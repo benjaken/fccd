@@ -9,6 +9,10 @@ const worker = readFileSync(
   "supabase/functions/wati-order-notifications/index.ts",
   "utf8",
 );
+const templateConfig = readFileSync(
+  "supabase/functions/_shared/wati-internal-template-config.ts",
+  "utf8",
+);
 
 describe("daily order readiness WhatsApp", () => {
   it("checks every requested readiness category on formal future orders", () => {
@@ -56,8 +60,9 @@ describe("daily order readiness WhatsApp", () => {
     expect(worker).toContain('"refresh_order_readiness_issues"');
     expect(worker).toContain("readinessOrderWatiParameters(directOrder, issues)");
     expect(worker).toContain('{ name: "issue_summary"');
-    expect(worker).toContain("WATI_ORDER_READINESS_ISSUE_TEMPLATE_NAME");
-    expect(worker).toContain("WATI_ORDER_READINESS_ISSUE_BROADCAST_NAME");
+    expect(worker).toContain('? "orderReadinessIssue"');
+    expect(templateConfig).toContain("WATI_ORDER_READINESS_ISSUE_TEMPLATE_NAME");
+    expect(templateConfig).toContain("WATI_ORDER_READINESS_ISSUE_BROADCAST_NAME");
   });
 
   it("runs once after 09:00 Hong Kong time rather than recalculating stock every minute", () => {

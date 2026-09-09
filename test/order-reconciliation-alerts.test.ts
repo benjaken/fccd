@@ -13,6 +13,10 @@ const notificationWorker = readFileSync(
   "supabase/functions/wati-order-notifications/index.ts",
   "utf8",
 );
+const internalTemplateConfig = readFileSync(
+  "supabase/functions/_shared/wati-internal-template-config.ts",
+  "utf8",
+);
 const productionCronMigration = readFileSync(
   "supabase/migrations/20260831124000_production_only_order_reconciliation_crons.sql",
   "utf8",
@@ -102,8 +106,8 @@ describe("Shopify/FCCD order reconciliation alerts", () => {
     expect(perOrderWatiMigration).toContain("distinct on (issue.order_id, recipient.id)");
     expect(perOrderWatiMigration).toContain("case when issue.issue_type = 'factory_unsent' then 1 else 0 end");
     expect(perOrderWatiMigration).toContain("order_reconciliation_alert_outbox_order_cycle_unique");
-    expect(notificationWorker).toContain("WATI_ORDER_RECONCILIATION_MISSING_TEMPLATE_NAME");
-    expect(notificationWorker).toContain("WATI_ORDER_RECONCILIATION_FACTORY_UNSENT_TEMPLATE_NAME");
+    expect(internalTemplateConfig).toContain("WATI_ORDER_RECONCILIATION_MISSING_TEMPLATE_NAME");
+    expect(internalTemplateConfig).toContain("WATI_ORDER_RECONCILIATION_FACTORY_UNSENT_TEMPLATE_NAME");
     expect(notificationWorker).toContain('internalOrderWatiParameters(reconciliationOrder(issue)!)');
     expect(notificationWorker).toContain('{ name: "brand_name"');
     expect(notificationWorker).toContain('{ name: "delivery_address"');
@@ -115,7 +119,7 @@ describe("Shopify/FCCD order reconciliation alerts", () => {
     expect(clearDailyMigration).toContain("if p_daily then");
     expect(clearDailyMigration).not.toContain("p_daily and exists");
     expect(notificationWorker).toContain('job.event_key !== "daily_reconciliation"');
-    expect(notificationWorker).toContain("WATI_ORDER_RECONCILIATION_CLEAR_TEMPLATE_NAME");
+    expect(internalTemplateConfig).toContain("WATI_ORDER_RECONCILIATION_CLEAR_TEMPLATE_NAME");
     expect(notificationWorker).toContain("今日沒有未入單、日期、廚房顯示、司機或存貨問題需要跟進");
     expect(notificationWorker).not.toContain("Shopify：${input.run.shopify_count}");
   });
@@ -128,8 +132,8 @@ describe("Shopify/FCCD order reconciliation alerts", () => {
     expect(perOrderWatiMigration).toContain("coalesce(new.shopify_store_id::text, 'unknown-store')");
     expect(perOrderWatiMigration).toContain("'shopify_order_imported', v_cycle_key, 'whatsapp'");
     expect(perOrderWatiMigration).not.toContain("'shopify_order_imported', v_cycle_key, 'email'");
-    expect(notificationWorker).toContain("WATI_SHOPIFY_NEW_ORDER_TEMPLATE_NAME");
-    expect(notificationWorker).toContain("WATI_SHOPIFY_NEW_ORDER_BROADCAST_NAME");
+    expect(internalTemplateConfig).toContain("WATI_SHOPIFY_NEW_ORDER_TEMPLATE_NAME");
+    expect(internalTemplateConfig).toContain("WATI_SHOPIFY_NEW_ORDER_BROADCAST_NAME");
     expect(notificationWorker).toContain('"shopify_import_email_not_supported"');
   });
 

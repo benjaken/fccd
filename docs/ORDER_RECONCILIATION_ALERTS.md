@@ -86,7 +86,20 @@ message with separate `未入單`, `未傳送工場`, and `訂單準備問題` s
 one order has several issues, they are summarized in one daily WATI message so
 the recipient does not receive duplicates for the same order.
 
-These internal templates must be approved and configured before WhatsApp delivery:
+These internal templates must be approved before WhatsApp delivery. The worker
+uses the names below by default; the paired Supabase Secrets remain available
+when WATI approves a different template or broadcast name:
+
+| Purpose | Default template | Default broadcast |
+| --- | --- | --- |
+| Missing order | `fccd_internal_missing_order` | `FCCD internal missing order` |
+| Factory unsent | `fccd_internal_factory_unsent` | `FCCD internal factory unsent` |
+| Daily all clear | `fccd_internal_order_audit_clear` | `Internal order audit clear` |
+| Urgent issue | `fccd_internal_missing_order_6h_urgent` | `Internal missing order urgent` |
+| Order readiness | `fccd_internal_order_readiness_issue` | `Internal order readiness issue` |
+| Shopify new order | `fccd_internal_shopify_new_order` | `FCCD internal Shopify new order` |
+
+Optional overrides:
 
 - `WATI_ORDER_RECONCILIATION_MISSING_TEMPLATE_NAME`
 - `WATI_ORDER_RECONCILIATION_MISSING_BROADCAST_NAME`

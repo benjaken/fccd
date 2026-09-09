@@ -19,6 +19,10 @@ import {
   loadWatiNotificationControls,
   watiEmergencySwitchAllows,
 } from "../_shared/wati-notification-controls.ts";
+import {
+  resolveInternalWatiTemplate,
+  type InternalWatiTemplateKind,
+} from "../_shared/wati-internal-template-config.ts";
 
 type ParameterRule = { name?: unknown; source?: unknown; value?: unknown };
 type QueueRow = {
@@ -146,6 +150,10 @@ function requiredEnv(name: string) {
   const value = Deno.env.get(name)?.trim();
   if (!value) throw new Error(`missing_${name.toLowerCase()}`);
   return value;
+}
+
+function internalWatiTemplate(kind: InternalWatiTemplateKind): WatiSendTemplate {
+  return resolveInternalWatiTemplate(kind, (name) => Deno.env.get(name));
 }
 
 function notificationActivation() {
@@ -1084,23 +1092,10 @@ Deno.serve(async (request) => {
         } else {
           const phone = normalizeWhatsAppNumber(job.recipient_address);
           if (!phone) throw new Error("recipient_phone_invalid");
-          const templateName = Deno.env.get("WATI_FACTORY_UNSENT_TEMPLATE_NAME")?.trim();
-          const broadcastName = Deno.env.get("WATI_FACTORY_UNSENT_BROADCAST_NAME")?.trim();
-          if (!templateName || !broadcastName) {
-            await admin.from("order_internal_notification_outbox").update({
-              status: "pending",
-              attempts: Math.max(0, job.attempts - 1),
-              scheduled_at: new Date(Date.now() + 24 * 60 * 60_000).toISOString(),
-              last_error: "factory_unsent_wati_template_not_configured",
-              locked_at: null,
-              updated_at: new Date().toISOString(),
-            }).eq("id", job.id);
-            continue;
-          }
+          const configuredTemplate = internalWatiTemplate("factoryUnsentReminder");
           const template: TemplateRow = {
             event_key: "delivery_order_confirmed",
-            template_name: templateName,
-            broadcast_name: broadcastName,
+            ...configuredTemplate,
             parameters: [],
           };
           const wati = await sendWati(phone, template, [
@@ -1376,15 +1371,11 @@ Deno.serve(async (request) => {
           const phone = normalizeWhatsAppNumber(job.recipient_address);
           if (!phone) throw new Error("recipient_phone_invalid");
           if (shopifyImported && directOrder) {
-            const templateName = Deno.env.get("WATI_SHOPIFY_NEW_ORDER_TEMPLATE_NAME")?.trim();
-            const broadcastName = Deno.env.get("WATI_SHOPIFY_NEW_ORDER_BROADCAST_NAME")?.trim();
-            if (!templateName || !broadcastName) {
-              throw new Error("shopify_new_order_wati_template_not_configured");
-            }
-            const wati = await sendWati(phone, {
-              template_name: templateName,
-              broadcast_name: broadcastName,
-            }, internalOrderWatiParameters(directOrder));
+            const wati = await sendWati(
+              phone,
+              internalWatiTemplate("shopifyNewOrder"),
+              internalOrderWatiParameters(directOrder),
+            );
             providerPayload = wati.payload;
           } else {
           const daily = job.event_key === "daily_reconciliation";
@@ -1397,31 +1388,15 @@ Deno.serve(async (request) => {
           ].includes(candidate.issue_type));
           const factoryUnsent = daily && !readiness
             && issues[0]?.issue_type === "factory_unsent";
-          const templateName = Deno.env.get(clear
-            ? "WATI_ORDER_RECONCILIATION_CLEAR_TEMPLATE_NAME"
+          const template = internalWatiTemplate(clear
+            ? "reconciliationClear"
             : readiness
-              ? "WATI_ORDER_READINESS_ISSUE_TEMPLATE_NAME"
-            : factoryUnsent
-              ? "WATI_ORDER_RECONCILIATION_FACTORY_UNSENT_TEMPLATE_NAME"
-              : daily
-                ? "WATI_ORDER_RECONCILIATION_MISSING_TEMPLATE_NAME"
-                : "WATI_ORDER_RECONCILIATION_URGENT_TEMPLATE_NAME")?.trim();
-          const broadcastName = Deno.env.get(clear
-            ? "WATI_ORDER_RECONCILIATION_CLEAR_BROADCAST_NAME"
-            : readiness
-              ? "WATI_ORDER_READINESS_ISSUE_BROADCAST_NAME"
-            : factoryUnsent
-              ? "WATI_ORDER_RECONCILIATION_FACTORY_UNSENT_BROADCAST_NAME"
-              : daily
-                ? "WATI_ORDER_RECONCILIATION_MISSING_BROADCAST_NAME"
-                : "WATI_ORDER_RECONCILIATION_URGENT_BROADCAST_NAME")?.trim();
-          if (!templateName || !broadcastName) {
-            throw new Error("order_reconciliation_wati_template_not_configured");
-          }
-          const template: WatiSendTemplate = {
-            template_name: templateName,
-            broadcast_name: broadcastName,
-          };
+              ? "orderReadinessIssue"
+              : factoryUnsent
+                ? "reconciliationFactoryUnsent"
+                : daily
+                  ? "reconciliationMissing"
+                  : "reconciliationUrgent");
           const issueText = issues.map(reconciliationIssueLine).join("；");
           const link = issues.length === 1 ? reconciliationOrderLink(issues[0]) :
             `${Deno.env.get("ORDER_ADMIN_BASE_URL")?.trim().replace(/\/$/, "") || ""}/orders/shopify-pending`;

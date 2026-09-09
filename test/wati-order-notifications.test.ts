@@ -16,6 +16,11 @@ import {
   resolveNotificationDeliveryMethod,
 } from "../supabase/functions/_shared/delivery-address.ts";
 
+const internalTemplateConfig = readFileSync(
+  resolve(process.cwd(), "supabase/functions/_shared/wati-internal-template-config.ts"),
+  "utf8",
+);
+
 const values: OrderNotificationValues = {
   name: "陳先生",
   order_number: "R/202608/88",
@@ -251,7 +256,6 @@ describe("WATI order notifications", () => {
       resolve(process.cwd(), "supabase/functions/wati-order-notifications/index.ts"),
       "utf8",
     );
-
     expect(worker).toContain('defaultActivationAt = "2026-08-31T00:00:00+08:00"');
     expect(worker).toContain('Deno.env.get("WATI_NOTIFICATIONS_ACTIVATE_AT")');
     expect(worker.indexOf("Date.now() < activation.timestamp"))
@@ -513,7 +517,8 @@ describe("WATI order notifications", () => {
     expect(migration).toContain("is_sent_to_factory");
     expect(migration).toContain("do_not_send_to_factory");
     expect(worker).toContain('"claim_order_internal_notifications"');
-    expect(worker).toContain('Deno.env.get("WATI_FACTORY_UNSENT_TEMPLATE_NAME")');
+    expect(internalTemplateConfig).toContain('templateEnv: "WATI_FACTORY_UNSENT_TEMPLATE_NAME"');
+    expect(worker).toContain('internalWatiTemplate("factoryUnsentReminder")');
     expect(worker).toContain("buildFactoryUnsentReminderContent(values)");
     expect(worker).toContain("factoryUnsentReminderAt(order)");
     expect(worker).toContain("from: EMAIL_FROM");
