@@ -8,4 +8,5 @@ interface ImportMetaEnv {
   readonly NEXT_PUBLIC_SUPABASE_ANON_KEY?: string;
   readonly VITE_GIT_BRANCH?: string;
   readonly VITE_VERCEL_ENV?: string;
+  readonly VITE_APP_VERSION?: string;
 }

@@ -530,6 +530,7 @@ export function QuoteEditorPage({
   const [sendingConfirmation, setSendingConfirmation] = useState(false);
   const [confirmationSendError, setConfirmationSendError] = useState(false);
   const [converting, setConverting] = useState(false);
+  const [conversionConfirmationOpen, setConversionConfirmationOpen] = useState(false);
   const [conversionError, setConversionError] = useState(false);
   const [labelModalLineId, setLabelModalLineId] = useState<string | null>(null);
   const [supplements, setSupplements] = useState<QuotePdfSupplementDraft>({
@@ -1184,6 +1185,7 @@ export function QuoteEditorPage({
 
   const convertCurrentQuote = async () => {
     if (!activeQuote || !validateDetails()) return;
+    setConversionConfirmationOpen(false);
     setConverting(true);
     setConversionError(false);
     try {
@@ -2117,6 +2119,12 @@ export function QuoteEditorPage({
       setReordering(false);
     }
   };
+
+  const requestQuoteConversion = () => {
+    if (!activeQuote || converting || !validateDetails()) return;
+    setConversionError(false);
+    setConversionConfirmationOpen(true);
+  };
   const sectionNavigation = (
     <nav
       ref={sectionNavigationRef}
@@ -2256,6 +2264,40 @@ export function QuoteEditorPage({
     </Modal>
   );
 
+  const conversionConfirmationModal = activeQuote && !isOrder ? (
+    <Modal
+      open={conversionConfirmationOpen}
+      onClose={() => setConversionConfirmationOpen(false)}
+      title={t("quotes.convertConfirmTitle")}
+      description={t("quotes.convertConfirmDescription", {
+        number: activeQuote.orderNumber || draft.orderNumber || activeQuote.id,
+      })}
+      closeLabel={t("quotes.convertConfirmClose")}
+      role="alertdialog"
+      size="sm"
+      closeOnBackdrop={!converting}
+      closeOnEscape={!converting}
+      footer={(
+        <>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={converting}
+            onClick={() => setConversionConfirmationOpen(false)}
+          >
+            {t("quotes.convertConfirmCancel")}
+          </Button>
+          <Button type="button" disabled={converting} onClick={() => void convertCurrentQuote()}>
+            {converting ? <LoaderCircle className="spin" /> : <ShoppingCart />}
+            {t(converting ? "quotes.actions.converting" : "quotes.convertConfirmAction")}
+          </Button>
+        </>
+      )}
+    >
+      <p>{t("quotes.convertConfirmWarning")}</p>
+    </Modal>
+  ) : null;
+
   const patchPayment = (paymentId: string, partial: Partial<QuotePayment>) => {
     setPayments((current) => current.map((payment) => payment.id === paymentId ? { ...payment, ...partial } : payment));
   };
@@ -2347,7 +2389,7 @@ export function QuoteEditorPage({
                 <Button
                   type="button"
                   disabled={converting}
-                  onClick={() => void convertCurrentQuote()}
+                  onClick={requestQuoteConversion}
                 >
                   {converting ? <LoaderCircle className="spin" /> : <ShoppingCart />}
                   {converting ? t("quotes.actions.converting") : t("quotes.actions.convert")}
@@ -2576,6 +2618,7 @@ export function QuoteEditorPage({
           />
         </section> : null}
         {factoryValidationModal}
+        {conversionConfirmationModal}
       </section>
     );
   }
@@ -2746,7 +2789,7 @@ export function QuoteEditorPage({
           {conversionError && <p className="quote-editor-error" role="alert">{t("quoteEditor.errors.convert")}</p>}
           <footer>
             {activeQuote && isOrder ? <Button type="button" variant="outline" disabled={completing || saving} onClick={() => void saveAndSendCurrentOrderConfirmation()}>{completing ? <LoaderCircle className="spin" /> : <Mail />}{t(completing ? "quoteEditor.detailActions.sendingConfirmation" : "quoteEditor.payments.sendAndComplete")}</Button> : null}
-            {activeQuote && !isOrder ? <Button type="button" variant="outline" disabled={converting || saving} onClick={() => void convertCurrentQuote()}><ShoppingCart />{converting ? t("quotes.actions.converting") : t("quotes.actions.convert")}</Button> : <span />}
+            {activeQuote && !isOrder ? <Button type="button" variant="outline" disabled={converting || saving} onClick={requestQuoteConversion}><ShoppingCart />{converting ? t("quotes.actions.converting") : t("quotes.actions.convert")}</Button> : <span />}
             <Button type="submit" disabled={saving || savingEnquiry || converting || (pendingEnquiry && !canEdit)}>{saving ? t("quoteEditor.saving") : activeQuote ? t("quoteEditor.saveChanges") : t("quoteEditor.saveAndContinue")}</Button>
           </footer>
       </form>
@@ -3133,6 +3176,7 @@ export function QuoteEditorPage({
       {productMatchModal}
       {catalogProductModal}
       {factoryValidationModal}
+      {conversionConfirmationModal}
     </section>
   );
 }
