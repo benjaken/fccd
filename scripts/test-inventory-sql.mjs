@@ -28,6 +28,8 @@ try {
     'test/sql/inventory-countable-pack-seed.sql',
     'supabase/migrations/20260909200000_countable_pack_child_unit_repair.sql',
     'supabase/migrations/20260909210000_countable_unit_audit_repair.sql',
+    'test/sql/inventory-countable-toast-seed.sql',
+    'supabase/migrations/20260909220000_countable_toast_loaf_repair.sql',
     'test/sql/inventory-countable-pack-units.sql',
   ]) {
     const sql = (await readFile(new URL(`../${file}`, import.meta.url), 'utf8'))
