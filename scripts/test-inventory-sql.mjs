@@ -25,6 +25,9 @@ try {
     'test/sql/inventory-utensil-legacy-seed.sql',
     'supabase/migrations/20260909191000_reconcile_legacy_utensil_consumptions.sql',
     'test/sql/inventory-utensil-demand.sql',
+    'test/sql/inventory-countable-pack-seed.sql',
+    'supabase/migrations/20260909200000_countable_pack_child_unit_repair.sql',
+    'test/sql/inventory-countable-pack-units.sql',
   ]) {
     const sql = (await readFile(new URL(`../${file}`, import.meta.url), 'utf8'))
       .replace(/^\\set .*$/gm, '');
