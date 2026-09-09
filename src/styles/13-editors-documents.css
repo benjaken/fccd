@@ -1021,7 +1021,7 @@
 .quote-pdf-page-active-field > span { display: grid; gap: 0.2rem; }
 
 .quote-pdf-editor {
-  min-height: 100%;
+  min-height: 0;
   margin: -1.75rem;
   padding: 1.5rem;
   background: #eef2f5;
@@ -1041,50 +1041,46 @@ body:has(.quote-pdf-editor) .sidebar {
   display: none;
 }
 
+/* Extra A4 sheets must grow the document and scroll with the window.
+   A 100dvh + overflow:hidden shell clips them, and overflow-x:clip on
+   html/body/#root otherwise computes overflow-y to clip as well. */
 html:has(.quote-pdf-editor),
 html:has(.document-editor-shell),
 body:has(.quote-pdf-editor),
 body:has(.document-editor-shell),
 html:has(.quote-pdf-editor) #root,
 html:has(.document-editor-shell) #root {
-  overflow-x: clip;
-  overflow-y: auto;
+  height: auto !important;
+  max-height: none !important;
+  overflow-x: visible !important;
+  overflow-y: auto !important;
 }
 
-body:has(.quote-pdf-editor) .shell-body {
+body:has(.quote-pdf-editor) .shell-body,
+body:has(.quote-pdf-editor) .shell-body.sidebar-is-collapsed,
+.document-editor-shell .shell-body,
+.document-editor-shell .shell-body.sidebar-is-collapsed,
+body:has(.quote-pdf-editor) .main-content,
+.document-editor-shell .main-content,
+body:has(.quote-pdf-editor) .page-transition,
+.document-editor-shell .page-transition,
+body:has(.quote-pdf-editor) .quote-pdf-editor {
   display: block;
-  height: 100dvh;
+  height: auto !important;
+  max-height: none !important;
   min-height: 0;
-  padding-top: 0;
-  overflow: hidden;
+  overflow: visible !important;
 }
 
+body:has(.quote-pdf-editor) .shell-body,
 .document-editor-shell .shell-body,
 .document-editor-shell .shell-body.sidebar-is-collapsed {
-  display: block;
-  height: 100dvh;
-  min-height: 0;
   padding-top: 0;
-  overflow: hidden;
 }
 
-/* `.main-content` defaults to overflow:hidden, and `overflow-x: clip` on
-   html/body/#root otherwise computes overflow-y to clip as well. Keep extra
-   A4 sheets reachable by making this page the scroll container. */
 body:has(.quote-pdf-editor) .main-content,
 .document-editor-shell .main-content {
-  height: 100dvh;
-  max-height: 100dvh;
-  min-height: 0;
   padding: 0;
-  overflow: auto;
-  overscroll-behavior: contain;
-}
-
-body:has(.quote-pdf-editor) .page-transition,
-.document-editor-shell .page-transition {
-  min-height: 100%;
-  overflow: visible;
 }
 
 body:has(.quote-pdf-editor) .quote-pdf-editor {

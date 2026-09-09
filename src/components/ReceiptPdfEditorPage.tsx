@@ -26,6 +26,7 @@ import {
   usePdfAutoPageBreaks,
   usePdfAutoProductPageBreaks,
 } from "@/lib/pdf-auto-pagination";
+import { useDocumentEditorWindowScroll } from "@/lib/document-editor-window-scroll";
 import { printPdf } from "@/lib/print-pdf";
 import { fetchShippingFees, type ShippingFee } from "@/lib/shipping-fees";
 
@@ -151,6 +152,7 @@ export function ReceiptPdfEditorPage({
   documentKind?: FinancialDocumentKind;
 }) {
   const { t, i18n } = useTranslation();
+  useDocumentEditorWindowScroll();
   const termDict = useDictItems(DICT_TYPE.quoteTermTemplate);
   const paymentDict = useDictItems(DICT_TYPE.quotePaymentTemplate);
   const termOptions = termDict.items.map((item) => dictItemLabel(item, i18n.language));

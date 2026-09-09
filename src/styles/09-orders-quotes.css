@@ -194,9 +194,9 @@
 }
 
 @media (max-width: 900px) {
-  html,
-  body,
-  #root {
+  html:not(:has(.quote-pdf-editor)):not(:has(.document-editor-shell)),
+  body:not(:has(.quote-pdf-editor)):not(:has(.document-editor-shell)),
+  html:not(:has(.quote-pdf-editor)):not(:has(.document-editor-shell)) #root {
     max-width: 100%;
     overflow-x: clip;
     overflow-y: auto;

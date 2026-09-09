@@ -36,6 +36,7 @@ import {
   usePdfAutoPageBreaks,
   usePdfAutoProductPageBreaks,
 } from "@/lib/pdf-auto-pagination";
+import { useDocumentEditorWindowScroll } from "@/lib/document-editor-window-scroll";
 import { printPdf } from "@/lib/print-pdf";
 import { formatOrderNumber } from "@/lib/order-number";
 import { splitPdfProductLines } from "@/lib/receipt-pdf-draft";
@@ -297,6 +298,7 @@ export function QuotePdfEditorPage({
   loadPdfPages?: PdfPageLoader;
 }) {
   const { t, i18n } = useTranslation();
+  useDocumentEditorWindowScroll();
   const termDict = useDictItems(DICT_TYPE.quoteTermTemplate);
   const paymentDict = useDictItems(DICT_TYPE.quotePaymentTemplate);
   const additionalInfoDict = useDictItems(DICT_TYPE.quoteAdditionalInfo);
