@@ -1087,6 +1087,23 @@ body:has(.quote-pdf-editor) .quote-pdf-editor {
   margin: 0;
 }
 
+.document-editor-shell .page-transition,
+body:has(.quote-pdf-editor) .page-transition {
+  animation: none;
+  transform: none;
+}
+
+html:has(.quote-pdf-editor),
+html:has(.document-editor-shell),
+.quote-pdf-editor {
+  touch-action: pan-y;
+}
+
+.quote-pdf-editor:focus,
+.quote-pdf-editor:focus-visible {
+  outline: none;
+}
+
 .quote-pdf-toolbar {
   position: sticky;
   z-index: 20;
