@@ -10,6 +10,7 @@ try {
     'supabase/migrations/20260908220000_unified_inventory_demand.sql',
     'supabase/migrations/20260909143000_normalize_catering_material_units.sql',
     'supabase/migrations/20260909152000_packaging_item_unit_repairs.sql',
+    'supabase/migrations/20260909160000_correct_corn_flakes_supplier_packaging.sql',
     'test/sql/inventory-rpc-fixture.sql',
     'supabase/migrations/20260817063000_cancel_pending_delivery.sql',
     'supabase/migrations/20260908224000_lock_existing_material_rpcs.sql',

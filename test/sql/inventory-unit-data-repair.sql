@@ -18,9 +18,10 @@ select pg_temp.assert_equal(
   (select count(*) from ingredients
    where id='b186e205-2a0c-4121-8f33-caea80d6e0d2'
      and product_unit='包' and stocktake_unit='包' and product_quantity=1
-     and cost_per_stocktake_unit=cost_per_product_unit),
+     and cost_per_stocktake_unit=cost_per_product_unit
+     and description='190g x 36包/箱'),
   1,
-  'corn flakes uses package units and package supplier cost'
+  'corn flakes deducts by package and records the 36-package supplier carton'
 );
 
 select pg_temp.assert_equal(
