@@ -36,7 +36,10 @@ import {
   usePdfAutoPageBreaks,
   usePdfAutoProductPageBreaks,
 } from "@/lib/pdf-auto-pagination";
-import { useDocumentEditorWindowScroll } from "@/lib/document-editor-window-scroll";
+import {
+  activateDocumentEditorWindowScroll,
+  useDocumentEditorWindowScroll,
+} from "@/lib/document-editor-window-scroll";
 import { printPdf } from "@/lib/print-pdf";
 import { formatOrderNumber } from "@/lib/order-number";
 import { splitPdfProductLines } from "@/lib/receipt-pdf-draft";
@@ -298,7 +301,8 @@ export function QuotePdfEditorPage({
   loadPdfPages?: PdfPageLoader;
 }) {
   const { t, i18n } = useTranslation();
-  useDocumentEditorWindowScroll();
+  const editorRef = useRef<HTMLElement>(null);
+  useDocumentEditorWindowScroll(editorRef);
   const termDict = useDictItems(DICT_TYPE.quoteTermTemplate);
   const paymentDict = useDictItems(DICT_TYPE.quotePaymentTemplate);
   const additionalInfoDict = useDictItems(DICT_TYPE.quoteAdditionalInfo);
@@ -324,7 +328,6 @@ export function QuotePdfEditorPage({
   const [pdfPagesError, setPdfPagesError] = useState(false);
   const [sourceBrand, setSourceBrand] = useState<{ channelId: string; name: string; email: string; quoteNumber: string }>({ channelId: "", name: "", email: "", quoteNumber: "" });
   const [, setSaved] = useState(true);
-  const editorRef = useRef<HTMLElement>(null);
   const paginationBrandKind = getBrandKind(sourceBrand.name, sourceBrand.quoteNumber, draft?.brandName, draft?.quoteNumber);
   const paginationModuleCount = draft
     ? 1
@@ -346,6 +349,10 @@ export function QuotePdfEditorPage({
     paginationModuleCount,
     `${paginationResetKey}:${productPageBreaks.join(",")}`,
   );
+
+  useLayoutEffect(() => {
+    if (!loading) activateDocumentEditorWindowScroll(editorRef.current);
+  }, [loading]);
 
   const storageKey = quotePdfDraftStorageKey(id);
   const load = useCallback(async () => {
@@ -823,7 +830,7 @@ export function QuotePdfEditorPage({
   };
 
   return (
-    <section ref={editorRef} className={`quote-pdf-editor${backPages.length ? " has-back-pages" : ""}`}>
+    <section ref={editorRef} tabIndex={-1} className={`quote-pdf-editor${backPages.length ? " has-back-pages" : ""}`}>
       <div className="quote-pdf-toolbar">
         <div>
           <strong>報價表工作稿</strong>

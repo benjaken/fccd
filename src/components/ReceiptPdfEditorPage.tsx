@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { LoaderCircle, Minus, Plus, Printer } from "lucide-react";
 import { useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -26,7 +26,10 @@ import {
   usePdfAutoPageBreaks,
   usePdfAutoProductPageBreaks,
 } from "@/lib/pdf-auto-pagination";
-import { useDocumentEditorWindowScroll } from "@/lib/document-editor-window-scroll";
+import {
+  activateDocumentEditorWindowScroll,
+  useDocumentEditorWindowScroll,
+} from "@/lib/document-editor-window-scroll";
 import { printPdf } from "@/lib/print-pdf";
 import { fetchShippingFees, type ShippingFee } from "@/lib/shipping-fees";
 
@@ -152,7 +155,8 @@ export function ReceiptPdfEditorPage({
   documentKind?: FinancialDocumentKind;
 }) {
   const { t, i18n } = useTranslation();
-  useDocumentEditorWindowScroll();
+  const editorRef = useRef<HTMLElement>(null);
+  useDocumentEditorWindowScroll(editorRef);
   const termDict = useDictItems(DICT_TYPE.quoteTermTemplate);
   const paymentDict = useDictItems(DICT_TYPE.quotePaymentTemplate);
   const termOptions = termDict.items.map((item) => dictItemLabel(item, i18n.language));
@@ -172,7 +176,6 @@ export function ReceiptPdfEditorPage({
   const [termSearch, setTermSearch] = useState("");
   const [paymentsOpen, setPaymentsOpen] = useState(false);
   const [paymentSearch, setPaymentSearch] = useState("");
-  const editorRef = useRef<HTMLElement>(null);
   const paginationResetKey = `${id}:${documentKind}`;
   const paginationModuleCount = draft
     ? documentKind === "invoice"
@@ -189,6 +192,11 @@ export function ReceiptPdfEditorPage({
     paginationModuleCount,
     `${paginationResetKey}:${productPageBreaks.join(",")}`,
   );
+
+  useLayoutEffect(() => {
+    if (!loading) activateDocumentEditorWindowScroll(editorRef.current);
+  }, [loading]);
+
   const isInvoice = documentKind === "invoice";
   const documentTitle = isInvoice ? "INVOICE" : "RECEIPT";
   const documentName = isInvoice ? "發票" : "收據";
@@ -506,7 +514,7 @@ export function ReceiptPdfEditorPage({
   );
 
   return (
-    <section ref={editorRef} className="quote-pdf-editor receipt-pdf-editor">
+    <section ref={editorRef} tabIndex={-1} className="quote-pdf-editor receipt-pdf-editor">
       <div className="quote-pdf-toolbar receipt-pdf-toolbar">
         <div>
           <strong>{documentName}預覽</strong>
