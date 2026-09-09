@@ -58,6 +58,7 @@ export type CustomerSelfServiceOrderDetail = {
   fleetArranged: boolean;
   currency: string;
   shippingFee?: number;
+  discount?: number;
   grandTotal: number;
   outstanding: number;
   paid: boolean;

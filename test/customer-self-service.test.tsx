@@ -110,8 +110,9 @@ describe("CustomerSelfServicePage", () => {
     });
     const loadDetail = vi.fn().mockResolvedValue({
       ...detail,
-      shippingFee: 0,
-      grandTotal: 1104,
+      shippingFee: 100,
+      discount: 50,
+      grandTotal: 1054,
       lines: [{ ...detail.lines[0], quantity: 2, unitPrice: 552, totalPrice: 1004 }],
     });
     render(
@@ -137,6 +138,8 @@ describe("CustomerSelfServicePage", () => {
     const totals = screen.getByText("食品小計").parentElement;
     expect(totals).toHaveTextContent("運費");
     expect(totals).toHaveTextContent("HK$100");
+    expect(totals).toHaveTextContent("折扣");
+    expect(totals).toHaveTextContent("-HK$50");
 
     fireEvent.click(screen.getByRole("button", { name: "預覽並下載收據" }));
     const dialog = await screen.findByRole("dialog", { name: "收據 B-1247" });
@@ -149,6 +152,9 @@ describe("CustomerSelfServicePage", () => {
     expect(within(receipt).getByDisplayValue("（雙格）椒鹽豬扒飯")).toBeInTheDocument();
     expect(receipt).toHaveTextContent("Delivery Fee");
     expect(within(receipt).getByDisplayValue("100")).toBeInTheDocument();
+    expect(receipt).toHaveTextContent("Discount:");
+    expect(receipt).toHaveTextContent("-$50");
+    expect(receipt).toHaveTextContent("$1,054");
     expect(receipt).toHaveTextContent("Payment information:");
     const receiptFields = Array.from(receipt.querySelectorAll("input, textarea"));
     expect(receiptFields.length).toBeGreaterThan(0);
