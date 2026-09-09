@@ -17,12 +17,12 @@ function wheelDelta(event: WheelEvent) {
 
 function isNestedScroller(node: EventTarget | null) {
   let candidate = node instanceof Element ? node : null;
-    while (
-      candidate
-      && candidate !== document.documentElement
-      && candidate !== document.body
-      && candidate.id !== "root"
-    ) {
+  while (
+    candidate
+    && candidate !== document.documentElement
+    && candidate !== document.body
+    && candidate.id !== "root"
+  ) {
     const style = window.getComputedStyle(candidate);
     if (
       /(auto|scroll|overlay)/.test(style.overflowY)
