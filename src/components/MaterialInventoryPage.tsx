@@ -53,6 +53,7 @@ export function MaterialInventoryPage() {
   const [ledgerLoading, setLedgerLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
+  const [showLedgerReversals, setShowLedgerReversals] = useState(false);
   const [correctionQuantity, setCorrectionQuantity] = useState("");
   const [correctionReason, setCorrectionReason] = useState("");
   const [correcting, setCorrecting] = useState(false);
@@ -110,8 +111,11 @@ export function MaterialInventoryPage() {
 
   const totalPages = Math.max(1, Math.ceil(items.length / PAGE_SIZE));
   const visibleItems = items.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
-  const ledgerTotalPages = Math.max(1, Math.ceil(ledger.length / PAGE_SIZE));
-  const visibleLedger = ledger.slice((ledgerPage - 1) * PAGE_SIZE, ledgerPage * PAGE_SIZE);
+  const visibleLedgerRows = useMemo(() => (
+    showLedgerReversals ? ledger : ledger.filter((entry) => !entry.isReversal)
+  ), [ledger, showLedgerReversals]);
+  const ledgerTotalPages = Math.max(1, Math.ceil(visibleLedgerRows.length / PAGE_SIZE));
+  const visibleLedger = visibleLedgerRows.slice((ledgerPage - 1) * PAGE_SIZE, ledgerPage * PAGE_SIZE);
   const paginationProps = {
     previousLabel: t("materialInventory.previous"), nextLabel: t("materialInventory.next"),
     pageLabel: t("materialInventory.pageOf"), jumpLabel: t("materialInventory.jumpToPage"),
@@ -119,7 +123,7 @@ export function MaterialInventoryPage() {
   const ledgerPagination = !ledgerLoading && ledger.length > 0 ? (
     <div className={styles.paginationFooter}>
       <TablePagination
-        summary={t("materialInventory.pagination", { from: (ledgerPage - 1) * PAGE_SIZE + 1, to: Math.min(ledgerPage * PAGE_SIZE, ledger.length), total: ledger.length })}
+        summary={t("materialInventory.pagination", { from: (ledgerPage - 1) * PAGE_SIZE + 1, to: Math.min(ledgerPage * PAGE_SIZE, visibleLedgerRows.length), total: visibleLedgerRows.length })}
         page={ledgerPage}
         totalPages={ledgerTotalPages}
         loading={ledgerLoading}
@@ -131,6 +135,10 @@ export function MaterialInventoryPage() {
     </div>
   ) : null;
 
+  useEffect(() => {
+    if (ledgerPage > ledgerTotalPages) setLedgerPage(1);
+  }, [ledgerTotalPages, ledgerPage]);
+
   return <section className="ingredients-page material-inventory-page">
     <header className="page-heading ingredients-heading"><div><span className="eyebrow">{t("navigation.kitchen")}</span><h1>{t("materialInventory.title")}</h1><p>{t("materialInventory.description")}</p></div></header>
     <article className={`panel ingredients-panel ${styles.inventoryPanel}`}>
@@ -141,16 +149,24 @@ export function MaterialInventoryPage() {
       {error === "load" ? <div className="products-state products-state-error"><RefreshCw /><div><strong>{t("materialInventory.loadError")}</strong><span>{t("materialInventory.loadErrorDescription")}</span></div><Button variant="outline" onClick={() => setReloadKey((value) => value + 1)}>{t("materialInventory.retry")}</Button></div> : !loading && items.length === 0 ? <div className="products-state products-state-empty"><PackageOpen /><div><strong>{t("materialInventory.empty")}</strong><span>{t("materialInventory.emptyDescription")}</span></div></div> : <ListTable className="ingredients-table-wrap" loading={loading} loadingLabel={t("materialInventory.loading")} skeletonColumns={SUMMARY_COLUMNS} skeletonRows={PAGE_SIZE} onRefresh={() => setReloadKey((value) => value + 1)} header={<tr><th>SKU</th><th>{t("materialInventory.columns.category")}</th><th>{t("materialInventory.columns.item")}</th><th>{t("materialInventory.columns.current")}</th><th>{t("materialInventory.columns.minimum")}</th><th>{t("materialInventory.columns.status")}</th><th>{t("materialInventory.columns.lastActivity")}</th><th><span className="sr-only">{t("materialInventory.view")}</span></th></tr>}>
         {visibleItems.map((item) => {
           const status = item.currentQuantity === null ? "missing" : item.minimumStock !== null && item.currentQuantity <= item.minimumStock ? "low" : "ok";
-          return <tr key={item.ingredientId}><td>{item.sku || "—"}</td><td>{item.ingredientType || "—"}</td><td><strong>{item.name}</strong></td><td className="tabular-nums"><strong>{quantity(item.currentQuantity, item.unit)}</strong></td><td className="tabular-nums">{quantity(item.minimumStock, item.unit)}</td><td><span className="inventory-stock-badge" data-tone={status}>{t(`materialInventory.status.${status}`)}</span></td><td>{dateTime(item.lastActivityAt, i18n.language)}</td><td><Button variant="outline" size="sm" onClick={() => { setSelected(item); setError(null); }}><Eye />{t("materialInventory.view")}</Button></td></tr>;
+          return <tr key={item.ingredientId}><td>{item.sku || "—"}</td><td>{item.ingredientType || "—"}</td><td><strong>{item.name}</strong></td><td className="tabular-nums"><strong>{quantity(item.currentQuantity, item.unit)}</strong></td><td className="tabular-nums">{quantity(item.minimumStock, item.unit)}</td><td><span className="inventory-stock-badge" data-tone={status}>{t(`materialInventory.status.${status}`)}</span></td><td>{dateTime(item.lastActivityAt, i18n.language)}</td><td><Button variant="outline" size="sm" onClick={() => { setSelected(item); setError(null); setShowLedgerReversals(false); }}><Eye />{t("materialInventory.view")}</Button></td></tr>;
         })}
       </ListTable>}
-      {!loading && !error && items.length > 0 ? <TablePagination summary={t("materialInventory.pagination", { from: (page - 1) * PAGE_SIZE + 1, to: Math.min(page * PAGE_SIZE, items.length), total: items.length })} page={page} totalPages={totalPages} loading={loading} onPrevious={() => setPage((value) => Math.max(1, value - 1))} onNext={() => setPage((value) => Math.min(totalPages, value + 1))} onPageChange={setPage} {...paginationProps} /> : null}
+    {!loading && !error && items.length > 0 ? <TablePagination summary={t("materialInventory.pagination", { from: (page - 1) * PAGE_SIZE + 1, to: Math.min(page * PAGE_SIZE, items.length), total: items.length })} page={page} totalPages={totalPages} loading={loading} onPrevious={() => setPage((value) => Math.max(1, value - 1))} onNext={() => setPage((value) => Math.min(totalPages, value + 1))} onPageChange={setPage} {...paginationProps} /> : null}
     </article>
-    <SidePanel open={selected !== null} title={selected?.name ?? ""} description={selected ? `${selected.sku || "—"} · ${t(`materialInventory.status.${selectedStatus}`)}` : undefined} closeLabel={t("common.close")} onClose={() => setSelected(null)} footer={ledgerPagination} half className={styles.detailPanel}>
-      {error && error !== "load" ? <p className="list-inline-error" role="alert">{t(`materialInventory.errors.${error}`)}</p> : null}
+    <SidePanel open={selected !== null} title={selected?.name ?? ""} description={selected ? `${selected.sku || "—"} · ${t(`materialInventory.status.${selectedStatus}`)}` : undefined} closeLabel={t("common.close")} onClose={() => { setSelected(null); setShowLedgerReversals(false); }} footer={ledgerPagination} half className={styles.detailPanel}>
+    {error && error !== "load" ? <p className="list-inline-error" role="alert">{t(`materialInventory.errors.${error}`)}</p> : null}
       <div className="mb-3 flex flex-wrap items-center justify-between gap-3"><h3 className="flex items-center gap-2 text-base font-bold"><ClipboardList />{t("materialInventory.ledgerTitle")}</h3>{selected && canCorrect ? <Button type="button" onClick={() => { setError(null); setCorrectionQuantity(selected.currentQuantity === null ? "" : String(selected.currentQuantity)); setCorrectionOpen(true); }}><Save />{t("materialInventory.correction.open")}</Button> : null}</div>
+      <label className="mb-3 flex items-center gap-2 text-sm text-muted-foreground">
+        <input
+          type="checkbox"
+          checked={showLedgerReversals}
+          onChange={(event) => setShowLedgerReversals(event.currentTarget.checked)}
+        />
+        <span>{t("materialInventory.showReversals")}</span>
+      </label>
       <ListTable className={`ingredients-table-wrap ${styles.ledgerTableWrap}`} tableClassName={styles.ledgerTable} loading={ledgerLoading} loadingLabel={t("materialInventory.ledgerLoading")} skeletonColumns={6} skeletonRows={8} header={<tr><th>{t("materialInventory.ledger.time")}</th><th>{t("materialInventory.ledger.type")}</th><th>{t("materialInventory.ledger.quantity")}</th><th>{t("materialInventory.ledger.balance")}</th><th>{t("materialInventory.ledger.reference")}</th><th>{t("materialInventory.ledger.note")}</th></tr>}>
-        {visibleLedger.map((entry) => <tr key={entry.id}><td>{dateTime(entry.occurredAt, i18n.language)}</td><td>{t(`materialInventory.movements.${entry.type}`)}</td><td className="tabular-nums">{quantity(entry.quantity, selected?.unit ?? null)}</td><td className="tabular-nums">{quantity(entry.balanceAfter, selected?.unit ?? null)}</td><td className={styles.truncateCell} title={entry.reference || undefined}>{entry.reference || "—"}</td><td className={styles.truncateCell} title={entry.note || undefined}>{entry.note || "—"}</td></tr>)}
+        {visibleLedger.map((entry) => <tr key={entry.id}><td>{dateTime(entry.occurredAt, i18n.language)}</td><td>{entry.isReversal ? t("materialInventory.movements.reversal") : t(`materialInventory.movements.${entry.type}`)}</td><td className="tabular-nums">{quantity(entry.quantity, selected?.unit ?? null)}</td><td className="tabular-nums">{quantity(entry.balanceAfter, selected?.unit ?? null)}</td><td className={styles.truncateCell} title={entry.reference || undefined}>{entry.reference || "—"}</td><td className={styles.truncateCell} title={entry.note || undefined}>{entry.note || "—"}</td></tr>)}
       </ListTable>
     </SidePanel>
     <Modal open={correctionOpen && selected !== null} title={t("materialInventory.correction.title")} description={selected ? `${selected.name} · ${selected.sku || "—"}` : undefined} closeLabel={t("common.close")} onClose={() => { if (!correcting) setCorrectionOpen(false); }} size="md" closeOnBackdrop={!correcting} closeOnEscape={!correcting} footer={<><Button type="button" variant="outline" disabled={correcting} onClick={() => setCorrectionOpen(false)}>{t("materialInventory.correction.cancel")}</Button><Button type="button" disabled={correcting} onClick={() => void correctStock()}><Save />{correcting ? t("materialInventory.correction.saving") : t("materialInventory.correction.save")}</Button></>}>
@@ -160,3 +176,4 @@ export function MaterialInventoryPage() {
     </Modal>
   </section>;
 }
+

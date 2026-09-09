@@ -21,6 +21,7 @@ export type MaterialInventoryLedgerEntry = {
   balanceAfter: number | null;
   reference: string | null;
   note: string | null;
+  isReversal: boolean;
 };
 
 function numberOrNull(value: number | string | null | undefined) {
@@ -67,6 +68,7 @@ export async function fetchMaterialInventoryLedger(
     balanceAfter: numberOrNull(row.balance_after as number | string | null),
     reference: row.reference ? String(row.reference) : null,
     note: row.note ? String(row.note) : null,
+    isReversal: row.is_reversal === true,
   }));
 }
 

@@ -90,6 +90,17 @@ export async function fetchPackingStocktakes({
 }): Promise<{ items: PackingStocktakeItem[]; total: number }> {
   const start = (page - 1) * PACKING_STOCKTAKES_PAGE_SIZE;
   const end = start + PACKING_STOCKTAKES_PAGE_SIZE - 1;
+  const normalizedSearch = search.trim().replace(/[,%()]/g, " ").replace(/\s+/g, " ").trim();
+  let ingredientNameIds: string[] = [];
+  if (normalizedSearch) {
+    const { data: ingredientRows, error: ingredientError } = await supabase
+      .from("ingredients")
+      .select("id")
+      .or(`sku.ilike.%${normalizedSearch}%,name.ilike.%${normalizedSearch}%,ingredient_type.ilike.%${normalizedSearch}%`);
+    if (ingredientError) throw ingredientError;
+    ingredientNameIds = (ingredientRows ?? []).map((row) => String(row.id));
+  }
+
   let query = supabase
     .from(eventTable(kind))
     .select(
@@ -99,10 +110,14 @@ export async function fetchPackingStocktakes({
     .order("stocktake_at", { ascending: false, nullsFirst: false })
     .range(start, end);
 
-  const term = search.trim().replace(/[,%()]/g, " ").replace(/\s+/g, " ").trim();
-  if (term) {
+  if (normalizedSearch) {
+    const ingredientFilter = ingredientNameIds.length > 0
+      ? `ingredient_id.in.(${ingredientNameIds.join(",")})`
+      : null;
     query = query.or(
-      `sku_snapshot.ilike.%${term}%,ingredients.sku.ilike.%${term}%,ingredients.name.ilike.%${term}%,ingredients.ingredient_type.ilike.%${term}%`,
+      ingredientFilter
+        ? `sku_snapshot.ilike.%${normalizedSearch}%,${ingredientFilter}`
+        : `sku_snapshot.ilike.%${normalizedSearch}%`,
     );
   }
   if (stocktakeDate) {
