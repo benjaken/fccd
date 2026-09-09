@@ -123,6 +123,7 @@ const productDetail: ProductDetail = {
       name: "松露",
       ingredientType: "貴重食材",
       quantity: 1,
+      unit: "克",
       unitCost: 12,
     },
     {
@@ -131,6 +132,7 @@ const productDetail: ProductDetail = {
       name: "雙格紙盒",
       ingredientType: "包裝用品",
       quantity: 1,
+      unit: "個",
       unitCost: 2,
     },
   ],
@@ -170,7 +172,7 @@ const productEditOptions = {
   ],
   packingMaterials: [{ id: "pack-1", name: "紙盒" }],
   packingSupplies: [{ id: "packing-cup", name: "膠杯" }],
-  catalogIngredients: [{ id: "ing-x", name: "松露", legacyId: "legacy-ing-x" }],
+  catalogIngredients: [{ id: "ing-x", name: "松露", legacyId: "legacy-ing-x", unit: "克" }],
 };
 
 const packageResult: PackageListResult = {
@@ -734,6 +736,8 @@ describe("Products catalog pages", () => {
       .closest("article");
     expect(premiumCard).not.toBeNull();
     expect(packingCard).not.toBeNull();
+    expect(within(premiumCard!).getByRole("columnheader", { name: "單位" })).toBeInTheDocument();
+    expect(within(premiumCard!).getByText("克")).toBeInTheDocument();
     expect(within(premiumCard!).queryByText("雙格紙盒")).not.toBeInTheDocument();
     expect(within(packingCard!).getByText("雙格紙盒")).toBeInTheDocument();
     expect(within(labelCard!).queryByRole("columnheader", { name: "包裝" })).not.toBeInTheDocument();
@@ -921,7 +925,7 @@ describe("Products catalog pages", () => {
     const user = userEvent.setup();
     const addIngredient = vi.fn().mockResolvedValue(undefined);
     const searchIngredients = vi.fn().mockResolvedValue([
-      { id: "ing-coke", name: "可口可樂", sku: "COKE", legacyId: "legacy-coke" },
+      { id: "ing-coke", name: "可口可樂", sku: "COKE", legacyId: "legacy-coke", unit: "罐" },
     ]);
     const loadDetail = vi
       .fn()
@@ -935,6 +939,7 @@ describe("Products catalog pages", () => {
             ingredientId: "ing-coke",
             name: "可口可樂",
             quantity: 1,
+            unit: "罐",
             unitCost: 3.25,
           },
         ],
@@ -968,6 +973,8 @@ describe("Products catalog pages", () => {
       expect(searchIngredients).toHaveBeenCalledWith("可樂"),
     );
     await user.click(await screen.findByRole("option", { name: /可口可樂/ }));
+    const premiumCard = screen.getByRole("heading", { name: /燒雞 - 名貴食材/ }).closest("article");
+    expect(within(premiumCard!).getByLabelText("單位")).toHaveValue("罐");
     await user.click(screen.getByRole("button", { name: "添加食材" }));
 
     await waitFor(() =>
@@ -986,7 +993,7 @@ describe("Products catalog pages", () => {
         ...productDetail,
         premiumIngredients: [
           ...productDetail.premiumIngredients,
-          { id: "packing-2", ingredientId: "packing-cup", name: "膠杯", ingredientType: "包裝用品", quantity: 2, unitCost: 1 },
+          { id: "packing-2", ingredientId: "packing-cup", name: "膠杯", ingredientType: "包裝用品", quantity: 2, unit: "個", unitCost: 1 },
         ],
       });
 
@@ -1023,7 +1030,7 @@ describe("Catalog creation pages", () => {
     cookTypes: [{ id: "cook-1", name: "Roast" }],
     collections: [], packingMaterials: [{ id: "pack-1", name: "Paper box" }],
     packingSupplies: [{ id: "packing-cup", name: "Plastic cup" }],
-    catalogIngredients: [{ id: "ing-truffle", name: "Truffle" }],
+    catalogIngredients: [{ id: "ing-truffle", name: "Truffle", unit: "g" }],
   };
 
   it("creates a product with the detail-page fields and opens its detail", async () => {
@@ -1048,7 +1055,11 @@ describe("Catalog creation pages", () => {
     expect(screen.getByRole("heading", { name: /Packaging supplies/ })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /Label/ })).toBeInTheDocument();
     await user.selectOptions(screen.getByLabelText("Premium ingredients"), "ing-truffle");
+    expect(screen.getByLabelText("Unit")).toHaveValue("g");
     await user.click(screen.getByRole("button", { name: "Add ingredient" }));
+    const premiumCard = screen.getByRole("heading", { name: /Premium ingredients/ }).closest("article");
+    expect(within(premiumCard!).getByRole("columnheader", { name: "Unit" })).toBeInTheDocument();
+    expect(within(premiumCard!).getByText("g")).toBeInTheDocument();
     await user.selectOptions(screen.getByLabelText("Packaging supply"), "packing-cup");
     await user.click(screen.getByRole("button", { name: "Add packaging supply" }));
     await user.type(screen.getByLabelText("Display A"), "New product label");
