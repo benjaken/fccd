@@ -25,6 +25,19 @@ try {
     'test/sql/inventory-utensil-legacy-seed.sql',
     'supabase/migrations/20260909191000_reconcile_legacy_utensil_consumptions.sql',
     'test/sql/inventory-utensil-demand.sql',
+    'test/sql/inventory-countable-pack-seed.sql',
+    'test/sql/inventory-leftover-pack-seed.sql',
+    'supabase/migrations/20260909200000_countable_pack_child_unit_repair.sql',
+    'supabase/migrations/20260909210000_countable_unit_audit_repair.sql',
+    'test/sql/inventory-countable-toast-seed.sql',
+    'supabase/migrations/20260909220000_countable_toast_loaf_repair.sql',
+    'supabase/migrations/20260909230000_restore_pack_box_units_and_delivery_time.sql',
+    'supabase/migrations/20260909240000_hide_reversed_pack_consumptions.sql',
+    'test/sql/inventory-countable-pack-units.sql',
+    'supabase/migrations/20260909250000_forecast_unconsumed_window_deliveries.sql',
+    'test/sql/inventory-forecast-delivery-window.sql',
+    'supabase/migrations/20260909260000_restore_remaining_pack_stocktake_units.sql',
+    'test/sql/inventory-leftover-pack-units.sql',
   ]) {
     const sql = (await readFile(new URL(`../${file}`, import.meta.url), 'utf8'))
       .replace(/^\\set .*$/gm, '');

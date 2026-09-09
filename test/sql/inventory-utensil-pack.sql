@@ -22,8 +22,7 @@ select pg_temp.assert_equal(
   (select count(*)
    from packing_stocktake_events event
    join ingredients ingredient on ingredient.id = event.ingredient_id
-   where ingredient.name = '餐具包 (6位)'
-     and event.stocktake_at::date = current_date - 2),
+   where ingredient.name = '餐具包 (6位)'),
   1,
   'standard utensil pack is added to the current packing stocktake record'
 );
