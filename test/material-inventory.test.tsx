@@ -45,6 +45,7 @@ describe("material inventory ledger", () => {
     vi.mocked(fetchMaterialInventoryLedger).mockResolvedValue([{
       id: "movement-1", type: "consumption", occurredAt: "2026-09-08T02:00:00Z",
       quantity: -2, balanceAfter: 12, reference: "B#1001", note: "order_bom",
+      isReversal: false,
     }]);
     vi.mocked(correctMaterialCurrentStock).mockResolvedValue("correction-1");
   });
