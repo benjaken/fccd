@@ -33,6 +33,8 @@ try {
     'supabase/migrations/20260909230000_restore_pack_box_units_and_delivery_time.sql',
     'supabase/migrations/20260909240000_hide_reversed_pack_consumptions.sql',
     'test/sql/inventory-countable-pack-units.sql',
+    'supabase/migrations/20260909250000_forecast_unconsumed_window_deliveries.sql',
+    'test/sql/inventory-forecast-delivery-window.sql',
   ]) {
     const sql = (await readFile(new URL(`../${file}`, import.meta.url), 'utf8'))
       .replace(/^\\set .*$/gm, '');
