@@ -1,4 +1,4 @@
-# Internal Shopify/FCCD order reconciliation
+# Internal Shopify/FCCD order reconciliation and readiness audit
 
 This feature is internal-only. WhatsApp recipients are read from
 `order_first_notification_recipients`; email recipients are users with
@@ -18,9 +18,25 @@ month. Webhooks continue to provide near-real-time create/update/delete data.
 At or after 09:00, the notification worker creates one daily count and
 order-level reconciliation run.
 
-The worker also refreshes open issues every minute. An issue becomes urgent
-when its calculated factory/service time is within six hours. A newly found
-late order is notified immediately rather than waiting for the next daily run.
+That daily run also checks every active formal FCCD order for operational
+readiness:
+
+- Shopify order not yet formally entered in FCCD
+- missing delivery date or service time
+- sent order missing from the kitchen board (no delivery row on the same date)
+- delivery order without an assigned fleet/driver; pickup orders are excluded
+- 14-day ingredient and packing shortage, including incomplete BOM mappings
+
+The stock calculation includes catering orders and internal replenishment
+demand. Order BOM snapshots are preferred, with product/package recipes used
+as fallback. Each affected order is queued once per WhatsApp recipient per day;
+all open problems for that order are combined into `issue_summary`.
+
+The worker refreshes the existing reconciliation/urgent issues every minute;
+the heavier readiness and inventory audit runs once daily after 09:00. An
+existing reconciliation issue becomes urgent when its calculated
+factory/service time is within six hours. A newly found late order is notified
+immediately rather than waiting for the next daily run.
 Only the main Supabase branch runs the scheduled reconciliation and sends
 internal alerts. The develop branch has no reconciliation cron jobs, avoiding
 duplicate notifications. The worker also supports `mode: reconciliation_only`
@@ -44,6 +60,13 @@ the existing activation gate continues to protect every normal/customer run.
   unsent-factory warning.
 - `missing_service_time`: an affected order has a service date but no usable
   ship-out/delivery time.
+- `missing_delivery_date`: an active formal order has no delivery date.
+- `kitchen_not_visible`: an order marked sent to factory has no delivery row
+  on the same Hong Kong delivery date, so it cannot appear in the kitchen view.
+- `driver_unassigned`: a future delivery (excluding pickup) has no assigned
+  motorcade/driver team.
+- `insufficient_stock`: the order uses an ingredient or packing item that is
+  short within the 14-day aggregate forecast, or one of its lines has no BOM.
 
 Service time uses `factory_date + ship_out_time` first and falls back to
 `delivery_at + delivery_time`.
@@ -59,9 +82,9 @@ the issue.
 ## WATI templates
 
 WhatsApp sends one message per order. The daily email remains one aggregate
-message with separate `未入單` and `未傳送工場` sections. If one order has both
-issue types, the missing/import issue wins so the recipient does not receive two
-daily WATI messages for the same order.
+message with separate `未入單`, `未傳送工場`, and `訂單準備問題` sections. If
+one order has several issues, they are summarized in one daily WATI message so
+the recipient does not receive duplicates for the same order.
 
 These internal templates must be approved and configured before WhatsApp delivery:
 
@@ -73,6 +96,8 @@ These internal templates must be approved and configured before WhatsApp deliver
 - `WATI_ORDER_RECONCILIATION_CLEAR_BROADCAST_NAME`
 - `WATI_ORDER_RECONCILIATION_URGENT_TEMPLATE_NAME`
 - `WATI_ORDER_RECONCILIATION_URGENT_BROADCAST_NAME`
+- `WATI_ORDER_READINESS_ISSUE_TEMPLATE_NAME`
+- `WATI_ORDER_READINESS_ISSUE_BROADCAST_NAME`
 - `WATI_SHOPIFY_NEW_ORDER_TEMPLATE_NAME`
 - `WATI_SHOPIFY_NEW_ORDER_BROADCAST_NAME`
 
@@ -86,6 +111,30 @@ parameters, in order:
 5. `delivery_time`
 6. `delivery_address`
 7. `order_link`
+
+The readiness template uses these parameters, in order:
+
+1. `brand_name`
+2. `order_number`
+3. `customer_name`
+4. `delivery_date`
+5. `delivery_time`
+6. `issue_summary`
+7. `order_link`
+
+Recommended Utility template body for the readiness message:
+
+```text
+⚠️FCCD 訂單準備問題⚠️（內部通知）
+
+{{1}} 訂單 #{{2}} 需要跟進。
+客人：{{3}}
+配送日期：{{4}}
+配送時間：{{5}}
+問題：{{6}}
+
+FCCD 訂單連結：{{7}}
+```
 
 Suggested WATI approval samples:
 

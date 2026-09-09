@@ -30,6 +30,7 @@ export type ShopCatalogItem = {
   warehouse: ShopWarehouse;
   fccSupplierId: string | null;
   sortOrder: number;
+  minimumStockLevel: number | null;
 };
 
 export type ShopCatalogSupplier = {
@@ -133,6 +134,7 @@ type CatalogRow = {
   warehouse: ShopWarehouse;
   fcc_supplier_id: string | null;
   sort_order: number;
+  minimum_stock_level: number | string | null;
 };
 
 type ContactRow = {
@@ -220,6 +222,7 @@ function mapCatalog(row: CatalogRow): ShopCatalogItem {
     warehouse: row.warehouse,
     fccSupplierId: row.fcc_supplier_id,
     sortOrder: row.sort_order,
+    minimumStockLevel: row.minimum_stock_level == null ? null : Number(row.minimum_stock_level),
   };
 }
 
@@ -302,7 +305,7 @@ export function canRestaurantEditShopOrder(request: Pick<ShopOrderRequest, "chan
 export async function fetchShopCatalog() {
   const { data, error } = await supabase
     .from("shop_catalog_items")
-    .select("id,sku,name,unit,supplier_name,channel,warehouse,fcc_supplier_id,sort_order")
+    .select("id,sku,name,unit,supplier_name,channel,warehouse,fcc_supplier_id,sort_order,minimum_stock_level")
     .eq("is_active", true)
     .order("sort_order")
     .order("supplier_name")

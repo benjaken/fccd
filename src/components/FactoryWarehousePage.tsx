@@ -7,14 +7,14 @@ import { cn } from "@/lib/utils";
 
 const LINKS = [
   {
-    to: "/restaurant/ordering/inventory",
+    to: "/kitchen/inventory-records",
     key: "outbound",
     icon: PackageMinus,
     permission: "workspace.factory.warehouse.outbound",
     end: true,
   },
   {
-    to: "/restaurant/ordering/inventory/receipts",
+    to: "/kitchen/inventory-records/receipts",
     key: "inbound",
     icon: PackagePlus,
     permission: "workspace.factory.warehouse.inbound",

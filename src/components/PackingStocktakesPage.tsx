@@ -13,6 +13,7 @@ import { TablePagination } from "@/components/ui/table-pagination";
 import { Modal } from "@/components/ui/modal";
 import { hongKongDateKey } from "@/lib/date-time";
 import { writeStocktakePrintWindow } from "@/lib/stocktake-print";
+import { correctMaterialCurrentStock } from "@/lib/material-inventory";
 import { KITCHEN_INGREDIENT_STOCKTAKES_DELETE, KITCHEN_INGREDIENT_STOCKTAKES_EDIT, KITCHEN_PACKING_STOCKTAKES_DELETE, KITCHEN_PACKING_STOCKTAKES_EDIT } from "@/lib/kitchen-action-permissions";
 import {
   fetchPackingStocktakes,
@@ -30,7 +31,7 @@ import {
 
 const SKELETON_COLUMNS = [
   { width: "10rem" }, { width: "8rem" }, { width: "8rem" },
-  { width: "18rem" }, { width: "8rem" }, { width: "5rem" },
+  { width: "18rem" }, { width: "8rem" }, { width: "9rem" }, { width: "5rem" },
 ];
 
 function formatDate(value: string | null | undefined, locale: string) {
@@ -56,6 +57,20 @@ function formatQuantity(value: number | null, notCounted: string) {
   return value == null ? notCounted : new Intl.NumberFormat("zh-HK", { maximumFractionDigits: 3 }).format(value);
 }
 
+function StocktakeDateListSkeleton({ label }: { label: string }) {
+  return (
+    <div className="stocktake-date-list-options stocktake-date-list-skeleton" role="status" aria-label={label}>
+      <span className="sr-only">{label}</span>
+      {Array.from({ length: 10 }, (_, index) => (
+        <div className="stocktake-date-skeleton-row" aria-hidden="true" key={index}>
+          <span className="page-skeleton-bone" />
+          <span className="page-skeleton-bone" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function PackingStocktakesPage({
   loadRows,
   createStocktake,
@@ -63,6 +78,7 @@ export function PackingStocktakesPage({
   saveQuantity,
   loadDates,
   deleteDate,
+  correctCurrentStock = correctMaterialCurrentStock,
   canEdit: canEditProp,
   kind = "packing",
 }: {
@@ -72,6 +88,7 @@ export function PackingStocktakesPage({
   saveQuantity?: (id: string, quantity: number) => Promise<number>;
   loadDates?: () => Promise<StocktakeDateItem[]>;
   deleteDate?: (date: string) => Promise<void>;
+  correctCurrentStock?: typeof correctMaterialCurrentStock;
   canEdit?: boolean;
   kind?: StocktakeKind;
 }) {
@@ -111,6 +128,10 @@ export function PackingStocktakesPage({
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
   const [printLoading, setPrintLoading] = useState(false);
+  const [correctingRow, setCorrectingRow] = useState<PackingStocktakeItem | null>(null);
+  const [correctionQuantity, setCorrectionQuantity] = useState("");
+  const [correctionReason, setCorrectionReason] = useState("");
+  const [correcting, setCorrecting] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const toggleSidebar = () => setSidebarCollapsed((value) => !value);
   const totalPages = Math.max(1, Math.ceil(total / PACKING_STOCKTAKES_PAGE_SIZE));
@@ -210,10 +231,36 @@ export function PackingStocktakesPage({
     setSavingId(row.id); setError(null);
     try {
       const saved = await effectiveSaveQuantity(row.id, quantity);
-      setRows((current) => current.map((item) => item.id === row.id ? { ...item, quantity: saved } : item));
+      setRows((current) => current.map((item) => item.id === row.id ? {
+        ...item,
+        quantity: saved,
+        currentQuantity: item.currentStocktakeAt === item.stocktakeAt ? saved : item.currentQuantity,
+      } : item));
       setEditingId(null);
     } catch { setError("saveError"); }
     finally { setSavingId(null); }
+  };
+
+  const openCorrection = (row: PackingStocktakeItem) => {
+    setCorrectingRow(row);
+    setCorrectionQuantity(row.currentQuantity == null ? "" : String(row.currentQuantity));
+    setCorrectionReason("");
+    setError(null);
+  };
+
+  const saveCorrection = async () => {
+    if (!correctingRow || correcting) return;
+    const nextQuantity = Number(correctionQuantity);
+    if (!correctionQuantity.trim() || !Number.isFinite(nextQuantity) || nextQuantity < 0) {
+      setError("quantityInvalid"); return;
+    }
+    if (!correctionReason.trim()) { setError("correctionReasonRequired"); return; }
+    setCorrecting(true); setError(null);
+    try {
+      await correctCurrentStock({ kind, ingredientId: correctingRow.ingredientId ?? "", quantity: nextQuantity, reason: correctionReason });
+      setCorrectingRow(null); setReloadKey((value) => value + 1);
+    } catch { setError("correctionError"); }
+    finally { setCorrecting(false); }
   };
 
   return (
@@ -241,9 +288,11 @@ export function PackingStocktakesPage({
               <RecordSidebarToggle collapsed={sidebarCollapsed} onToggle={toggleSidebar} hideLabel={t("common.hideSidebar")} showLabel={t("common.showSidebar")} />
             </div>
           </header>
-          <div className="stocktake-date-list-options">
-            {datesLoading ? <span>{t(copyKey("loading"))}</span> : dates.length === 0 ? <span>{t(copyKey("noDates"))}</span> : dates.map((item) => <div key={item.date} className={item.date === stocktakeDate ? "stocktake-date-item is-active" : "stocktake-date-item"}><button type="button" data-stocktake-date={item.date} onClick={() => { setStocktakeDate(item.date); setPage(1); }}><strong>{formatDate(`${item.date}T00:00:00+08:00`, i18n.language)}</strong><small>{t(copyKey("updatedAt"), { time: formatDateTime(item.updatedAt, i18n.language) })}</small></button>{canDelete ? <Button type="button" variant="ghost" size="icon" disabled={deletingDate === item.date} aria-label={t(copyKey("deleteDate"), { date: formatDate(`${item.date}T00:00:00+08:00`, i18n.language) })} onClick={() => void removeDate(item.date)}><Trash2 /></Button> : null}</div>)}
-          </div>
+          {datesLoading ? <StocktakeDateListSkeleton label={t(copyKey("loading"))} /> : (
+            <div className="stocktake-date-list-options">
+              {dates.length === 0 ? <span>{t(copyKey("noDates"))}</span> : dates.map((item) => <div key={item.date} className={item.date === stocktakeDate ? "stocktake-date-item is-active" : "stocktake-date-item"}><button type="button" data-stocktake-date={item.date} onClick={() => { setStocktakeDate(item.date); setPage(1); }}><strong>{formatDate(`${item.date}T00:00:00+08:00`, i18n.language)}</strong><small>{t(copyKey("updatedAt"), { time: formatDateTime(item.updatedAt, i18n.language) })}</small></button>{canDelete ? <Button type="button" variant="ghost" size="icon" disabled={deletingDate === item.date} aria-label={t(copyKey("deleteDate"), { date: formatDate(`${item.date}T00:00:00+08:00`, i18n.language) })} onClick={() => void removeDate(item.date)}><Trash2 /></Button> : null}</div>)}
+            </div>
+          )}
         </CollapsibleRecordSidebar>
         <article className="panel ingredients-panel stocktake-records-panel">
         <div className="stocktake-records-content">
@@ -261,10 +310,10 @@ export function PackingStocktakesPage({
           <div className="products-state products-state-error"><div><strong>{t(copyKey("loadError"))}</strong><span>{t(copyKey("loadErrorDescription"))}</span></div><Button type="button" variant="outline" onClick={() => setReloadKey((value) => value + 1)}><RefreshCw />{t(copyKey("searchAction"))}</Button></div>
         ) : (
           <ListTable className="ingredients-table-wrap" onRefresh={() => setReloadKey((value) => value + 1)} loading={loading} loadingLabel={t(copyKey("loading"))} skeletonRows={PACKING_STOCKTAKES_PAGE_SIZE} skeletonColumns={SKELETON_COLUMNS}
-            header={<tr><th>{t(copyKey("columns.date"))}</th><th>{t(copyKey("columns.sku"))}</th><th>{t(copyKey("columns.type"))}</th><th>{t(copyKey("columns.name"))}</th><th>{t(copyKey("columns.quantity"))}</th><th>{t(copyKey("columns.unit"))}</th></tr>}>
+            header={<tr><th>{t(copyKey("columns.date"))}</th><th>{t(copyKey("columns.sku"))}</th><th>{t(copyKey("columns.type"))}</th><th>{t(copyKey("columns.name"))}</th><th>{t(copyKey("columns.quantity"))}</th><th>{t(copyKey("columns.currentQuantity"))}</th><th>{t(copyKey("columns.unit"))}</th></tr>}>
             {rows.map((row) => <tr key={row.id}><td>{formatDate(row.stocktakeAt, i18n.language)}</td><td>{row.sku || "—"}</td><td>{row.ingredientType || "—"}</td><td><strong>{row.name || "—"}</strong></td><td>
               {editingId === row.id ? <input autoFocus className="stocktake-quantity-input" type="number" min="0" step="0.001" value={draftQuantity} disabled={savingId === row.id} aria-label={t(copyKey("editQuantity"), { item: row.name ?? row.sku ?? "" })} onChange={(event) => setDraftQuantity(event.target.value)} onBlur={() => void save(row)} onKeyDown={(event) => { if (event.key === "Enter") event.currentTarget.blur(); if (event.key === "Escape") setEditingId(null); }} /> : <button type="button" className="stocktake-quantity-value" disabled={!canEdit} onClick={() => beginEdit(row)} aria-label={t(copyKey("editQuantity"), { item: row.name ?? row.sku ?? "" })}>{formatQuantity(row.quantity, t(copyKey("notCounted")))}</button>}
-            </td><td>{row.unit || "—"}</td></tr>)}
+            </td><td><span className="flex flex-col items-start tabular-nums"><strong>{formatQuantity(row.currentQuantity, t(copyKey("notCounted")))}</strong>{row.currentStocktakeAt ? <small className="text-slate-500">{t(copyKey("currentAsOf"), { date: formatDate(row.currentStocktakeAt, i18n.language) })}</small> : null}{canEdit && row.ingredientId ? <button type="button" className="mt-1 cursor-pointer text-xs font-semibold text-primary hover:underline" onClick={() => openCorrection(row)}>{t(copyKey("correctCurrent"))}</button> : null}</span></td><td>{row.unit || "—"}</td></tr>)}
           </ListTable>
         )}
         {!loading && !error && total > 0 ? <TablePagination summary={t(copyKey("pagination"), { from: visibleFrom, to: visibleTo, total })} page={page} totalPages={totalPages} loading={loading} onPrevious={() => setPage((current) => Math.max(1, current - 1))} onNext={() => setPage((current) => Math.min(totalPages, current + 1))} onPageChange={setPage} previousLabel={t(copyKey("previous"))} nextLabel={t(copyKey("next"))} pageLabel={t(copyKey("pageOf"))} jumpLabel={t(copyKey("jumpToPage"))} /> : null}
@@ -275,6 +324,13 @@ export function PackingStocktakesPage({
       <Modal open={createOpen} title={t(copyKey("createTitle"))} description={t(copyKey("createDescription"))} onClose={() => !creating && setCreateOpen(false)} closeLabel={t(copyKey("closePanel"))} size="sm" footer={<><Button type="button" variant="outline" disabled={creating} onClick={() => setCreateOpen(false)}>{t(copyKey("cancel"))}</Button><Button type="button" disabled={!newDate || creating} onClick={() => void createForDate()}>{creating ? t(copyKey("checking")) : t(copyKey("continueAction"))}</Button></>}>
         <label className="ingredients-field"><span>{t(copyKey("stocktakeDate"))}</span><input type="date" value={newDate} onChange={(event) => setNewDate(event.target.value)} /></label>
         {createError ? <p className="list-inline-error">{t(copyKey(createError))}</p> : null}
+      </Modal>
+      <Modal open={correctingRow !== null} title={t(copyKey("correctionTitle"), { item: correctingRow?.name ?? correctingRow?.sku ?? "" })} description={t(copyKey("correctionDescription"))} onClose={() => !correcting && setCorrectingRow(null)} closeLabel={t(copyKey("closePanel"))} size="sm" footer={<><Button type="button" variant="outline" disabled={correcting} onClick={() => setCorrectingRow(null)}>{t(copyKey("cancel"))}</Button><Button type="button" disabled={correcting} onClick={() => void saveCorrection()}>{t(copyKey("saveCorrection"))}</Button></>}>
+        <div className="grid gap-4">
+          <label className="ingredients-field"><span>{t(copyKey("correctionQuantity"))}</span><input type="number" min="0" step="0.001" value={correctionQuantity} onChange={(event) => setCorrectionQuantity(event.target.value)} /></label>
+          <label className="ingredients-field"><span>{t(copyKey("correctionReason"))}</span><input value={correctionReason} onChange={(event) => setCorrectionReason(event.target.value)} /></label>
+          {error && ["quantityInvalid", "correctionReasonRequired", "correctionError"].includes(error) ? <p className="list-inline-error" role="alert">{t(copyKey(error))}</p> : null}
+        </div>
       </Modal>
     </section>
   );

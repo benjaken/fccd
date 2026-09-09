@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import type { MaterialInventoryKind } from "@/lib/material-inventory";
 
 const HONG_KONG_TIME_ZONE = "Asia/Hong_Kong";
 const QUERY_PAGE_SIZE = 1_000;
@@ -11,6 +12,8 @@ export type KitchenMaterialUsageDetail = {
   deliveryAt: string | null;
   productQuantity: number | null;
   quantity: number;
+  orderNumber?: string | null;
+  demandSource?: "catering" | "restaurant";
 };
 
 export type KitchenMaterialUsageRow = {
@@ -26,6 +29,7 @@ export type KitchenMaterialUsageRow = {
 
 export type KitchenMaterialUsageReport = {
   rows: KitchenMaterialUsageRow[];
+  kind: MaterialInventoryKind;
   stocktakeDate: string;
   usageStartDate: string;
   usageEndDate: string;
@@ -36,6 +40,8 @@ type IngredientRow = {
   name: string | null;
   sku: string | null;
   stocktake_unit: string | null;
+  is_ingredient_stocktake?: boolean | null;
+  is_packing_stocktake?: boolean | null;
 };
 
 type ProductRow = { id: string; name: string | null; sku: string | null };
@@ -54,6 +60,10 @@ type BomRow = {
   calculated_quantity: number | string | null;
   ingredient_quantity: number | string | null;
   product_quantity: number | string | null;
+  product_name?: string | null;
+  product_sku?: string | null;
+  order_number?: string | null;
+  demand_source?: "catering" | "restaurant";
 };
 
 type UsageSource = {
@@ -108,7 +118,8 @@ export function hongKongDateKey(value: Date | string = new Date()) {
 
 export function buildKitchenMaterialUsageReport(
   source: UsageSource,
-  selection: Pick<KitchenMaterialUsageReport, "stocktakeDate" | "usageStartDate" | "usageEndDate">,
+  selection: Pick<KitchenMaterialUsageReport, "stocktakeDate" | "usageStartDate" | "usageEndDate">
+    & Partial<Pick<KitchenMaterialUsageReport, "kind">>,
 ): KitchenMaterialUsageReport {
   const ingredients = new Map(source.ingredients.map((ingredient) => [ingredient.id, ingredient]));
   const products = new Map(source.products.map((product) => [product.id, product]));
@@ -166,12 +177,14 @@ export function buildKitchenMaterialUsageReport(
     row.estimatedUsage += quantity;
     row.details.push({
       id: line.id,
-      productName: product?.name ?? null,
-      productSku: product?.sku ?? null,
+      productName: line.product_name ?? product?.name ?? null,
+      productSku: line.product_sku ?? product?.sku ?? null,
       orderId: line.order_id,
       deliveryAt: line.delivery_at,
       productQuantity: numberOrNull(line.product_quantity),
       quantity,
+      orderNumber: line.order_number ?? null,
+      demandSource: line.demand_source ?? "catering",
     });
   }
 
@@ -194,19 +207,19 @@ export function buildKitchenMaterialUsageReport(
       return 0;
     });
 
-  return { ...selection, rows: resultRows };
+  return { ...selection, kind: selection.kind ?? "ingredient", rows: resultRows };
 }
 
-async function fetchAllBomLines(start: string, end: string): Promise<BomRow[]> {
+async function fetchAllDemandLines(kind: MaterialInventoryKind, start: string, end: string): Promise<BomRow[]> {
   const rows: BomRow[] = [];
   for (let offset = 0; ; offset += QUERY_PAGE_SIZE) {
     const { data, error } = await supabase
-      .from("order_bom_requirements")
-      .select("id,ingredient_id,product_id,order_id,delivery_at,calculated_quantity,ingredient_quantity,product_quantity")
-      .not("ingredient_id", "is", null)
-      .gte("delivery_at", start)
-      .lt("delivery_at", end)
+      .rpc("material_usage_forecast_lines", {
+        p_kind: kind, p_start_date: start, p_end_date: end,
+      })
       .order("delivery_at", { ascending: true, nullsFirst: false })
+      .order("id", { ascending: true })
+      .order("ingredient_id", { ascending: true })
       .range(offset, offset + QUERY_PAGE_SIZE - 1);
     if (error) throw error;
     const page = (data ?? []) as BomRow[];
@@ -245,40 +258,40 @@ export async function fetchLatestIngredientStocktakeDate() {
 }
 
 export async function fetchKitchenMaterialUsageReport({
+  kind = "ingredient",
   stocktakeDate,
   usageStartDate,
   usageEndDate,
-}: Pick<KitchenMaterialUsageReport, "stocktakeDate" | "usageStartDate" | "usageEndDate">): Promise<KitchenMaterialUsageReport> {
+}: Pick<KitchenMaterialUsageReport, "stocktakeDate" | "usageStartDate" | "usageEndDate">
+  & Partial<Pick<KitchenMaterialUsageReport, "kind">>): Promise<KitchenMaterialUsageReport> {
   const usageEnd = usageEndDate < usageStartDate ? usageStartDate : usageEndDate;
-  const stocktakeBounds = hongKongDateBounds(stocktakeDate);
-  const usageBounds = hongKongDateBounds(usageEnd);
-  const [bomLines, stocktakeResult] = await Promise.all([
-    fetchAllBomLines(hongKongDateBounds(usageStartDate).start, usageBounds.end),
-    supabase
-      .from("ingredient_stocktake_events")
-      .select("ingredient_id,quantity")
-      .gte("stocktake_at", stocktakeBounds.start)
-      .lt("stocktake_at", stocktakeBounds.end),
-  ]);
-  if (stocktakeResult.error) throw stocktakeResult.error;
+  const bomLines = await fetchAllDemandLines(kind, usageStartDate, usageEnd);
 
-  const ingredientIds = [...new Set([
-    ...bomLines.map((line) => line.ingredient_id),
-    ...((stocktakeResult.data ?? []) as StocktakeRow[]).map((row) => row.ingredient_id),
-  ].filter((id): id is string => Boolean(id)))];
+  const ingredientIds = [...new Set(bomLines.map((line) => line.ingredient_id)
+    .filter((id): id is string => Boolean(id)))];
   const productIds = [...new Set(bomLines.map((line) => line.product_id).filter((id): id is string => Boolean(id)))];
-  const [ingredients, products] = await Promise.all([
-    fetchRowsByIds<IngredientRow>("ingredients", "id,name,sku,stocktake_unit", ingredientIds),
+  const [allIngredients, products] = await Promise.all([
+    fetchRowsByIds<IngredientRow>("ingredients", "id,name,sku,stocktake_unit,is_ingredient_stocktake,is_packing_stocktake", ingredientIds),
     fetchRowsByIds<ProductRow>("products", "id,name,sku", productIds),
   ]);
+  const ingredients = allIngredients.filter((ingredient) => kind === "ingredient"
+    ? ingredient.is_ingredient_stocktake
+    : ingredient.is_packing_stocktake);
+  const eligibleIds = new Set(ingredients.map((ingredient) => ingredient.id));
+  const eligibleBomLines = bomLines.filter((line) => line.ingredient_id && eligibleIds.has(line.ingredient_id));
+  const { data: currentStock, error: currentStockError } = await supabase.rpc(
+    "get_material_current_stock",
+    { p_kind: kind, p_ingredient_ids: [...eligibleIds] },
+  );
+  if (currentStockError) throw currentStockError;
 
   return buildKitchenMaterialUsageReport(
     {
       ingredients,
       products,
-      stocktakes: (stocktakeResult.data ?? []) as StocktakeRow[],
-      bomLines,
+      stocktakes: ((currentStock ?? []) as Array<{ ingredient_id: string | null; quantity: number | string | null }>),
+      bomLines: eligibleBomLines,
     },
-    { stocktakeDate, usageStartDate, usageEndDate: usageEnd },
+    { kind, stocktakeDate, usageStartDate, usageEndDate: usageEnd },
   );
 }

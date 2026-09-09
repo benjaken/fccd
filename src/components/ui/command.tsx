@@ -39,11 +39,29 @@ CommandInput.displayName = CommandPrimitive.Input.displayName;
 const CommandList = React.forwardRef<
   React.ElementRef<typeof CommandPrimitive.List>,
   React.ComponentPropsWithoutRef<typeof CommandPrimitive.List>
->(({ className, ...props }, ref) => (
+>(({ className, onWheel, ...props }, ref) => (
   <CommandPrimitive.List
     ref={ref}
     data-slot="command-list"
-    className={cn("max-h-[260px] overflow-y-auto overflow-x-hidden", className)}
+    className={cn(
+      "max-h-[260px] touch-pan-y overflow-y-auto overflow-x-hidden overscroll-contain [scrollbar-gutter:stable]",
+      className,
+    )}
+    onWheel={(event) => {
+      onWheel?.(event);
+      if (event.defaultPrevented) return;
+
+      const list = event.currentTarget;
+      if (list.scrollHeight <= list.clientHeight) return;
+      event.preventDefault();
+      event.stopPropagation();
+      const multiplier = event.deltaMode === 1
+        ? 16
+        : event.deltaMode === 2
+          ? list.clientHeight
+          : 1;
+      list.scrollTop += event.deltaY * multiplier;
+    }}
     {...props}
   />
 ));

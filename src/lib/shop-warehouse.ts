@@ -17,6 +17,11 @@ export const FACTORY_WAREHOUSE_VISIBLE_STATUSES = [
 
 export type ShopStockWarning = "ok" | "missing" | "low" | "unmapped";
 
+export type InventoryShortageNotificationControl = {
+  enabled: boolean;
+  updatedAt: string | null;
+};
+
 export type ShopWarehouseReceipt = {
   id: string;
   receiptNo: string;
@@ -139,6 +144,7 @@ export async function fetchShopWarehouseReceipts() {
     .select(
       "id,receipt_no,warehouse,name,unit,sku,quantity,source_name,batch_no,receipt_date,stock_warning,created_at",
     )
+    .eq("warehouse", "dry")
     .order("created_at", { ascending: false });
   if (error) throw error;
   return ((data ?? []) as ReceiptRow[]).map((row) => ({
@@ -226,6 +232,9 @@ export async function recordShopWarehouseReceipt(input: {
   batchNo?: string;
   idempotencyKey: string;
 }) {
+  if (input.catalogItem.warehouse !== "dry") {
+    throw new Error("Only dry-goods catalog items can be received through warehouse inbound.");
+  }
   const { data, error } = await supabase.rpc("record_shop_warehouse_receipt", {
     p_catalog_item_id: input.catalogItem.id,
     p_quantity: input.quantity,
@@ -237,6 +246,33 @@ export async function recordShopWarehouseReceipt(input: {
   });
   if (error) throw error;
   return data as { id: string; receiptNo: string; warning: ShopStockWarning; replayed: boolean };
+}
+
+export async function setShopCatalogMinimumStock(catalogItemId: string, minimumStockLevel: number) {
+  const { data, error } = await supabase.rpc("set_shop_catalog_minimum_stock", {
+    p_catalog_item_id: catalogItemId,
+    p_minimum_stock_level: minimumStockLevel,
+  });
+  if (error) throw error;
+  return Number(data);
+}
+
+export async function fetchInventoryShortageNotificationControl(): Promise<InventoryShortageNotificationControl> {
+  const { data, error } = await supabase.rpc("get_inventory_shortage_notification_control");
+  if (error) throw error;
+  const row = Array.isArray(data) ? data[0] : data;
+  return {
+    enabled: Boolean(row?.enabled),
+    updatedAt: row?.updated_at ?? null,
+  };
+}
+
+export async function setInventoryShortageNotificationsEnabled(enabled: boolean) {
+  const { data, error } = await supabase.rpc("set_inventory_shortage_notifications_enabled", {
+    p_enabled: enabled,
+  });
+  if (error) throw error;
+  return Boolean(data);
 }
 
 export async function shipShopOrderRequest(

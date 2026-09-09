@@ -103,6 +103,7 @@ function IngredientFormPanel({
   const [productQuantity, setProductQuantity] = useState("");
   const [costPerProductUnit, setCostPerProductUnit] = useState("");
   const [costPerStocktakeUnit, setCostPerStocktakeUnit] = useState("");
+  const [minimumStockLevel, setMinimumStockLevel] = useState("");
   const [supplierId, setSupplierId] = useState("");
   const [isActive, setIsActive] = useState(true);
   const [isIngredientStocktake, setIsIngredientStocktake] = useState(false);
@@ -134,6 +135,9 @@ function IngredientFormPanel({
       ingredient?.costPerStocktakeUnit != null
         ? String(ingredient.costPerStocktakeUnit)
         : "",
+    );
+    setMinimumStockLevel(
+      ingredient?.minimumStockLevel != null ? String(ingredient.minimumStockLevel) : "",
     );
     setSupplierId(ingredient?.supplierId ?? "");
     setIsActive(ingredient?.isActive ?? true);
@@ -177,6 +181,7 @@ function IngredientFormPanel({
       productQuantity: parseOptionalNumber(productQuantity),
       costPerProductUnit: parseOptionalNumber(costPerProductUnit),
       costPerStocktakeUnit: parseOptionalNumber(costPerStocktakeUnit),
+      minimumStockLevel: parseOptionalNumber(minimumStockLevel),
       supplierId: supplierId || null,
       isActive,
       isIngredientStocktake,
@@ -333,6 +338,23 @@ function IngredientFormPanel({
               value={costPerStocktakeUnit}
               onChange={(event) => setCostPerStocktakeUnit(event.target.value)}
               placeholder={t("ingredients.fields.costPlaceholder")}
+            />
+            <span className="ingredients-input-suffix-text">
+              {stocktakeUnit || t("ingredients.fields.unitPlaceholder")}
+            </span>
+          </div>
+        </label>
+        <label className="ingredients-field">
+          <span>{t("ingredients.fields.minimumStockLevel")}</span>
+          <div className="ingredients-input-suffix">
+            <input
+              type="number"
+              inputMode="decimal"
+              min="0"
+              step="0.001"
+              value={minimumStockLevel}
+              onChange={(event) => setMinimumStockLevel(event.target.value)}
+              placeholder={t("ingredients.fields.minimumStockPlaceholder")}
             />
             <span className="ingredients-input-suffix-text">
               {stocktakeUnit || t("ingredients.fields.unitPlaceholder")}

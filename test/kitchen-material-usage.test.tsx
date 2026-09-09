@@ -158,7 +158,6 @@ describe("kitchen material usage", () => {
     let loadReportCalls = 0;
     render(
       <KitchenMaterialUsagePage
-        loadStocktakeDates={async () => [{ date: "2026-08-20", updatedAt: "2026-08-20T00:00:00Z" }]}
         loadReport={async (selection) => {
           loadReportCalls += 1;
           return {
@@ -203,19 +202,16 @@ describe("kitchen material usage", () => {
       />,
     );
 
-    const stocktakeSelect = screen.getAllByRole("combobox")[0];
-    await waitFor(() => expect(stocktakeSelect).toBeEnabled());
-    expect(stocktakeSelect).toHaveValue("");
     expect(loadReportCalls).toBe(0);
     expect(screen.queryByText("番茄")).not.toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "食材" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("tab", { name: "包裝" })).toBeInTheDocument();
 
     const usageDate = screen.getByRole("combobox", { name: "預計用量日期" });
     expect(usageDate).toHaveValue("");
-    await user.selectOptions(stocktakeSelect, "2026-08-20");
     await selectDate(user, usageDate, "2026-08-20");
     await waitFor(() => expect(screen.getByText("番茄")).toBeInTheDocument());
-    expect(stocktakeSelect).toHaveValue("2026-08-20");
-    const usageMode = screen.getAllByRole("combobox")[1];
+    const usageMode = screen.getByRole("combobox", { name: "預計用量" });
     expect(usageMode).toHaveValue("single");
     expect(screen.getByText("12 kg")).toBeInTheDocument();
     expect(screen.getAllByText("11.5 kg")).toHaveLength(1);
@@ -234,6 +230,10 @@ describe("kitchen material usage", () => {
     expect(screen.getByRole("group", { name: "預計用量日期範圍" })).toBeInTheDocument();
     await user.selectOptions(usageMode, "single");
     expect(screen.getByRole("combobox", { name: "預計用量日期" })).toBeInTheDocument();
+
+    const callsBeforePackagingTab = loadReportCalls;
+    await user.click(screen.getByRole("tab", { name: "包裝" }));
+    await waitFor(() => expect(loadReportCalls).toBe(callsBeforePackagingTab + 1));
 
   });
 });

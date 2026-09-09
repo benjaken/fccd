@@ -9,6 +9,7 @@ import {
   isPrimaryNavActive,
   isSecondaryNavItemActive,
   primaryNav,
+  sidebarAccordionExpansion,
   sectionFromPath,
 } from "@/lib/nav";
 import {
@@ -18,6 +19,35 @@ import {
 } from "@/auth/use-page-access";
 
 describe("Primary navigation section matching", () => {
+  it("keeps only one sidebar group expanded at each level", () => {
+    expect(
+      sidebarAccordionExpansion(
+        {
+          "root/orders": true,
+          "root/allQuotes": true,
+          "root/orders/settings": true,
+        },
+        "root/delivery",
+        "root",
+        false,
+      ),
+    ).toEqual({
+      "root/orders/settings": true,
+      "root/delivery": true,
+    });
+  });
+
+  it("collapses the current sidebar group when toggled again", () => {
+    expect(
+      sidebarAccordionExpansion(
+        { "root/delivery": true },
+        "root/delivery",
+        "root",
+        true,
+      ),
+    ).toEqual({ "root/delivery": false });
+  });
+
   it("keeps the business menu invoice and every order setting as leaf links", () => {
     const leaves = flattenVisibleNavItems(
       businessSidebarNav("catering", "orders"),
@@ -146,6 +176,8 @@ describe("Primary navigation section matching", () => {
     ["/kitchen", "kitchen"],
     ["/kitchen/calendar", "kitchen"],
     ["/kitchen/settings", "kitchen"],
+    ["/kitchen/inventory-records", "kitchen"],
+    ["/kitchen/inventory-records/receipts", "kitchen"],
     ["/delivery", "delivery"],
     ["/delivery/assign", "delivery"],
     ["/restaurant", "restaurant"],
@@ -338,6 +370,26 @@ describe("Primary navigation section matching", () => {
       "workspace.delivery.settings",
     );
     expect(pageAccessKey("/customer")).toBe("workspace.customer.portal");
+  });
+
+  it("orders the Central Kitchen submenu and excludes kitchen orders", () => {
+    const items = businessSidebarNav("catering", "kitchen");
+    const kitchen = items.find((item) => item.key === "kitchen");
+
+    expect(kitchen?.children?.map((item) => item.key)).toEqual([
+      "ingredients",
+      "materialInventory",
+      "inventoryRecords",
+      "ingredientStocktakes",
+      "packingStocktakes",
+      "kitchenMaterialUsage",
+      "suppliers",
+      "dataInputProgress",
+      "operationsExpenseInput",
+      "purchaseExpenseInput",
+    ]);
+    expect(pageAccessKey("/kitchen/inventory-records")).toBe("workspace.factory.warehouse.outbound");
+    expect(pageAccessKey("/kitchen/inventory-records/receipts")).toBe("workspace.factory.warehouse.inbound");
   });
 
   it("registers order settings before the order detail route", () => {

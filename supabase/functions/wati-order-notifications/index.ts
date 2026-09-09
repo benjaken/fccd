@@ -50,7 +50,15 @@ type DriverAssignmentReminderJob = {
 };
 type ReconciliationIssueRow = {
   id: string;
-  issue_type: "missing_fccd" | "unlinked_fccd" | "factory_unsent" | "missing_service_time";
+  issue_type:
+    | "missing_fccd"
+    | "unlinked_fccd"
+    | "factory_unsent"
+    | "missing_service_time"
+    | "missing_delivery_date"
+    | "kitchen_not_visible"
+    | "driver_unassigned"
+    | "insufficient_stock";
   severity: "normal" | "important" | "urgent";
   status: "open" | "resolved";
   service_at: string | null;
@@ -372,7 +380,53 @@ function reconciliationIssueLabel(issueType: ReconciliationIssueRow["issue_type"
     case "unlinked_fccd": return "FCCD訂單尚未連結Shopify";
     case "factory_unsent": return "訂單尚未傳送廚房";
     case "missing_service_time": return "訂單缺少出餐時間";
+    case "missing_delivery_date": return "沒有安排配送日期";
+    case "kitchen_not_visible": return "廚房版面沒有顯示";
+    case "driver_unassigned": return "沒有安排司機";
+    case "insufficient_stock": return "存貨不足或物料設定不完整";
   }
+}
+
+function reconciliationIssueSummary(issues: ReconciliationIssueRow[]) {
+  return [...new Set(issues.map((issue) => {
+    if (issue.issue_type !== "insufficient_stock") {
+      return reconciliationIssueLabel(issue.issue_type);
+    }
+    const shortageItems = Array.isArray(issue.metadata?.shortageItems)
+      ? issue.metadata.shortageItems
+      : [];
+    const names = shortageItems.flatMap((item) => {
+      if (!item || typeof item !== "object") return [];
+      const name = (item as Record<string, unknown>).name;
+      return typeof name === "string" && name.trim() ? [name.trim()] : [];
+    }).slice(0, 5);
+    const unmapped = Number(issue.metadata?.unmappedLineCount || 0);
+    const detail = [
+      names.length ? `短缺：${names.join("、")}` : "",
+      unmapped > 0 ? `${unmapped}項未設定物料` : "",
+    ].filter(Boolean).join("；");
+    return detail || reconciliationIssueLabel(issue.issue_type);
+  }))]
+    .join("、");
+}
+
+function readinessOrderWatiParameters(
+  order: OrderRow,
+  issues: ReconciliationIssueRow[],
+) {
+  const values = internalValues(order, "同事");
+  return [
+    { name: "brand_name", value: internalOrderBrandName(order) },
+    { name: "order_number", value: values.order_number.replace(/^#+\s*/, "") },
+    { name: "customer_name", value: values.customer_name },
+    { name: "delivery_date", value: values.delivery_date },
+    { name: "delivery_time", value: values.delivery_time },
+    { name: "issue_summary", value: reconciliationIssueSummary(issues) },
+    { name: "order_link", value: values.order_link },
+  ].map((parameter) => ({
+    ...parameter,
+    value: internalWatiParameterValue(parameter.value),
+  }));
 }
 
 function reconciliationOrder(issue: ReconciliationIssueRow) {
@@ -435,8 +489,15 @@ function reconciliationIssueGroups(issues: ReconciliationIssueRow[]) {
     });
   };
   return {
-    missing: uniqueOrders(sorted.filter((issue) => issue.issue_type !== "factory_unsent")),
+    missing: uniqueOrders(sorted.filter((issue) =>
+      issue.issue_type === "missing_fccd" || issue.issue_type === "unlinked_fccd"
+    )),
     factoryUnsent: uniqueOrders(sorted.filter((issue) => issue.issue_type === "factory_unsent")),
+    readiness: uniqueOrders(sorted.filter((issue) => ![
+      "missing_fccd",
+      "unlinked_fccd",
+      "factory_unsent",
+    ].includes(issue.issue_type))),
   };
 }
 
@@ -445,6 +506,7 @@ function reconciliationEmailOrder(issue: ReconciliationIssueRow) {
   const link = reconciliationOrderLink(issue);
   return `<li style="margin:0 0 14px">
     <strong>${escapeHtml(order?.order_number?.trim() || String(issue.metadata?.orderNumber || "未編號訂單"))}</strong><br>
+    問題：${escapeHtml(reconciliationIssueLabel(issue.issue_type))}<br>
     送貨日期：${escapeHtml(reconciliationDeliveryDate(issue))}<br>
     送貨時間：${escapeHtml(order?.delivery_time?.trim() || "未設定")}<br>
     客人姓名：${escapeHtml(order?.customer_name_snapshot?.trim() || order?.company_name_snapshot?.trim() || "未設定")}<br>
@@ -475,7 +537,7 @@ function reconciliationEmailContent(input: {
       html: `<div style="font-family:Arial,sans-serif;line-height:1.6">
         <p>${escapeHtml(input.recipientName)}：</p>
         <h2>🎉 今日訂單核對完成！</h2>
-        <p>今日沒有「未入單」或「未傳送工場」的訂單需要跟進，一切正常，祝工作順利！</p>
+        <p>今日沒有未入單、日期、廚房顯示、司機或存貨問題需要跟進，一切正常，祝工作順利！</p>
       </div>`,
     };
   }
@@ -489,7 +551,9 @@ function reconciliationEmailContent(input: {
   const dailySections = `<h3>【未入單】</h3>
     ${groups.missing.length ? `<ul>${groups.missing.map(reconciliationEmailOrder).join("")}</ul>` : "<p>沒有</p>"}
     <h3>【未傳送工場】</h3>
-    ${groups.factoryUnsent.length ? `<ul>${groups.factoryUnsent.map(reconciliationEmailOrder).join("")}</ul>` : "<p>沒有</p>"}`;
+    ${groups.factoryUnsent.length ? `<ul>${groups.factoryUnsent.map(reconciliationEmailOrder).join("")}</ul>` : "<p>沒有</p>"}
+    <h3>【訂單準備問題】</h3>
+    ${groups.readiness.length ? `<ul>${groups.readiness.map(reconciliationEmailOrder).join("")}</ul>` : "<p>沒有</p>"}`;
   return {
     subject,
     html: `<div style="font-family:Arial,sans-serif;line-height:1.6">
@@ -673,6 +737,14 @@ Deno.serve(async (request) => {
       "delivery_today_reminder",
       "pickup_today_reminder",
     ]);
+
+    const { error: readinessRefreshError } = await admin.rpc(
+      "refresh_order_readiness_issues",
+      { p_now: nowIso },
+    );
+    if (readinessRefreshError && readinessRefreshError.code !== "PGRST202") {
+      throw new Error(`order_readiness_refresh_failed:${readinessRefreshError.message}`);
+    }
 
     const { error: reconciliationRefreshError } = await admin.rpc(
       "refresh_order_reconciliation",
@@ -1223,7 +1295,7 @@ Deno.serve(async (request) => {
             .eq("status", "open")
             .order("severity", { ascending: false })
             .order("service_at", { ascending: true, nullsFirst: false })
-            .limit(100),
+            .limit(1000),
         ]);
       if (runError) throw new Error(`order_reconciliation_run_load_failed:${runError.message}`);
       if (issueError) throw new Error(`order_reconciliation_issue_load_failed:${issueError.message}`);
@@ -1236,8 +1308,17 @@ Deno.serve(async (request) => {
       const issue = loadedIssue?.status === "open" ? loadedIssue : null;
       const directOrder = relation<OrderRow>(job.direct_order);
       const shopifyImported = job.event_key === "shopify_order_imported";
+      const dailyOrderIssues = directOrder?.id
+        ? dailyIssues.filter((candidate) =>
+          reconciliationOrder(candidate)?.id === directOrder.id
+        )
+        : [];
       const issues = job.event_key === "daily_reconciliation"
-        ? job.channel === "email" ? dailyIssues : issue ? [issue] : []
+        ? job.channel === "email"
+          ? dailyIssues
+          : directOrder?.id
+            ? dailyOrderIssues.length ? dailyOrderIssues : issue ? [issue] : []
+            : issue ? [issue] : []
         : issue ? [issue] : [];
       if (shopifyImported && (!directOrder || job.channel !== "whatsapp")) {
         await admin.from("order_reconciliation_alert_outbox").update({
@@ -1308,9 +1389,18 @@ Deno.serve(async (request) => {
           } else {
           const daily = job.event_key === "daily_reconciliation";
           const clear = daily && issues.length === 0;
-          const factoryUnsent = daily && issues[0]?.issue_type === "factory_unsent";
+          const readiness = daily && issues.some((candidate) => [
+            "missing_delivery_date",
+            "kitchen_not_visible",
+            "driver_unassigned",
+            "insufficient_stock",
+          ].includes(candidate.issue_type));
+          const factoryUnsent = daily && !readiness
+            && issues[0]?.issue_type === "factory_unsent";
           const templateName = Deno.env.get(clear
             ? "WATI_ORDER_RECONCILIATION_CLEAR_TEMPLATE_NAME"
+            : readiness
+              ? "WATI_ORDER_READINESS_ISSUE_TEMPLATE_NAME"
             : factoryUnsent
               ? "WATI_ORDER_RECONCILIATION_FACTORY_UNSENT_TEMPLATE_NAME"
               : daily
@@ -1318,6 +1408,8 @@ Deno.serve(async (request) => {
                 : "WATI_ORDER_RECONCILIATION_URGENT_TEMPLATE_NAME")?.trim();
           const broadcastName = Deno.env.get(clear
             ? "WATI_ORDER_RECONCILIATION_CLEAR_BROADCAST_NAME"
+            : readiness
+              ? "WATI_ORDER_READINESS_ISSUE_BROADCAST_NAME"
             : factoryUnsent
               ? "WATI_ORDER_RECONCILIATION_FACTORY_UNSENT_BROADCAST_NAME"
               : daily
@@ -1338,6 +1430,8 @@ Deno.serve(async (request) => {
               { name: "recipient_name", value: job.recipient_name },
               { name: "date", value: dailyRun?.run_date || "-" },
             ]
+            : daily && readiness && directOrder
+              ? readinessOrderWatiParameters(directOrder, issues)
             : daily && issue ? internalOrderWatiParameters(reconciliationOrder(issue)!)
             : [
               { name: "recipient_name", value: job.recipient_name },

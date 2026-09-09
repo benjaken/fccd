@@ -501,7 +501,8 @@ const phaseD1: SourceMapping[] = [
       cost_per_stocktake_unit: numberValue(r["cost/stockTakeUnit"]),
       is_ingredient_stocktake: booleanValue(r["食材盤點"]),
       is_packing_stocktake: booleanValue(r["包裝盤點"]),
-      is_active: booleanValue(r.Active, true),
+      is_active: booleanValue(r.Active, true)
+        && !/^[（(]停售[）)]/.test(text(r["Display Name"])?.trim() ?? ""),
     }),
     relations: [relation("supplier_legacy_id", "supplier_id", "suppliers")],
   },

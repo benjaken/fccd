@@ -9,11 +9,14 @@ function eventTable(kind: StocktakeKind) {
 
 export type PackingStocktakeItem = {
   id: string;
+  ingredientId: string | null;
   stocktakeAt: string | null;
   sku: string | null;
   ingredientType: string | null;
   name: string | null;
   quantity: number | null;
+  currentQuantity: number | null;
+  currentStocktakeAt: string | null;
   unit: string | null;
   supplierName?: string | null;
   supplierPhone?: string | null;
@@ -23,6 +26,7 @@ export type StocktakeDateItem = { date: string; updatedAt: string };
 
 type PackingStocktakeRow = {
   id: string;
+  ingredient_id: string | null;
   stocktake_at: string | null;
   sku_snapshot: string | null;
   quantity: number | string | null;
@@ -53,11 +57,14 @@ function mapRow(row: PackingStocktakeRow): PackingStocktakeItem {
     : row.ingredients;
   return {
     id: row.id,
+    ingredientId: row.ingredient_id,
     stocktakeAt: row.stocktake_at,
     sku: ingredient?.sku ?? row.sku_snapshot,
     ingredientType: ingredient?.ingredient_type ?? null,
     name: ingredient?.name ?? null,
     quantity: toNumber(row.quantity),
+    currentQuantity: null,
+    currentStocktakeAt: null,
     unit: ingredient?.stocktake_unit ?? null,
     supplierName: (Array.isArray(ingredient?.suppliers) ? ingredient.suppliers[0]?.company_name : ingredient?.suppliers?.company_name) ?? null,
     supplierPhone: (Array.isArray(ingredient?.suppliers) ? ingredient.suppliers[0]?.phone_number : ingredient?.suppliers?.phone_number) ?? null,
@@ -86,7 +93,7 @@ export async function fetchPackingStocktakes({
   let query = supabase
     .from(eventTable(kind))
     .select(
-      "id,stocktake_at,sku_snapshot,quantity,ingredients(sku,name,ingredient_type,stocktake_unit,suppliers(company_name,phone_number))",
+      "id,ingredient_id,stocktake_at,sku_snapshot,quantity,ingredients(sku,name,ingredient_type,stocktake_unit,suppliers(company_name,phone_number))",
       { count: "exact" },
     )
     .order("stocktake_at", { ascending: false, nullsFirst: false })
@@ -102,8 +109,29 @@ export async function fetchPackingStocktakes({
 
   const { data, count, error } = await query;
   if (error) throw error;
+  const items = ((data ?? []) as PackingStocktakeRow[]).map(mapRow);
+  const ingredientIds = [...new Set(items.flatMap((item) => item.ingredientId ? [item.ingredientId] : []))];
+  if (ingredientIds.length > 0) {
+    const { data: currentData, error: currentError } = await supabase.rpc(
+      "get_material_current_stock",
+      { p_kind: kind, p_ingredient_ids: ingredientIds },
+    );
+    if (currentError) throw currentError;
+    const currentByIngredient = new Map(
+      ((currentData ?? []) as Array<{
+        ingredient_id: string;
+        quantity: number | string | null;
+        stocktake_at: string | null;
+      }>).map((row) => [row.ingredient_id, row] as const),
+    );
+    for (const item of items) {
+      const current = item.ingredientId ? currentByIngredient.get(item.ingredientId) : null;
+      item.currentQuantity = toNumber(current?.quantity ?? null);
+      item.currentStocktakeAt = current?.stocktake_at ?? null;
+    }
+  }
   return {
-    items: ((data ?? []) as PackingStocktakeRow[]).map(mapRow),
+    items,
     total: count ?? 0,
   };
 }
@@ -142,7 +170,7 @@ export async function createIngredientStocktake(stocktakeDate: string): Promise<
 export async function fetchPackingStocktakeSheet(stocktakeDate: string, kind: StocktakeKind = "packing"): Promise<PackingStocktakeItem[]> {
   const { data, error } = await supabase
     .from(eventTable(kind))
-    .select("id,stocktake_at,sku_snapshot,quantity,ingredients(sku,name,ingredient_type,stocktake_unit,suppliers(company_name,phone_number))")
+    .select("id,ingredient_id,stocktake_at,sku_snapshot,quantity,ingredients(sku,name,ingredient_type,stocktake_unit,suppliers(company_name,phone_number))")
     .gte("stocktake_at", `${stocktakeDate}T00:00:00+08:00`)
     .lt("stocktake_at", `${nextDate(stocktakeDate)}T00:00:00+08:00`)
     .order("sku_snapshot", { ascending: true, nullsFirst: false })

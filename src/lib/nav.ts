@@ -71,6 +71,25 @@ export type NavItem = {
   children?: NavItem[];
 };
 
+export function sidebarAccordionExpansion(
+  current: Record<string, boolean>,
+  expansionKey: string,
+  parentPath: string,
+  isExpanded: boolean,
+) {
+  const siblingPrefix = `${parentPath}/`;
+  const next = { ...current };
+
+  for (const key of Object.keys(next)) {
+    if (!key.startsWith(siblingPrefix)) continue;
+    const relativeKey = key.slice(siblingPrefix.length);
+    if (!relativeKey.includes("/")) delete next[key];
+  }
+
+  next[expansionKey] = !isExpanded;
+  return next;
+}
+
 export const primaryNav: NavItem[] = [
   { key: "overview", to: "/", icon: LayoutDashboard },
   {
@@ -520,7 +539,6 @@ export const secondaryNav: Record<string, NavItem[]> = {
     },
   ],
   kitchen: [
-    { key: "kitchenOrders", to: "/kitchen", icon: Utensils, permissionKey: "kitchen" },
     {
       key: "ingredients",
       to: "/kitchen/ingredients",
@@ -528,16 +546,16 @@ export const secondaryNav: Record<string, NavItem[]> = {
       permissionKey: "kitchen.ingredients",
     },
     {
-      key: "suppliers",
-      to: "/kitchen/suppliers",
-      icon: Users,
-      permissionKey: "kitchen.suppliers",
+      key: "materialInventory",
+      to: "/kitchen/inventory",
+      icon: Boxes,
+      permissionKey: "kitchen.inventory",
     },
     {
-      key: "packingStocktakes",
-      to: "/kitchen/packing-stocktakes",
-      icon: ClipboardList,
-      permissionKey: "kitchen.packing_stocktakes",
+      key: "inventoryRecords",
+      to: "/kitchen/inventory-records",
+      icon: Warehouse,
+      permissionKey: "workspace.factory.warehouse",
     },
     {
       key: "ingredientStocktakes",
@@ -546,16 +564,22 @@ export const secondaryNav: Record<string, NavItem[]> = {
       permissionKey: "kitchen.ingredient_stocktakes",
     },
     {
+      key: "packingStocktakes",
+      to: "/kitchen/packing-stocktakes",
+      icon: ClipboardList,
+      permissionKey: "kitchen.packing_stocktakes",
+    },
+    {
       key: "kitchenMaterialUsage",
       to: "/kitchen/material-usage",
       icon: Calculator,
       permissionKey: KITCHEN_MATERIAL_USAGE_PAGE_KEY,
     },
     {
-      key: "kitchenSettings",
-      to: "/kitchen/settings",
-      icon: Settings,
-      permissionKey: "kitchen.settings",
+      key: "suppliers",
+      to: "/kitchen/suppliers",
+      icon: Users,
+      permissionKey: "kitchen.suppliers",
     },
   ],
   delivery: [
@@ -636,7 +660,6 @@ export const secondaryNav: Record<string, NavItem[]> = {
         { key: "restaurantOrderingSuppliers", to: "/restaurant/ordering/suppliers", icon: Store, permissionKey: "restaurant.ordering.suppliers" },
         { key: "restaurantOrderingPhonebook", to: "/restaurant/ordering/phonebook", icon: Phone, permissionKey: "restaurant.ordering.phonebook" },
         { key: "restaurantOrderingReview", to: "/restaurant/ordering/review", icon: ShieldCheck, permissionKey: "restaurant.ordering.review" },
-        { key: "restaurantOrderingInventory", to: "/restaurant/ordering/inventory", icon: Warehouse, permissionKey: "workspace.factory.warehouse" },
       ],
     },
   ],
@@ -1094,6 +1117,9 @@ export const SECTION_CHILD_KEYS: Record<string, string[]> = {
   kitchen: [
     "kitchen.inventory",
     "kitchen.ingredients",
+    "workspace.factory.warehouse",
+    "workspace.factory.warehouse.outbound",
+    "workspace.factory.warehouse.inbound",
     "kitchen.packing_stocktakes",
     "kitchen.ingredient_stocktakes",
     "kitchen.suppliers",
@@ -1101,7 +1127,7 @@ export const SECTION_CHILD_KEYS: Record<string, string[]> = {
     ...KITCHEN_ACTION_PAGE_KEYS,
   ],
   delivery: ["delivery.assign", "delivery.fleets"],
-  restaurant: ["restaurant.daily_sales", "restaurant.daily_purchases", "restaurant.monthly_expenses", "restaurant.inventory", "restaurant.reports", "restaurant.staff", "restaurant.settings", "restaurant.settings.restaurants", "restaurant.settings.departments", "restaurant.settings.service_periods", "restaurant.settings.payment_methods", "restaurant.settings.delivery_platforms", "restaurant.settings.holidays", "restaurant.settings.roster_times", "restaurant.settings.supplier_cost_categories", "restaurant.settings.inventory_items", "restaurant.settings.monthly_pnl_cost_categories", "restaurant.ordering", "restaurant.ordering.suppliers", "restaurant.ordering.requests", "restaurant.ordering.records", "restaurant.ordering.phonebook", "restaurant.ordering.review", "workspace.factory.warehouse", "workspace.factory.warehouse.outbound", "workspace.factory.warehouse.inbound"],
+  restaurant: ["restaurant.daily_sales", "restaurant.daily_purchases", "restaurant.monthly_expenses", "restaurant.inventory", "restaurant.reports", "restaurant.staff", "restaurant.settings", "restaurant.settings.restaurants", "restaurant.settings.departments", "restaurant.settings.service_periods", "restaurant.settings.payment_methods", "restaurant.settings.delivery_platforms", "restaurant.settings.holidays", "restaurant.settings.roster_times", "restaurant.settings.supplier_cost_categories", "restaurant.settings.inventory_items", "restaurant.settings.monthly_pnl_cost_categories", "restaurant.ordering", "restaurant.ordering.suppliers", "restaurant.ordering.requests", "restaurant.ordering.records", "restaurant.ordering.phonebook", "restaurant.ordering.review"],
   reports: [
     REPORT_GROUP_PAGE_KEYS.dataInputProgress,
     "kitchen.cost_input",
