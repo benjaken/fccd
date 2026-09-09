@@ -116,7 +116,7 @@ describe("Shopify/FCCD order reconciliation alerts", () => {
     expect(clearDailyMigration).not.toContain("p_daily and exists");
     expect(notificationWorker).toContain('job.event_key !== "daily_reconciliation"');
     expect(notificationWorker).toContain("WATI_ORDER_RECONCILIATION_CLEAR_TEMPLATE_NAME");
-    expect(notificationWorker).toContain("今日沒有「未入單」或「未傳送工場」的訂單需要跟進");
+    expect(notificationWorker).toContain("今日沒有未入單、日期、廚房顯示、司機或存貨問題需要跟進");
     expect(notificationWorker).not.toContain("Shopify：${input.run.shopify_count}");
   });
 
