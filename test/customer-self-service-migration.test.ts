@@ -66,4 +66,16 @@ describe("customer self-service receipt data", () => {
     expect(sql).toContain("store.shop_domain");
     expect(sql).toContain("private.self_service_order_matches");
   });
+
+  it("exposes the order discount used by the self-service receipt", () => {
+    const sql = readFileSync(
+      resolve(
+        process.cwd(),
+        "supabase/migrations/20260909130000_expose_self_service_order_discount.sql",
+      ),
+      "utf8",
+    );
+    expect(sql).toContain("'discount', coalesce(v_order.discount_amount, 0)");
+    expect(sql).toContain("private.self_service_order_matches");
+  });
 });
