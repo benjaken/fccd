@@ -116,6 +116,7 @@ function resultToDraft(
     deliveryFeeId: "",
     deliveryFeeLabel: "Delivery Fee",
     deliveryFee: order?.shippingFee ? String(order.shippingFee) : "",
+    discount: order?.discount ? String(order.discount) : "",
     paymentInformation:
       outstanding > 0
         ? `Outstanding: ${money(outstanding, true)}`
@@ -235,7 +236,8 @@ export function ReceiptPdfEditorPage({
       0,
     );
     const deliveryFee = numberValue(draft?.deliveryFee ?? "");
-    return { subtotal, grandTotal: subtotal + deliveryFee };
+    const discount = numberValue(draft?.discount ?? "");
+    return { subtotal, discount, grandTotal: subtotal + deliveryFee - discount };
   }, [draft]);
 
   const update = <K extends keyof ReceiptPdfDraft>(
@@ -494,6 +496,7 @@ export function ReceiptPdfEditorPage({
         {showTotals ? <tfoot>
           <tr><td colSpan={4}>Subtotal:</td><td>{money(totals.subtotal)}</td></tr>
           <tr><td colSpan={4}><FilterableSelect className="quote-pdf-edit-only shipping-fee-select" aria-label="運費選項" value={draft.deliveryFeeId} onChange={(event) => selectDeliveryFee(event.target.value)}><option value="">Delivery Fee</option>{shippingFees.map((fee) => <option key={fee.id} value={fee.id}>{fee.item}</option>)}</FilterableSelect><span className="quote-pdf-print-only">{draft.deliveryFeeLabel}</span></td><td><span className="receipt-pdf-price-input">{draft.deliveryFee ? <span aria-hidden="true">$</span> : null}<PdfBlurCommitInput aria-label="運費" inputMode="decimal" size={Math.max(draft.deliveryFee.length, 1)} value={draft.deliveryFee} onCommit={(value) => update("deliveryFee", value.trim() ? value : "0")} /></span></td></tr>
+          {totals.discount > 0 ? <tr><td colSpan={4}>Discount:</td><td><span className="receipt-pdf-price-input"><span aria-hidden="true">-$</span><PdfBlurCommitInput aria-label="折扣" inputMode="decimal" size={Math.max(draft.discount.length, 1)} value={draft.discount} onCommit={(value) => update("discount", value.trim() ? value : "0")} /></span></td></tr> : null}
           <tr><td colSpan={4}>Grand Total:</td><td>{money(totals.grandTotal)}</td></tr>
         </tfoot> : null}
       </table>
