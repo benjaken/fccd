@@ -1522,6 +1522,14 @@ body:has(.quote-pdf-editor) .sidebar {
 .quote-pdf-notes { display: grid; gap: 0.45rem; margin-top: 0.75rem; color: #000; }
 .quote-pdf-notes-page-controls { background: #fff7dd; }
 .quote-pdf-note-block { border: 1.5px solid #000; background: #fff7dd; }
+.quote-pdf-note-heading,
+.quote-pdf-summary-rows .shipping-fee-select,
+.quote-pdf-activity tfoot .shipping-fee-select,
+.quote-pdf-customer-signature-toggle {
+  position: relative;
+  z-index: 5;
+  pointer-events: auto;
+}
 .quote-pdf-note-heading { display: block; width: 100%; min-height: 38px; padding: 0.42rem 0.6rem; border: 0; border-bottom: 1.5px solid #000; border-radius: 0; background: #fff7dd; color: #000; font: inherit; font-size: 0.88rem; font-weight: 850; text-align: left; }
 .quote-pdf-note-block ol { display: grid; gap: 0.05rem; margin: 0; padding: 0.25rem 0.45rem 0.35rem; counter-reset: quote-note; list-style: none; }
 .quote-pdf-note-block li { display: grid; grid-template-columns: 2rem minmax(0, 1fr); align-items: start; counter-increment: quote-note; }

@@ -1,5 +1,42 @@
 import { useLayoutEffect, useRef, useState, type RefObject } from "react";
 
+function isEditorInteraction(container: HTMLElement | null) {
+  const activeElement = document.activeElement;
+  return Boolean(
+    container
+    && activeElement instanceof HTMLElement
+    && container.contains(activeElement)
+    && (
+      activeElement instanceof HTMLInputElement
+      || activeElement instanceof HTMLTextAreaElement
+      || activeElement instanceof HTMLSelectElement
+      || activeElement instanceof HTMLButtonElement
+    ),
+  );
+}
+
+function useEditorPointerLock(containerRef: RefObject<HTMLElement | null>) {
+  const [locked, setLocked] = useState(false);
+  useLayoutEffect(() => {
+    const onDown = (event: PointerEvent) => {
+      const container = containerRef.current;
+      if (container && event.target instanceof Node && container.contains(event.target)) {
+        setLocked(true);
+      }
+    };
+    const release = () => setLocked(false);
+    window.addEventListener("pointerdown", onDown, true);
+    window.addEventListener("pointerup", release, true);
+    window.addEventListener("pointercancel", release, true);
+    return () => {
+      window.removeEventListener("pointerdown", onDown, true);
+      window.removeEventListener("pointerup", release, true);
+      window.removeEventListener("pointercancel", release, true);
+    };
+  }, [containerRef]);
+  return locked;
+}
+
 const PAGE_SELECTOR = "[data-pdf-auto-page]";
 const MODULE_SELECTOR = "[data-pdf-auto-module-index]";
 const FOOTER_SELECTOR = "[data-pdf-auto-footer]";
@@ -201,6 +238,7 @@ export function usePdfAutoPageBreaks(
   const rejectedMerges = useRef(new Set<number>());
   const mergeTrial = useRef<{ removedBreak: number; previousBreaks: number[] } | null>(null);
   const pendingFocusRestore = useRef<FocusSnapshot | null>(null);
+  const pointerLocked = useEditorPointerLock(containerRef);
 
   useLatePdfLayoutRevision(
     containerRef,
@@ -228,6 +266,7 @@ export function usePdfAutoPageBreaks(
       }
     }
 
+    if (pointerLocked) return;
     if (!container || !moduleCount) return;
 
     const pages = Array.from(container.querySelectorAll<HTMLElement>(PAGE_SELECTOR));
@@ -263,22 +302,17 @@ export function usePdfAutoPageBreaks(
     }
 
     mergeTrial.current = null;
-    const activeElement = document.activeElement;
-    const fieldIsBeingEdited = (
-      (activeElement instanceof HTMLInputElement || activeElement instanceof HTMLTextAreaElement)
-      && container.contains(activeElement)
-    );
     // Shrinking content can make an existing continuation page merge back into
     // the previous page. Defer that disruptive move until editing finishes so
     // backspace/delete never moves the field out from under the caret.
-    if (fieldIsBeingEdited) return;
+    if (isEditorInteraction(container)) return;
 
     const removableBreak = pageBreaks.find((pageBreak) => !rejectedMerges.current.has(pageBreak));
     if (removableBreak !== undefined) {
       mergeTrial.current = { removedBreak: removableBreak, previousBreaks: pageBreaks };
       updatePageBreaks((current) => current.filter((pageBreak) => pageBreak !== removableBreak));
     }
-  }, [containerRef, layoutRevision, moduleCount, pageBreaks, resetKey]);
+  }, [containerRef, layoutRevision, moduleCount, pageBreaks, pointerLocked, resetKey]);
 
   useLayoutEffect(() => {
     const container = containerRef.current;
@@ -340,6 +374,7 @@ export function usePdfAutoProductPageBreaks(
   const rejectedMerges = useRef(new Set<number>());
   const mergeTrial = useRef<{ removedBreak: number; previousBreaks: number[] } | null>(null);
   const pendingFocusRestore = useRef<FocusSnapshot | null>(null);
+  const pointerLocked = useEditorPointerLock(containerRef);
 
   useLatePdfLayoutRevision(
     containerRef,
@@ -367,6 +402,7 @@ export function usePdfAutoProductPageBreaks(
       }
     }
 
+    if (pointerLocked) return;
     if (!container || !lineCount) return;
 
     const pages = Array.from(container.querySelectorAll<HTMLElement>(PRODUCT_PAGE_SELECTOR));
@@ -406,19 +442,14 @@ export function usePdfAutoProductPageBreaks(
     }
 
     mergeTrial.current = null;
-    const activeElement = document.activeElement;
-    const fieldIsBeingEdited = (
-      (activeElement instanceof HTMLInputElement || activeElement instanceof HTMLTextAreaElement)
-      && container.contains(activeElement)
-    );
-    if (fieldIsBeingEdited) return;
+    if (isEditorInteraction(container)) return;
 
     const removableBreak = pageBreaks.find((pageBreak) => !rejectedMerges.current.has(pageBreak));
     if (removableBreak !== undefined) {
       mergeTrial.current = { removedBreak: removableBreak, previousBreaks: pageBreaks };
       updatePageBreaks((current) => current.filter((pageBreak) => pageBreak !== removableBreak));
     }
-  }, [containerRef, layoutRevision, lineCount, pageBreaks, resetKey]);
+  }, [containerRef, layoutRevision, lineCount, pageBreaks, pointerLocked, resetKey]);
 
   useLayoutEffect(() => {
     const container = containerRef.current;

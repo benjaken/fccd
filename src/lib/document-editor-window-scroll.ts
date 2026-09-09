@@ -26,16 +26,9 @@ function isNestedScroller(node: EventTarget | null) {
   return false;
 }
 
-export function activateDocumentEditorWindowScroll(container?: HTMLElement | null) {
-  const target =
-    container ?? document.querySelector<HTMLElement>(".quote-pdf-editor") ?? document.body;
-  if (target !== document.body && target.tabIndex < 0) target.tabIndex = -1;
-  if (typeof target.focus !== "function") return;
-  try {
-    target.focus({ preventScroll: true });
-  } catch {
-    // Ignore environments that reject programmatic focus.
-  }
+export function activateDocumentEditorWindowScroll(_container?: HTMLElement | null) {
+  // Do not focus the editor. Programmatic focus on the section eats the first
+  // click on + / shipping until the user focuses an input.
 }
 
 function pageScroller() {

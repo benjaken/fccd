@@ -4313,6 +4313,13 @@ body:has(.shop-order-product-panel) .restaurant-workspace-body > .shop-order-pag
 }
 
 @media print {
+  html:has(.quote-pdf-editor) .quote-pdf-editor,
+  html:has(.quote-pdf-editor) .quote-pdf-editor *,
+  html:has(.document-editor-shell) .quote-pdf-editor,
+  html:has(.document-editor-shell) .quote-pdf-editor * {
+    visibility: visible !important;
+  }
+
   html:has(.quote-pdf-editor),
   html:has(.document-editor-shell),
   body:has(.quote-pdf-editor),

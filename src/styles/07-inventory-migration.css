@@ -502,7 +502,7 @@
 .print-stocktake-quantity { min-width: 100px; height: 28px; }
 
 @media print {
-  body * { visibility: hidden; }
+  body:has(.print-stocktake-sheet) * { visibility: hidden; }
   .modal-root, .modal-root * { visibility: visible; }
   .modal-root { position: static; }
   .modal-backdrop, .modal-header, .modal-footer { display: none !important; }
