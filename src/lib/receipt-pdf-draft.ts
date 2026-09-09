@@ -27,6 +27,7 @@ export type ReceiptPdfDraft = {
   deliveryFeeId: string;
   deliveryFeeLabel: string;
   deliveryFee: string;
+  discount: string;
   paymentInformation: string;
   receiptPayments: ReceiptPdfPaymentDraft[];
   terms: string[];

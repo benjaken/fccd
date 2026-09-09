@@ -96,6 +96,7 @@ const DEMO_DETAIL: CustomerSelfServiceOrderDetail = {
   fleetArranged: true,
   currency: "HKD",
   shippingFee: 100,
+  discount: 0,
   grandTotal: 1720,
   outstanding: 0,
   paid: true,
@@ -179,6 +180,11 @@ function customerOrderShippingFee(order: CustomerSelfServiceOrderDetail, itemTot
   return Number.isFinite(returnedShippingFee) && returnedShippingFee > 0
     ? returnedShippingFee
     : Math.max(order.grandTotal - itemTotal, 0);
+}
+
+function customerOrderDiscount(order: CustomerSelfServiceOrderDetail) {
+  const discount = Number(order.discount);
+  return Number.isFinite(discount) && discount > 0 ? discount : 0;
 }
 
 function customerLoginError(error: unknown) {
@@ -295,7 +301,8 @@ function StatusBadges({ order }: { order: CustomerSelfServiceOrderDetail }) {
 function ReceiptDocument({ order, documentRef, scale = 1 }: { order: CustomerSelfServiceOrderDetail; documentRef?: RefObject<HTMLDivElement | null>; scale?: number }) {
   const subtotal = order.lines.reduce((total, line) => total + customerOrderLineTotal(line), 0);
   const shippingFee = customerOrderShippingFee(order, subtotal);
-  const grandTotal = subtotal + shippingFee;
+  const discount = customerOrderDiscount(order);
+  const grandTotal = subtotal + shippingFee - discount;
   const brandValues = [order.channelName, order.shopifyStoreDomain, order.orderNumber];
   const paymentInformation = order.outstanding > 0
     ? `Outstanding: ${receiptMoney(order.outstanding, true)}`
@@ -342,6 +349,7 @@ function ReceiptDocument({ order, documentRef, scale = 1 }: { order: CustomerSel
           <tfoot>
             <tr><td colSpan={4}>Subtotal:</td><td>{receiptMoney(subtotal)}</td></tr>
             <tr><td colSpan={4}>Delivery Fee</td><td><span className="receipt-pdf-price-input"><span aria-hidden="true">$</span><input aria-label="運費" readOnly tabIndex={-1} inputMode="decimal" size={Math.max(String(shippingFee).length, 1)} value={String(shippingFee)} /></span></td></tr>
+            {discount > 0 ? <tr><td colSpan={4}>Discount:</td><td>{`-${receiptMoney(discount)}`}</td></tr> : null}
             <tr><td colSpan={4}>Grand Total:</td><td>{receiptMoney(grandTotal)}</td></tr>
           </tfoot>
         </table>
@@ -516,6 +524,7 @@ function DetailView({ session, order, onBack, onLogout, printReceipt, loadAddonO
   const [addonOptions, setAddonOptions] = useState<CustomerSelfServiceAddonOptions | null>(null);
   const itemTotal = useMemo(() => order.lines.reduce((total, line) => total + customerOrderLineTotal(line), 0), [order.lines]);
   const shippingFee = customerOrderShippingFee(order, itemTotal);
+  const discount = customerOrderDiscount(order);
   useEffect(() => {
     let active = true;
     void loadAddonOptions(session.token, order.id).then((value) => { if (active) setAddonOptions(value); }).catch(() => undefined);
@@ -544,7 +553,7 @@ function DetailView({ session, order, onBack, onLogout, printReceipt, loadAddonO
             <dl><div><dt>單價</dt><dd>{money(line.unitPrice, order.currency)}</dd></div><div><dt>數量</dt><dd>{line.quantity}</dd></div><div><dt>小計</dt><dd>{money(line.totalPrice, order.currency)}</dd></div></dl>
           </article>)}
         </div>
-        <footer><span>食品小計</span><strong>{money(itemTotal, order.currency)}</strong><span>運費</span><strong>{money(shippingFee, order.currency)}</strong><span>訂單總額</span><strong>{money(order.grandTotal, order.currency)}</strong></footer>
+        <footer><span>食品小計</span><strong>{money(itemTotal, order.currency)}</strong><span>運費</span><strong>{money(shippingFee, order.currency)}</strong>{discount > 0 ? <><span>折扣</span><strong>-{money(discount, order.currency)}</strong></> : null}<span>訂單總額</span><strong>{money(order.grandTotal, order.currency)}</strong></footer>
       </section>
       <section className="self-service-delivery-card">
         <header><MapPin /><div><span>送貨資料</span><h2>{order.shippingMethod || "送貨安排"}</h2></div></header>

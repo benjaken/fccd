@@ -200,6 +200,24 @@ describe("Receipt PDF editor", () => {
     expect(await screen.findByLabelText("Invoice Date:")).toHaveValue("24/8/2026");
   });
 
+  it("shows and deducts the saved discount in the invoice PDF", async () => {
+    render(
+      <MemoryRouter initialEntries={["/orders/order-1/invoice"]}>
+        <Routes>
+          <Route path="/orders/:id/invoice" element={<ReceiptPdfEditorPage documentKind="invoice" loadDetail={vi.fn().mockResolvedValue({
+            ...result,
+            order: result.order ? { ...result.order, discount: 100, grandTotal: 1550 } : null,
+          })} loadShippingFees={vi.fn().mockResolvedValue(shippingFees)} />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    const invoice = await screen.findByRole("main", { name: "發票 PDF" });
+    expect(within(invoice).getByText("Discount:")).toBeInTheDocument();
+    expect(within(invoice).getByLabelText("折扣")).toHaveValue("100");
+    expect(within(invoice).getByText("$1,550")).toBeInTheDocument();
+  });
+
   it("keeps receipt number edits only for the current page session", async () => {
     const user = userEvent.setup();
     renderPage();
