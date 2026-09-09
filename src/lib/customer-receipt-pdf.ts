@@ -57,6 +57,7 @@ export async function createCustomerReceiptPdf(
       useCORS: true,
       onclone: (clonedDocument, clonedElement) => {
         clonedElement.style.transform = "none";
+        clonedElement.classList.add("is-pdf-capture");
       const safeColors: Record<string, string> = {
         "--background": "#ffffff",
         "--foreground": "#111111",

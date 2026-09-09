@@ -8,11 +8,14 @@ const css = readFileSync(
 );
 
 describe("customer self-service receipt layout", () => {
-  it("leaves enough line height for Chinese product names in generated PDFs", () => {
+  it("uses the order receipt field metrics without stretching product rows", () => {
     const rule = css.match(/\.self-service-receipt-document \.receipt-pdf-table tbody td\s*\{([^}]*)\}/)?.[1] ?? "";
     expect(rule).not.toContain("height: 23px");
-    expect(rule).toContain("min-height: 24px");
-    expect(rule).toContain("line-height: 1.45");
-    expect(rule).toContain("vertical-align: middle");
+    expect(rule).not.toContain("min-height");
+    expect(rule).not.toContain("line-height");
+    expect(rule).not.toContain("vertical-align");
+
+    const captureRule = css.match(/\.self-service-receipt-document\.is-pdf-capture \.self-service-receipt-capture-text\s*\{([^}]*)\}/)?.[1] ?? "";
+    expect(captureRule).toContain("transform: translateY(-4px)");
   });
 });
