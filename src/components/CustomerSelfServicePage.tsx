@@ -6,6 +6,7 @@ import {
   type FormEvent,
   type RefObject,
 } from "react";
+import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useParams } from "react-router-dom";
 import {
@@ -31,6 +32,7 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { SidePanel } from "@/components/ui/side-panel";
+import { PdfAutoResizeTextarea } from "@/components/PdfAutoResizeTextarea";
 import {
   captureCustomerAddonPaypalCheckout,
   cancelCustomerAddonPaypalCheckout,
@@ -45,10 +47,7 @@ import {
   type CustomerSelfServiceOrderSummary,
   type CustomerSelfServiceSession,
 } from "@/lib/customer-self-service";
-import {
-  createCustomerReceiptPdf,
-  downloadCustomerReceipt,
-} from "@/lib/customer-receipt-pdf";
+import { printPdf } from "@/lib/print-pdf";
 import {
   FOOD_CHANNEL_CATERING_LOGO_PATH,
   getBrandContactEmail,
@@ -62,7 +61,7 @@ type RestoreFn = typeof restoreCustomerSelfService;
 type DetailFn = typeof fetchCustomerSelfServiceOrder;
 type AddonOptionsFn = typeof fetchCustomerSelfServiceAddonOptions;
 type LogoutFn = typeof logoutCustomerSelfService;
-type PdfFn = typeof createCustomerReceiptPdf;
+type PrintReceiptFn = typeof printPdf;
 
 const DEMO_SESSION: CustomerSelfServiceSession = {
   token: "local-design-preview",
@@ -293,7 +292,7 @@ function StatusBadges({ order }: { order: CustomerSelfServiceOrderDetail }) {
   </div>;
 }
 
-function ReceiptDocument({ order, documentRef, scale = 1 }: { order: CustomerSelfServiceOrderDetail; documentRef: RefObject<HTMLDivElement | null>; scale?: number }) {
+function ReceiptDocument({ order, documentRef, scale = 1 }: { order: CustomerSelfServiceOrderDetail; documentRef?: RefObject<HTMLDivElement | null>; scale?: number }) {
   const subtotal = order.lines.reduce((total, line) => total + customerOrderLineTotal(line), 0);
   const shippingFee = customerOrderShippingFee(order, subtotal);
   const grandTotal = subtotal + shippingFee;
@@ -309,41 +308,41 @@ function ReceiptDocument({ order, documentRef, scale = 1 }: { order: CustomerSel
         <img src={getDocumentLogoPath(...brandValues)} alt={getBrandLogoAlt(...brandValues)} />
         <div className="receipt-pdf-document-heading">
           <h1>RECEIPT</h1>
-          <strong className="self-service-receipt-number">{`REC/${order.orderNumber}`}</strong>
+          <input aria-label="收據編號" readOnly tabIndex={-1} value={`REC/${order.orderNumber}`} />
         </div>
       </header>
 
       <div className="receipt-pdf-meta-grid self-service-receipt-meta-grid">
         <div className="receipt-pdf-customer-company">
-          <label><span className="self-service-receipt-capture-text">Customer Name:</span></label><span><span className="self-service-receipt-capture-text">{order.customerName || ""}</span></span>
-          <label><span className="self-service-receipt-capture-text">Company Name:</span></label><span><span className="self-service-receipt-capture-text">{order.companyName || ""}</span></span>
+          <label>Customer Name:</label><input aria-label="Customer Name" readOnly tabIndex={-1} value={order.customerName || ""} />
+          <label>Company Name:</label><input aria-label="Company Name" readOnly tabIndex={-1} value={order.companyName || ""} />
         </div>
-        <label><span className="self-service-receipt-capture-text">Invoice Date:</span></label><span><span className="self-service-receipt-capture-text">{receiptDate(order.orderDate)}</span></span>
-        <label><span className="self-service-receipt-capture-text">Contact Person:</span></label><span><span className="self-service-receipt-capture-text">{[order.phoneA, order.phoneB].filter(Boolean).join(" / ")}</span></span>
-        <label><span className="self-service-receipt-capture-text">Delivery Date:</span></label><span><span className="self-service-receipt-capture-text">{receiptDate(order.deliveryDate)}</span></span>
-        <label><span className="self-service-receipt-capture-text">Delivery Address:</span></label><span><span className="self-service-receipt-capture-text">{order.address || ""}</span></span>
-        <label><span className="self-service-receipt-capture-text">Delivery Time:</span></label><span><span className="self-service-receipt-capture-text">{order.deliveryTime || ""}</span></span>
+        <label>Invoice Date:</label><input aria-label="Invoice Date" readOnly tabIndex={-1} value={receiptDate(order.orderDate)} />
+        <label>Contact Person:</label><input aria-label="Contact Person" readOnly tabIndex={-1} value={[order.phoneA, order.phoneB].filter(Boolean).join(" / ")} />
+        <label>Delivery Date:</label><input aria-label="Delivery Date" readOnly tabIndex={-1} value={receiptDate(order.deliveryDate)} />
+        <label>Delivery Address:</label><PdfAutoResizeTextarea aria-label="Delivery Address" readOnly tabIndex={-1} rows={1} value={order.address || ""} />
+        <label>Delivery Time:</label><input aria-label="Delivery Time" readOnly tabIndex={-1} value={order.deliveryTime || ""} />
       </div>
 
       <div className="receipt-pdf-table-wrap">
         <table className="receipt-pdf-table">
-          <thead><tr><th aria-label="序號" /><th><span className="self-service-receipt-capture-text">Description</span></th><th><span className="self-service-receipt-capture-text">Unit Price</span></th><th><span className="self-service-receipt-capture-text">Qty</span></th><th><span className="self-service-receipt-capture-text">Total</span></th></tr></thead>
+          <thead><tr><th aria-label="序號" /><th>Description</th><th>Unit Price</th><th>Qty</th><th>Total</th></tr></thead>
           <tbody>{order.lines.map((line, index) => {
             const unitPrice = line.unitPrice !== 0 || !line.totalPrice || line.quantity === 0
               ? line.unitPrice
               : line.totalPrice / line.quantity;
             return <tr key={line.id}>
-              <td><span className="self-service-receipt-capture-text">{index + 1}</span></td>
-              <td><span className="self-service-receipt-capture-text">{line.name || line.content || ""}</span></td>
-              <td><span className="self-service-receipt-capture-text">{receiptMoney(unitPrice)}</span></td>
-              <td><span className="self-service-receipt-capture-text">{line.quantity}</span></td>
-              <td><span className="self-service-receipt-capture-text">{receiptMoney(customerOrderLineTotal(line))}</span></td>
+              <td>{index + 1}</td>
+              <td><PdfAutoResizeTextarea aria-label={`產品 ${index + 1}`} readOnly tabIndex={-1} rows={1} value={line.name || line.content || ""} /></td>
+              <td><span className="receipt-pdf-price-input"><span aria-hidden="true">$</span><input aria-label={`單價 ${index + 1}`} readOnly tabIndex={-1} inputMode="decimal" size={Math.max(String(unitPrice).length, 1)} value={String(unitPrice)} /></span></td>
+              <td><input aria-label={`數量 ${index + 1}`} readOnly tabIndex={-1} inputMode="decimal" value={String(line.quantity)} /></td>
+              <td>{receiptMoney(customerOrderLineTotal(line))}</td>
             </tr>;
           })}</tbody>
           <tfoot>
-            <tr><td colSpan={4}><span className="self-service-receipt-capture-text">Subtotal:</span></td><td><span className="self-service-receipt-capture-text">{receiptMoney(subtotal)}</span></td></tr>
-            <tr><td colSpan={4}><span className="self-service-receipt-capture-text">Delivery Fee:</span></td><td><span className="self-service-receipt-capture-text">{receiptMoney(shippingFee)}</span></td></tr>
-            <tr><td colSpan={4}><span className="self-service-receipt-capture-text">Grand Total:</span></td><td><span className="self-service-receipt-capture-text">{receiptMoney(grandTotal)}</span></td></tr>
+            <tr><td colSpan={4}>Subtotal:</td><td>{receiptMoney(subtotal)}</td></tr>
+            <tr><td colSpan={4}>Delivery Fee</td><td><span className="receipt-pdf-price-input"><span aria-hidden="true">$</span><input aria-label="運費" readOnly tabIndex={-1} inputMode="decimal" size={Math.max(String(shippingFee).length, 1)} value={String(shippingFee)} /></span></td></tr>
+            <tr><td colSpan={4}>Grand Total:</td><td>{receiptMoney(grandTotal)}</td></tr>
           </tfoot>
         </table>
       </div>
@@ -351,12 +350,12 @@ function ReceiptDocument({ order, documentRef, scale = 1 }: { order: CustomerSel
       <div className="receipt-pdf-trailing" aria-label="付款資料及公司蓋章">
         <section className="receipt-pdf-payment">
           <strong>Payment information:</strong>
-          <span>{paymentInformation}</span>
+          <input className="receipt-pdf-payment-summary-input" aria-label="付款資料" readOnly tabIndex={-1} size={Math.max(paymentInformation.length, 1)} value={paymentInformation} />
           {order.payments.map((payment, index) => {
             const suffix = order.payments.length > 1 ? ` ${index + 1}` : "";
             return <div className="receipt-pdf-payment-record" key={payment.id}>
-              <span>{`Payment Method${suffix}: ${payment.method || ""} ${receiptMoney(payment.amount, true)}`}</span>
-              <span>{`Payment Date${suffix}: ${receiptDate(payment.paymentAt)}`}</span>
+              <label><span>{`Payment Method${suffix}:`}</span><input aria-label={`付款方式${suffix}`} readOnly tabIndex={-1} size={Math.max((payment.method || "").length, 1)} value={payment.method || ""} /><span className="receipt-pdf-payment-amount"><span aria-hidden="true">$</span><input aria-label={`支付金額${suffix}`} readOnly tabIndex={-1} inputMode="decimal" size={Math.max(receiptMoney(payment.amount, true).length - 1, 1)} value={receiptMoney(payment.amount, true).slice(1)} /></span></label>
+              <label><span>{`Payment Date${suffix}:`}</span><input aria-label={`付款日期${suffix}`} readOnly tabIndex={-1} size={Math.max(receiptDate(payment.paymentAt).length, 1)} value={receiptDate(payment.paymentAt)} /></label>
             </div>;
           })}
         </section>
@@ -379,32 +378,10 @@ function ReceiptDocument({ order, documentRef, scale = 1 }: { order: CustomerSel
   );
 }
 
-function ReceiptPreview({ order, onClose, createPdf }: { order: CustomerSelfServiceOrderDetail; onClose: () => void; createPdf: PdfFn }) {
+function ReceiptPreview({ order, onClose, printReceipt }: { order: CustomerSelfServiceOrderDetail; onClose: () => void; printReceipt: PrintReceiptFn }) {
   const documentRef = useRef<HTMLDivElement>(null);
   const previewRef = useRef<HTMLDivElement>(null);
-  const [busy, setBusy] = useState(true);
-  const [error, setError] = useState("");
-  const [download, setDownload] = useState<{ blob: Blob; filename: string } | null>(null);
   const [previewSize, setPreviewSize] = useState<{ width: number; height: number; scale: number } | null>(null);
-
-  async function generate(autoDownload: boolean) {
-    if (!documentRef.current) return;
-    setBusy(true); setError("");
-    try {
-      const file = await createPdf(documentRef.current, order.orderNumber);
-      setDownload(file);
-      if (autoDownload) downloadCustomerReceipt(file.blob, file.filename);
-    } catch (pdfError) {
-      console.error("Customer receipt PDF generation failed", pdfError);
-      const detail = import.meta.env.DEV && pdfError instanceof Error
-        ? `（${pdfError.message}）`
-        : "";
-      setError(`暫時無法建立收據 PDF，請稍後再試。${detail}`);
-    }
-    finally { setBusy(false); }
-  }
-
-  useEffect(() => { const timer = window.setTimeout(() => void generate(true), 80); return () => window.clearTimeout(timer); }, []);
 
   useEffect(() => {
     const preview = previewRef.current;
@@ -431,7 +408,17 @@ function ReceiptPreview({ order, onClose, createPdf }: { order: CustomerSelfServ
     return () => observer.disconnect();
   }, []);
 
+  const printDocument = typeof document !== "undefined"
+    ? createPortal(
+        <div className="self-service-receipt-print-root" data-testid="self-service-receipt-print-root" aria-hidden="true">
+          <ReceiptDocument order={order} />
+        </div>,
+        document.body,
+      )
+    : null;
+
   return (
+    <>
     <div className="self-service-receipt-layer" role="dialog" aria-modal="true" aria-labelledby="receipt-preview-title">
       <button className="self-service-receipt-scrim" onClick={onClose} aria-label="關閉收據預覽" />
       <article className="self-service-receipt-modal">
@@ -445,11 +432,13 @@ function ReceiptPreview({ order, onClose, createPdf }: { order: CustomerSelfServ
           </div>
         </div>
         <footer>
-          {busy ? <span><LoaderCircle className="self-service-spin" />正在建立並下載 PDF…</span> : error ? <span className="is-error">{error}</span> : <span><Check />PDF 已開始下載</span>}
-          <Button variant="outline" onClick={() => download && downloadCustomerReceipt(download.blob, download.filename)} disabled={!download}><Download />再次下載</Button>
+          <span><Check />使用瀏覽器列印並可另存為 PDF</span>
+          <Button variant="outline" onClick={() => printReceipt("收據", `REC/${order.orderNumber}`)}><Download />下載收據</Button>
         </footer>
       </article>
     </div>
+    {printDocument}
+    </>
   );
 }
 
@@ -521,7 +510,7 @@ function AddonPanel({
   </SidePanel>;
 }
 
-function DetailView({ session, order, onBack, onLogout, createPdf, loadAddonOptions, paymentNotice }: { session: CustomerSelfServiceSession; order: CustomerSelfServiceOrderDetail; onBack: () => void; onLogout: () => void; createPdf: PdfFn; loadAddonOptions: AddonOptionsFn; paymentNotice?: string }) {
+function DetailView({ session, order, onBack, onLogout, printReceipt, loadAddonOptions, paymentNotice }: { session: CustomerSelfServiceSession; order: CustomerSelfServiceOrderDetail; onBack: () => void; onLogout: () => void; printReceipt: PrintReceiptFn; loadAddonOptions: AddonOptionsFn; paymentNotice?: string }) {
   const [receiptOpen, setReceiptOpen] = useState(false);
   const [addonOpen, setAddonOpen] = useState(false);
   const [addonOptions, setAddonOptions] = useState<CustomerSelfServiceAddonOptions | null>(null);
@@ -567,7 +556,7 @@ function DetailView({ session, order, onBack, onLogout, createPdf, loadAddonOpti
           <div className="is-wide"><span>地址</span><strong>{order.address || "—"}</strong></div>
         </div>
       </section>
-      {receiptOpen ? <ReceiptPreview order={order} createPdf={createPdf} onClose={() => setReceiptOpen(false)} /> : null}
+      {receiptOpen ? <ReceiptPreview order={order} printReceipt={printReceipt} onClose={() => setReceiptOpen(false)} /> : null}
       {addonOpen && addonOptions ? <AddonPanel open session={session} order={order} options={addonOptions} onClose={() => setAddonOpen(false)} /> : null}
     </main>
   );
@@ -579,8 +568,8 @@ export function CustomerSelfServicePage({
   loadDetail = fetchCustomerSelfServiceOrder,
   loadAddonOptions = fetchCustomerSelfServiceAddonOptions,
   logout = logoutCustomerSelfService,
-  createPdf = createCustomerReceiptPdf,
-}: { login?: LoginFn; restore?: RestoreFn; loadDetail?: DetailFn; loadAddonOptions?: AddonOptionsFn; logout?: LogoutFn; createPdf?: PdfFn }) {
+  printReceipt = printPdf,
+}: { login?: LoginFn; restore?: RestoreFn; loadDetail?: DetailFn; loadAddonOptions?: AddonOptionsFn; logout?: LogoutFn; printReceipt?: PrintReceiptFn }) {
   const navigate = useNavigate();
   const { orderId = "" } = useParams<{ orderId?: string }>();
   const demoMode = import.meta.env.DEV
@@ -667,6 +656,6 @@ export function CustomerSelfServicePage({
   if (!session) return <LoginView login={login} onLogin={setSession} />;
   if (detailError) return <main className="self-service-loading"><p role="alert">{detailError}</p><Button onClick={() => { setDetailError(""); navigate("/self_service_search"); }}>返回訂單列表</Button></main>;
   if (loading) return <main className="self-service-loading"><LoaderCircle className="self-service-spin" /><span>正在載入訂單…</span></main>;
-  if (detail) return <DetailView session={session} order={detail} onBack={() => navigate("/self_service_search")} onLogout={() => void leave()} createPdf={createPdf} loadAddonOptions={demoMode ? loadDemoAddonOptions : loadAddonOptions} paymentNotice={paymentNotice} />;
+  if (detail) return <DetailView session={session} order={detail} onBack={() => navigate("/self_service_search")} onLogout={() => void leave()} printReceipt={printReceipt} loadAddonOptions={demoMode ? loadDemoAddonOptions : loadAddonOptions} paymentNotice={paymentNotice} />;
   return <OrdersView session={session} onSelect={(order) => void selectOrder(order)} onLogout={() => void leave()} />;
 }

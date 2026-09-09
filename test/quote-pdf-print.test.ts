@@ -96,4 +96,27 @@ describe("quote PDF print stylesheet", () => {
       /\.quote-pdf-print-only\s*\{\s*display:\s*block !important;\s*width:\s*fit-content;\s*margin-left:\s*auto;\s*padding:\s*0;\s*text-align:\s*right;/,
     );
   });
+
+  it("keeps the self-service receipt footer inside the A4 preview and print safe area", () => {
+    const css = readAppStyles();
+    const selfServiceCss = readFileSync(
+      join(process.cwd(), "src/components/customer-self-service.css"),
+      "utf8",
+    );
+    expect(selfServiceCss).toMatch(
+      /\.quote-pdf-sheet\.receipt-pdf-sheet\.self-service-receipt-document\s*\{[^}]*position:\s*relative;[^}]*padding-bottom:\s*16mm;/s,
+    );
+    expect(selfServiceCss).toMatch(
+      /\.self-service-receipt-document\s*>\s*\.receipt-pdf-page-footer\s*\{[^}]*position:\s*absolute;[^}]*bottom:\s*6mm;/s,
+    );
+    expect(selfServiceCss).toMatch(
+      /\.self-service-receipt-document\s+\.receipt-pdf-signature\s*\{[^}]*margin-top:\s*0;/s,
+    );
+    expect(selfServiceCss).toMatch(
+      /@media print[\s\S]*?\.self-service-receipt-print-root\s*>\s*\.self-service-receipt-document\s*\{[^}]*padding:\s*10mm 10mm 16mm !important;/s,
+    );
+    expect(css).toMatch(
+      /\.receipt-pdf-page-footer\s*\{[^}]*flex:\s*0 0 auto;/s,
+    );
+  });
 });

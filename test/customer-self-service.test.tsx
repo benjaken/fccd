@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 
@@ -103,10 +103,10 @@ describe("CustomerSelfServicePage", () => {
     expect(screen.getByText("****4127")).toBeInTheDocument();
   });
 
-  it("shows order details and opens a receipt preview that starts a PDF download", async () => {
-    const createPdf = vi.fn().mockResolvedValue({
-      blob: new Blob(["receipt"], { type: "application/pdf" }),
-      filename: "收據REC-B-1247.pdf",
+  it("opens a read-only receipt preview and prints it through the order receipt workflow", async () => {
+    const previousTitle = document.title;
+    const print = vi.spyOn(window, "print").mockImplementation(() => {
+      expect(document.title).toBe("收據REC-B-1247");
     });
     const loadDetail = vi.fn().mockResolvedValue({
       ...detail,
@@ -126,7 +126,6 @@ describe("CustomerSelfServicePage", () => {
           hasAddOn: false,
           items: [{ id: "setting-1", productId: "product-1", sku: "ADD-1", name: "唐揚炸雞塊（12件）", price: 128, minQuantity: 1, maxQuantity: 10 }],
         })}
-        createPdf={createPdf}
         />} /></Routes>
       </MemoryRouter>,
     );
@@ -140,18 +139,24 @@ describe("CustomerSelfServicePage", () => {
     expect(totals).toHaveTextContent("HK$100");
 
     fireEvent.click(screen.getByRole("button", { name: "預覽並下載收據" }));
-    expect(await screen.findByRole("dialog", { name: "收據 B-1247" })).toBeInTheDocument();
-    const receipt = screen.getByLabelText("唯讀收據 PDF");
+    const dialog = await screen.findByRole("dialog", { name: "收據 B-1247" });
+    expect(dialog).toBeInTheDocument();
+    const receipt = within(dialog).getByLabelText("唯讀收據 PDF");
+    expect(screen.getByTestId("self-service-receipt-print-root")).toBeInTheDocument();
     expect(receipt).toHaveTextContent("RECEIPT");
-    expect(receipt).toHaveTextContent("REC/B-1247");
+    expect(within(receipt).getByDisplayValue("REC/B-1247")).toBeInTheDocument();
     expect(receipt).toHaveTextContent("Description");
-    expect(receipt).toHaveTextContent("（雙格）椒鹽豬扒飯");
-    expect(receipt).toHaveTextContent("Delivery Fee:");
-    expect(receipt).toHaveTextContent("$100");
+    expect(within(receipt).getByDisplayValue("（雙格）椒鹽豬扒飯")).toBeInTheDocument();
+    expect(receipt).toHaveTextContent("Delivery Fee");
+    expect(within(receipt).getByDisplayValue("100")).toBeInTheDocument();
     expect(receipt).toHaveTextContent("Payment information:");
-    expect(receipt.querySelector("input, textarea, select")).toBeNull();
-    await waitFor(() => expect(createPdf).toHaveBeenCalledWith(expect.any(HTMLDivElement), "B-1247"));
-    expect(HTMLAnchorElement.prototype.click).toHaveBeenCalled();
+    const receiptFields = Array.from(receipt.querySelectorAll("input, textarea"));
+    expect(receiptFields.length).toBeGreaterThan(0);
+    expect(receiptFields.every((field) => field.hasAttribute("readonly"))).toBe(true);
+    expect(receiptFields.every((field) => field.getAttribute("tabindex") === "-1")).toBe(true);
+    fireEvent.click(screen.getByRole("button", { name: "下載收據" }));
+    expect(print).toHaveBeenCalledOnce();
+    expect(document.title).toBe(previousTitle);
   });
 
   it("restores the order detail directly from its URL after refresh", async () => {

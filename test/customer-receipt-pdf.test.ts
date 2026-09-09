@@ -48,10 +48,6 @@ describe("customer receipt PDF", () => {
 
     expect(logo.decode).toHaveBeenCalledOnce();
     expect(mocks.html2canvas).toHaveBeenCalledWith(element, expect.any(Object));
-    const options = mocks.html2canvas.mock.calls[0]?.[1] as { onclone?: (document: Document, element: HTMLElement) => void };
-    const clonedElement = document.createElement("div");
-    options.onclone?.(document, clonedElement);
-    expect(clonedElement).toHaveClass("is-pdf-capture");
     expect(mocks.addImage).toHaveBeenCalledWith(
       "data:image/jpeg;base64,receipt",
       "JPEG",

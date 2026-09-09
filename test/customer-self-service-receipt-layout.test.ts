@@ -15,7 +15,10 @@ describe("customer self-service receipt layout", () => {
     expect(rule).not.toContain("line-height");
     expect(rule).not.toContain("vertical-align");
 
-    const captureRule = css.match(/\.self-service-receipt-document\.is-pdf-capture \.self-service-receipt-capture-text\s*\{([^}]*)\}/)?.[1] ?? "";
-    expect(captureRule).toContain("transform: translateY(-4px)");
+    expect(css).toContain("body:has(.self-service-receipt-print-root) > * { display: none !important; }");
+    expect(css).toContain(".self-service-receipt-print-root * { visibility: visible !important; }");
+    expect(css).toContain("page-break-after: auto !important");
+    expect(css).toContain("padding-bottom: 20px");
+    expect(css).toContain("transform: none !important");
   });
 });
