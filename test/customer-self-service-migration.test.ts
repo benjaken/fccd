@@ -50,3 +50,20 @@ describe("customer self-service catalog product name", () => {
     );
   });
 });
+
+describe("customer self-service receipt data", () => {
+  it("exposes the same shipping and brand fields used by the order REC", () => {
+    const sql = readFileSync(
+      resolve(
+        process.cwd(),
+        "supabase/migrations/20260909120000_self_service_receipt_matches_order_rec.sql",
+      ),
+      "utf8",
+    );
+    expect(sql).toContain("'shippingFee', coalesce(v_order.shipping_fee, 0)");
+    expect(sql).toContain("'deliveryTime', coalesce(v_order.delivery_time, v_order.ship_out_time)");
+    expect(sql).toContain("'shopifyStoreDomain'");
+    expect(sql).toContain("store.shop_domain");
+    expect(sql).toContain("private.self_service_order_matches");
+  });
+});

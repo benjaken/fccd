@@ -96,11 +96,13 @@ const DEMO_DETAIL: CustomerSelfServiceOrderDetail = {
   factoryArranged: true,
   fleetArranged: true,
   currency: "HKD",
+  shippingFee: 100,
   grandTotal: 1720,
   outstanding: 0,
   paid: true,
   channelName: "HK Lunch Box",
   channelEmail: "sales@foodchannels-catering.com",
+  shopifyStoreDomain: null,
   lines: [
     { id: "line-1", name: "（雙格）椒鹽豬扒飯", content: null, quantity: 10, unitPrice: 60, totalPrice: 600, isAddon: false },
     { id: "line-2", name: "（雙格）菠蘿酸甜咕嚕肉飯", content: null, quantity: 10, unitPrice: 60, totalPrice: 600, isAddon: false },
@@ -145,6 +147,39 @@ function money(value: number, currency = "HKD") {
     currency,
     maximumFractionDigits: Number.isInteger(value) ? 0 : 2,
   }).format(value);
+}
+
+function receiptDate(value: string | null | undefined) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.valueOf())) return value;
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Hong_Kong",
+    day: "numeric",
+    month: "numeric",
+    year: "numeric",
+  }).formatToParts(date);
+  const part = (type: Intl.DateTimeFormatPartTypes) => parts.find((item) => item.type === type)?.value ?? "";
+  return `${Number(part("day"))}/${Number(part("month"))}/${part("year")}`;
+}
+
+function receiptMoney(value: number, decimals = false) {
+  return `$${value.toLocaleString("en-HK", {
+    minimumFractionDigits: decimals ? 2 : Number.isInteger(value) ? 0 : 2,
+    maximumFractionDigits: 2,
+  })}`;
+}
+
+function customerOrderLineTotal(line: CustomerSelfServiceOrderDetail["lines"][number]) {
+  const totalPrice = Number(line.totalPrice);
+  return Number.isFinite(totalPrice) ? totalPrice : line.unitPrice * line.quantity;
+}
+
+function customerOrderShippingFee(order: CustomerSelfServiceOrderDetail, itemTotal: number) {
+  const returnedShippingFee = Number(order.shippingFee);
+  return Number.isFinite(returnedShippingFee) && returnedShippingFee > 0
+    ? returnedShippingFee
+    : Math.max(order.grandTotal - itemTotal, 0);
 }
 
 function customerLoginError(error: unknown) {
@@ -258,50 +293,99 @@ function StatusBadges({ order }: { order: CustomerSelfServiceOrderDetail }) {
   </div>;
 }
 
-function ReceiptDocument({ order, documentRef }: { order: CustomerSelfServiceOrderDetail; documentRef: RefObject<HTMLDivElement | null> }) {
-  const paymentTotal = order.payments.reduce((total, payment) => total + payment.amount, 0);
-  const payment = order.payments[0];
-  const contact = [order.companyName, order.customerName].filter(Boolean).join(" / ") || "Customer";
-  const brandValues = [order.channelName, order.orderNumber];
+function ReceiptDocument({ order, documentRef, scale = 1 }: { order: CustomerSelfServiceOrderDetail; documentRef: RefObject<HTMLDivElement | null>; scale?: number }) {
+  const subtotal = order.lines.reduce((total, line) => total + customerOrderLineTotal(line), 0);
+  const shippingFee = customerOrderShippingFee(order, subtotal);
+  const grandTotal = subtotal + shippingFee;
+  const brandValues = [order.channelName, order.shopifyStoreDomain, order.orderNumber];
+  const paymentInformation = order.outstanding > 0
+    ? `Outstanding: ${receiptMoney(order.outstanding, true)}`
+    : order.outstanding < 0
+      ? `Overpaid: ${receiptMoney(Math.abs(order.outstanding), true)}`
+      : "Payment Status: Paid";
   return (
-    <div className="customer-receipt-document" ref={documentRef}>
-      <header>
-        <div><strong>Food Channels Limited</strong><span>Unit D-G, 5/F, Wah Lik Industrial Centre, 459-469 Castle Peak Road, Tsuen Wan N.T.</span></div>
+    <div className="quote-pdf-sheet receipt-pdf-sheet self-service-receipt-document" ref={documentRef} aria-label="唯讀收據 PDF" style={{ transform: `scale(${scale})`, transformOrigin: "top left" }}>
+      <header className="receipt-pdf-letterhead">
+        <img src={getDocumentLogoPath(...brandValues)} alt={getBrandLogoAlt(...brandValues)} />
+        <div className="receipt-pdf-document-heading">
+          <h1>RECEIPT</h1>
+          <strong className="self-service-receipt-number">{`REC/${order.orderNumber}`}</strong>
+        </div>
       </header>
-      <section className="customer-receipt-meta">
-        <span>No.:</span><strong>{payment?.receiptReference || `REC/${order.orderNumber}`}</strong>
-        <span>Delivery Date:</span><strong>{portalDate(order.deliveryDate)}</strong>
-        <span>Contact Person:</span><strong>{contact} ({order.phoneA || order.phoneB || "—"})</strong>
-        <span>Email:</span><strong>{order.email || "—"}</strong>
-        <span>Delivery Address:</span><strong>{order.address || "—"}</strong>
-      </section>
-      <h2>Official Receipt</h2>
-      <section className="customer-receipt-description">
-        <strong>Description</strong>
-        <div><span>{order.channelName || "Catering"}　{order.orderNumber}</span><span>{money(order.grandTotal, order.currency)}</span></div>
-      </section>
-      <section className="customer-receipt-payment">
-        <span>Total Amount:</span><strong>{money(order.grandTotal, order.currency)}</strong>
-        <span>Payment Method:</span><strong>{payment?.method || "—"}</strong>
-        <span>Payment Date:</span><strong>{portalDate(payment?.paymentAt)}</strong>
-        {paymentTotal && paymentTotal !== order.grandTotal ? <><span>Amount Received:</span><strong>{money(paymentTotal, order.currency)}</strong></> : null}
-      </section>
-      <section className="customer-receipt-signature">
-        <span>For and on behalf of</span>
-        <strong>Food Channels Limited</strong>
-        <img src="/assets/fc-ltd-stamp.avif" alt="Food Channels Limited company chop" />
-        <span>Authorized Signature &amp; Co. Chop</span>
-      </section>
-      <footer><span>www.foodchannels-catering.com</span><span>(+852) 2185 7373</span><span>{getBrandContactEmail(order.channelEmail, ...brandValues)}</span></footer>
+
+      <div className="receipt-pdf-meta-grid self-service-receipt-meta-grid">
+        <div className="receipt-pdf-customer-company">
+          <label>Customer Name:</label><span>{order.customerName || ""}</span>
+          <label>Company Name:</label><span>{order.companyName || ""}</span>
+        </div>
+        <label>Invoice Date:</label><span>{receiptDate(order.orderDate)}</span>
+        <label>Contact Person:</label><span>{[order.phoneA, order.phoneB].filter(Boolean).join(" / ")}</span>
+        <label>Delivery Date:</label><span>{receiptDate(order.deliveryDate)}</span>
+        <label>Delivery Address:</label><span>{order.address || ""}</span>
+        <label>Delivery Time:</label><span>{order.deliveryTime || ""}</span>
+      </div>
+
+      <div className="receipt-pdf-table-wrap">
+        <table className="receipt-pdf-table">
+          <thead><tr><th aria-label="序號" /><th>Description</th><th>Unit Price</th><th>Qty</th><th>Total</th></tr></thead>
+          <tbody>{order.lines.map((line, index) => {
+            const unitPrice = line.unitPrice !== 0 || !line.totalPrice || line.quantity === 0
+              ? line.unitPrice
+              : line.totalPrice / line.quantity;
+            return <tr key={line.id}>
+              <td>{index + 1}</td>
+              <td>{line.name || line.content || ""}</td>
+              <td><span className="receipt-pdf-price-input">{receiptMoney(unitPrice)}</span></td>
+              <td>{line.quantity}</td>
+              <td>{receiptMoney(customerOrderLineTotal(line))}</td>
+            </tr>;
+          })}</tbody>
+          <tfoot>
+            <tr><td colSpan={4}>Subtotal:</td><td>{receiptMoney(subtotal)}</td></tr>
+            <tr><td colSpan={4}>Delivery Fee:</td><td>{receiptMoney(shippingFee)}</td></tr>
+            <tr><td colSpan={4}>Grand Total:</td><td>{receiptMoney(grandTotal)}</td></tr>
+          </tfoot>
+        </table>
+      </div>
+
+      <div className="receipt-pdf-trailing" aria-label="付款資料及公司蓋章">
+        <section className="receipt-pdf-payment">
+          <strong>Payment information:</strong>
+          <span>{paymentInformation}</span>
+          {order.payments.map((payment, index) => {
+            const suffix = order.payments.length > 1 ? ` ${index + 1}` : "";
+            return <div className="receipt-pdf-payment-record" key={payment.id}>
+              <span>{`Payment Method${suffix}: ${payment.method || ""} ${receiptMoney(payment.amount, true)}`}</span>
+              <span>{`Payment Date${suffix}: ${receiptDate(payment.paymentAt)}`}</span>
+            </div>;
+          })}
+        </section>
+      </div>
+      <div className="receipt-pdf-trailing receipt-pdf-trailing-signature">
+        <section className="receipt-pdf-signature" aria-label="公司簽署">
+          <span>For and on behalf of</span>
+          <strong>Food Channels Limited</strong>
+          <img src="/assets/fc-ltd-stamp.avif" alt="Food Channels Limited 公司蓋印" />
+          <span>Authorized Signature &amp; Co. Chop</span>
+        </section>
+      </div>
+      <footer className="receipt-pdf-page-footer">
+        <span>5D-G Wah Lik Ind Ctr Tsuen Wan</span>
+        <span>(+852) 2185 7373 / 5396 4335</span>
+        <span>{getBrandContactEmail(order.channelEmail, ...brandValues)}</span>
+        <span>第1頁 | 共1頁</span>
+      </footer>
     </div>
   );
 }
 
 function ReceiptPreview({ order, onClose, createPdf }: { order: CustomerSelfServiceOrderDetail; onClose: () => void; createPdf: PdfFn }) {
   const documentRef = useRef<HTMLDivElement>(null);
+  const previewRef = useRef<HTMLDivElement>(null);
   const [busy, setBusy] = useState(true);
   const [error, setError] = useState("");
   const [download, setDownload] = useState<{ blob: Blob; filename: string } | null>(null);
+  const [previewSize, setPreviewSize] = useState<{ width: number; height: number; scale: number } | null>(null);
 
   async function generate(autoDownload: boolean) {
     if (!documentRef.current) return;
@@ -322,12 +406,44 @@ function ReceiptPreview({ order, onClose, createPdf }: { order: CustomerSelfServ
 
   useEffect(() => { const timer = window.setTimeout(() => void generate(true), 80); return () => window.clearTimeout(timer); }, []);
 
+  useEffect(() => {
+    const preview = previewRef.current;
+    const document = documentRef.current;
+    if (!preview || !document) return;
+    const resize = () => {
+      const style = window.getComputedStyle(preview);
+      const availableWidth = preview.clientWidth
+        - Number.parseFloat(style.paddingLeft || "0")
+        - Number.parseFloat(style.paddingRight || "0");
+      const pageWidth = document.offsetWidth;
+      const pageHeight = document.offsetHeight;
+      if (availableWidth <= 0 || pageWidth <= 0 || pageHeight <= 0) return;
+      const scale = Math.min(1, availableWidth / pageWidth);
+      setPreviewSize({ width: pageWidth * scale, height: pageHeight * scale, scale });
+    };
+    resize();
+    if (typeof ResizeObserver === "undefined") {
+      window.addEventListener("resize", resize);
+      return () => window.removeEventListener("resize", resize);
+    }
+    const observer = new ResizeObserver(resize);
+    observer.observe(preview);
+    return () => observer.disconnect();
+  }, []);
+
   return (
     <div className="self-service-receipt-layer" role="dialog" aria-modal="true" aria-labelledby="receipt-preview-title">
       <button className="self-service-receipt-scrim" onClick={onClose} aria-label="關閉收據預覽" />
       <article className="self-service-receipt-modal">
         <header><div><span>PDF 預覽</span><h2 id="receipt-preview-title">收據 {order.orderNumber}</h2></div><Button variant="ghost" size="icon" onClick={onClose} aria-label="關閉"><X /></Button></header>
-        <div className="self-service-receipt-preview"><ReceiptDocument order={order} documentRef={documentRef} /></div>
+        <div className="self-service-receipt-preview" ref={previewRef}>
+          <div
+            className="self-service-receipt-stage"
+            style={previewSize ? { width: previewSize.width, height: previewSize.height } : undefined}
+          >
+            <ReceiptDocument order={order} documentRef={documentRef} scale={previewSize?.scale ?? 1} />
+          </div>
+        </div>
         <footer>
           {busy ? <span><LoaderCircle className="self-service-spin" />正在建立並下載 PDF…</span> : error ? <span className="is-error">{error}</span> : <span><Check />PDF 已開始下載</span>}
           <Button variant="outline" onClick={() => download && downloadCustomerReceipt(download.blob, download.filename)} disabled={!download}><Download />再次下載</Button>
@@ -409,7 +525,8 @@ function DetailView({ session, order, onBack, onLogout, createPdf, loadAddonOpti
   const [receiptOpen, setReceiptOpen] = useState(false);
   const [addonOpen, setAddonOpen] = useState(false);
   const [addonOptions, setAddonOptions] = useState<CustomerSelfServiceAddonOptions | null>(null);
-  const itemTotal = useMemo(() => order.lines.reduce((total, line) => total + line.totalPrice, 0), [order.lines]);
+  const itemTotal = useMemo(() => order.lines.reduce((total, line) => total + customerOrderLineTotal(line), 0), [order.lines]);
+  const shippingFee = customerOrderShippingFee(order, itemTotal);
   useEffect(() => {
     let active = true;
     void loadAddonOptions(session.token, order.id).then((value) => { if (active) setAddonOptions(value); }).catch(() => undefined);
@@ -438,7 +555,7 @@ function DetailView({ session, order, onBack, onLogout, createPdf, loadAddonOpti
             <dl><div><dt>單價</dt><dd>{money(line.unitPrice, order.currency)}</dd></div><div><dt>數量</dt><dd>{line.quantity}</dd></div><div><dt>小計</dt><dd>{money(line.totalPrice, order.currency)}</dd></div></dl>
           </article>)}
         </div>
-        <footer><span>食品小計</span><strong>{money(itemTotal, order.currency)}</strong><span>訂單總額</span><strong>{money(order.grandTotal, order.currency)}</strong></footer>
+        <footer><span>食品小計</span><strong>{money(itemTotal, order.currency)}</strong><span>運費</span><strong>{money(shippingFee, order.currency)}</strong><span>訂單總額</span><strong>{money(order.grandTotal, order.currency)}</strong></footer>
       </section>
       <section className="self-service-delivery-card">
         <header><MapPin /><div><span>送貨資料</span><h2>{order.shippingMethod || "送貨安排"}</h2></div></header>
