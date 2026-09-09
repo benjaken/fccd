@@ -51,9 +51,9 @@ describe("customer-service backend conversation preview", () => {
     expect(source).not.toContain('fallback.intent === "out_of_scope"');
   });
 
-  it("limits only live automatic replies to the customer-service allowlist and fails closed", () => {
+  it("supports an optional live automatic-reply allowlist", () => {
     expect(source).toContain("row?.allowed_phones || []");
-    expect(source).toContain("customer_service_allowed_phones_missing");
+    expect(source).not.toContain("customer_service_allowed_phones_missing");
     expect(source).toContain("customerServicePhoneAllowed(event.waId, controls.allowedPhones)");
     expect(source).toContain('ignored: "phone_not_allowed"');
     expect(source).not.toContain("notificationRecipientAllowlist");

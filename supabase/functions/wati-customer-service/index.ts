@@ -411,11 +411,6 @@ async function loadBotControls(admin: AdminClient) {
   const allowedPhones = parseAllowedCustomerServicePhones(
     row?.allowed_phones || [],
   );
-  // Fail closed: only explicitly allowlisted customer-service callers may
-  // reach the automatic reply flow.
-  if (!allowedPhones.length) {
-    throw new Error("customer_service_allowed_phones_missing");
-  }
   return {
     botEnabled: Boolean(row?.bot_enabled),
     allowedPhones,
