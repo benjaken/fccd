@@ -178,8 +178,8 @@
 /* Orders and quotes share this navigator. Once it reaches the fixed app
    navigation, keep it visible while the document sections continue scrolling. */
 .main-content:has(.quote-editor-section-navigation) {
-  overflow: visible;
   overflow-x: clip;
+  overflow-y: auto;
 }
 
 .quote-editor-section-navigation {
@@ -199,6 +199,7 @@
   #root {
     max-width: 100%;
     overflow-x: clip;
+    overflow-y: auto;
   }
 
   .quote-editor-page,
