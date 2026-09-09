@@ -4285,10 +4285,9 @@ body:has(.quote-pdf-editor),
 body:has(.document-editor-shell),
 html:has(.quote-pdf-editor) #root,
 html:has(.document-editor-shell) #root {
-  height: auto !important;
-  max-height: none !important;
-  overflow-x: visible !important;
-  overflow-y: auto !important;
+  height: 100% !important;
+  max-height: 100% !important;
+  overflow: hidden !important;
 }
 
 .document-editor-shell .shell-body,
@@ -4297,9 +4296,18 @@ html:has(.document-editor-shell) #root {
 .document-editor-shell .page-transition,
 body:has(.quote-pdf-editor) .shell-body,
 body:has(.quote-pdf-editor) .main-content,
-body:has(.quote-pdf-editor) .page-transition,
-body:has(.quote-pdf-editor) .quote-pdf-editor {
-  height: auto !important;
+body:has(.quote-pdf-editor) .page-transition {
+  height: 100% !important;
   max-height: none !important;
   overflow: visible !important;
+}
+
+body:has(.quote-pdf-editor) .quote-pdf-editor,
+.document-editor-shell .quote-pdf-editor {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  max-height: 100% !important;
+  overflow: auto !important;
 }

@@ -321,7 +321,7 @@ describe("Catering quotes list", () => {
 
     await screen.findByText("Q-260812-001");
     expect(screen.getByRole("link", { name: "PDF" })).toHaveAttribute("href", "/quotes/quote-1/pdf");
-    expect(screen.getByRole("link", { name: "PDF" })).toHaveAttribute("target", "_blank");
+    expect(screen.getByRole("link", { name: "PDF" })).not.toHaveAttribute("target");
     expect(screen.getByRole("link", { name: "查看" })).toHaveAttribute("href", "/quotes/quote-1");
     expect(screen.getByRole("link", { name: "查看" })).toHaveAttribute("target", "_blank");
     expect(screen.getByRole("link", { name: "查看" })).toHaveAttribute("rel", "noopener noreferrer");

@@ -88,6 +88,10 @@ describe("quote PDF print stylesheet", () => {
     expect(css).toMatch(
       /\.quote-pdf-summary-rows select\s*\{[^}]*margin-left:\s*auto;[^}]*text-align:\s*right;[^}]*text-align-last:\s*right;/,
     );
+    expect(css).toMatch(/\.quote-pdf-page-footer\s*\{[^}]*pointer-events:\s*none;/);
+    expect(css).toMatch(
+      /\.quote-pdf-sheet > :not\(\.quote-pdf-page-footer\):not\(\.receipt-pdf-page-footer\)\s*\{[^}]*z-index:\s*1;/,
+    );
     expect(css).not.toContain("quote-pdf-print-footer-spacer");
     expect(css).toMatch(
       /\.quote-pdf-sheet\s*\{[^}]*padding:\s*10mm 10mm 24mm;/,
@@ -123,7 +127,10 @@ describe("quote PDF print stylesheet", () => {
   it("keeps extra quote PDF sheets reachable by scrolling the document editor", () => {
     const css = readAppStyles();
     expect(css).toMatch(
-      /html:has\(\.quote-pdf-editor\),\s*html:has\(\.document-editor-shell\),\s*body:has\(\.quote-pdf-editor\),\s*body:has\(\.document-editor-shell\),\s*html:has\(\.quote-pdf-editor\) #root,\s*html:has\(\.document-editor-shell\) #root\s*\{[^}]*height:\s*auto !important;[^}]*overflow-y:\s*auto !important;/s,
+      /html:has\(\.quote-pdf-editor\),\s*html:has\(\.document-editor-shell\),\s*body:has\(\.quote-pdf-editor\),\s*body:has\(\.document-editor-shell\),\s*html:has\(\.quote-pdf-editor\) #root,\s*html:has\(\.document-editor-shell\) #root\s*\{[^}]*height:\s*100% !important;[^}]*overflow:\s*hidden !important;/s,
+    );
+    expect(css).toMatch(
+      /body:has\(\.quote-pdf-editor\) \.quote-pdf-editor,\s*\.document-editor-shell \.quote-pdf-editor\s*\{[^}]*position:\s*fixed !important;[^}]*overflow:\s*auto !important;/s,
     );
     expect(css).toMatch(
       /body:has\(\.quote-pdf-editor\) \.main-content,\s*\.document-editor-shell \.main-content,[\s\S]*?overflow:\s*visible !important;/,

@@ -1,58 +1,109 @@
 import { act, render } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { useRef, type ReactNode } from "react";
+import { describe, expect, it } from "vitest";
 
 import { useDocumentEditorWindowScroll } from "@/lib/document-editor-window-scroll";
 
-function ScrollUnlockProbe() {
-  useDocumentEditorWindowScroll();
-  return <section className="quote-pdf-editor">probe</section>;
+function markScrollable(node: HTMLElement | null, scrollHeight = 3000, clientHeight = 800) {
+  if (!node) return;
+  Object.defineProperties(node, {
+    scrollHeight: { configurable: true, get: () => scrollHeight },
+    clientHeight: { configurable: true, get: () => clientHeight },
+    scrollWidth: { configurable: true, get: () => 800 },
+    clientWidth: { configurable: true, get: () => 800 },
+  });
+}
+
+function ScrollUnlockProbe({ children }: { children?: ReactNode }) {
+  const ref = useRef<HTMLElement | null>(null);
+  useDocumentEditorWindowScroll(ref);
+  return (
+    <section
+      ref={(node) => {
+        ref.current = node;
+        markScrollable(node);
+      }}
+      className="quote-pdf-editor"
+    >
+      {children ?? "probe"}
+    </section>
+  );
 }
 
 describe("document editor window scroll", () => {
-  it("unlocks html/body so extra PDF sheets can use window scroll", () => {
+  it("locks html/body and makes the editor the viewport scroller", () => {
     const root = document.createElement("div");
     root.id = "root";
     document.body.append(root);
 
     const { unmount } = render(<ScrollUnlockProbe />, { container: root });
+    const editor = root.querySelector(".quote-pdf-editor");
 
-    expect(document.documentElement.style.getPropertyValue("overflow-y")).toBe("scroll");
-    expect(document.documentElement.style.getPropertyPriority("overflow-y")).toBe("important");
-    expect(document.body.style.getPropertyValue("overflow-y")).toBe("auto");
-    expect(root.style.getPropertyValue("overflow")).toBe("");
-    expect(root.style.getPropertyValue("overflow-y")).toBe("auto");
-    expect(root.style.getPropertyValue("height")).toBe("auto");
+    expect(document.documentElement.style.getPropertyValue("overflow")).toBe("hidden");
+    expect(document.documentElement.style.getPropertyPriority("overflow")).toBe("important");
+    expect(document.documentElement.style.getPropertyValue("height")).toBe("100%");
+    expect(document.body.style.getPropertyValue("overflow")).toBe("hidden");
+    expect(root.style.getPropertyValue("overflow")).toBe("hidden");
+    expect(root.style.getPropertyValue("height")).toBe("100%");
+    expect(editor).toBeInstanceOf(HTMLElement);
+    expect((editor as HTMLElement).style.getPropertyValue("overflow")).toBe("auto");
+    expect((editor as HTMLElement).style.getPropertyValue("position")).toBe("fixed");
 
     unmount();
     root.remove();
 
-    expect(document.documentElement.style.getPropertyValue("overflow-y")).toBe("");
-    expect(document.body.style.getPropertyValue("overflow-y")).toBe("");
+    expect(document.documentElement.style.getPropertyValue("overflow")).toBe("");
+    expect(document.body.style.getPropertyValue("overflow")).toBe("");
   });
 
-  it("scrolls the window when a wheel event is swallowed before click", async () => {
+  it("scrolls the editor on wheel without a prior click", async () => {
     const root = document.createElement("div");
     root.id = "root";
     document.body.append(root);
-    const scroller = { scrollTop: 0, scrollHeight: 3000, clientHeight: 800 };
-    Object.defineProperty(document, "scrollingElement", {
-      configurable: true,
-      get: () => scroller,
-    });
-    const raf = vi.spyOn(window, "requestAnimationFrame").mockImplementation((callback) => {
-      callback(0);
-      return 1;
-    });
 
     const { unmount } = render(<ScrollUnlockProbe />, { container: root });
+    const editor = root.querySelector(".quote-pdf-editor") as HTMLElement;
+    const event = new WheelEvent("wheel", { deltaY: 80, bubbles: true, cancelable: true });
+
     await act(async () => {
-      window.dispatchEvent(new WheelEvent("wheel", { deltaY: 180, bubbles: true }));
+      editor.dispatchEvent(event);
     });
 
-    expect(scroller.scrollTop).toBe(180);
+    expect(editor.scrollTop).toBe(80);
+    expect(event.defaultPrevented).toBe(true);
+    expect(root.scrollTop).toBe(0);
+    expect(document.documentElement.scrollTop).toBe(0);
+    expect(document.body.scrollTop).toBe(0);
 
     unmount();
-    raf.mockRestore();
+    root.remove();
+  });
+
+  it("scrolls the editor when wheel targets an overflow-hidden sheet", async () => {
+    const root = document.createElement("div");
+    root.id = "root";
+    document.body.append(root);
+
+    const { unmount } = render(
+      <ScrollUnlockProbe>
+        <main className="quote-pdf-sheet" style={{ overflow: "hidden", height: "297mm" }}>
+          sheet
+        </main>
+      </ScrollUnlockProbe>,
+      { container: root },
+    );
+    const editor = root.querySelector(".quote-pdf-editor") as HTMLElement;
+    const sheet = root.querySelector(".quote-pdf-sheet") as HTMLElement;
+    const event = new WheelEvent("wheel", { deltaY: 120, bubbles: true, cancelable: true });
+
+    await act(async () => {
+      sheet.dispatchEvent(event);
+    });
+
+    expect(editor.scrollTop).toBe(120);
+    expect(event.defaultPrevented).toBe(true);
+
+    unmount();
     root.remove();
   });
 });

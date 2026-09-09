@@ -586,18 +586,22 @@ export function QuotePdfEditorPage({
 
   if (loading) {
     return (
-      <div className="quote-pdf-state">
-        <LoaderCircle className="spin" /> 正在載入報價表…
-      </div>
+      <section ref={editorRef} tabIndex={-1} className="quote-pdf-editor">
+        <div className="quote-pdf-state">
+          <LoaderCircle className="spin" /> 正在載入報價表…
+        </div>
+      </section>
     );
   }
 
   if (error || !draft) {
     return (
-      <div className="quote-pdf-state" role="alert">
-        無法載入報價表。
-        <Button variant="outline" onClick={() => void load()}>重試</Button>
-      </div>
+      <section ref={editorRef} tabIndex={-1} className="quote-pdf-editor">
+        <div className="quote-pdf-state" role="alert">
+          無法載入報價表。
+          <Button variant="outline" onClick={() => void load()}>重試</Button>
+        </div>
+      </section>
     );
   }
 
