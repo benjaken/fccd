@@ -297,10 +297,21 @@ export function ReceiptPdfEditorPage({
   };
 
   if (loading) {
-    return <div className="quote-pdf-state"><LoaderCircle className="spin" />正在載入{documentName}…</div>;
+    return (
+      <section ref={editorRef} tabIndex={-1} className="quote-pdf-editor receipt-pdf-editor">
+        <div className="quote-pdf-state"><LoaderCircle className="spin" />正在載入{documentName}…</div>
+      </section>
+    );
   }
   if (error || !draft) {
-    return <div className="quote-pdf-state"><span>無法載入{documentName}。</span><Button variant="outline" onClick={() => void load()}>重新載入</Button></div>;
+    return (
+      <section ref={editorRef} tabIndex={-1} className="quote-pdf-editor receipt-pdf-editor">
+        <div className="quote-pdf-state">
+          <span>無法載入{documentName}。</span>
+          <Button variant="outline" onClick={() => void load()}>重新載入</Button>
+        </div>
+      </section>
+    );
   }
 
   const brandLogo = getDocumentLogoPath(

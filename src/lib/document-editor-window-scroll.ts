@@ -1,18 +1,52 @@
 import { useLayoutEffect, type RefObject } from "react";
 
-const UNLOCK: Array<[string, string]> = [
-  ["overflow-x", "visible"],
-  ["overflow-y", "auto"],
-  ["height", "auto"],
-  ["max-height", "none"],
+const PAGE_LOCK: Array<[string, string]> = [
+  ["overflow", "hidden"],
+  ["height", "100%"],
+  ["max-height", "100%"],
 ];
+
+const EDITOR_LOCK: Array<[string, string]> = [
+  ["position", "fixed"],
+  ["inset", "0px"],
+  ["width", "100%"],
+  ["height", "100%"],
+  ["max-height", "100%"],
+  ["overflow", "auto"],
+];
+
+type StyleSnapshot = {
+  node: HTMLElement;
+  property: string;
+  value: string;
+  priority: string;
+};
 
 function applyImportant(node: HTMLElement, property: string, value: string) {
   node.style.setProperty(property, value, "important");
 }
 
-function wheelDelta(event: WheelEvent) {
-  return event.deltaMode === 1 ? event.deltaY * 16 : event.deltaY;
+function snapshotAndLock(node: HTMLElement, lock: Array<[string, string]>): StyleSnapshot[] {
+  const snapshots = lock.map(([property]) => ({
+    node,
+    property,
+    value: node.style.getPropertyValue(property),
+    priority: node.style.getPropertyPriority(property),
+  }));
+  for (const [property, value] of lock) applyImportant(node, property, value);
+  return snapshots;
+}
+
+function restore(snapshots: StyleSnapshot[]) {
+  for (const entry of snapshots) {
+    if (entry.value) entry.node.style.setProperty(entry.property, entry.value, entry.priority);
+    else entry.node.style.removeProperty(entry.property);
+  }
+}
+
+function wheelDelta(event: WheelEvent, axis: "x" | "y") {
+  const value = axis === "x" ? event.deltaX : event.deltaY;
+  return event.deltaMode === 1 ? value * 16 : value;
 }
 
 function isNestedScroller(node: EventTarget | null) {
@@ -22,6 +56,7 @@ function isNestedScroller(node: EventTarget | null) {
     && candidate !== document.documentElement
     && candidate !== document.body
     && candidate.id !== "root"
+    && !candidate.classList.contains("quote-pdf-editor")
   ) {
     const style = window.getComputedStyle(candidate);
     if (
@@ -36,7 +71,11 @@ function isNestedScroller(node: EventTarget | null) {
 }
 
 export function activateDocumentEditorWindowScroll(container?: HTMLElement | null) {
-  const target = container ?? document.body;
+  const target =
+    container ?? document.querySelector<HTMLElement>(".quote-pdf-editor") ?? document.body;
+  if (target.classList.contains("quote-pdf-editor")) {
+    for (const [property, value] of EDITOR_LOCK) applyImportant(target, property, value);
+  }
   if (target !== document.body && target.tabIndex < 0) target.tabIndex = -1;
   if (typeof target.focus !== "function") return;
   try {
@@ -46,55 +85,61 @@ export function activateDocumentEditorWindowScroll(container?: HTMLElement | nul
   }
 }
 
+function editorScroller(containerRef?: RefObject<HTMLElement | null>) {
+  return containerRef?.current ?? document.querySelector<HTMLElement>(".quote-pdf-editor");
+}
+
 /**
- * Quote / receipt / invoice PDF pages must scroll with the window immediately.
- * New-tab opens and overflow-hidden fields otherwise swallow wheel until click.
+ * The PDF editor is the scroll container. Wheel events are applied to it in
+ * capture phase because overflow:hidden A4 sheets otherwise become the
+ * browser's scroll target until the page is clicked.
  */
 export function useDocumentEditorWindowScroll(containerRef?: RefObject<HTMLElement | null>) {
   useLayoutEffect(() => {
-    const nodes = [document.documentElement, document.body, document.getElementById("root")].filter(
+    const pageNodes = [document.documentElement, document.body, document.getElementById("root")].filter(
       (node): node is HTMLElement => node instanceof HTMLElement,
     );
-    const previous = nodes.map((node) =>
-      UNLOCK.map(([property]) => ({
-        node,
-        property,
-        value: node.style.getPropertyValue(property),
-        priority: node.style.getPropertyPriority(property),
-      })),
-    );
+    const pageSnapshots = pageNodes.flatMap((node) => snapshotAndLock(node, PAGE_LOCK));
+    let editorSnapshots: StyleSnapshot[] = [];
 
-    for (const node of nodes) {
-      for (const [property, value] of UNLOCK) applyImportant(node, property, value);
-    }
-    applyImportant(document.documentElement, "overflow-y", "scroll");
-    activateDocumentEditorWindowScroll(containerRef?.current);
-
-    const onWheel = (event: WheelEvent) => {
-      if (event.defaultPrevented || event.ctrlKey || isNestedScroller(event.target)) return;
-      const scroller = document.scrollingElement;
-      if (!scroller) return;
-      const before = scroller.scrollTop;
-      const delta = wheelDelta(event);
-      if (delta === 0) return;
-      requestAnimationFrame(() => {
-        if (Math.abs(scroller.scrollTop - before) > 0.5) return;
-        const max = scroller.scrollHeight - scroller.clientHeight;
-        if (max <= 1) return;
-        scroller.scrollTop = Math.min(max, Math.max(0, before + delta));
-      });
+    const lockEditor = (node: HTMLElement) => {
+      if (editorSnapshots.some((entry) => entry.node === node)) return;
+      editorSnapshots = editorSnapshots.concat(snapshotAndLock(node, EDITOR_LOCK));
     };
 
-    window.addEventListener("wheel", onWheel, { passive: true });
+    const existing = editorScroller(containerRef);
+    if (existing) lockEditor(existing);
+
+    const observer = new MutationObserver(() => {
+      const found = editorScroller(containerRef);
+      if (found) lockEditor(found);
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+
+    const onWheel = (event: WheelEvent) => {
+      if (event.ctrlKey || isNestedScroller(event.target)) return;
+      const scroller = editorScroller(containerRef);
+      if (!scroller) return;
+      lockEditor(scroller);
+      const deltaY = wheelDelta(event, "y");
+      const deltaX = wheelDelta(event, "x");
+      const maxY = scroller.scrollHeight - scroller.clientHeight;
+      const maxX = scroller.scrollWidth - scroller.clientWidth;
+      const nextTop = Math.min(Math.max(maxY, 0), Math.max(0, scroller.scrollTop + deltaY));
+      const nextLeft = Math.min(Math.max(maxX, 0), Math.max(0, scroller.scrollLeft + deltaX));
+      if (nextTop === scroller.scrollTop && nextLeft === scroller.scrollLeft) return;
+      if (event.cancelable) event.preventDefault();
+      scroller.scrollTop = nextTop;
+      scroller.scrollLeft = nextLeft;
+    };
+
+    window.addEventListener("wheel", onWheel, { passive: false, capture: true });
 
     return () => {
-      window.removeEventListener("wheel", onWheel);
-      for (const entries of previous) {
-        for (const entry of entries) {
-          if (entry.value) entry.node.style.setProperty(entry.property, entry.value, entry.priority);
-          else entry.node.style.removeProperty(entry.property);
-        }
-      }
+      observer.disconnect();
+      window.removeEventListener("wheel", onWheel, true);
+      restore(editorSnapshots);
+      restore(pageSnapshots);
     };
   }, [containerRef]);
 }
