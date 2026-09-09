@@ -23,6 +23,7 @@ create table products (id uuid primary key default gen_random_uuid(), name text,
 create table ingredients (
   id uuid primary key default gen_random_uuid(), name text, sku text,
   product_unit text, stocktake_unit text, product_quantity numeric,
+  cost_per_product_unit numeric, cost_per_stocktake_unit numeric,
   is_packing_stocktake boolean default false, is_ingredient_stocktake boolean default true
 );
 create table order_lines (
