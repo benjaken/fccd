@@ -4277,3 +4277,29 @@ body:has(.shop-order-product-panel) .restaurant-workspace-body > .shop-order-pag
     padding: 12px 16px max(12px, env(safe-area-inset-bottom));
   }
 }
+
+/* Document PDF editors must win later height/overflow locks on .main-content. */
+html:has(.quote-pdf-editor),
+html:has(.document-editor-shell),
+body:has(.quote-pdf-editor),
+body:has(.document-editor-shell),
+html:has(.quote-pdf-editor) #root,
+html:has(.document-editor-shell) #root {
+  height: auto !important;
+  max-height: none !important;
+  overflow-x: visible !important;
+  overflow-y: auto !important;
+}
+
+.document-editor-shell .shell-body,
+.document-editor-shell .shell-body.sidebar-is-collapsed,
+.document-editor-shell .main-content,
+.document-editor-shell .page-transition,
+body:has(.quote-pdf-editor) .shell-body,
+body:has(.quote-pdf-editor) .main-content,
+body:has(.quote-pdf-editor) .page-transition,
+body:has(.quote-pdf-editor) .quote-pdf-editor {
+  height: auto !important;
+  max-height: none !important;
+  overflow: visible !important;
+}

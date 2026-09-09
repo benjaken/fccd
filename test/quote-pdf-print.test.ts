@@ -123,13 +123,16 @@ describe("quote PDF print stylesheet", () => {
   it("keeps extra quote PDF sheets reachable by scrolling the document editor", () => {
     const css = readAppStyles();
     expect(css).toMatch(
-      /body:has\(\.quote-pdf-editor\) \.main-content,\s*\.document-editor-shell \.main-content\s*\{[^}]*height:\s*100dvh;[^}]*max-height:\s*100dvh;[^}]*overflow:\s*auto;/s,
+      /html:has\(\.quote-pdf-editor\),\s*html:has\(\.document-editor-shell\),\s*body:has\(\.quote-pdf-editor\),\s*body:has\(\.document-editor-shell\),\s*html:has\(\.quote-pdf-editor\) #root,\s*html:has\(\.document-editor-shell\) #root\s*\{[^}]*height:\s*auto !important;[^}]*overflow-y:\s*auto !important;/s,
     );
     expect(css).toMatch(
-      /html:has\(\.quote-pdf-editor\),\s*html:has\(\.document-editor-shell\),\s*body:has\(\.quote-pdf-editor\),\s*body:has\(\.document-editor-shell\),\s*html:has\(\.quote-pdf-editor\) #root,\s*html:has\(\.document-editor-shell\) #root\s*\{[^}]*overflow-x:\s*clip;[^}]*overflow-y:\s*auto;/s,
+      /body:has\(\.quote-pdf-editor\) \.main-content,\s*\.document-editor-shell \.main-content,[\s\S]*?overflow:\s*visible !important;/,
+    );
+    expect(css).not.toMatch(
+      /body:has\(\.quote-pdf-editor\) \.main-content,\s*\.document-editor-shell \.main-content\s*\{[^}]*height:\s*100dvh;[^}]*overflow:\s*auto;/s,
     );
     expect(css).toMatch(
-      /html,\s*body,\s*#root\s*\{[^}]*overflow-x:\s*clip;[^}]*overflow-y:\s*auto;/s,
+      /html:not\(:has\(\.quote-pdf-editor\)\):not\(:has\(\.document-editor-shell\)\),\s*body:not\(:has\(\.quote-pdf-editor\)\):not\(:has\(\.document-editor-shell\)\),\s*html:not\(:has\(\.quote-pdf-editor\)\):not\(:has\(\.document-editor-shell\)\) #root\s*\{[^}]*overflow-x:\s*clip;[^}]*overflow-y:\s*auto;/s,
     );
   });
 });
