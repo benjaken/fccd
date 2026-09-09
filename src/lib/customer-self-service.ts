@@ -57,11 +57,13 @@ export type CustomerSelfServiceOrderDetail = {
   factoryArranged: boolean;
   fleetArranged: boolean;
   currency: string;
+  shippingFee?: number;
   grandTotal: number;
   outstanding: number;
   paid: boolean;
   channelName: string | null;
   channelEmail: string | null;
+  shopifyStoreDomain: string | null;
   lines: CustomerSelfServiceLine[];
   payments: CustomerSelfServicePayment[];
 };

@@ -43,11 +43,13 @@ const detail: CustomerSelfServiceOrderDetail = {
   factoryArranged: true,
   fleetArranged: true,
   currency: "HKD",
+  shippingFee: 1120,
   grandTotal: 1720,
   outstanding: 0,
   paid: true,
   channelName: "HK Lunch Box",
   channelEmail: "sales@example.com",
+  shopifyStoreDomain: null,
   lines: [{
     id: "line-1",
     name: "（雙格）椒鹽豬扒飯",
@@ -104,9 +106,14 @@ describe("CustomerSelfServicePage", () => {
   it("shows order details and opens a receipt preview that starts a PDF download", async () => {
     const createPdf = vi.fn().mockResolvedValue({
       blob: new Blob(["receipt"], { type: "application/pdf" }),
-      filename: "收據-B-1247.pdf",
+      filename: "收據REC-B-1247.pdf",
     });
-    const loadDetail = vi.fn().mockResolvedValue(detail);
+    const loadDetail = vi.fn().mockResolvedValue({
+      ...detail,
+      shippingFee: 0,
+      grandTotal: 1104,
+      lines: [{ ...detail.lines[0], quantity: 2, unitPrice: 552, totalPrice: 1004 }],
+    });
     render(
       <MemoryRouter initialEntries={["/self_service_search"]}>
         <Routes><Route path="/self_service_search/:orderId?" element={<CustomerSelfServicePage
@@ -128,9 +135,21 @@ describe("CustomerSelfServicePage", () => {
     expect(await screen.findByText("（雙格）椒鹽豬扒飯")).toBeInTheDocument();
     expect(loadDetail).toHaveBeenCalledWith("customer-session", "order-1");
     expect(await screen.findByRole("button", { name: "加單" })).toBeInTheDocument();
+    const totals = screen.getByText("食品小計").parentElement;
+    expect(totals).toHaveTextContent("運費");
+    expect(totals).toHaveTextContent("HK$100");
 
     fireEvent.click(screen.getByRole("button", { name: "預覽並下載收據" }));
     expect(await screen.findByRole("dialog", { name: "收據 B-1247" })).toBeInTheDocument();
+    const receipt = screen.getByLabelText("唯讀收據 PDF");
+    expect(receipt).toHaveTextContent("RECEIPT");
+    expect(receipt).toHaveTextContent("REC/B-1247");
+    expect(receipt).toHaveTextContent("Description");
+    expect(receipt).toHaveTextContent("（雙格）椒鹽豬扒飯");
+    expect(receipt).toHaveTextContent("Delivery Fee:");
+    expect(receipt).toHaveTextContent("$100");
+    expect(receipt).toHaveTextContent("Payment information:");
+    expect(receipt.querySelector("input, textarea, select")).toBeNull();
     await waitFor(() => expect(createPdf).toHaveBeenCalledWith(expect.any(HTMLDivElement), "B-1247"));
     expect(HTMLAnchorElement.prototype.click).toHaveBeenCalled();
   });
