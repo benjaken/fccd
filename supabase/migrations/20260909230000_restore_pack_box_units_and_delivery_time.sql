@@ -277,14 +277,18 @@ end
 $rebuild_pack_box_consumptions$;
 
 update public.order_material_consumptions consumption
-set consumed_at = coalesce(delivery.delivery_at, orders.delivery_at, consumption.consumed_at)
-from public.orders orders
-left join public.deliveries delivery on delivery.id = consumption.delivery_id
-where consumption.order_id = orders.id
-  and consumption.reversed_at is null
-  and coalesce(delivery.delivery_at, orders.delivery_at) is not null
-  and consumption.consumed_at
-    is distinct from coalesce(delivery.delivery_at, orders.delivery_at);
+set consumed_at = src.delivery_time
+from (
+  select live.id,
+    coalesce(delivery.delivery_at, orders.delivery_at) as delivery_time
+  from public.order_material_consumptions live
+  join public.orders orders on orders.id = live.order_id
+  left join public.deliveries delivery on delivery.id = live.delivery_id
+  where live.reversed_at is null
+) src
+where consumption.id = src.id
+  and src.delivery_time is not null
+  and consumption.consumed_at is distinct from src.delivery_time;
 
 do $verify$
 begin
