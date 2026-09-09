@@ -119,4 +119,17 @@ describe("quote PDF print stylesheet", () => {
       /\.receipt-pdf-page-footer\s*\{[^}]*flex:\s*0 0 auto;/s,
     );
   });
+
+  it("keeps extra quote PDF sheets reachable by scrolling the document editor", () => {
+    const css = readAppStyles();
+    expect(css).toMatch(
+      /body:has\(\.quote-pdf-editor\) \.main-content,\s*\.document-editor-shell \.main-content\s*\{[^}]*height:\s*100dvh;[^}]*max-height:\s*100dvh;[^}]*overflow:\s*auto;/s,
+    );
+    expect(css).toMatch(
+      /html:has\(\.quote-pdf-editor\),\s*html:has\(\.document-editor-shell\),\s*body:has\(\.quote-pdf-editor\),\s*body:has\(\.document-editor-shell\),\s*html:has\(\.quote-pdf-editor\) #root,\s*html:has\(\.document-editor-shell\) #root\s*\{[^}]*overflow-x:\s*clip;[^}]*overflow-y:\s*auto;/s,
+    );
+    expect(css).toMatch(
+      /html,\s*body,\s*#root\s*\{[^}]*overflow-x:\s*clip;[^}]*overflow-y:\s*auto;/s,
+    );
+  });
 });

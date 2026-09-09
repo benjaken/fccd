@@ -1021,7 +1021,7 @@
 .quote-pdf-page-active-field > span { display: grid; gap: 0.2rem; }
 
 .quote-pdf-editor {
-  min-height: 100vh;
+  min-height: 100%;
   margin: -1.75rem;
   padding: 1.5rem;
   background: #eef2f5;
@@ -1041,26 +1041,49 @@ body:has(.quote-pdf-editor) .sidebar {
   display: none;
 }
 
+html:has(.quote-pdf-editor),
+html:has(.document-editor-shell),
+body:has(.quote-pdf-editor),
+body:has(.document-editor-shell),
+html:has(.quote-pdf-editor) #root,
+html:has(.document-editor-shell) #root {
+  overflow-x: clip;
+  overflow-y: auto;
+}
+
 body:has(.quote-pdf-editor) .shell-body {
   display: block;
+  height: 100dvh;
+  min-height: 0;
   padding-top: 0;
+  overflow: hidden;
 }
 
 .document-editor-shell .shell-body,
 .document-editor-shell .shell-body.sidebar-is-collapsed {
   display: block;
-  min-height: 100vh;
+  height: 100dvh;
+  min-height: 0;
   padding-top: 0;
+  overflow: hidden;
 }
 
-body:has(.quote-pdf-editor) .main-content {
-  padding: 0;
-  overflow: visible;
-}
-
+/* `.main-content` defaults to overflow:hidden, and `overflow-x: clip` on
+   html/body/#root otherwise computes overflow-y to clip as well. Keep extra
+   A4 sheets reachable by making this page the scroll container. */
+body:has(.quote-pdf-editor) .main-content,
 .document-editor-shell .main-content {
-  min-height: 100vh;
+  height: 100dvh;
+  max-height: 100dvh;
+  min-height: 0;
   padding: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+body:has(.quote-pdf-editor) .page-transition,
+.document-editor-shell .page-transition {
+  min-height: 100%;
   overflow: visible;
 }
 
@@ -1897,7 +1920,6 @@ body:has(.quote-clause-modal-root) { overflow: hidden; }
   .quote-pdf-toolbar, .quote-pdf-toolbar > div:last-child { align-items: stretch; flex-direction: column; }
   .quote-pdf-toolbar { position: static; }
   .quote-pdf-sheet { min-width: 700px; padding: 32px 32px 48px; }
-  .quote-pdf-editor { overflow-x: auto; }
   .quote-pdf-insert-page { min-width: 700px; height: 990px; }
   .quote-pdf-pages-toolbar { align-items: stretch; flex-direction: column; }
   .quote-pdf-pages-toolbar > .button { margin-left: 0; }
