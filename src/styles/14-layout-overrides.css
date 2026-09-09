@@ -4278,19 +4278,17 @@ body:has(.shop-order-product-panel) .restaurant-workspace-body > .shop-order-pag
   }
 }
 
-/* Screen-only. Print must keep a single flowing A4 document. */
 @media screen {
   html:has(.quote-pdf-editor),
-  html:has(.document-editor-shell),
-  body:has(.quote-pdf-editor),
-  body:has(.document-editor-shell),
-  html:has(.quote-pdf-editor) #root,
-  html:has(.document-editor-shell) #root {
-    height: 100% !important;
-    max-height: 100% !important;
-    overflow: hidden !important;
+  html:has(.document-editor-shell) {
+    height: auto !important;
+    max-height: none !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
   }
 
+  html:has(.quote-pdf-editor) #root,
+  html:has(.document-editor-shell) #root,
   .document-editor-shell .shell-body,
   .document-editor-shell .shell-body.sidebar-is-collapsed,
   .document-editor-shell .main-content,
@@ -4298,19 +4296,19 @@ body:has(.shop-order-product-panel) .restaurant-workspace-body > .shop-order-pag
   body:has(.quote-pdf-editor) .shell-body,
   body:has(.quote-pdf-editor) .main-content,
   body:has(.quote-pdf-editor) .page-transition {
-    height: 100% !important;
+    height: auto !important;
     max-height: none !important;
     overflow: visible !important;
   }
 
   body:has(.quote-pdf-editor) .quote-pdf-editor,
   .document-editor-shell .quote-pdf-editor {
-    position: fixed !important;
-    inset: 0 !important;
+    position: relative !important;
+    inset: auto !important;
     width: 100% !important;
-    height: 100% !important;
-    max-height: 100% !important;
-    overflow: auto !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
   }
 }
 
@@ -4321,6 +4319,9 @@ body:has(.shop-order-product-panel) .restaurant-workspace-body > .shop-order-pag
   body:has(.document-editor-shell),
   html:has(.quote-pdf-editor) #root,
   html:has(.document-editor-shell) #root,
+  body:has(.quote-pdf-editor) .shell-body,
+  body:has(.quote-pdf-editor) .main-content,
+  body:has(.quote-pdf-editor) .page-transition,
   body:has(.quote-pdf-editor) .quote-pdf-editor,
   .document-editor-shell .quote-pdf-editor,
   .quote-pdf-editor {
@@ -4332,8 +4333,6 @@ body:has(.shop-order-product-panel) .restaurant-workspace-body > .shop-order-pag
   }
 
   .quote-pdf-editor {
-    position: absolute !important;
-    inset: 0 auto auto 0 !important;
     width: 100% !important;
   }
 

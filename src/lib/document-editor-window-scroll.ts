@@ -38,22 +38,25 @@ export function activateDocumentEditorWindowScroll(container?: HTMLElement | nul
   }
 }
 
-function editorScroller(containerRef?: RefObject<HTMLElement | null>) {
-  return containerRef?.current ?? document.querySelector<HTMLElement>(".quote-pdf-editor");
+function pageScroller() {
+  const scroller = document.scrollingElement;
+  if (scroller && "scrollTop" in scroller && "scrollHeight" in scroller) {
+    return scroller as HTMLElement;
+  }
+  return document.documentElement;
 }
 
 /**
- * Apply wheel deltas to the editor without inline overflow/position locks.
- * Those locks leaked into print and clipped generated PDFs to one viewport.
+ * Scroll the window. Do not lock the editor with inline position/overflow —
+ * those styles collapse print height and produce blank PDF pages.
  */
-export function useDocumentEditorWindowScroll(containerRef?: RefObject<HTMLElement | null>) {
+export function useDocumentEditorWindowScroll(_containerRef?: RefObject<HTMLElement | null>) {
   useLayoutEffect(() => {
-    activateDocumentEditorWindowScroll(containerRef?.current);
+    activateDocumentEditorWindowScroll();
 
     const onWheel = (event: WheelEvent) => {
       if (event.ctrlKey || isNestedScroller(event.target)) return;
-      const scroller = editorScroller(containerRef);
-      if (!scroller) return;
+      const scroller = pageScroller();
       const deltaY = wheelDelta(event, "y");
       const deltaX = wheelDelta(event, "x");
       const maxY = scroller.scrollHeight - scroller.clientHeight;
@@ -68,5 +71,5 @@ export function useDocumentEditorWindowScroll(containerRef?: RefObject<HTMLEleme
 
     window.addEventListener("wheel", onWheel, { passive: false, capture: true });
     return () => window.removeEventListener("wheel", onWheel, true);
-  }, [containerRef]);
+  }, []);
 }

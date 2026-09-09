@@ -10,7 +10,7 @@ describe("quote PDF print stylesheet", () => {
       /\.quote-pdf-editor,\s*\.quote-pdf-editor \*\s*\{\s*visibility:\s*visible !important/,
     );
     expect(css).toMatch(
-      /\.quote-pdf-editor\s*\{\s*position:\s*absolute !important;\s*inset:\s*0 auto auto 0 !important/,
+      /\.quote-pdf-editor\s*\{\s*position:\s*static !important;\s*inset:\s*auto !important;\s*width:\s*100% !important;\s*height:\s*auto !important/,
     );
   });
 
@@ -127,10 +127,10 @@ describe("quote PDF print stylesheet", () => {
   it("keeps extra quote PDF sheets reachable by scrolling the document editor", () => {
     const css = readAppStyles();
     expect(css).toMatch(
-      /@media screen\s*\{[\s\S]*html:has\(\.quote-pdf-editor\),\s*html:has\(\.document-editor-shell\),[\s\S]*height:\s*100% !important;[\s\S]*overflow:\s*hidden !important;/,
+      /@media screen\s*\{[\s\S]*html:has\(\.quote-pdf-editor\),\s*html:has\(\.document-editor-shell\)\s*\{[^}]*height:\s*auto !important;[^}]*overflow-y:\s*auto !important;/,
     );
     expect(css).toMatch(
-      /@media screen\s*\{[\s\S]*body:has\(\.quote-pdf-editor\) \.quote-pdf-editor,\s*\.document-editor-shell \.quote-pdf-editor\s*\{[^}]*position:\s*fixed !important;[^}]*overflow:\s*auto !important;/,
+      /@media screen\s*\{[\s\S]*body:has\(\.quote-pdf-editor\) \.quote-pdf-editor,\s*\.document-editor-shell \.quote-pdf-editor\s*\{[^}]*height:\s*auto !important;[^}]*overflow:\s*visible !important;/,
     );
     expect(css).toMatch(/@media screen\s*\{[\s\S]*\.quote-pdf-sheet\s*\{\s*overflow:\s*clip;/);
     expect(css).toMatch(
