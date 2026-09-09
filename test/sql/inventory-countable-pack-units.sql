@@ -187,4 +187,32 @@ select pg_temp.assert_equal(
   'sausage consumption is dated at the order delivery time and stored in 包'
 );
 
+insert into order_material_consumptions(
+  order_id, delivery_id, order_line_id, ingredient_id, quantity,
+  consumed_at, calculation_source, reversed_at, reversal_reason
+) values (
+  '30000000-0000-0000-0000-000000000080',
+  '50000000-0000-0000-0000-000000000080',
+  '40000000-0000-0000-0000-000000000080',
+  '41be0a73-850b-45d6-8f72-42ec107e3992',
+  18, timestamptz '2026-09-07 11:35:00+00', 'product_bom',
+  timestamptz '2026-09-09 08:17:00+00', 'six_setting_utensil_rule_deployed'
+);
+
+select pg_temp.assert_equal(
+  (select count(*) from material_inventory_ledger(
+    'ingredient', '41be0a73-850b-45d6-8f72-42ec107e3992'
+  ) where reference = 'B-1535-TEST' and quantity = -18 and is_reversal is false),
+  0,
+  'reversed piece-count rows are not shown as live 訂單消耗'
+);
+
+select pg_temp.assert_equal(
+  (select count(*) from material_inventory_ledger(
+    'ingredient', '41be0a73-850b-45d6-8f72-42ec107e3992'
+  ) where reference = 'B-1535-TEST' and quantity = -0.35 and is_reversal is false),
+  1,
+  'live sausage consumption stays visible as 0.35 包'
+);
+
 rollback;
