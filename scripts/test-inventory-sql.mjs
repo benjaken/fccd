@@ -8,6 +8,7 @@ try {
     'test/sql/inventory-fixture.sql', 'test/sql/inventory-legacy-seed.sql',
     'supabase/migrations/20260908210000_unified_delivery_material_commitments.sql',
     'supabase/migrations/20260908220000_unified_inventory_demand.sql',
+    'supabase/migrations/20260909143000_normalize_catering_material_units.sql',
     'test/sql/inventory-rpc-fixture.sql',
     'supabase/migrations/20260817063000_cancel_pending_delivery.sql',
     'supabase/migrations/20260908224000_lock_existing_material_rpcs.sql',

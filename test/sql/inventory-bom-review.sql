@@ -69,4 +69,44 @@ update order_lines set product_id='20000000-0000-0000-0000-000000000002',package
 update order_bom_requirements set ingredient_quantity=ingredient_quantity where order_line_id='40000000-0000-0000-0000-000000000020';
 select pg_temp.assert_equal((select count(*) from private.catering_line_material_requirements('40000000-0000-0000-0000-000000000020')),0,'unchanged stale snapshot remains invalid');
 select pg_temp.assert_equal((select count(*) from order_material_consumptions where order_id='30000000-0000-0000-0000-000000000020' and reversed_at is null),0,'stale no-op cannot re-deduct materials');
+
+-- Forecast quantities use the material stocktake unit, not the BOM entry unit.
+insert into ingredients(
+  id,name,sku,product_unit,stocktake_unit,product_quantity,
+  is_ingredient_stocktake,is_packing_stocktake
+) values
+  ('10000000-0000-0000-0000-000000000021','Test leaves','LEAF','克','kg',1000,true,false),
+  ('10000000-0000-0000-0000-000000000022','Test container','BOX','個','個',1,false,true);
+insert into products(id,name,sku) values
+  ('20000000-0000-0000-0000-000000000021','Unit conversion meal','UNIT-MEAL');
+insert into product_ingredients(product_id,ingredient_id,quantity) values
+  ('20000000-0000-0000-0000-000000000021','10000000-0000-0000-0000-000000000021',300),
+  ('20000000-0000-0000-0000-000000000021','10000000-0000-0000-0000-000000000022',1);
+insert into orders(id,order_number,delivery_at) values
+  ('30000000-0000-0000-0000-000000000021','UNIT-CONVERSION',current_date+3);
+insert into order_lines(id,order_id,product_id,quantity) values
+  ('40000000-0000-0000-0000-000000000021','30000000-0000-0000-0000-000000000021','20000000-0000-0000-0000-000000000021',1);
+insert into deliveries(id,order_id,delivery_at,delivery_status) values
+  ('50000000-0000-0000-0000-000000000021','30000000-0000-0000-0000-000000000021',current_date+3,'Pending');
+set constraints all immediate;
+select pg_temp.assert_equal(
+  (select sum(calculated_quantity) from public.material_usage_forecast_lines(
+    'ingredient',current_date,current_date+13
+  ) where order_id='30000000-0000-0000-0000-000000000021'),
+  0.3,
+  '300 grams forecasts as 0.3 kg'
+);
+select pg_temp.assert_equal(
+  (select sum(calculated_quantity) from public.material_usage_forecast_lines(
+    'packing',current_date,current_date+13
+  ) where order_id='30000000-0000-0000-0000-000000000021'),
+  1,
+  'one packing item forecasts as one item'
+);
+select pg_temp.assert_equal(
+  (select (stocktake_unit='個' and product_quantity=1)::integer
+   from ingredients where id='83a650ca-4ca8-4195-8562-a588c247dfd2'),
+  1,
+  '2L soup bucket is stocked and deducted by item'
+);
 rollback;
