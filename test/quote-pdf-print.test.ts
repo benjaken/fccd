@@ -88,6 +88,10 @@ describe("quote PDF print stylesheet", () => {
     expect(css).toMatch(
       /\.quote-pdf-summary-rows select\s*\{[^}]*margin-left:\s*auto;[^}]*text-align:\s*right;[^}]*text-align-last:\s*right;/,
     );
+    expect(css).toMatch(/\.quote-pdf-page-footer\s*\{[^}]*pointer-events:\s*none;/);
+    expect(css).toMatch(
+      /\.quote-pdf-sheet > :not\(\.quote-pdf-page-footer\):not\(\.receipt-pdf-page-footer\)\s*\{[^}]*z-index:\s*1;/,
+    );
     expect(css).not.toContain("quote-pdf-print-footer-spacer");
     expect(css).toMatch(
       /\.quote-pdf-sheet\s*\{[^}]*padding:\s*10mm 10mm 24mm;/,
