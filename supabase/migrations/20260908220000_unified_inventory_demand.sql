@@ -471,6 +471,8 @@ begin
 end;
 $$;
 
+drop function if exists public.material_inventory_ledger(text, uuid);
+
 create or replace function public.material_inventory_ledger(
   p_kind text,
   p_ingredient_id uuid
