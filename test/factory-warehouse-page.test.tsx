@@ -13,16 +13,16 @@ vi.mock("@/auth/use-page-access", () => ({
   }),
 }));
 
-describe("Restaurant ordering inventory records", () => {
+describe("Central kitchen inventory records", () => {
   beforeEach(async () => {
     await i18n.changeLanguage("zh-HK");
   });
 
-  it("shows only outbound and inbound tabs under restaurant ordering", () => {
+  it("shows only outbound and inbound tabs under Central Kitchen", () => {
     render(
-      <MemoryRouter initialEntries={["/restaurant/ordering/inventory"]}>
+      <MemoryRouter initialEntries={["/kitchen/inventory-records"]}>
         <Routes>
-          <Route path="/restaurant/ordering/inventory" element={<FactoryWarehousePage />}>
+          <Route path="/kitchen/inventory-records" element={<FactoryWarehousePage />}>
             <Route index element={<p>outbound-body</p>} />
           </Route>
         </Routes>

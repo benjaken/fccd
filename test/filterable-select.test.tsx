@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 
@@ -58,5 +58,20 @@ describe("FilterableSelect", () => {
     expect(within(listbox).getByRole("option", { name: "B&W Solution" })).toBeInTheDocument();
     expect(within(listbox).queryByRole("option", { name: "Food Channels" })).not.toBeInTheDocument();
     expect(within(listbox).queryByRole("option", { name: "全部品牌" })).not.toBeInTheDocument();
+  });
+
+  it("keeps wheel scrolling inside a long dropdown list", async () => {
+    const user = userEvent.setup();
+    render(<Example />);
+
+    await user.click(screen.getByRole("combobox", { name: "品牌" }));
+    const listbox = screen.getByRole("listbox");
+    Object.defineProperty(listbox, "clientHeight", { configurable: true, value: 120 });
+    Object.defineProperty(listbox, "scrollHeight", { configurable: true, value: 420 });
+    Object.defineProperty(listbox, "scrollTop", { configurable: true, writable: true, value: 0 });
+
+    fireEvent.wheel(listbox, { deltaY: 80 });
+
+    expect(listbox.scrollTop).toBe(80);
   });
 });

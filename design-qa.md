@@ -36,6 +36,37 @@ No actionable P0, P1, or P2 issues remain for the requested independent scrollin
 - Pass 1: confirmed that only the actively scrolled date column moves; the other two retain their positions.
 
 final result: passed
+
+---
+
+# Design QA — inventory interfaces
+
+Date: 2026-09-08
+
+## References
+
+- `C:/Users/ADMINI~1/AppData/Local/Temp/codex-clipboard-777858f0-74b1-47f9-b070-5feb01fd22dd.png` — inventory table background
+- `C:/Users/ADMINI~1/AppData/Local/Temp/codex-clipboard-6325a151-5beb-4712-8646-f29a8cacfb14.png` — tabs and search placement
+- `C:/Users/ADMINI~1/AppData/Local/Temp/codex-clipboard-178deb6e-04ba-44db-8456-0ce86d9c0d02.png` — ledger scroll region
+- `C:/Users/ADMINI~1/AppData/Local/Temp/codex-clipboard-1b14358e-e438-42dd-9144-2ff586b10e5b.png` — minimum-stock panel width
+
+## Implementation captures
+
+- `C:/Users/Administrator/AppData/Local/Temp/fccd-material-inventory-loaded-qa.png`
+- `C:/Users/Administrator/AppData/Local/Temp/fccd-minimum-stock-qa.png`
+- `C:/Users/Administrator/AppData/Local/Temp/fccd-filterable-select-scroll-qa.png`
+
+## Result
+
+- PASS — inventory table cell background computes to `rgb(255, 255, 255)`.
+- PASS — ingredient/packing tabs and search share one desktop toolbar row; tab labels do not wrap.
+- PASS — the ledger body is the scroll container (`overflow: auto`); header and footer remain fixed.
+- PASS — minimum-stock panel is exactly 50% of the 1280 px viewport.
+- PASS — minimum-stock table has no horizontal overflow (`clientWidth = scrollWidth = 586 px`).
+- PASS — shared searchable dropdown list has a 260 px viewport over 4806 px of content, with `overflow-y: auto`, contained overscroll, and a stable scrollbar gutter.
+- PASS — wheel behavior is covered at the shared `CommandList` layer, so FilterableSelect, MultiSelect, and SearchSelect inherit the fix.
+
+final result: passed
 ---
 
 # Unified order workspace action placement QA

@@ -16,6 +16,7 @@ export type IngredientListItem = {
   productQuantity: number | null;
   costPerProductUnit: number | null;
   costPerStocktakeUnit: number | null;
+  minimumStockLevel?: number | null;
   isActive: boolean;
   isIngredientStocktake: boolean;
   isPackingStocktake: boolean;
@@ -47,6 +48,7 @@ export type IngredientWriteInput = {
   productQuantity: number | null;
   costPerProductUnit: number | null;
   costPerStocktakeUnit: number | null;
+  minimumStockLevel?: number | null;
   isActive: boolean;
   isIngredientStocktake: boolean;
   isPackingStocktake: boolean;
@@ -67,6 +69,7 @@ type IngredientDbRow = {
   product_quantity: number | string | null;
   cost_per_product_unit: number | string | null;
   cost_per_stocktake_unit: number | string | null;
+  minimum_stock_level: number | string | null;
   is_active: boolean;
   is_ingredient_stocktake: boolean | null;
   is_packing_stocktake: boolean | null;
@@ -79,7 +82,7 @@ type IngredientDbRow = {
 };
 
 const INGREDIENT_SELECT_FIELDS =
-  "id,legacy_id,supplier_id,supplier_legacy_id,sku,name,description,ingredient_type,product_unit,stocktake_unit,product_quantity,cost_per_product_unit,cost_per_stocktake_unit,is_active,is_ingredient_stocktake,is_packing_stocktake,bubble_created_at,bubble_modified_at,created_at,updated_at,archived_at,suppliers(id,company_name)";
+  "id,legacy_id,supplier_id,supplier_legacy_id,sku,name,description,ingredient_type,product_unit,stocktake_unit,product_quantity,cost_per_product_unit,cost_per_stocktake_unit,minimum_stock_level,is_active,is_ingredient_stocktake,is_packing_stocktake,bubble_created_at,bubble_modified_at,created_at,updated_at,archived_at,suppliers(id,company_name)";
 
 const SORT_COLUMNS: Record<IngredientSortField, string> = {
   name: "name",
@@ -121,6 +124,7 @@ function mapIngredient(row: IngredientDbRow): IngredientListItem {
     productQuantity: toNumber(row.product_quantity),
     costPerProductUnit: toNumber(row.cost_per_product_unit),
     costPerStocktakeUnit: toNumber(row.cost_per_stocktake_unit),
+    minimumStockLevel: toNumber(row.minimum_stock_level),
     isActive: row.is_active,
     isIngredientStocktake: row.is_ingredient_stocktake ?? false,
     isPackingStocktake: row.is_packing_stocktake ?? false,
@@ -218,6 +222,7 @@ function writeFields(input: IngredientWriteInput) {
     product_quantity: input.productQuantity,
     cost_per_product_unit: input.costPerProductUnit,
     cost_per_stocktake_unit: input.costPerStocktakeUnit,
+    minimum_stock_level: input.minimumStockLevel,
     is_active: input.isActive,
     is_ingredient_stocktake: input.isIngredientStocktake,
     is_packing_stocktake: input.isPackingStocktake,

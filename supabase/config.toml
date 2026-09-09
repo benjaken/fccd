@@ -75,6 +75,9 @@ verify_jwt = false
 [functions.wati-order-notifications]
 verify_jwt = false
 
+[functions.inventory-email-notifications]
+verify_jwt = false
+
 [functions.send-enquiry-notifications]
 verify_jwt = false
 

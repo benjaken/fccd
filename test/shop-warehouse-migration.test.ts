@@ -14,6 +14,10 @@ const automationSql = readFileSync(
   resolve(process.cwd(), "supabase/migrations/20260907120000_auto_ship_and_material_stocktakes.sql"),
   "utf8",
 );
+const dryGoodsReceiptSql = readFileSync(
+  resolve(process.cwd(), "supabase/migrations/20260908190000_restrict_shop_receipts_to_dry_goods.sql"),
+  "utf8",
+);
 
 describe("shop warehouse phase 1 migration", () => {
   it("creates receipts, shipments, and a dry movement ledger", () => {
@@ -68,5 +72,11 @@ describe("shop warehouse phase 1 migration", () => {
     expect(automationSql).toContain("stocktake_kind = 'ingredient'");
     expect(automationSql).toContain("stocktake_kind = 'packing'");
     expect(automationSql).toContain("v_catalog.channel <> 'fc_internal'");
+  });
+
+  it("keeps manual warehouse receipts limited to purchased dry goods", () => {
+    expect(dryGoodsReceiptSql).toContain("new.warehouse <> 'dry'");
+    expect(dryGoodsReceiptSql).toContain("prepared meat must be produced from frozen raw meat");
+    expect(dryGoodsReceiptSql).toContain("before insert or update of warehouse");
   });
 });

@@ -219,6 +219,8 @@ const EXACT_PAGE_KEYS: Array<{ prefix: string; pageKey: string }> = [
   { prefix: "/kitchen/cost-input", pageKey: "kitchen.cost_input" },
   { prefix: "/kitchen/material-usage", pageKey: "kitchen.material_usage" },
   { prefix: "/kitchen/calendar", pageKey: "kitchen.calendar" },
+  { prefix: "/kitchen/inventory-records/receipts", pageKey: "workspace.factory.warehouse.inbound" },
+  { prefix: "/kitchen/inventory-records", pageKey: "workspace.factory.warehouse.outbound" },
   { prefix: "/kitchen/inventory", pageKey: "kitchen.inventory" },
   {
     prefix: "/kitchen/packing-stocktakes",
@@ -440,6 +442,17 @@ function tabPermissionKeys(tabs: readonly ReportTabKey[]) {
 
 const PAGE_ACCESS_CHILD_KEYS: Record<string, string[]> = {
   restaurant: ["restaurant.daily_sales", "restaurant.daily_purchases", "restaurant.inventory"],
+  kitchen: [
+    "kitchen.ingredients",
+    "kitchen.inventory",
+    "workspace.factory.warehouse",
+    "workspace.factory.warehouse.outbound",
+    "workspace.factory.warehouse.inbound",
+    "kitchen.ingredient_stocktakes",
+    "kitchen.packing_stocktakes",
+    "kitchen.material_usage",
+    "kitchen.suppliers",
+  ],
   "kitchen.settings": ["kitchen.settings.cook_types"],
   "restaurant.settings": [
     "restaurant.settings.restaurants",
@@ -495,9 +508,6 @@ const PAGE_ACCESS_CHILD_KEYS: Record<string, string[]> = {
     "restaurant.ordering.records",
     "restaurant.ordering.phonebook",
     "restaurant.ordering.review",
-    "workspace.factory.warehouse",
-    "workspace.factory.warehouse.outbound",
-    "workspace.factory.warehouse.inbound",
   ],
   "workspace.factory": [
     "workspace.factory.board",

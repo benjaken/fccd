@@ -2,26 +2,24 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { RefreshCw, Scale } from "lucide-react";
 
-import { FilterableSelect } from "@/components/ui/filterable-select";
 import { Button } from "@/components/ui/button";
+import { SegmentedTabs } from "@/components/ui/segmented-tabs";
 import { DatePicker } from "@/components/ui/date-picker";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { ListTable } from "@/components/ui/list-table";
 import {
-  fetchStocktakeDates,
-  type StocktakeDateItem,
-} from "@/lib/packing-stocktakes";
-import {
   fetchKitchenMaterialUsageReport,
+  hongKongDateKey,
   type KitchenMaterialUsageReport,
 } from "@/lib/kitchen-material-usage";
+import type { MaterialInventoryKind } from "@/lib/material-inventory";
 
 type ReportLoader = (selection: {
+  kind: MaterialInventoryKind;
   stocktakeDate: string;
   usageStartDate: string;
   usageEndDate: string;
 }) => Promise<KitchenMaterialUsageReport>;
-type StocktakeDatesLoader = () => Promise<StocktakeDateItem[]>;
 type UsageMode = "single" | "range";
 
 const SKELETON_COLUMNS = [
@@ -32,9 +30,6 @@ const SKELETON_COLUMNS = [
   { width: "7rem" },
   { width: "7rem" },
 ];
-const defaultStocktakeDatesLoader: StocktakeDatesLoader = () =>
-  fetchStocktakeDates("ingredient");
-
 function formatQuantity(value: number | null, unit: string | null) {
   if (value === null) return "—";
   const formatted = new Intl.NumberFormat("zh-HK", { maximumFractionDigits: 3 }).format(value);
@@ -55,15 +50,12 @@ function formatHongKongDateTime(value: string | null) {
 
 export function KitchenMaterialUsagePage({
   loadReport = fetchKitchenMaterialUsageReport,
-  loadStocktakeDates = defaultStocktakeDatesLoader,
 }: {
   loadReport?: ReportLoader;
-  loadStocktakeDates?: StocktakeDatesLoader;
 }) {
   const { t } = useTranslation();
-  const [stocktakeDates, setStocktakeDates] = useState<StocktakeDateItem[]>([]);
-  const [stocktakeDatesLoading, setStocktakeDatesLoading] = useState(true);
-  const [stocktakeDate, setStocktakeDate] = useState("");
+  const [kind, setKind] = useState<MaterialInventoryKind>("ingredient");
+  const stocktakeDate = hongKongDateKey();
   const [usageMode, setUsageMode] = useState<UsageMode>("single");
   const [usageStartDate, setUsageStartDate] = useState("");
   const [usageEndDate, setUsageEndDate] = useState("");
@@ -77,42 +69,19 @@ export function KitchenMaterialUsagePage({
 
   useEffect(() => {
     let active = true;
-    setStocktakeDatesLoading(true);
-    void loadStocktakeDates()
-      .then((dates) => {
-        if (!active) return;
-        const sortedDates = [...dates].sort((left, right) =>
-          right.date.localeCompare(left.date),
-        );
-        setStocktakeDates(sortedDates);
-        setStocktakeDate((current) =>
-          current && sortedDates.some((item) => item.date === current) ? current : "",
-        );
-      })
-      .catch(() => {
-        if (active) setStocktakeDates([]);
-      })
-      .finally(() => {
-        if (active) setStocktakeDatesLoading(false);
-      });
-    return () => { active = false; };
-  }, [loadStocktakeDates]);
-
-  useEffect(() => {
-    let active = true;
     setError(null);
     const hasUsageDates = usageMode === "single"
       ? Boolean(usageStartDate)
       : Boolean(usageStartDate && usageEndDate);
 
-    if (!stocktakeDate || !hasUsageDates) {
+    if (!hasUsageDates) {
       setReport(null);
       setLoading(false);
       return () => { active = false; };
     }
 
     setLoading(true);
-    void loadReport({ stocktakeDate, usageStartDate, usageEndDate })
+    void loadReport({ kind, stocktakeDate, usageStartDate, usageEndDate })
       .then((nextReport) => {
         if (active) {
           setReport(nextReport);
@@ -126,7 +95,7 @@ export function KitchenMaterialUsagePage({
         if (active) setLoading(false);
       });
     return () => { active = false; };
-  }, [loadReport, refreshKey, stocktakeDate, usageEndDate, usageMode, usageStartDate]);
+  }, [kind, loadReport, refreshKey, stocktakeDate, usageEndDate, usageMode, usageStartDate]);
 
   const changeUsageStartDate = (nextStartDate: string) => {
     setUsageStartDate(nextStartDate);
@@ -153,7 +122,7 @@ export function KitchenMaterialUsagePage({
   const hasUsageDates = usageMode === "single"
     ? Boolean(usageStartDate)
     : Boolean(usageStartDate && usageEndDate);
-  const canShowReport = Boolean(stocktakeDate && hasUsageDates);
+  const canShowReport = hasUsageDates;
   const rows = report?.rows.filter((row) => row.details.length > 0) ?? [];
   const toggleIngredientDetails = (ingredientId: string) => {
     setExpandedIngredientIds((current) => {
@@ -175,27 +144,10 @@ export function KitchenMaterialUsagePage({
       </header>
 
       <article className="panel ingredients-panel kitchen-material-usage-panel">
+        <div className="flex border-b border-border p-4">
+          <SegmentedTabs value={kind} label={t("kitchenMaterialUsage.kindTabs")} onChange={setKind} tabs={(["ingredient", "packing"] as const).map((tab) => ({ value: tab, label: t(`materialInventory.kinds.${tab}`) }))} />
+        </div>
         <div className="kitchen-material-usage-toolbar">
-          <label className="kitchen-material-usage-field">
-            <span>{t("kitchenMaterialUsage.stocktakeRecord")}</span>
-            <FilterableSelect
-              aria-label={t("kitchenMaterialUsage.stocktakeRecord")}
-              value={stocktakeDate}
-              disabled={stocktakeDatesLoading}
-              onChange={(event) => setStocktakeDate(event.target.value)}
-            >
-              <option value="" disabled>
-                {stocktakeDates.length
-                  ? t("kitchenMaterialUsage.selectStocktakeRecord")
-                  : t("kitchenMaterialUsage.noStocktakeRecords")}
-              </option>
-              {stocktakeDates.map((item) => (
-                <option key={item.date} value={item.date}>
-                  {item.date.split("-").reverse().join("/")} {t("kitchenMaterialUsage.stocktakeSuffix")}
-                </option>
-              ))}
-            </FilterableSelect>
-          </label>
           <label className="kitchen-material-usage-field">
             <span>{t("kitchenMaterialUsage.usageMode")}</span>
             <select
@@ -274,7 +226,8 @@ export function KitchenMaterialUsagePage({
                 <td>
                   <strong>{detail.productName || t("kitchenMaterialUsage.unknownProduct")}</strong>
                   {detail.productSku ? <span>{detail.productSku}</span> : null}
-                  <span>{t("kitchenMaterialUsage.detailMeta", { date: formatHongKongDateTime(detail.deliveryAt), order: detail.orderId || "—" })}</span>
+                  <span>{t("kitchenMaterialUsage.detailMeta", { date: formatHongKongDateTime(detail.deliveryAt), order: detail.orderNumber || detail.orderId || "—" })}</span>
+                  {detail.demandSource === "restaurant" && <span>{t("deliveryAllocations.restaurantDemand")}</span>}
                   <span className="kitchen-material-usage-portion">{formatQuantity(detail.productQuantity, t("kitchenMaterialUsage.portionUnit"))}</span>
                   {detailIndex === 0 && hiddenDetailCount > 0 ? (
                     <button
@@ -297,7 +250,7 @@ export function KitchenMaterialUsagePage({
                       aria-expanded={false}
                       onClick={() => toggleIngredientDetails(row.ingredientId)}
                     >
-                      顯示更多
+                      {t("suppliers.more")}
                     </button>
                   </td>
                 )}

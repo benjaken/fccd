@@ -5,6 +5,8 @@ import {
   CheckCircle2,
   Eye,
   PackagePlus,
+  Save,
+  Settings2,
   TriangleAlert,
 } from "lucide-react";
 
@@ -12,12 +14,16 @@ import { Button } from "@/components/ui/button";
 import { FilterableSelect } from "@/components/ui/filterable-select";
 import { RestaurantSettingsListTable } from "@/components/ui/restaurant-settings-list-table";
 import { SidePanel } from "@/components/ui/side-panel";
+import { Switch } from "@/components/ui/switch";
 import { fetchShopCatalog, type ShopCatalogItem } from "@/lib/shop-orders";
 import { hongKongDateInputValue } from "@/lib/raw-meat-inventory";
 import {
+  fetchInventoryShortageNotificationControl,
   fetchShopShipments,
   fetchShopWarehouseReceipts,
   recordShopWarehouseReceipt,
+  setInventoryShortageNotificationsEnabled,
+  setShopCatalogMinimumStock,
   type ShopShipment,
   type ShopStockWarning,
   type ShopWarehouseReceipt,
@@ -111,11 +117,18 @@ export function FactoryWarehouseReceiptsPage() {
   const [error, setError] = useState("");
   const [loadError, setLoadError] = useState("");
   const [receiptPanelOpen, setReceiptPanelOpen] = useState(false);
+  const [minimumPanelOpen, setMinimumPanelOpen] = useState(false);
+  const [minimumDrafts, setMinimumDrafts] = useState<Record<string, string>>({});
+  const [minimumSavingId, setMinimumSavingId] = useState<string | null>(null);
+  const [shortageNotificationsEnabled, setShortageNotificationsEnabled] = useState(false);
+  const [shortageNotificationsLoading, setShortageNotificationsLoading] = useState(false);
+  const [shortageNotificationsSaving, setShortageNotificationsSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const [idempotencyKey, setIdempotencyKey] = useState(() => crypto.randomUUID());
   const [saving, setSaving] = useState(false);
   const items = useMemo(() => catalog.filter((item) => item.channel === "fc_internal" && item.warehouse), [catalog]);
-  const selected = items.find((item) => item.id === itemId) ?? null;
+  const receiptItems = useMemo(() => items.filter((item) => item.warehouse === "dry"), [items]);
+  const selected = receiptItems.find((item) => item.id === itemId) ?? null;
 
   useEffect(() => {
     void Promise.all([fetchShopCatalog(), fetchShopWarehouseReceipts()])
@@ -146,6 +159,52 @@ export function FactoryWarehouseReceiptsPage() {
     }
   };
 
+  const openMinimums = () => {
+    setMinimumDrafts(Object.fromEntries(items.map((item) => [item.id, item.minimumStockLevel == null ? "" : String(item.minimumStockLevel)])));
+    setError("");
+    setMinimumPanelOpen(true);
+    setShortageNotificationsLoading(true);
+    void fetchInventoryShortageNotificationControl()
+      .then((control) => setShortageNotificationsEnabled(control.enabled))
+      .catch(() => setError(t("shopWarehouse.shortageNotificationsLoadError")))
+      .finally(() => setShortageNotificationsLoading(false));
+  };
+
+  const toggleShortageNotifications = async (enabled: boolean) => {
+    setShortageNotificationsSaving(true);
+    setError("");
+    try {
+      const saved = await setInventoryShortageNotificationsEnabled(enabled);
+      setShortageNotificationsEnabled(saved);
+      setMessage(t(saved
+        ? "shopWarehouse.shortageNotificationsEnabledMessage"
+        : "shopWarehouse.shortageNotificationsDisabledMessage"));
+    } catch {
+      setError(t("shopWarehouse.shortageNotificationsSaveError"));
+    } finally {
+      setShortageNotificationsSaving(false);
+    }
+  };
+
+  const saveMinimum = async (item: ShopCatalogItem) => {
+    const value = Number(minimumDrafts[item.id]);
+    if (!Number.isFinite(value) || value < 0) {
+      setError(t("shopWarehouse.minimumInvalid"));
+      return;
+    }
+    setMinimumSavingId(item.id);
+    setError("");
+    try {
+      const saved = await setShopCatalogMinimumStock(item.id, value);
+      setCatalog((current) => current.map((row) => row.id === item.id ? { ...row, minimumStockLevel: saved } : row));
+      setMessage(t("shopWarehouse.minimumSaved", { name: item.name }));
+    } catch {
+      setError(t("shopWarehouse.minimumSaveError"));
+    } finally {
+      setMinimumSavingId(null);
+    }
+  };
+
   return (
     <section className="inventory-records-page">
       {message ? <Feedback tone="success">{message}</Feedback> : null}
@@ -155,7 +214,7 @@ export function FactoryWarehouseReceiptsPage() {
         loadingLabel={t("shopOrdering.loading")}
         skeletonColumns={6}
         emptyTitle={t("shopWarehouse.historyTitle")}
-        toolbarAction={<Button onClick={() => { setError(""); setReceiptPanelOpen(true); }}><PackagePlus aria-hidden="true" />{t("shopWarehouse.receiptFormTitle")}</Button>}
+        toolbarAction={<div className="flex flex-wrap gap-2"><Button variant="outline" onClick={openMinimums}><Settings2 aria-hidden="true" />{t("shopWarehouse.minimumSettings")}</Button><Button onClick={() => { setError(""); setReceiptPanelOpen(true); }}><PackagePlus aria-hidden="true" />{t("shopWarehouse.receiptFormTitle")}</Button></div>}
         header={<tr><th>{t("shopOrdering.columns.number")}</th><th>{t("shopWarehouse.receiptDate")}</th><th>{t("shopOrdering.item")}</th><th>{t("shopOrdering.quantity")}</th><th>{t("shopWarehouse.source")}</th><th>{t("shopWarehouse.batch")}</th></tr>}
       >
         {rows.map((row) => <tr key={row.id}>
@@ -178,11 +237,50 @@ export function FactoryWarehouseReceiptsPage() {
       >
         {error ? <Feedback tone="error">{error}</Feedback> : null}
         <div className="inventory-receipt-form">
-          <label className="inventory-field inventory-field-wide"><span>{t("shopOrdering.item")}</span><FilterableSelect aria-label={t("shopOrdering.item")} value={itemId} onChange={(event) => setItemId(event.target.value)}><option value="">{t("shopWarehouse.itemPlaceholder")}</option>{items.map((item) => <option key={item.id} value={item.id}>{item.supplierName} · {item.name} ({item.unit})</option>)}</FilterableSelect></label>
+          <label className="inventory-field inventory-field-wide"><span>{t("shopOrdering.item")}</span><FilterableSelect aria-label={t("shopOrdering.item")} value={itemId} onChange={(event) => setItemId(event.target.value)}><option value="">{t("shopWarehouse.itemPlaceholder")}</option>{receiptItems.map((item) => <option key={item.id} value={item.id}>{item.supplierName} · {item.name} ({item.unit})</option>)}</FilterableSelect></label>
           <label className="inventory-field"><span>{t("shopOrdering.quantity")}</span><input type="number" min="0" value={quantity} onChange={(event) => setQuantity(event.target.value)} /></label>
           <label className="inventory-field"><span>{t("shopWarehouse.receiptDate")}</span><input type="date" value={receiptDate} onChange={(event) => setReceiptDate(event.target.value)} /></label>
           <label className="inventory-field"><span>{t("shopWarehouse.source")}</span><input value={sourceName} onChange={(event) => setSourceName(event.target.value)} /></label>
           <label className="inventory-field"><span>{t("shopWarehouse.batch")}</span><input value={batchNo} onChange={(event) => setBatchNo(event.target.value)} /></label>
+        </div>
+      </SidePanel>
+      <SidePanel
+        open={minimumPanelOpen}
+        title={t("shopWarehouse.minimumSettings")}
+        description={t("shopWarehouse.minimumDescription")}
+        closeLabel={t("common.close")}
+        onClose={() => setMinimumPanelOpen(false)}
+        className="inventory-receipt-panel"
+        half
+      >
+        {error ? <Feedback tone="error">{error}</Feedback> : null}
+        <div className="mb-4 flex items-start justify-between gap-4 rounded-xl border border-amber-200 bg-amber-50 p-4">
+          <div>
+            <strong className="block text-sm text-slate-900">{t("shopWarehouse.shortageNotificationsTitle")}</strong>
+            <p className="mt-1 text-sm text-slate-600">{t("shopWarehouse.shortageNotificationsDescription")}</p>
+            <span className="mt-2 inline-block text-xs font-medium text-amber-800">
+              {t(shortageNotificationsEnabled
+                ? "shopWarehouse.shortageNotificationsOn"
+                : "shopWarehouse.shortageNotificationsOff")}
+            </span>
+          </div>
+          <Switch
+            checked={shortageNotificationsEnabled}
+            disabled={shortageNotificationsLoading || shortageNotificationsSaving}
+            aria-label={t("shopWarehouse.shortageNotificationsTitle")}
+            onCheckedChange={(checked) => void toggleShortageNotifications(checked)}
+          />
+        </div>
+        <div className="overflow-x-hidden rounded-xl border border-slate-200">
+          <table className="w-full table-fixed text-left text-sm">
+            <colgroup><col className="w-[52%]" /><col className="w-[30%]" /><col className="w-[18%]" /></colgroup>
+            <thead className="bg-slate-50 text-slate-600"><tr><th className="px-4 py-3">{t("shopOrdering.item")}</th><th className="px-4 py-3">{t("shopWarehouse.minimumStock")}</th><th className="px-4 py-3"><span className="sr-only">{t("common.save")}</span></th></tr></thead>
+            <tbody>{items.map((item) => <tr key={item.id} className="border-t border-slate-100">
+              <td className="px-4 py-3 whitespace-normal"><strong className="block break-words text-slate-900">{item.name}</strong><span className="break-words text-slate-500">{item.sku || t("common.notSet")} · {item.unit}</span></td>
+              <td className="px-4 py-3"><label className="flex min-w-0 items-center gap-2"><span className="sr-only">{t("shopWarehouse.minimumStockFor", { name: item.name })}</span><input className="h-10 min-w-0 flex-1 rounded-lg border border-slate-300 px-3 text-sm" type="number" min="0" step="0.001" value={minimumDrafts[item.id] ?? ""} onChange={(event) => setMinimumDrafts((current) => ({ ...current, [item.id]: event.target.value }))} /><span className="shrink-0 text-slate-500">{item.unit}</span></label></td>
+              <td className="px-4 py-3 text-right"><Button size="sm" disabled={minimumSavingId === item.id} onClick={() => void saveMinimum(item)}><Save aria-hidden="true" />{t("common.save")}</Button></td>
+            </tr>)}</tbody>
+          </table>
         </div>
       </SidePanel>
     </section>

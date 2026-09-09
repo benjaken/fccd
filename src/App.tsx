@@ -112,6 +112,7 @@ import { KitchenOrdersPage } from "@/components/KitchenOrdersPage";
 import { KitchenSettingsPage } from "@/components/KitchenSettingsPage";
 import { KitchenCostInputPage } from "@/components/KitchenCostInputPage";
 import { KitchenMaterialUsagePage } from "@/components/KitchenMaterialUsagePage";
+import { MaterialInventoryPage } from "@/components/MaterialInventoryPage";
 import { KitchenSalesCostReportPage } from "@/components/KitchenSalesCostReportPage";
 import { KitchenProductSalesReportPage } from "@/components/KitchenProductSalesReportPage";
 import { KitchenChannelSalesReportPage } from "@/components/KitchenChannelSalesReportPage";
@@ -214,6 +215,7 @@ import {
   isWorkspaceNavActive,
   mobileNavLinkEnd,
   primaryNav,
+  sidebarAccordionExpansion,
   sectionFromPath,
   secondaryNav,
   SECTION_CHILD_KEYS,
@@ -305,6 +307,10 @@ function OperationsShell() {
   const [followUpCounts, setFollowUpCounts] = useState<FollowUpCounts | null>(null);
   const [recoveringInitialPath, setRecoveringInitialPath] = useState(true);
   const userMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setSidebarGroupExpansion({});
+  }, [location.pathname, location.search, menuStyle]);
 
   const isBusinessMenu = menuStyle === "style-one";
   const section = isBusinessMenu
@@ -434,14 +440,7 @@ function OperationsShell() {
     const nestGroups = options.nestGroups ?? !sidebarCollapsed;
     const childActive = hasChildren && visibleChildren.some(branchIsActive);
     const expansionKey = `${parentPath}/${item.key}`;
-    const defaultsOpenInCatering =
-      isBusinessMenu &&
-      section === "catering" &&
-      depth === 0 &&
-      (item.key === "orders" || item.key === "allQuotes");
-    const isExpanded =
-      childActive ||
-      (sidebarGroupExpansion[expansionKey] ?? defaultsOpenInCatering);
+    const isExpanded = sidebarGroupExpansion[expansionKey] ?? childActive;
     const subnavId = `sidebar-subnav-${expansionKey.replace(/[^a-zA-Z0-9_-]/g, "-")}`;
     const linkContent = (
       <>
@@ -472,10 +471,14 @@ function OperationsShell() {
             aria-expanded={isExpanded}
             aria-controls={subnavId}
             onClick={() =>
-              setSidebarGroupExpansion((current) => ({
-                ...current,
-                [expansionKey]: !isExpanded,
-              }))
+              setSidebarGroupExpansion((current) =>
+                sidebarAccordionExpansion(
+                  current,
+                  expansionKey,
+                  parentPath,
+                  isExpanded,
+                ),
+              )
             }
           >
             {linkContent}
@@ -1349,7 +1352,7 @@ function OperationsShell() {
               />
               <Route
                 path="/restaurant/ordering/inventory/*"
-                element={pageAccess.canAccess("workspace.factory.warehouse") ? <RestaurantInventoryRecordsWorkspace /> : <SettingsAccessDenied />}
+                element={<LegacyRestaurantInventoryRecordsRedirect />}
               />
               <Route path="/restaurant/settings/monthly-pnl-cost-categories" element={pageAccess.canAccess("restaurant.settings.monthly_pnl_cost_categories") ? <MonthlyPnlCostCategoriesPage /> : <SettingsAccessDenied />} />
               <Route path="/restaurant/settings/inventory-items" element={pageAccess.canAccess("restaurant.settings.inventory_items") ? <RestaurantInventoryItemsPage /> : <SettingsAccessDenied />} />
@@ -1360,6 +1363,20 @@ function OperationsShell() {
               <Route path="/restaurant/settings/delivery-platforms" element={pageAccess.canAccess("restaurant.settings.delivery_platforms") ? <RestaurantDeliveryPlatformsPage /> : <SettingsAccessDenied />} />
               <Route path="/restaurant/settings/holidays" element={pageAccess.canAccess("restaurant.settings.holidays") ? <RestaurantHolidaysPage /> : <SettingsAccessDenied />} />
               <Route path="/restaurant/settings/roster-times" element={pageAccess.canAccess("restaurant.settings.roster_times") ? <RestaurantRosterTimesPage /> : <SettingsAccessDenied />} />
+              <Route
+                path="/kitchen/inventory"
+                element={
+                  pageAccess.canAccess("kitchen.inventory") ? (
+                    <MaterialInventoryPage />
+                  ) : (
+                    <SettingsAccessDenied />
+                  )
+                }
+              />
+              <Route
+                path="/kitchen/inventory-records/*"
+                element={pageAccess.canAccess("workspace.factory.warehouse") ? <KitchenInventoryRecordsWorkspace /> : <SettingsAccessDenied />}
+              />
               <Route
                 path="/kitchen/packing-stocktakes"
                 element={
@@ -2552,12 +2569,12 @@ function FactoryProductionCalendarWorkspace() {
   );
 }
 
-function RestaurantInventoryRecordsWorkspace() {
+function KitchenInventoryRecordsWorkspace() {
   return (
     <Routes>
       <Route element={<FactoryWarehousePage />}>
         <Route index element={<FactoryWarehouseShipmentsPage />} />
-        <Route path="shipments" element={<Navigate replace to="/restaurant/ordering/inventory" />} />
+        <Route path="shipments" element={<Navigate replace to="/kitchen/inventory-records" />} />
         <Route path="receipts" element={<FactoryWarehouseReceiptsPage />} />
       </Route>
     </Routes>
@@ -2578,7 +2595,13 @@ function FactoryShopDeliveryNoteWorkspace() {
 function LegacyFactoryWarehouseRedirect() {
   const location = useLocation();
   const suffix = location.pathname.replace(/^\/factory\/warehouse/, "");
-  return <Navigate replace to={`/restaurant/ordering/inventory${suffix}${location.search}`} />;
+  return <Navigate replace to={`/kitchen/inventory-records${suffix}${location.search}`} />;
+}
+
+function LegacyRestaurantInventoryRecordsRedirect() {
+  const location = useLocation();
+  const suffix = location.pathname.replace(/^\/restaurant\/ordering\/inventory/, "");
+  return <Navigate replace to={`/kitchen/inventory-records${suffix}${location.search}`} />;
 }
 
 function DriverDeliveryWorkspace() {

@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
@@ -12,8 +13,9 @@ vi.mock("@/auth/AuthProvider", () => ({
 }));
 
 const records: PackingStocktakeItem[] = [{
-  id: "packing-1", stocktakeAt: "2026-08-10T00:00:00.000Z", sku: "LKO001-B",
-  ingredientType: "包裝用品", name: "芝士汁粉", quantity: 12, unit: "包",
+  id: "packing-1", ingredientId: "ingredient-1", stocktakeAt: "2026-08-10T00:00:00.000Z", sku: "LKO001-B",
+  ingredientType: "包裝用品", name: "芝士汁粉", quantity: 12,
+  currentQuantity: 21, currentStocktakeAt: "2026-09-07T00:00:00.000Z", unit: "包",
   supplierName: "測試供應商", supplierPhone: "2345 6789",
 }];
 
@@ -26,6 +28,21 @@ describe("Packaging stocktake records page", () => {
     return button;
   }
 
+  it.each([
+    ["packing", "正在載入包裝盤點記錄…"],
+    ["ingredient", "正在載入食材盤點記錄…"],
+  ] as const)("shows a stable date-list skeleton while %s dates initialise", (kind, loadingLabel) => {
+    const pendingDates = new Promise<never>(() => undefined);
+    const { container } = render(<MemoryRouter><PackingStocktakesPage
+      kind={kind}
+      loadDates={() => pendingDates}
+    /></MemoryRouter>);
+
+    expect(screen.getByRole("status", { name: loadingLabel })).toBeInTheDocument();
+    expect(container.querySelectorAll(".stocktake-date-skeleton-row")).toHaveLength(10);
+    expect(container.querySelectorAll(".stocktake-date-item")).toHaveLength(0);
+  });
+
   it("uses the operational table and saves a clicked quantity without an edit button", async () => {
     const user = userEvent.setup();
     const saveQuantity = vi.fn().mockResolvedValue(18);
@@ -35,6 +52,8 @@ describe("Packaging stocktake records page", () => {
     const dateList = await screen.findByRole("complementary", { name: "盤點日期列表" });
     await user.click(dateButton(dateList, "2026-08-10"));
     expect(screen.getByRole("columnheader", { name: "盤點數量" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "現有庫存" })).toBeInTheDocument();
+    expect(screen.getByText("21")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "編輯" })).not.toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "修改「芝士汁粉」的盤點數量" }));
@@ -45,6 +64,47 @@ describe("Packaging stocktake records page", () => {
 
     await waitFor(() => expect(saveQuantity).toHaveBeenCalledWith("packing-1", 18));
     expect(await screen.findByRole("button", { name: "修改「芝士汁粉」的盤點數量" })).toHaveTextContent("18");
+  });
+
+  it("loads the latest balance per material for the current-stock column", () => {
+    const migration = readFileSync(
+      "supabase/migrations/20260908140000_material_current_stock.sql",
+      "utf8",
+    );
+    expect(migration).toContain("get_material_current_stock");
+    expect(migration).toContain("select distinct on (event.ingredient_id)");
+    expect(migration).not.toContain("event.quantity is not null");
+    expect(migration).toContain("event.stocktake_at desc nulls last");
+  });
+
+  it("adds a correction record from the current-stock column", async () => {
+    const user = userEvent.setup();
+    const correctCurrentStock = vi.fn().mockResolvedValue("correction-1");
+    const loadRows = vi.fn().mockResolvedValue({ items: records, total: 1 });
+    render(<MemoryRouter><PackingStocktakesPage canEdit
+      loadDates={vi.fn().mockResolvedValue([{ date: "2026-08-10" }])}
+      loadRows={loadRows}
+      correctCurrentStock={correctCurrentStock}
+    /></MemoryRouter>);
+
+    const dateList = await screen.findByRole("complementary", { name: "盤點日期列表" });
+    await user.click(dateButton(dateList, "2026-08-10"));
+    await screen.findByText("芝士汁粉");
+    await user.click(screen.getByRole("button", { name: "修正現有庫存" }));
+
+    const quantityInput = screen.getByRole("spinbutton", { name: "實際數量" });
+    await user.clear(quantityInput);
+    await user.type(quantityInput, "25");
+    await user.type(screen.getByRole("textbox", { name: "修正原因" }), "重新點算");
+    await user.click(screen.getByRole("button", { name: "保存修正" }));
+
+    await waitFor(() => expect(correctCurrentStock).toHaveBeenCalledWith({
+      kind: "packing",
+      ingredientId: "ingredient-1",
+      quantity: 25,
+      reason: "重新點算",
+    }));
+    await waitFor(() => expect(loadRows).toHaveBeenCalledTimes(2));
   });
 
   it("opens the selected date even when all eligible rows already exist", async () => {

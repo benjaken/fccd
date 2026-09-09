@@ -184,7 +184,10 @@ export function FilterableSelect({
             placeholder={resolvedSearchPlaceholder}
             autoFocus
           />
-          <CommandList role="listbox" label={accessibleLabel || undefined}>
+          <CommandList
+            role="listbox"
+            label={accessibleLabel || undefined}
+          >
             <CommandEmpty>{resolvedEmptyLabel}</CommandEmpty>
             {options.map((option, index) => {
               const optionValue = String(option.props.value ?? "");
