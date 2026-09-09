@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { LoaderCircle, Minus, Plus, Printer } from "lucide-react";
 import { useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -26,10 +26,6 @@ import {
   usePdfAutoPageBreaks,
   usePdfAutoProductPageBreaks,
 } from "@/lib/pdf-auto-pagination";
-import {
-  activateDocumentEditorWindowScroll,
-  useDocumentEditorWindowScroll,
-} from "@/lib/document-editor-window-scroll";
 import { printPdf } from "@/lib/print-pdf";
 import { fetchShippingFees, type ShippingFee } from "@/lib/shipping-fees";
 
@@ -156,7 +152,6 @@ export function ReceiptPdfEditorPage({
 }) {
   const { t, i18n } = useTranslation();
   const editorRef = useRef<HTMLElement>(null);
-  useDocumentEditorWindowScroll(editorRef);
   const termDict = useDictItems(DICT_TYPE.quoteTermTemplate);
   const paymentDict = useDictItems(DICT_TYPE.quotePaymentTemplate);
   const termOptions = termDict.items.map((item) => dictItemLabel(item, i18n.language));
@@ -192,10 +187,6 @@ export function ReceiptPdfEditorPage({
     paginationModuleCount,
     `${paginationResetKey}:${productPageBreaks.join(",")}`,
   );
-
-  useLayoutEffect(() => {
-    if (!loading) activateDocumentEditorWindowScroll(editorRef.current);
-  }, [loading]);
 
   const isInvoice = documentKind === "invoice";
   const documentTitle = isInvoice ? "INVOICE" : "RECEIPT";
@@ -298,14 +289,14 @@ export function ReceiptPdfEditorPage({
 
   if (loading) {
     return (
-      <section ref={editorRef} tabIndex={-1} className="quote-pdf-editor receipt-pdf-editor">
+      <section ref={editorRef} className="quote-pdf-editor receipt-pdf-editor">
         <div className="quote-pdf-state"><LoaderCircle className="spin" />正在載入{documentName}…</div>
       </section>
     );
   }
   if (error || !draft) {
     return (
-      <section ref={editorRef} tabIndex={-1} className="quote-pdf-editor receipt-pdf-editor">
+      <section ref={editorRef} className="quote-pdf-editor receipt-pdf-editor">
         <div className="quote-pdf-state">
           <span>無法載入{documentName}。</span>
           <Button variant="outline" onClick={() => void load()}>重新載入</Button>
@@ -525,7 +516,7 @@ export function ReceiptPdfEditorPage({
   );
 
   return (
-    <section ref={editorRef} tabIndex={-1} className="quote-pdf-editor receipt-pdf-editor">
+    <section ref={editorRef} className="quote-pdf-editor receipt-pdf-editor">
       <div className="quote-pdf-toolbar receipt-pdf-toolbar">
         <div>
           <strong>{documentName}預覽</strong>

@@ -4336,7 +4336,20 @@ body:has(.shop-order-product-panel) .restaurant-workspace-body > .shop-order-pag
     inset: auto !important;
     height: auto !important;
     max-height: none !important;
+    min-height: 0 !important;
     overflow: visible !important;
+    transform: none !important;
+    animation: none !important;
+  }
+
+  html:has(.quote-pdf-editor) .shell-body,
+  html:has(.quote-pdf-editor) .main-content,
+  html:has(.quote-pdf-editor) .page-transition,
+  html:has(.document-editor-shell) .shell-body,
+  html:has(.document-editor-shell) .main-content,
+  html:has(.document-editor-shell) .page-transition {
+    display: block !important;
+    width: auto !important;
   }
 
   .quote-pdf-editor {

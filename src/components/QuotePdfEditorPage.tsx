@@ -36,10 +36,6 @@ import {
   usePdfAutoPageBreaks,
   usePdfAutoProductPageBreaks,
 } from "@/lib/pdf-auto-pagination";
-import {
-  activateDocumentEditorWindowScroll,
-  useDocumentEditorWindowScroll,
-} from "@/lib/document-editor-window-scroll";
 import { printPdf } from "@/lib/print-pdf";
 import { formatOrderNumber } from "@/lib/order-number";
 import { splitPdfProductLines } from "@/lib/receipt-pdf-draft";
@@ -302,7 +298,6 @@ export function QuotePdfEditorPage({
 }) {
   const { t, i18n } = useTranslation();
   const editorRef = useRef<HTMLElement>(null);
-  useDocumentEditorWindowScroll(editorRef);
   const termDict = useDictItems(DICT_TYPE.quoteTermTemplate);
   const paymentDict = useDictItems(DICT_TYPE.quotePaymentTemplate);
   const additionalInfoDict = useDictItems(DICT_TYPE.quoteAdditionalInfo);
@@ -349,10 +344,6 @@ export function QuotePdfEditorPage({
     paginationModuleCount,
     `${paginationResetKey}:${productPageBreaks.join(",")}`,
   );
-
-  useLayoutEffect(() => {
-    if (!loading) activateDocumentEditorWindowScroll(editorRef.current);
-  }, [loading]);
 
   const storageKey = quotePdfDraftStorageKey(id);
   const load = useCallback(async () => {
@@ -586,7 +577,7 @@ export function QuotePdfEditorPage({
 
   if (loading) {
     return (
-      <section ref={editorRef} tabIndex={-1} className="quote-pdf-editor">
+      <section ref={editorRef} className="quote-pdf-editor">
         <div className="quote-pdf-state">
           <LoaderCircle className="spin" /> 正在載入報價表…
         </div>
@@ -596,7 +587,7 @@ export function QuotePdfEditorPage({
 
   if (error || !draft) {
     return (
-      <section ref={editorRef} tabIndex={-1} className="quote-pdf-editor">
+      <section ref={editorRef} className="quote-pdf-editor">
         <div className="quote-pdf-state" role="alert">
           無法載入報價表。
           <Button variant="outline" onClick={() => void load()}>重試</Button>
@@ -834,7 +825,7 @@ export function QuotePdfEditorPage({
   };
 
   return (
-    <section ref={editorRef} tabIndex={-1} className={`quote-pdf-editor${backPages.length ? " has-back-pages" : ""}`}>
+    <section ref={editorRef} className={`quote-pdf-editor${backPages.length ? " has-back-pages" : ""}`}>
       <div className="quote-pdf-toolbar">
         <div>
           <strong>報價表工作稿</strong>

@@ -1,5 +1,5 @@
 import { readAppStyles } from "./read-app-styles";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
@@ -12,6 +12,10 @@ describe("quote PDF print stylesheet", () => {
     expect(css).toMatch(
       /\.quote-pdf-editor\s*\{\s*position:\s*static !important;\s*inset:\s*auto !important;\s*width:\s*100% !important;\s*height:\s*auto !important/,
     );
+  });
+
+  it("does not lock html overflow with a window-scroll helper", () => {
+    expect(existsSync(join(process.cwd(), "src/lib/document-editor-window-scroll.ts"))).toBe(false);
   });
 
   it("uses fixed A4 sheets in the editing view", () => {
