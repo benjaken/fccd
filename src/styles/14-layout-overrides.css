@@ -4278,36 +4278,67 @@ body:has(.shop-order-product-panel) .restaurant-workspace-body > .shop-order-pag
   }
 }
 
-/* Document PDF editors must win later height/overflow locks on .main-content. */
-html:has(.quote-pdf-editor),
-html:has(.document-editor-shell),
-body:has(.quote-pdf-editor),
-body:has(.document-editor-shell),
-html:has(.quote-pdf-editor) #root,
-html:has(.document-editor-shell) #root {
-  height: 100% !important;
-  max-height: 100% !important;
-  overflow: hidden !important;
+/* Screen-only. Print must keep a single flowing A4 document. */
+@media screen {
+  html:has(.quote-pdf-editor),
+  html:has(.document-editor-shell),
+  body:has(.quote-pdf-editor),
+  body:has(.document-editor-shell),
+  html:has(.quote-pdf-editor) #root,
+  html:has(.document-editor-shell) #root {
+    height: 100% !important;
+    max-height: 100% !important;
+    overflow: hidden !important;
+  }
+
+  .document-editor-shell .shell-body,
+  .document-editor-shell .shell-body.sidebar-is-collapsed,
+  .document-editor-shell .main-content,
+  .document-editor-shell .page-transition,
+  body:has(.quote-pdf-editor) .shell-body,
+  body:has(.quote-pdf-editor) .main-content,
+  body:has(.quote-pdf-editor) .page-transition {
+    height: 100% !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+
+  body:has(.quote-pdf-editor) .quote-pdf-editor,
+  .document-editor-shell .quote-pdf-editor {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    max-height: 100% !important;
+    overflow: auto !important;
+  }
 }
 
-.document-editor-shell .shell-body,
-.document-editor-shell .shell-body.sidebar-is-collapsed,
-.document-editor-shell .main-content,
-.document-editor-shell .page-transition,
-body:has(.quote-pdf-editor) .shell-body,
-body:has(.quote-pdf-editor) .main-content,
-body:has(.quote-pdf-editor) .page-transition {
-  height: 100% !important;
-  max-height: none !important;
-  overflow: visible !important;
-}
+@media print {
+  html:has(.quote-pdf-editor),
+  html:has(.document-editor-shell),
+  body:has(.quote-pdf-editor),
+  body:has(.document-editor-shell),
+  html:has(.quote-pdf-editor) #root,
+  html:has(.document-editor-shell) #root,
+  body:has(.quote-pdf-editor) .quote-pdf-editor,
+  .document-editor-shell .quote-pdf-editor,
+  .quote-pdf-editor {
+    position: static !important;
+    inset: auto !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
 
-body:has(.quote-pdf-editor) .quote-pdf-editor,
-.document-editor-shell .quote-pdf-editor {
-  position: fixed !important;
-  inset: 0 !important;
-  width: 100% !important;
-  height: 100% !important;
-  max-height: 100% !important;
-  overflow: auto !important;
+  .quote-pdf-editor {
+    position: absolute !important;
+    inset: 0 auto auto 0 !important;
+    width: 100% !important;
+  }
+
+  .quote-pdf-sheet {
+    height: 297mm !important;
+    overflow: hidden !important;
+  }
 }

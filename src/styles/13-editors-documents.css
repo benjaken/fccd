@@ -1041,71 +1041,79 @@ body:has(.quote-pdf-editor) .sidebar {
   display: none;
 }
 
-/* The editor itself is the viewport scroller. Window scroll waits for a
-   first click after target=_blank; a fixed overflow:auto pane does not. */
-html:has(.quote-pdf-editor),
-html:has(.document-editor-shell),
-body:has(.quote-pdf-editor),
-body:has(.document-editor-shell),
-html:has(.quote-pdf-editor) #root,
-html:has(.document-editor-shell) #root {
-  height: 100% !important;
-  max-height: 100% !important;
-  overflow: hidden !important;
-}
+/* Screen-only: never leak height/overflow locks into print, or generated
+   PDFs get clipped to a single viewport page. */
+@media screen {
+  html:has(.quote-pdf-editor),
+  html:has(.document-editor-shell),
+  body:has(.quote-pdf-editor),
+  body:has(.document-editor-shell),
+  html:has(.quote-pdf-editor) #root,
+  html:has(.document-editor-shell) #root {
+    height: 100% !important;
+    max-height: 100% !important;
+    overflow: hidden !important;
+  }
 
-body:has(.quote-pdf-editor) .shell-body,
-body:has(.quote-pdf-editor) .shell-body.sidebar-is-collapsed,
-.document-editor-shell .shell-body,
-.document-editor-shell .shell-body.sidebar-is-collapsed,
-body:has(.quote-pdf-editor) .main-content,
-.document-editor-shell .main-content,
-body:has(.quote-pdf-editor) .page-transition,
-.document-editor-shell .page-transition {
-  display: block;
-  height: 100% !important;
-  max-height: none !important;
-  min-height: 0;
-  overflow: visible !important;
-}
+  body:has(.quote-pdf-editor) .shell-body,
+  body:has(.quote-pdf-editor) .shell-body.sidebar-is-collapsed,
+  .document-editor-shell .shell-body,
+  .document-editor-shell .shell-body.sidebar-is-collapsed,
+  body:has(.quote-pdf-editor) .main-content,
+  .document-editor-shell .main-content,
+  body:has(.quote-pdf-editor) .page-transition,
+  .document-editor-shell .page-transition {
+    display: block;
+    height: 100% !important;
+    max-height: none !important;
+    min-height: 0;
+    overflow: visible !important;
+  }
 
-body:has(.quote-pdf-editor) .shell-body,
-.document-editor-shell .shell-body,
-.document-editor-shell .shell-body.sidebar-is-collapsed {
-  padding-top: 0;
-}
+  body:has(.quote-pdf-editor) .shell-body,
+  .document-editor-shell .shell-body,
+  .document-editor-shell .shell-body.sidebar-is-collapsed {
+    padding-top: 0;
+  }
 
-body:has(.quote-pdf-editor) .main-content,
-.document-editor-shell .main-content {
-  padding: 0;
-}
+  body:has(.quote-pdf-editor) .main-content,
+  .document-editor-shell .main-content {
+    padding: 0;
+  }
 
-body:has(.quote-pdf-editor) .quote-pdf-editor,
-.document-editor-shell .quote-pdf-editor,
-.quote-pdf-editor {
-  position: fixed;
-  inset: 0;
-  z-index: 10;
-  width: 100%;
-  height: 100% !important;
-  max-height: 100% !important;
-  min-height: 0;
-  margin: 0;
-  overflow: auto !important;
-  overscroll-behavior: contain;
-  -webkit-overflow-scrolling: touch;
-}
+  body:has(.quote-pdf-editor) .quote-pdf-editor,
+  .document-editor-shell .quote-pdf-editor,
+  .quote-pdf-editor {
+    position: fixed;
+    inset: 0;
+    z-index: 10;
+    width: 100%;
+    height: 100% !important;
+    max-height: 100% !important;
+    min-height: 0;
+    margin: 0;
+    overflow: auto !important;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
 
-.document-editor-shell .page-transition,
-body:has(.quote-pdf-editor) .page-transition {
-  animation: none;
-  transform: none;
-}
+  .document-editor-shell .page-transition,
+  body:has(.quote-pdf-editor) .page-transition {
+    animation: none;
+    transform: none;
+  }
 
-html:has(.quote-pdf-editor),
-html:has(.document-editor-shell),
-.quote-pdf-editor {
-  touch-action: pan-y;
+  html:has(.quote-pdf-editor),
+  html:has(.document-editor-shell),
+  .quote-pdf-editor {
+    touch-action: pan-y;
+  }
+
+  /* clip is not a scroll container, so the wheel goes to the editor
+     immediately. hidden would wait for a first click. Print stays hidden. */
+  .quote-pdf-sheet {
+    overflow: clip;
+  }
 }
 
 .quote-pdf-editor:focus,
