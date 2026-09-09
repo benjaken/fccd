@@ -24,7 +24,12 @@ const EMPTY_OPTIONS: ProductEditOptions = {
   packingMaterials: [], packingSupplies: [], catalogIngredients: [],
 };
 
-type PendingMaterial = { ingredientId: string; name: string; quantity: number };
+type PendingMaterial = {
+  ingredientId: string;
+  name: string;
+  quantity: number;
+  unit: string | null;
+};
 type PendingLabel = {
   displayA: string;
   displayB: string;
@@ -217,7 +222,7 @@ export function CatalogCreatePage({
     const setItems = kind === "premium" ? setPremiumIngredients : setPackingSupplies;
     setItems((current) => current.some((item) => item.ingredientId === ingredientId)
       ? current
-      : [...current, { ingredientId, name: selected.name, quantity }]);
+      : [...current, { ingredientId, name: selected.name, quantity, unit: selected.unit ?? null }]);
     setMaterialDraft((current) => kind === "premium"
       ? { ...current, premiumId: "", premiumQty: "1" }
       : { ...current, packingId: "", packingQty: "1" });
@@ -333,7 +338,7 @@ export function CatalogCreatePage({
               <header className="product-section-header">
                 <h2>{form.chineseName || form.name || t("catalogCreate.newProduct")} - {t("productDetail.premiumIngredients")}</h2>
               </header>
-              <div className="product-inline-add">
+              <div className="product-inline-add has-unit">
                 <label>
                   <span>{t("productDetail.premiumIngredients")}</span>
                   <FilterableSelect value={materialDraft.premiumId} onChange={(event) => setMaterialDraft((current) => ({ ...current, premiumId: event.target.value }))}>
@@ -342,11 +347,20 @@ export function CatalogCreatePage({
                   </FilterableSelect>
                 </label>
                 <label><span>{t("productDetail.quantity")}</span><input type="number" min="0" step="0.01" value={materialDraft.premiumQty} onChange={(event) => setMaterialDraft((current) => ({ ...current, premiumQty: event.target.value }))} /></label>
+                <label>
+                  <span>{t("productDetail.unit")}</span>
+                  <input
+                    type="text"
+                    value={options.catalogIngredients.find((item) => item.id === materialDraft.premiumId)?.unit ?? ""}
+                    readOnly
+                    placeholder={t("productDetail.unitPlaceholder")}
+                  />
+                </label>
                 <Button type="button" disabled={!materialDraft.premiumId} onClick={() => addMaterial("premium")}><Plus />{t("productDetail.addIngredient")}</Button>
               </div>
               {premiumIngredients.length ? (
-                <div className="table-wrap detail-inline-table"><table><thead><tr><th>{t("productDetail.ingredient")}</th><th>{t("productDetail.quantity")}</th><th>{t("products.columns.actions")}</th></tr></thead><tbody>
-                  {premiumIngredients.map((item) => <tr key={item.ingredientId}><td>{item.name}</td><td>{item.quantity}</td><td className="table-actions-cell"><Button type="button" variant="outline" size="icon" aria-label={t("productDetail.removeIngredient")} onClick={() => setPremiumIngredients((current) => current.filter((row) => row.ingredientId !== item.ingredientId))}><Trash2 /></Button></td></tr>)}
+                <div className="table-wrap detail-inline-table"><table><thead><tr><th>{t("productDetail.ingredient")}</th><th>{t("productDetail.quantity")}</th><th>{t("productDetail.unit")}</th><th>{t("products.columns.actions")}</th></tr></thead><tbody>
+                  {premiumIngredients.map((item) => <tr key={item.ingredientId}><td>{item.name}</td><td>{item.quantity}</td><td>{item.unit || t("common.notSet")}</td><td className="table-actions-cell"><Button type="button" variant="outline" size="icon" aria-label={t("productDetail.removeIngredient")} onClick={() => setPremiumIngredients((current) => current.filter((row) => row.ingredientId !== item.ingredientId))}><Trash2 /></Button></td></tr>)}
                 </tbody></table></div>
               ) : <p className="detail-description">{t("productDetail.noIngredients")}</p>}
             </article>

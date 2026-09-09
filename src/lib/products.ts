@@ -103,6 +103,7 @@ export type CatalogOption = {
   name: string;
   sku?: string | null;
   legacyId?: string;
+  unit?: string | null;
 };
 
 export type ProductEditOptions = {
@@ -146,8 +147,20 @@ export type ProductPremiumIngredient = {
   name: string;
   ingredientType?: string | null;
   quantity: number | null;
+  unit: string | null;
   unitCost: number | null;
 };
+
+/** Supplier-facing unit for an ingredient: product unit first, then stocktake unit. */
+export function ingredientSupplierUnit(input: {
+  productUnit?: string | null;
+  stocktakeUnit?: string | null;
+}): string | null {
+  const productUnit = input.productUnit?.trim();
+  if (productUnit) return productUnit;
+  const stocktakeUnit = input.stocktakeUnit?.trim();
+  return stocktakeUnit || null;
+}
 
 export type ProductLabelRow = {
   id: string;
@@ -811,7 +824,7 @@ export async function fetchProductDetail(
       .eq("product_id", id),
     supabase
       .from("product_ingredients")
-      .select("id,quantity,ingredients(id,name,ingredient_type,cost_per_product_unit)")
+      .select("id,quantity,ingredients(id,name,ingredient_type,cost_per_product_unit,product_unit,stocktake_unit)")
       .eq("product_id", id)
       .is("package_id", null),
     supabase
@@ -857,6 +870,8 @@ export async function fetchProductDetail(
     name: string;
     ingredient_type?: string | null;
     cost_per_product_unit?: number | string | null;
+    product_unit?: string | null;
+    stocktake_unit?: string | null;
   };
 
   const premiumIngredients = premiumError
@@ -872,6 +887,10 @@ export async function fetchProductDetail(
             name: ingredient.name,
             ingredientType: ingredient.ingredient_type ?? null,
             quantity: toNumber(row.quantity as number | string | null),
+            unit: ingredientSupplierUnit({
+              productUnit: ingredient.product_unit,
+              stocktakeUnit: ingredient.stocktake_unit,
+            }),
             unitCost: toNumber(ingredient.cost_per_product_unit),
           } satisfies ProductPremiumIngredient;
         })
@@ -1059,7 +1078,7 @@ export async function fetchProductCollections(
 async function fetchCatalogIngredients(): Promise<CatalogOption[]> {
   const { data, error } = await supabase
     .from("ingredients")
-    .select("id,name,sku,legacy_id")
+    .select("id,name,sku,legacy_id,product_unit,stocktake_unit")
     .is("archived_at", null)
     .eq("is_active", true)
     .or("ingredient_type.is.null,ingredient_type.neq.包裝用品")
@@ -1117,7 +1136,7 @@ export async function searchProductIngredients(
 
   const { data, error } = await supabase
     .from("ingredients")
-    .select("id,name,sku,legacy_id")
+    .select("id,name,sku,legacy_id,product_unit,stocktake_unit")
     .is("archived_at", null)
     .eq("is_active", true)
     .or("ingredient_type.is.null,ingredient_type.neq.包裝用品")
@@ -1133,12 +1152,18 @@ function mapIngredientOption(row: {
   name: unknown;
   sku?: unknown;
   legacy_id?: unknown;
+  product_unit?: unknown;
+  stocktake_unit?: unknown;
 }): CatalogOption {
   return {
     id: row.id as string,
     name: row.name as string,
     sku: (row.sku as string | null | undefined) ?? null,
     legacyId: (row.legacy_id as string | null | undefined) ?? undefined,
+    unit: ingredientSupplierUnit({
+      productUnit: (row.product_unit as string | null | undefined) ?? null,
+      stocktakeUnit: (row.stocktake_unit as string | null | undefined) ?? null,
+    }),
   };
 }
 export async function updateProductRecommendation(

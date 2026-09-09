@@ -8,7 +8,7 @@ vi.mock("@/lib/supabase", () => ({
   },
 }));
 
-import { fetchBentoColumnTypes, fetchCatalogCookTypes, fetchProducts, searchCatalogProducts, searchProductIngredients, sortBentoColumnTypes, sortCookTypes } from "@/lib/products";
+import { fetchBentoColumnTypes, fetchCatalogCookTypes, fetchProducts, ingredientSupplierUnit, searchCatalogProducts, searchProductIngredients, sortBentoColumnTypes, sortCookTypes } from "@/lib/products";
 
 function createQuery(result: { data: unknown; count?: number; error: unknown }) {
   const query: Record<string, unknown> = {};
@@ -94,6 +94,33 @@ describe("product SKU list filter", () => {
 
     expect(query.not).toHaveBeenCalledWith("sku", "is", null);
     expect(query.neq).toHaveBeenCalledWith("sku", "");
+  });
+
+  it("uses the supplier product unit for premium ingredient search results", async () => {
+    const query = createQuery({
+      data: [
+        {
+          id: "ing-1",
+          name: "厚方包",
+          sku: "B01",
+          legacy_id: "l1",
+          product_unit: "包",
+          stocktake_unit: "片",
+        },
+      ],
+      error: null,
+    });
+    fromMock.mockReturnValue(query);
+
+    await expect(searchProductIngredients("厚方")).resolves.toEqual([
+      expect.objectContaining({ id: "ing-1", name: "厚方包", unit: "包" }),
+    ]);
+  });
+
+  it("falls back to the stocktake unit when the supplier product unit is empty", () => {
+    expect(ingredientSupplierUnit({ productUnit: " 包 ", stocktakeUnit: "片" })).toBe("包");
+    expect(ingredientSupplierUnit({ productUnit: null, stocktakeUnit: "kg" })).toBe("kg");
+    expect(ingredientSupplierUnit({ productUnit: "  ", stocktakeUnit: "" })).toBeNull();
   });
 
   it("keeps packaging supplies out of the product ingredient search", async () => {
