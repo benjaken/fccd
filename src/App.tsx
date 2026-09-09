@@ -47,6 +47,7 @@ import {
 import { LoginPage } from "@/components/LoginPage";
 import { ResetPasswordPage } from "@/components/ResetPasswordPage";
 import { NotificationCenter } from "@/components/NotificationCenter";
+import { FrontendUpdateNotice } from "@/components/FrontendUpdateNotice";
 import {
   HomeSalesDashboardPage,
   type HomeSalesDashboardLoader,
@@ -800,6 +801,7 @@ function OperationsShell() {
         </aside>
 
         <main className="main-content">
+          {!documentEditorMode ? <FrontendUpdateNotice /> : null}
           <div className="page-transition" key={pageKey}>
             {pageAccess.loading ? (
               <PageSkeleton label={t("settings.loadingPermissions")} />
