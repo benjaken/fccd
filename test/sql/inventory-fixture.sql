@@ -25,7 +25,7 @@ create table ingredients (
   product_unit text, stocktake_unit text, product_quantity numeric,
   cost_per_product_unit numeric, cost_per_stocktake_unit numeric,
   is_packing_stocktake boolean default false, is_ingredient_stocktake boolean default true,
-  is_active boolean default true
+  is_active boolean default true, archived_at timestamptz
 );
 create table order_lines (
   id uuid primary key default gen_random_uuid(), order_id uuid references orders,
