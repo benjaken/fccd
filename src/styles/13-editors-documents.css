@@ -2425,6 +2425,7 @@ body:has(.quote-clause-modal-root) { overflow: hidden; }
   display: grid;
   grid-template-columns: 1.25fr 1.15fr 1.15fr auto;
   align-items: center;
+  flex: 0 0 auto;
   gap: 0.8rem;
   margin-top: auto;
   padding-top: 1rem;
