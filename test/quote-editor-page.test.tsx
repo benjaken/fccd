@@ -1268,6 +1268,65 @@ describe("Quote editor", () => {
     expect(screen.getByRole("button", { name: "Drag to reorder item 1 Beef" })).toBeInTheDocument();
   });
 
+  it("keeps a newly added product in its reordered position after saving", async () => {
+    const user = userEvent.setup();
+    const existingLine: QuoteLine = {
+      id: "line-existing", productId: "product-existing", packageId: null, sku: "P001",
+      name: "Existing dish", quantity: 1, unitPrice: 100, totalPrice: 100, remarks: null,
+    };
+    const savedNewLine: QuoteLine = {
+      id: "line-new", productId: "product-new", packageId: null, sku: "P002",
+      name: "New dish", quantity: 1, unitPrice: 80, totalPrice: 80, remarks: null,
+    };
+    const loadLines = vi.fn()
+      .mockResolvedValueOnce([existingLine])
+      .mockResolvedValueOnce([existingLine, savedNewLine]);
+    const saveLine = vi.fn().mockResolvedValue("line-new");
+    const saveLineOrder = vi.fn().mockResolvedValue(undefined);
+
+    renderEditor({
+      loadSummary: vi.fn().mockResolvedValue({
+        id: "quote-1",
+        orderNumber: "FCLQ20260801",
+        channelId: "channel-1",
+        draft: {
+          ...emptyQuoteDraft,
+          channelId: "channel-1",
+          customerName: "Customer",
+          contactA: "12345678",
+          email: "quote@example.com",
+          districtId: "district-1",
+          shippingMethodId: "shipping-home",
+        },
+      }),
+      loadLines,
+      searchCatalog: vi.fn().mockResolvedValue([
+        { id: "product-new", kind: "product", sku: "P002", name: "New dish", price: 80 },
+      ]),
+      saveLine,
+      saveLineOrder,
+    }, "/quotes/quote-1/edit");
+
+    const tabs = await screen.findAllByRole("tab");
+    await user.click(tabs[1]);
+    await user.type(screen.getByPlaceholderText("Search product name or SKU"), "P002");
+    await user.click(await screen.findByRole("option", { name: /New dish/ }));
+    await user.click(screen.getByRole("button", { name: "Add to quote" }));
+
+    const sequence = screen.getByRole("spinbutton", { name: "No. New dish" });
+    await user.clear(sequence);
+    await user.type(sequence, "1");
+    await user.tab();
+    expect(sequence).toHaveValue(1);
+
+    await user.click(within(document.getElementById("quote-editor-editable-items")!).getByRole("button", { name: "Save changes" }));
+
+    await waitFor(() => expect(saveLine).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(saveLineOrder).toHaveBeenCalledWith(["line-new", "line-existing"]));
+    expect(screen.getByRole("spinbutton", { name: "No. New dish" })).toHaveValue(1);
+    expect(screen.getByRole("spinbutton", { name: "No. Existing dish" })).toHaveValue(2);
+  }, 10_000);
+
   it.each([
     ["quote", "/quotes/quote-1/edit"],
     ["order", "/orders/quote-1/edit"],

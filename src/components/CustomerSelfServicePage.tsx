@@ -315,35 +315,35 @@ function ReceiptDocument({ order, documentRef, scale = 1 }: { order: CustomerSel
 
       <div className="receipt-pdf-meta-grid self-service-receipt-meta-grid">
         <div className="receipt-pdf-customer-company">
-          <label>Customer Name:</label><span>{order.customerName || ""}</span>
-          <label>Company Name:</label><span>{order.companyName || ""}</span>
+          <label><span className="self-service-receipt-capture-text">Customer Name:</span></label><span><span className="self-service-receipt-capture-text">{order.customerName || ""}</span></span>
+          <label><span className="self-service-receipt-capture-text">Company Name:</span></label><span><span className="self-service-receipt-capture-text">{order.companyName || ""}</span></span>
         </div>
-        <label>Invoice Date:</label><span>{receiptDate(order.orderDate)}</span>
-        <label>Contact Person:</label><span>{[order.phoneA, order.phoneB].filter(Boolean).join(" / ")}</span>
-        <label>Delivery Date:</label><span>{receiptDate(order.deliveryDate)}</span>
-        <label>Delivery Address:</label><span>{order.address || ""}</span>
-        <label>Delivery Time:</label><span>{order.deliveryTime || ""}</span>
+        <label><span className="self-service-receipt-capture-text">Invoice Date:</span></label><span><span className="self-service-receipt-capture-text">{receiptDate(order.orderDate)}</span></span>
+        <label><span className="self-service-receipt-capture-text">Contact Person:</span></label><span><span className="self-service-receipt-capture-text">{[order.phoneA, order.phoneB].filter(Boolean).join(" / ")}</span></span>
+        <label><span className="self-service-receipt-capture-text">Delivery Date:</span></label><span><span className="self-service-receipt-capture-text">{receiptDate(order.deliveryDate)}</span></span>
+        <label><span className="self-service-receipt-capture-text">Delivery Address:</span></label><span><span className="self-service-receipt-capture-text">{order.address || ""}</span></span>
+        <label><span className="self-service-receipt-capture-text">Delivery Time:</span></label><span><span className="self-service-receipt-capture-text">{order.deliveryTime || ""}</span></span>
       </div>
 
       <div className="receipt-pdf-table-wrap">
         <table className="receipt-pdf-table">
-          <thead><tr><th aria-label="序號" /><th>Description</th><th>Unit Price</th><th>Qty</th><th>Total</th></tr></thead>
+          <thead><tr><th aria-label="序號" /><th><span className="self-service-receipt-capture-text">Description</span></th><th><span className="self-service-receipt-capture-text">Unit Price</span></th><th><span className="self-service-receipt-capture-text">Qty</span></th><th><span className="self-service-receipt-capture-text">Total</span></th></tr></thead>
           <tbody>{order.lines.map((line, index) => {
             const unitPrice = line.unitPrice !== 0 || !line.totalPrice || line.quantity === 0
               ? line.unitPrice
               : line.totalPrice / line.quantity;
             return <tr key={line.id}>
-              <td>{index + 1}</td>
-              <td>{line.name || line.content || ""}</td>
-              <td><span className="receipt-pdf-price-input">{receiptMoney(unitPrice)}</span></td>
-              <td>{line.quantity}</td>
-              <td>{receiptMoney(customerOrderLineTotal(line))}</td>
+              <td><span className="self-service-receipt-capture-text">{index + 1}</span></td>
+              <td><span className="self-service-receipt-capture-text">{line.name || line.content || ""}</span></td>
+              <td><span className="self-service-receipt-capture-text">{receiptMoney(unitPrice)}</span></td>
+              <td><span className="self-service-receipt-capture-text">{line.quantity}</span></td>
+              <td><span className="self-service-receipt-capture-text">{receiptMoney(customerOrderLineTotal(line))}</span></td>
             </tr>;
           })}</tbody>
           <tfoot>
-            <tr><td colSpan={4}>Subtotal:</td><td>{receiptMoney(subtotal)}</td></tr>
-            <tr><td colSpan={4}>Delivery Fee:</td><td>{receiptMoney(shippingFee)}</td></tr>
-            <tr><td colSpan={4}>Grand Total:</td><td>{receiptMoney(grandTotal)}</td></tr>
+            <tr><td colSpan={4}><span className="self-service-receipt-capture-text">Subtotal:</span></td><td><span className="self-service-receipt-capture-text">{receiptMoney(subtotal)}</span></td></tr>
+            <tr><td colSpan={4}><span className="self-service-receipt-capture-text">Delivery Fee:</span></td><td><span className="self-service-receipt-capture-text">{receiptMoney(shippingFee)}</span></td></tr>
+            <tr><td colSpan={4}><span className="self-service-receipt-capture-text">Grand Total:</span></td><td><span className="self-service-receipt-capture-text">{receiptMoney(grandTotal)}</span></td></tr>
           </tfoot>
         </table>
       </div>

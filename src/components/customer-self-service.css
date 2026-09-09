@@ -489,11 +489,9 @@
   overflow-wrap: anywhere;
 }
 .self-service-receipt-meta-grid > span { display: flex; align-items: center; }
-.self-service-receipt-document .receipt-pdf-table tbody td {
-  min-height: 24px;
-  padding-block: 0.14rem;
-  line-height: 1.45;
-  vertical-align: middle;
+.self-service-receipt-document.is-pdf-capture .self-service-receipt-capture-text {
+  display: inline-block;
+  transform: translateY(-4px);
 }
 .self-service-receipt-document .receipt-pdf-payment-record { line-height: 1.35; }
 

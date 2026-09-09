@@ -985,6 +985,7 @@ export function QuoteEditorPage({
   };
 
   const flushPendingLines = async (orderId: string) => {
+    const desiredActiveLines = lines.filter((line) => !line.isVoid);
     const pendingLines = lines.filter(
       (line): line is QuoteLine & { pendingItem: QuoteCatalogItem } =>
         Boolean(line.isPending && line.pendingItem),
@@ -992,6 +993,7 @@ export function QuoteEditorPage({
     if (!pendingLines.length) return;
 
     const savedIds = new Set<string>();
+    const persistedIdByDraftId = new Map<string, string>();
     try {
       for (const line of pendingLines) {
         const lineId = await saveLine({
@@ -1002,12 +1004,29 @@ export function QuoteEditorPage({
           remarks: line.remarks || "",
           packageChoices: line.pendingPackageChoices ?? [],
         });
+        if (lineId) persistedIdByDraftId.set(line.id, lineId);
         if (line.labelEdited) {
           await saveLineLabel({ ...line, id: lineId, isPending: false });
         }
         savedIds.add(line.id);
       }
-      setLines(await loadLines(orderId));
+      const desiredPersistedIds = desiredActiveLines.map((line) =>
+        line.isPending ? persistedIdByDraftId.get(line.id) : line.id,
+      );
+      if (desiredPersistedIds.every((lineId): lineId is string => Boolean(lineId))) {
+        await saveLineOrder(desiredPersistedIds);
+      }
+      const savedLines = await loadLines(orderId);
+      const desiredOrder = new Map(
+        desiredPersistedIds
+          .filter((lineId): lineId is string => Boolean(lineId))
+          .map((lineId, index) => [lineId, index]),
+      );
+      setLines([...savedLines].sort((left, right) => {
+        if (left.isVoid !== right.isVoid) return left.isVoid ? 1 : -1;
+        return (desiredOrder.get(left.id) ?? Number.MAX_SAFE_INTEGER)
+          - (desiredOrder.get(right.id) ?? Number.MAX_SAFE_INTEGER);
+      }));
       await refreshPersistedGrandTotal(orderId);
     } catch (cause) {
       const remainingDrafts = pendingLines.filter((line) => !savedIds.has(line.id));
