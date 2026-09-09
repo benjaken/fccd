@@ -10,6 +10,13 @@ insert into ingredients(
   ('dfe98feb-c67d-4df0-b53f-38062380eedb','酒精 (1小時)',null,'個','箱',36,2.1111,76,false,true),
   ('b186e205-2a0c-4121-8f33-caea80d6e0d2','粟米片','190g x 8包/箱','包','箱',8,18,144,false,true),
   ('83a650ca-4ca8-4195-8562-a588c247dfd2','塑料湯桶 連蓋 2L',null,'個','箱',200,5.26,1052,false,true);
+insert into ingredients(
+  id,legacy_id,name,product_unit,stocktake_unit,product_quantity,
+  is_ingredient_stocktake,is_packing_stocktake
+) values (
+  '5346734a-df61-4d46-91ed-17db6985c5e6','legacy-chinese-utensil-pack',
+  '中式餐具包','套','包',100,false,true
+);
 insert into packing_stocktake_events(ingredient_id,quantity,stocktake_at) values
   ('fc4cdae7-24b2-433f-8026-2133cc652d27',80,current_date-2),
   ('55255419-1471-4b6b-ac80-9518c686dfd0',50,current_date-2),

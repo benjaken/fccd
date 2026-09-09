@@ -21,10 +21,11 @@ create table deliveries (
 );
 create table products (id uuid primary key default gen_random_uuid(), name text, sku text);
 create table ingredients (
-  id uuid primary key default gen_random_uuid(), name text, sku text, description text,
+  id uuid primary key default gen_random_uuid(), legacy_id text unique, name text, sku text, description text,
   product_unit text, stocktake_unit text, product_quantity numeric,
   cost_per_product_unit numeric, cost_per_stocktake_unit numeric,
-  is_packing_stocktake boolean default false, is_ingredient_stocktake boolean default true
+  is_packing_stocktake boolean default false, is_ingredient_stocktake boolean default true,
+  is_active boolean default true
 );
 create table order_lines (
   id uuid primary key default gen_random_uuid(), order_id uuid references orders,
@@ -68,7 +69,7 @@ create table shop_order_lines (
 );
 create table ingredient_stocktake_events (
   id uuid primary key default gen_random_uuid(), ingredient_id uuid, quantity numeric,
-  stocktake_at timestamptz, created_at timestamptz default now(), entry_type text default 'stocktake', legacy_id text, correction_reason text
+  stocktake_at timestamptz, created_at timestamptz default now(), entry_type text default 'stocktake', legacy_id text unique, correction_reason text
 );
 create table packing_stocktake_events (like ingredient_stocktake_events including all);
 create table shop_dry_stock_movements (

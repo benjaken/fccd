@@ -11,6 +11,7 @@ try {
     'supabase/migrations/20260909143000_normalize_catering_material_units.sql',
     'supabase/migrations/20260909152000_packaging_item_unit_repairs.sql',
     'supabase/migrations/20260909160000_correct_corn_flakes_supplier_packaging.sql',
+    'supabase/migrations/20260909170000_add_standard_utensil_pack_to_stocktake.sql',
     'test/sql/inventory-rpc-fixture.sql',
     'supabase/migrations/20260817063000_cancel_pending_delivery.sql',
     'supabase/migrations/20260908224000_lock_existing_material_rpcs.sql',
@@ -18,6 +19,7 @@ try {
     'test/sql/inventory-review-regressions.sql',
     'test/sql/inventory-bom-review.sql', 'test/sql/inventory-fourth-review.sql', 'test/sql/inventory-rpc-behaviour.sql', 'test/sql/inventory-lifecycle-regressions.sql', 'test/sql/inventory-legacy-behaviour.sql',
     'test/sql/inventory-unit-data-repair.sql',
+    'test/sql/inventory-utensil-pack.sql',
   ]) {
     const sql = (await readFile(new URL(`../${file}`, import.meta.url), 'utf8'))
       .replace(/^\\set .*$/gm, '');
