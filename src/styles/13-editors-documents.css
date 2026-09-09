@@ -1041,18 +1041,24 @@ body:has(.quote-pdf-editor) .sidebar {
   display: none;
 }
 
-/* Screen-only: never leak height/overflow locks into print, or generated
-   PDFs get clipped to a single viewport page. */
+/* Keep the quote in normal document flow. A fixed/absolute editor collapses
+   print height (blank PDF pages) and hides later A4 sheets from the window. */
 @media screen {
   html:has(.quote-pdf-editor),
-  html:has(.document-editor-shell),
+  html:has(.document-editor-shell) {
+    height: auto !important;
+    max-height: none !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+  }
+
   body:has(.quote-pdf-editor),
   body:has(.document-editor-shell),
   html:has(.quote-pdf-editor) #root,
   html:has(.document-editor-shell) #root {
-    height: 100% !important;
-    max-height: 100% !important;
-    overflow: hidden !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
   }
 
   body:has(.quote-pdf-editor) .shell-body,
@@ -1064,7 +1070,7 @@ body:has(.quote-pdf-editor) .sidebar {
   body:has(.quote-pdf-editor) .page-transition,
   .document-editor-shell .page-transition {
     display: block;
-    height: 100% !important;
+    height: auto !important;
     max-height: none !important;
     min-height: 0;
     overflow: visible !important;
@@ -1084,17 +1090,15 @@ body:has(.quote-pdf-editor) .sidebar {
   body:has(.quote-pdf-editor) .quote-pdf-editor,
   .document-editor-shell .quote-pdf-editor,
   .quote-pdf-editor {
-    position: fixed;
-    inset: 0;
+    position: relative;
+    inset: auto;
     z-index: 10;
     width: 100%;
-    height: 100% !important;
-    max-height: 100% !important;
+    height: auto !important;
+    max-height: none !important;
     min-height: 0;
     margin: 0;
-    overflow: auto !important;
-    overscroll-behavior: contain;
-    -webkit-overflow-scrolling: touch;
+    overflow: visible !important;
   }
 
   .document-editor-shell .page-transition,
@@ -1109,8 +1113,8 @@ body:has(.quote-pdf-editor) .sidebar {
     touch-action: pan-y;
   }
 
-  /* clip is not a scroll container, so the wheel goes to the editor
-     immediately. hidden would wait for a first click. Print stays hidden. */
+  /* clip is not a scroll container, so the window receives the wheel
+     without a first click. Print stays overflow:hidden. */
   .quote-pdf-sheet {
     overflow: clip;
   }
@@ -1964,7 +1968,7 @@ body:has(.quote-clause-modal-root) { overflow: hidden; }
   body { background: white !important; }
   .quote-clause-modal-root { display: none !important; }
   .quote-pdf-editor, .quote-pdf-editor * { visibility: visible !important; }
-  .quote-pdf-editor { position: absolute !important; inset: 0 auto auto 0 !important; width: 100% !important; }
+  .quote-pdf-editor { position: static !important; inset: auto !important; width: 100% !important; height: auto !important; overflow: visible !important; }
   .topbar, .workspace-bar, .sidebar, .quote-pdf-toolbar, .quote-pdf-add-row, .quote-pdf-delete, .quote-pdf-section-title, .quote-pdf-additional li button, .quote-pdf-activity button { display: none !important; }
   .shell-body, .main-content, .quote-pdf-editor { margin: 0 !important; padding: 0 !important; background: white !important; overflow: visible !important; }
   .quote-pdf-sheet { width: 100%; height: 297mm; margin: 0; padding: 10mm 10mm 24mm; overflow: hidden; break-after: page; page-break-after: always; box-shadow: none; }
