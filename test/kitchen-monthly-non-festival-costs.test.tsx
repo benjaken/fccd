@@ -7,6 +7,7 @@ import i18n from "@/i18n";
 
 const api = vi.hoisted(() => ({
   createCost: vi.fn(),
+  fetchCosts: vi.fn(async () => ({ items: [], total: 0 })),
 }));
 
 vi.mock("@/lib/kitchen-monthly-costs", async (importOriginal) => ({
@@ -20,7 +21,7 @@ vi.mock("@/lib/kitchen-monthly-costs", async (importOriginal) => ({
     { id: "catering", legacyId: "catering-legacy", name: "Catering", sortOrder: 1 },
     { id: "lunch-box", legacyId: "lunch-box-legacy", name: "HK Lunch Box", sortOrder: 2 },
   ]),
-  fetchKitchenMonthlyNonFestivalCosts: vi.fn(async () => ({ items: [], total: 0 })),
+  fetchKitchenMonthlyNonFestivalCosts: api.fetchCosts,
   createKitchenMonthlyNonFestivalCost: api.createCost,
   updateKitchenMonthlyNonFestivalCosts: vi.fn(),
   deleteKitchenMonthlyCost: vi.fn(),
@@ -29,9 +30,43 @@ vi.mock("@/lib/kitchen-monthly-costs", async (importOriginal) => ({
 import { KitchenMonthlyNonFestivalCosts } from "@/components/KitchenMonthlyNonFestivalCosts";
 
 describe("monthly non-festival operating costs", () => {
+  it("paginates the records after filtering by month", async () => {
+    await i18n.changeLanguage("zh-HK");
+    api.fetchCosts.mockReset().mockResolvedValue({
+      items: Array.from({ length: 18 }, (_, index) => ({
+        id: `cost-${index + 1}`,
+        monthAt: "2026-08-01T00:00:00.000Z",
+        amount: index + 1,
+        remarks: "",
+        costTypeName: `費用 ${index + 1}`,
+        channelNames: [],
+      })),
+      total: 18,
+    });
+    const user = userEvent.setup();
+
+    render(
+      <MemoryRouter initialEntries={["/?month=2026-08"]}>
+        <KitchenMonthlyNonFestivalCosts canEdit={false} />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("費用 1")).toBeInTheDocument();
+    expect(screen.getByText("費用 15")).toBeInTheDocument();
+    expect(screen.queryByText("費用 16")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "下一頁" }));
+
+    expect(await screen.findByText("費用 16")).toBeInTheDocument();
+    expect(screen.getByText("費用 18")).toBeInTheDocument();
+    expect(screen.queryByText("費用 1")).not.toBeInTheDocument();
+    expect(screen.getByText("顯示 16–18，共 18 筆")).toBeInTheDocument();
+  });
+
   it("requires and saves brands for Google costs", async () => {
     await i18n.changeLanguage("zh-HK");
     api.createCost.mockReset().mockResolvedValue(undefined);
+    api.fetchCosts.mockReset().mockResolvedValue({ items: [], total: 0 });
     const user = userEvent.setup();
     render(
       <MemoryRouter>
@@ -62,6 +97,7 @@ describe("monthly non-festival operating costs", () => {
 
   it("does not require a brand for other cost types", async () => {
     await i18n.changeLanguage("zh-HK");
+    api.fetchCosts.mockReset().mockResolvedValue({ items: [], total: 0 });
     const user = userEvent.setup();
     render(
       <MemoryRouter>
@@ -77,6 +113,7 @@ describe("monthly non-festival operating costs", () => {
 
   it("uses the shared date picker for the month filter", async () => {
     await i18n.changeLanguage("zh-HK");
+    api.fetchCosts.mockReset().mockResolvedValue({ items: [], total: 0 });
     const user = userEvent.setup();
     render(
       <MemoryRouter>

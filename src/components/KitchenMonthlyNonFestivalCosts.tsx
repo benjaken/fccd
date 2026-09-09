@@ -277,11 +277,14 @@ export function KitchenMonthlyNonFestivalCosts({ canEdit }: { canEdit: boolean }
     void fetchKitchenMonthlyNonFestivalCosts({ page: selectedMonth ? 1 : page, pageSize: selectedMonth ? 500 : PAGE_SIZE })
       .then((result) => {
         if (!active) return;
-        const items = selectedMonth
+        const filteredItems = selectedMonth
           ? result.items.filter((row) => hongKongMonthKey(row.monthAt) === selectedMonth)
           : result.items;
+        const items = selectedMonth
+          ? filteredItems.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+          : filteredItems;
         setRows(items);
-        setTotal(selectedMonth ? items.length : result.total);
+        setTotal(selectedMonth ? filteredItems.length : result.total);
         setDrafts((current) => {
           const next = { ...current };
           for (const row of items) {
