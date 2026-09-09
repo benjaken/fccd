@@ -4,25 +4,38 @@
 -- countable pairs the first pass missed (串/塊, null product_unit, 個/條).
 -- Weight (克/kg/包) and 中式餐具包 stay on their existing conversion rules.
 
--- Historical pack counts of 100+ are not real for these retail items; they
--- are leftover piece counts that the first repair multiplied again.
-with repaired as (
-  select ingredient.id,
-    (regexp_match(ingredient.description, '^([0-9.]+)'))[1]::numeric as child_per_pack
-  from public.ingredients ingredient
-  where ingredient.product_unit is not distinct from ingredient.stocktake_unit
-    and ingredient.product_quantity = 1
-    and ingredient.description
-      ~ '^[0-9.]+(條|個|件|粒|隻|片|套|支|頭|罐|瓶|卷)/(包|箱|盒)'
-    and (regexp_match(ingredient.description, '^([0-9.]+)'))[1]::numeric > 1
-)
+-- A later restore put master units back to 包/箱/盒 but left the piece-scale
+-- stocktakes (15包 became 300條, then the label became 300包). Detect that
+-- leftover piece scale and do not multiply it again. Pack counts of 100+
+-- are leftover piece entries that were multiplied twice.
+create table pg_temp.already_child_scale (
+  id uuid primary key,
+  child_per_pack numeric not null
+);
+
+insert into already_child_scale (id, child_per_pack)
+select ingredient.id, pack.child_per_pack
+from public.ingredients ingredient
+join lateral (
+  select (regexp_match(ingredient.description, '^([0-9.]+)'))[1]::numeric as child_per_pack
+) pack on pack.child_per_pack > 1
+join lateral (
+  select min(event.quantity) as min_qty,
+    percentile_cont(0.5) within group (order by event.quantity) as median_qty
+  from public.ingredient_stocktake_events event
+  where event.ingredient_id = ingredient.id and event.quantity > 0
+) stats on stats.min_qty >= pack.child_per_pack
+  and stats.median_qty >= pack.child_per_pack
+where ingredient.description
+    ~ '^[0-9.]+(條|個|件|粒|隻|片|套|支|頭|罐|瓶|卷)/(包|箱|盒)';
+
 update public.ingredient_stocktake_events event
-set quantity = event.quantity / repaired.child_per_pack
-from repaired
-where event.ingredient_id = repaired.id
+set quantity = event.quantity / scale.child_per_pack
+from already_child_scale scale
+where event.ingredient_id = scale.id
   and event.quantity is not null
   and event.quantity > 0
-  and event.quantity / repaired.child_per_pack >= 100;
+  and event.quantity / scale.child_per_pack >= 100;
 
 create table pg_temp.countable_audit_repairs (
   id uuid primary key,
@@ -136,13 +149,31 @@ update public.ingredient_stocktake_events event
 set quantity = event.quantity * repairs.old_product_quantity
 from countable_audit_repairs repairs
 where event.ingredient_id = repairs.id
-  and event.quantity is not null;
+  and event.quantity is not null
+  and repairs.id not in (select id from already_child_scale)
+  and not exists (
+    select 1
+    from public.ingredient_stocktake_events stats
+    where stats.ingredient_id = repairs.id and stats.quantity > 0
+    having min(stats.quantity) >= repairs.old_product_quantity
+      and percentile_cont(0.5) within group (order by stats.quantity)
+        >= repairs.old_product_quantity
+  );
 
 update public.packing_stocktake_events event
 set quantity = event.quantity * repairs.old_product_quantity
 from countable_audit_repairs repairs
 where event.ingredient_id = repairs.id
-  and event.quantity is not null;
+  and event.quantity is not null
+  and repairs.id not in (select id from already_child_scale)
+  and not exists (
+    select 1
+    from public.packing_stocktake_events stats
+    where stats.ingredient_id = repairs.id and stats.quantity > 0
+    having min(stats.quantity) >= repairs.old_product_quantity
+      and percentile_cont(0.5) within group (order by stats.quantity)
+        >= repairs.old_product_quantity
+  );
 
 do $rebuild_countable_audit_consumptions$
 declare
