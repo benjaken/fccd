@@ -1,5 +1,15 @@
 begin;
 
+select pg_temp.assert_equal(
+  (select coalesce(sum(quantity),0)
+   from order_material_consumptions
+   where order_id='30000000-0000-0000-0000-000000000033'
+     and ingredient_id='c6621db1-b21f-4b62-b6cb-0aef12e34c01'
+     and reversed_at is null),
+  12,
+  'legacy committed six-person packs are reconciled to settings'
+);
+
 insert into orders(id,order_number,delivery_at) values
   ('30000000-0000-0000-0000-000000000030','UTENSIL-DEMAND',current_date+2);
 insert into order_lines(
@@ -16,8 +26,8 @@ select pg_temp.assert_equal(
    from public.material_usage_forecast_lines('packing',current_date,current_date+13)
    where order_id='30000000-0000-0000-0000-000000000030'
      and ingredient_id='c6621db1-b21f-4b62-b6cb-0aef12e34c01'),
-  3,
-  'standard six-person utensil lines deduct standard packs'
+  18,
+  'three six-person utensil packs deduct eighteen place settings'
 );
 
 select pg_temp.assert_equal(
@@ -39,8 +49,8 @@ select pg_temp.assert_equal(
    where order_id='30000000-0000-0000-0000-000000000030'
      and ingredient_id='c6621db1-b21f-4b62-b6cb-0aef12e34c01'
      and reversed_at is null),
-  3,
-  'committed delivery deducts standard utensil packs'
+  18,
+  'committed delivery deducts standard utensil place settings'
 );
 
 select pg_temp.assert_equal(

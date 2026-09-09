@@ -13,6 +13,7 @@ try {
     'supabase/migrations/20260909160000_correct_corn_flakes_supplier_packaging.sql',
     'supabase/migrations/20260909170000_add_standard_utensil_pack_to_stocktake.sql',
     'supabase/migrations/20260909180000_link_order_utensil_material_demand.sql',
+    'supabase/migrations/20260909190000_deduct_six_utensil_settings_per_pack.sql',
     'test/sql/inventory-rpc-fixture.sql',
     'supabase/migrations/20260817063000_cancel_pending_delivery.sql',
     'supabase/migrations/20260908224000_lock_existing_material_rpcs.sql',
@@ -21,6 +22,8 @@ try {
     'test/sql/inventory-bom-review.sql', 'test/sql/inventory-fourth-review.sql', 'test/sql/inventory-rpc-behaviour.sql', 'test/sql/inventory-lifecycle-regressions.sql', 'test/sql/inventory-legacy-behaviour.sql',
     'test/sql/inventory-unit-data-repair.sql',
     'test/sql/inventory-utensil-pack.sql',
+    'test/sql/inventory-utensil-legacy-seed.sql',
+    'supabase/migrations/20260909191000_reconcile_legacy_utensil_consumptions.sql',
     'test/sql/inventory-utensil-demand.sql',
   ]) {
     const sql = (await readFile(new URL(`../${file}`, import.meta.url), 'utf8'))
