@@ -99,8 +99,12 @@ export async function fetchPackingStocktakes({
     .order("stocktake_at", { ascending: false, nullsFirst: false })
     .range(start, end);
 
-  const term = search.trim().replace(/[,%()]/g, " ");
-  if (term) query = query.ilike("sku_snapshot", `%${term}%`);
+  const term = search.trim().replace(/[,%()]/g, " ").replace(/\s+/g, " ").trim();
+  if (term) {
+    query = query.or(
+      `sku_snapshot.ilike.%${term}%,ingredients.sku.ilike.%${term}%,ingredients.name.ilike.%${term}%,ingredients.ingredient_type.ilike.%${term}%`,
+    );
+  }
   if (stocktakeDate) {
     query = query
       .gte("stocktake_at", `${stocktakeDate}T00:00:00+08:00`)
