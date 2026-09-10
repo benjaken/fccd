@@ -143,18 +143,27 @@ export function FileMigrationPage({
   async function refreshStatus() {
     setStatusLoading(true);
     setStatusError(undefined);
-    const { data, error: invokeError } = await supabase.functions.invoke(
-      "attachment-incremental",
-      { body: { action: "status" } },
-    );
-    if (invokeError) {
-      setStatusError(
-        invokeError.message || t("fileMigration.incrementalPanel.statusError"),
+    try {
+      const { data, error: invokeError } = await supabase.functions.invoke(
+        "attachment-incremental",
+        { body: { action: "status" } },
       );
-    } else {
-      setLiveStatus(data as LiveAttachmentStatus);
+      if (invokeError) {
+        setStatusError(
+          invokeError.message || t("fileMigration.incrementalPanel.statusError"),
+        );
+      } else {
+        setLiveStatus(data as LiveAttachmentStatus);
+      }
+    } catch (error) {
+      setStatusError(
+        error instanceof Error
+          ? error.message
+          : t("fileMigration.incrementalPanel.statusError"),
+      );
+    } finally {
+      setStatusLoading(false);
     }
-    setStatusLoading(false);
   }
 
   useEffect(() => {
