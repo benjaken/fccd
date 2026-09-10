@@ -85,6 +85,7 @@ import {
   quoteLinePrintLabelName,
   classifyQuoteSaveError,
   isQuoteSaveErrorKey,
+  quoteDraftForSave,
   type CreatedQuote,
   type QuoteCatalogItem,
   type QuoteDraft,
@@ -813,8 +814,14 @@ export function QuoteEditorPage({
     };
   }, [copyFrom, id, isOrder, loadLines, loadOptions, loadSummary, navigate, pendingEnquiry, sourceId]);
 
-  const saveCurrentDetails = (orderId: string) =>
-    isOrder ? saveDetails(orderId, draft, "order") : saveDetails(orderId, draft);
+  const saveCurrentDetails = (orderId: string) => {
+    const method = options.shippingMethods.find((item) => item.id === draft.shippingMethodId);
+    const payload = quoteDraftForSave(
+      draft,
+      automaticDistrictForMethod(method?.name ?? ""),
+    );
+    return isOrder ? saveDetails(orderId, payload, "order") : saveDetails(orderId, payload);
+  };
 
   const saveCurrentEnquiryAnswers = async () => {
     if (!pendingEnquiry || !enquirySubmission || !canEdit || savingEnquiry) return;
@@ -1121,8 +1128,11 @@ export function QuoteEditorPage({
       await persistAllChanges(activeQuote);
     } catch (cause) {
       console.error("quote save failed", cause);
-      setError(classifyQuoteSaveError(cause));
+      const key = classifyQuoteSaveError(cause);
+      setError(key);
       setCompletionError("save");
+      if (key === "invalidLine") scrollToSection("items");
+      if (key === "paymentInvalid") scrollToSection("payments");
     } finally {
       setSaving(false);
     }
@@ -1139,6 +1149,7 @@ export function QuoteEditorPage({
 
     setSaving(true);
     setError(null);
+    const draftPayload = quoteDraftForSave(draft, automaticDistrictName);
     try {
       if (pendingEnquiry && enquirySubmission) {
         await saveEnquirySubmissionAnswers(
@@ -1148,11 +1159,11 @@ export function QuoteEditorPage({
         );
         const quote = await convertEnquiryToQuote({
           submissionId: enquirySubmission.id,
-          channelId: draft.channelId,
-          draft,
+          channelId: draftPayload.channelId,
+          draft: draftPayload,
         });
         setCreated(quote);
-        setChannelId(draft.channelId);
+        setChannelId(draftPayload.channelId);
         setActiveTab("items");
         setLoading(true);
         navigate(`/quotes/${quote.id}/edit?nav=catering.quotes`, { replace: true });
@@ -1160,11 +1171,11 @@ export function QuoteEditorPage({
       }
       const quote = copyFrom
         ? isOrder
-          ? await copyOrder(copyFrom, draft)
-          : await copyQuote(copyFrom, draft)
+          ? await copyOrder(copyFrom, draftPayload)
+          : await copyQuote(copyFrom, draftPayload)
         : isOrder
-          ? await createOrder(draft)
-          : await saveQuote(draft);
+          ? await createOrder(draftPayload)
+          : await saveQuote(draftPayload);
       if (copyFrom) {
         writeQuotePdfSupplements(
           quote.id,
@@ -1172,7 +1183,7 @@ export function QuoteEditorPage({
         );
       }
       setCreated(quote);
-      setChannelId(draft.channelId);
+      setChannelId(draftPayload.channelId);
       setActiveTab("items");
       // The route change remounts this editor. Hide the old route's product
       // controls while the saved quote is being loaded so callers cannot start
@@ -2822,7 +2833,12 @@ export function QuoteEditorPage({
               <label><span>{t("quoteEditor.items.unitPrice")}</span><input type="number" min="0" step="0.01" value={unitPrice} onChange={(event) => setUnitPrice(event.target.value)} /></label>
             </div>
             <label><span>{t("quoteEditor.items.remarks")}</span><textarea rows={1} maxLength={16} value={lineRemarks} onChange={(event) => setLineRemarks(event.target.value)} /></label>
-            {error && <p className="quote-editor-error" role="alert">{t(`quoteEditor.errors.${error === "quote_line_invalid" ? "invalidLine" : "line"}`)}</p>}
+            {(error === "quote_line_invalid" || error === "invalidLine") ? (
+              <p className="quote-editor-error" role="alert">{t("quoteEditor.errors.invalidLine")}</p>
+            ) : null}
+            {(error === "quote_line_save_failed" || error === "quote_line_delete_failed") ? (
+              <p className="quote-editor-error" role="alert">{t("quoteEditor.errors.line")}</p>
+            ) : null}
             <div className="quote-item-form-actions">
               <Button type="button" variant="outline" onClick={() => setLunchboxPickerOpen(true)}><Search />{t("quoteEditor.items.lunchboxSearchButton")}</Button>
               <Button type="button" variant="outline" onClick={() => setCustomProductOpen(true)}><Pencil />{t("quoteEditor.items.customProduct")}</Button>

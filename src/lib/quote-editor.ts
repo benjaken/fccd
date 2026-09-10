@@ -1282,7 +1282,9 @@ export type QuoteSaveErrorKey =
   | "permission"
   | "channelRequired"
   | "customerRequired"
-  | "districtPermission";
+  | "districtPermission"
+  | "invalidLine"
+  | "paymentInvalid";
 
 function errorText(cause: unknown) {
   if (!cause || typeof cause !== "object") {
@@ -1306,16 +1308,32 @@ const QUOTE_SAVE_ERROR_KEYS = new Set<QuoteSaveErrorKey>([
   "channelRequired",
   "customerRequired",
   "districtPermission",
+  "invalidLine",
+  "paymentInvalid",
 ]);
 
 export function isQuoteSaveErrorKey(value: string | null | undefined): value is QuoteSaveErrorKey {
   return Boolean(value && QUOTE_SAVE_ERROR_KEYS.has(value as QuoteSaveErrorKey));
 }
 
+/** Ensure auto-filled shipping districts are present on the draft before save/create. */
+export function quoteDraftForSave(
+  draft: QuoteDraft,
+  automaticDistrictName?: string | null,
+): QuoteDraft {
+  if (draft.districtId || draft.districtName.trim()) return draft;
+  const autoName = automaticDistrictName?.trim() ?? "";
+  if (!autoName) return draft;
+  return { ...draft, districtName: autoName };
+}
+
 /** Map raw create/save failures to UI copy. Avoid blaming permissions by default. */
 export function classifyQuoteSaveError(cause: unknown): QuoteSaveErrorKey {
   const text = errorText(cause);
   if (!text) return "create";
+  // Client-side checks run before any network call; keep their messages specific.
+  if (text.includes("quote_line_invalid")) return "invalidLine";
+  if (text.includes("quote_payment_invalid")) return "paymentInvalid";
   if (text.includes("channel_required")) return "channelRequired";
   if (text.includes("customer_required")) return "customerRequired";
   if (
