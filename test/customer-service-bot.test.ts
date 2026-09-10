@@ -306,7 +306,7 @@ describe("customer-service FAQ routing priority", () => {
 });
 
 describe("customer-service bot turns", () => {
-  it("verifies the order email before returning a one-order summary", async () => {
+  it("returns a one-order summary without asking for order email", async () => {
     const unverified = { ...conversation, identity_verified_at: null };
     const lookupOrderItems = vi.fn().mockResolvedValue([{
       order_line_id: "line-1",
@@ -317,7 +317,7 @@ describe("customer-service bot turns", () => {
       quantity_text: null,
       remarks: ["不要辣"],
     }]);
-    const challenge = await handleCustomerServiceTurn({
+    const turn = await handleCustomerServiceTurn({
       phone: conversation.phone_normalized,
       text: "查下我張訂單訂咗咩菜",
       conversation: unverified,
@@ -326,28 +326,41 @@ describe("customer-service bot turns", () => {
         lookupOrderItems,
       }),
     });
-    expect(challenge.reply).toMatch(/電郵|email/i);
-    expect(challenge.conversation.state).toBe("verifying_order");
-    expect(lookupOrderItems).not.toHaveBeenCalled();
-
-    const turn = await handleCustomerServiceTurn({
-      phone: conversation.phone_normalized,
-      text: "customer@example.com",
-      conversation: challenge.conversation,
-      deps: deps({
-        lookupOrders: vi.fn().mockResolvedValue([order]),
-        lookupOrderItems,
-      }),
-    });
+    expect(turn.reply).not.toMatch(/電郵|email/i);
+    expect(turn.conversation.state).not.toBe("verifying_order");
     expect(turn.reply).toContain("FCL2026090101");
     expect(turn.reply).toContain("黑椒牛柳 × 2");
     expect(turn.reply).toContain("不要辣");
     expect(turn.reply).toContain("self_service_search");
-    expect(turn.conversation.identity_verification_method).toBe("order_email");
     expect(lookupOrderItems).toHaveBeenCalledWith(
       conversation.phone_normalized,
       order.order_id,
     );
+  });
+
+  it("resumes a stuck verifying_order state without email when challenge is disabled", async () => {
+    const stuck = {
+      ...conversation,
+      state: "verifying_order" as const,
+      identity_verified_at: null,
+      identity_verification_method: null,
+      identity_verification_order_id: order.order_id,
+      selected_order_id: order.order_id,
+      pending_request: "lookup:summary",
+      identity_verification_attempts: 1,
+    };
+    const turn = await handleCustomerServiceTurn({
+      phone: conversation.phone_normalized,
+      text: "唔知點入",
+      conversation: stuck,
+      deps: deps({
+        lookupOrders: vi.fn().mockResolvedValue([order]),
+        verifyOrderIdentity: vi.fn().mockResolvedValue(false),
+      }),
+    });
+    expect(turn.reply).toContain("FCL2026090101");
+    expect(turn.conversation.state).toBe("identifying");
+    expect(turn.conversation.pending_request).toBeNull();
   });
 
   it("lists multiple orders and does not leak the other order detail until picked", async () => {

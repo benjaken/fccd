@@ -276,6 +276,9 @@ function isExplicitPreviousHandoffCancellation(value: string) {
   return /(?:取消|撤回).*(?:之前|先前|上次|頭先|刚才|剛才).*(?:訂單|订单)?(?:修改|更改|改期|申請|申请)/.test(text);
 }
 
+/** When false, WhatsApp bot skips asking for order email before lookup/handoff. */
+const ORDER_EMAIL_IDENTITY_VERIFICATION_ENABLED = false;
+
 function identityChallengeReply(order: CustomerServiceOrder) {
   return sanitizeOutboundReply(
     `為保障訂單私隱，請輸入訂單 ${order.order_number || ""} 落單時使用的完整電郵地址作核實。`,
@@ -291,6 +294,7 @@ function identityFailedReply(attempts: number) {
 }
 
 function hasVerifiedIdentity(conversation: CustomerServiceConversation) {
+  if (!ORDER_EMAIL_IDENTITY_VERIFICATION_ENABLED) return true;
   if (!conversation.identity_verified_at) return false;
   return Date.now() - new Date(conversation.identity_verified_at).getTime() < 30 * 60 * 1_000;
 }
@@ -865,7 +869,64 @@ export async function handleCustomerServiceTurn({
   }
 
   if (conversation.state === "verifying_order") {
-    return await replyOrderVerification(deps, phone, text, conversation);
+    if (ORDER_EMAIL_IDENTITY_VERIFICATION_ENABLED) {
+      return await replyOrderVerification(deps, phone, text, conversation);
+    }
+    // Challenge disabled: clear stuck verification and resume pending request.
+    const orderId =
+      conversation.identity_verification_order_id || conversation.selected_order_id;
+    const orders = await deps.lookupOrders(phone);
+    const selected = orderId
+      ? orders.find((order) => order.order_id === orderId)
+      : null;
+    if (selected) {
+      const resumed = nextConversation(conversation, {
+        state: "identifying",
+        selected_order_id: selected.order_id,
+        identity_verified_at: new Date().toISOString(),
+        identity_verification_method: null,
+        identity_verification_order_id: null,
+        identity_verification_attempts: 0,
+      });
+      const pending = conversation.pending_request || "lookup";
+      if (pending.startsWith("handoff:")) {
+        return finishOrderHandoff(
+          deps,
+          phone,
+          selected,
+          pending.slice("handoff:".length),
+          resumed,
+        );
+      }
+      const result = await lookupVerifiedOrderReply(
+        deps,
+        phone,
+        selected,
+        parseLookupPendingRequest(pending),
+      );
+      return {
+        reply: result.reply,
+        conversation: nextConversation(resumed, { pending_request: null }),
+        wroteInquiry: false,
+        notified: false,
+        usedModel: false,
+        failureReason: result.failureReason,
+      };
+    }
+    return {
+      reply: lookupNoOrdersReply(""),
+      conversation: nextConversation(conversation, {
+        state: "identifying",
+        selected_order_id: null,
+        identity_verification_order_id: null,
+        identity_verification_attempts: 0,
+        pending_request: null,
+      }),
+      wroteInquiry: false,
+      notified: false,
+      usedModel: false,
+      failureReason: "identity_verification_context_missing",
+    };
   }
 
   if (isCustomerServiceGreeting(text)) {
