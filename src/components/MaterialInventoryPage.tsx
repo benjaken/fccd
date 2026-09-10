@@ -14,10 +14,13 @@ import {
   correctMaterialCurrentStock,
   fetchMaterialInventory,
   fetchMaterialInventoryLedger,
+  materialInventoryStatus,
   type MaterialInventoryItem,
   type MaterialInventoryKind,
   type MaterialInventoryLedgerEntry,
+  type MaterialInventoryStatusFilter,
 } from "@/lib/material-inventory";
+import { useDeferredFilter } from "@/lib/use-deferred-filter";
 import styles from "./MaterialInventoryPage.module.css";
 
 const SUMMARY_COLUMNS = [
@@ -26,6 +29,16 @@ const SUMMARY_COLUMNS = [
   { width: "11rem" }, { width: "6rem" },
 ];
 const PAGE_SIZE = 15;
+
+const STATUS_OPTIONS: Array<{
+  value: MaterialInventoryStatusFilter;
+  labelKey: string;
+}> = [
+  { value: "", labelKey: "materialInventory.allStatuses" },
+  { value: "ok", labelKey: "materialInventory.status.ok" },
+  { value: "low", labelKey: "materialInventory.status.low" },
+  { value: "missing", labelKey: "materialInventory.status.missing" },
+];
 
 function quantity(value: number | null, unit: string | null) {
   if (value === null) return "—";
@@ -46,6 +59,8 @@ export function MaterialInventoryPage() {
   const [kind, setKind] = useState<MaterialInventoryKind>("ingredient");
   const [search, setSearch] = useState("");
   const [appliedSearch, setAppliedSearch] = useState("");
+  const [status, setStatus] = useState<MaterialInventoryStatusFilter>("");
+  const statusFilter = useDeferredFilter(status, setStatus);
   const [items, setItems] = useState<MaterialInventoryItem[]>([]);
   const [selected, setSelected] = useState<MaterialInventoryItem | null>(null);
   const [ledger, setLedger] = useState<MaterialInventoryLedgerEntry[]>([]);
@@ -85,13 +100,21 @@ export function MaterialInventoryPage() {
   }, [kind, selected, reloadKey]);
 
   const changeKind = (next: MaterialInventoryKind) => {
-    setKind(next); setSelected(null); setSearch(""); setAppliedSearch(""); setPage(1);
+    setKind(next); setSelected(null); setSearch(""); setAppliedSearch(""); setStatus(""); setPage(1);
   };
-  const selectedStatus = useMemo(() => {
-    if (!selected || selected.currentQuantity === null) return "missing";
-    if (selected.minimumStock !== null && selected.currentQuantity <= selected.minimumStock) return "low";
-    return "ok";
-  }, [selected]);
+
+  const filteredItems = useMemo(() => {
+    if (!status) return items;
+    return items.filter((item) => materialInventoryStatus(item) === status);
+  }, [items, status]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [status]);
+
+  const selectedStatus = useMemo(() => (
+    selected ? materialInventoryStatus(selected) : "missing"
+  ), [selected]);
 
   const correctStock = async () => {
     if (!selected || correcting) return;
@@ -109,8 +132,8 @@ export function MaterialInventoryPage() {
     finally { setCorrecting(false); }
   };
 
-  const totalPages = Math.max(1, Math.ceil(items.length / PAGE_SIZE));
-  const visibleItems = items.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const totalPages = Math.max(1, Math.ceil(filteredItems.length / PAGE_SIZE));
+  const visibleItems = filteredItems.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
   const visibleLedgerRows = useMemo(() => (
     showLedgerReversals ? ledger : ledger.filter((entry) => !entry.isReversal)
   ), [ledger, showLedgerReversals]);
@@ -139,20 +162,54 @@ export function MaterialInventoryPage() {
     if (ledgerPage > ledgerTotalPages) setLedgerPage(1);
   }, [ledgerTotalPages, ledgerPage]);
 
+  useEffect(() => {
+    if (page > totalPages) setPage(1);
+  }, [page, totalPages]);
+
   return <section className="ingredients-page material-inventory-page">
     <header className="page-heading ingredients-heading"><div><span className="eyebrow">{t("navigation.kitchen")}</span><h1>{t("materialInventory.title")}</h1><p>{t("materialInventory.description")}</p></div></header>
     <article className={`panel ingredients-panel ${styles.inventoryPanel}`}>
       <div className={`${styles.toolbar} border-b border-border p-4`}>
         <SegmentedTabs value={kind} label={t("materialInventory.kindTabs")} onChange={changeKind} tabs={(["ingredient", "packing"] as const).map((tab) => ({ value: tab, label: t(`materialInventory.kinds.${tab}`) }))} />
-        <ListSearchBar className={styles.inventorySearch} id="material-inventory-search" value={search} onChange={setSearch} onSubmit={() => setAppliedSearch(search.trim())} label={t("materialInventory.search")} placeholder={t("materialInventory.searchPlaceholder")} submitLabel={t("materialInventory.searchAction")} />
+        <ListSearchBar
+          className={styles.inventorySearch}
+          id="material-inventory-search"
+          value={search}
+          onChange={setSearch}
+          onSubmit={() => setAppliedSearch(search.trim())}
+          label={t("materialInventory.search")}
+          placeholder={t("materialInventory.searchPlaceholder")}
+          submitLabel={t("materialInventory.searchAction")}
+          filtersActive={Boolean(status)}
+          filtersTitle={t("materialInventory.statusFilter")}
+          onConfirmFilters={statusFilter.confirm}
+          onDismissFilters={statusFilter.revert}
+          filters={
+            <label className={styles.statusFilter}>
+              <span>{t("materialInventory.statusFilter")}</span>
+              <select
+                value={statusFilter.value}
+                onChange={(event) =>
+                  statusFilter.setValue(event.target.value as MaterialInventoryStatusFilter)
+                }
+              >
+                {STATUS_OPTIONS.map((option) => (
+                  <option key={option.value || "all"} value={option.value}>
+                    {t(option.labelKey)}
+                  </option>
+                ))}
+              </select>
+            </label>
+          }
+        />
       </div>
-      {error === "load" ? <div className="products-state products-state-error"><RefreshCw /><div><strong>{t("materialInventory.loadError")}</strong><span>{t("materialInventory.loadErrorDescription")}</span></div><Button variant="outline" onClick={() => setReloadKey((value) => value + 1)}>{t("materialInventory.retry")}</Button></div> : !loading && items.length === 0 ? <div className="products-state products-state-empty"><PackageOpen /><div><strong>{t("materialInventory.empty")}</strong><span>{t("materialInventory.emptyDescription")}</span></div></div> : <ListTable className="ingredients-table-wrap" loading={loading} loadingLabel={t("materialInventory.loading")} skeletonColumns={SUMMARY_COLUMNS} skeletonRows={PAGE_SIZE} onRefresh={() => setReloadKey((value) => value + 1)} header={<tr><th>SKU</th><th>{t("materialInventory.columns.category")}</th><th>{t("materialInventory.columns.item")}</th><th>{t("materialInventory.columns.current")}</th><th>{t("materialInventory.columns.minimum")}</th><th>{t("materialInventory.columns.status")}</th><th>{t("materialInventory.columns.lastActivity")}</th><th><span className="sr-only">{t("materialInventory.view")}</span></th></tr>}>
+      {error === "load" ? <div className="products-state products-state-error"><RefreshCw /><div><strong>{t("materialInventory.loadError")}</strong><span>{t("materialInventory.loadErrorDescription")}</span></div><Button variant="outline" onClick={() => setReloadKey((value) => value + 1)}>{t("materialInventory.retry")}</Button></div> : !loading && filteredItems.length === 0 ? <div className="products-state products-state-empty"><PackageOpen /><div><strong>{t("materialInventory.empty")}</strong><span>{t("materialInventory.emptyDescription")}</span></div></div> : <ListTable className="ingredients-table-wrap" loading={loading} loadingLabel={t("materialInventory.loading")} skeletonColumns={SUMMARY_COLUMNS} skeletonRows={PAGE_SIZE} onRefresh={() => setReloadKey((value) => value + 1)} header={<tr><th>SKU</th><th>{t("materialInventory.columns.category")}</th><th>{t("materialInventory.columns.item")}</th><th>{t("materialInventory.columns.current")}</th><th>{t("materialInventory.columns.minimum")}</th><th>{t("materialInventory.columns.status")}</th><th>{t("materialInventory.columns.lastActivity")}</th><th><span className="sr-only">{t("materialInventory.view")}</span></th></tr>}>
         {visibleItems.map((item) => {
-          const status = item.currentQuantity === null ? "missing" : item.minimumStock !== null && item.currentQuantity <= item.minimumStock ? "low" : "ok";
-          return <tr key={item.ingredientId}><td>{item.sku || "—"}</td><td>{item.ingredientType || "—"}</td><td><strong>{item.name}</strong></td><td className="tabular-nums"><strong>{quantity(item.currentQuantity, item.unit)}</strong></td><td className="tabular-nums">{quantity(item.minimumStock, item.unit)}</td><td><span className="inventory-stock-badge" data-tone={status}>{t(`materialInventory.status.${status}`)}</span></td><td>{dateTime(item.lastActivityAt, i18n.language)}</td><td><Button variant="outline" size="sm" onClick={() => { setSelected(item); setError(null); setShowLedgerReversals(false); }}><Eye />{t("materialInventory.view")}</Button></td></tr>;
+          const itemStatus = materialInventoryStatus(item);
+          return <tr key={item.ingredientId}><td>{item.sku || "—"}</td><td>{item.ingredientType || "—"}</td><td><strong>{item.name}</strong></td><td className="tabular-nums"><strong>{quantity(item.currentQuantity, item.unit)}</strong></td><td className="tabular-nums">{quantity(item.minimumStock, item.unit)}</td><td><span className="inventory-stock-badge" data-tone={itemStatus}>{t(`materialInventory.status.${itemStatus}`)}</span></td><td>{dateTime(item.lastActivityAt, i18n.language)}</td><td><Button variant="outline" size="sm" onClick={() => { setSelected(item); setError(null); setShowLedgerReversals(false); }}><Eye />{t("materialInventory.view")}</Button></td></tr>;
         })}
       </ListTable>}
-    {!loading && !error && items.length > 0 ? <TablePagination summary={t("materialInventory.pagination", { from: (page - 1) * PAGE_SIZE + 1, to: Math.min(page * PAGE_SIZE, items.length), total: items.length })} page={page} totalPages={totalPages} loading={loading} onPrevious={() => setPage((value) => Math.max(1, value - 1))} onNext={() => setPage((value) => Math.min(totalPages, value + 1))} onPageChange={setPage} {...paginationProps} /> : null}
+    {!loading && !error && filteredItems.length > 0 ? <TablePagination summary={t("materialInventory.pagination", { from: (page - 1) * PAGE_SIZE + 1, to: Math.min(page * PAGE_SIZE, filteredItems.length), total: filteredItems.length })} page={page} totalPages={totalPages} loading={loading} onPrevious={() => setPage((value) => Math.max(1, value - 1))} onNext={() => setPage((value) => Math.min(totalPages, value + 1))} onPageChange={setPage} {...paginationProps} /> : null}
     </article>
     <SidePanel open={selected !== null} title={selected?.name ?? ""} description={selected ? `${selected.sku || "—"} · ${t(`materialInventory.status.${selectedStatus}`)}` : undefined} closeLabel={t("common.close")} onClose={() => { setSelected(null); setShowLedgerReversals(false); }} footer={ledgerPagination} half className={styles.detailPanel}>
     {error && error !== "load" ? <p className="list-inline-error" role="alert">{t(`materialInventory.errors.${error}`)}</p> : null}
@@ -176,4 +233,3 @@ export function MaterialInventoryPage() {
     </Modal>
   </section>;
 }
-

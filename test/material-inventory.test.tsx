@@ -15,11 +15,15 @@ import {
 vi.mock("@/auth/use-page-access", () => ({
   useCurrentPageAccess: () => ({ canAccess: () => true, canManage: () => true }),
 }));
-vi.mock("@/lib/material-inventory", () => ({
-  fetchMaterialInventory: vi.fn(),
-  fetchMaterialInventoryLedger: vi.fn(),
-  correctMaterialCurrentStock: vi.fn(),
-}));
+vi.mock("@/lib/material-inventory", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/material-inventory")>();
+  return {
+    ...actual,
+    fetchMaterialInventory: vi.fn(),
+    fetchMaterialInventoryLedger: vi.fn(),
+    correctMaterialCurrentStock: vi.fn(),
+  };
+});
 
 const migration = readFileSync(
   "supabase/migrations/20260908150000_material_inventory_ledger.sql",
@@ -93,5 +97,38 @@ describe("material inventory ledger", () => {
     await waitFor(() => expect(correctMaterialCurrentStock).toHaveBeenCalledWith({
       kind: "packing", ingredientId: "ingredient-1", quantity: 18, reason: "重新盤點",
     }));
+  });
+
+  it("filters inventory rows by stock status", async () => {
+    const user = userEvent.setup();
+    vi.mocked(fetchMaterialInventory).mockResolvedValue([
+      {
+        ingredientId: "ingredient-1", sku: "AM001", name: "白米", ingredientType: "一般食材",
+        unit: "包", currentQuantity: 12, minimumStock: 5, lastActivityAt: "2026-09-08T02:00:00Z",
+      },
+      {
+        ingredientId: "ingredient-2", sku: "AM002", name: "糯米", ingredientType: "一般食材",
+        unit: "包", currentQuantity: 2, minimumStock: 5, lastActivityAt: "2026-09-08T03:00:00Z",
+      },
+      {
+        ingredientId: "ingredient-3", sku: "AM003", name: "紅米", ingredientType: "一般食材",
+        unit: "包", currentQuantity: null, minimumStock: 5, lastActivityAt: null,
+      },
+    ]);
+
+    render(<MemoryRouter><MaterialInventoryPage /></MemoryRouter>);
+
+    expect(await screen.findByText("白米")).toBeInTheDocument();
+    expect(screen.getByText("糯米")).toBeInTheDocument();
+    expect(screen.getByText("紅米")).toBeInTheDocument();
+
+    await user.selectOptions(screen.getByLabelText("庫存狀態"), "low");
+    expect(screen.queryByText("白米")).not.toBeInTheDocument();
+    expect(screen.getByText("糯米")).toBeInTheDocument();
+    expect(screen.queryByText("紅米")).not.toBeInTheDocument();
+
+    await user.selectOptions(screen.getByLabelText("庫存狀態"), "missing");
+    expect(screen.queryByText("糯米")).not.toBeInTheDocument();
+    expect(screen.getByText("紅米")).toBeInTheDocument();
   });
 });

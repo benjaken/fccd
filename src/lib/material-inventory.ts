@@ -2,6 +2,10 @@ import { supabase } from "@/lib/supabase";
 
 export type MaterialInventoryKind = "ingredient" | "packing";
 
+export type MaterialInventoryStatus = "ok" | "low" | "missing";
+
+export type MaterialInventoryStatusFilter = "" | MaterialInventoryStatus;
+
 export type MaterialInventoryItem = {
   ingredientId: string;
   sku: string | null;
@@ -12,6 +16,14 @@ export type MaterialInventoryItem = {
   minimumStock: number | null;
   lastActivityAt: string | null;
 };
+
+export function materialInventoryStatus(
+  item: Pick<MaterialInventoryItem, "currentQuantity" | "minimumStock">,
+): MaterialInventoryStatus {
+  if (item.currentQuantity === null) return "missing";
+  if (item.minimumStock !== null && item.currentQuantity <= item.minimumStock) return "low";
+  return "ok";
+}
 
 export type MaterialInventoryLedgerEntry = {
   id: string;
