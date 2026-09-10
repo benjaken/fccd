@@ -1614,8 +1614,8 @@ describe("Quote editor", () => {
       scroll.mockRestore();
       const amount = within(document.getElementById("quote-editor-editable-payments")!).getByRole("spinbutton");
       await user.clear(amount);
-      await user.type(amount, "-40");
-      expect(amount).toHaveValue(-40);
+      await user.type(amount, "50");
+      expect(amount).toHaveValue(50);
     }
     for (const section of sectionIds) {
       await user.click(within(document.getElementById(`quote-editor-editable-${section}`)!).getByRole("button", { name: "Save changes" }));
@@ -1632,7 +1632,7 @@ describe("Quote editor", () => {
       expect(saveExistingLine).toHaveBeenCalledTimes(sectionIds.length);
       expect(saveFinancialDetails).toHaveBeenCalledTimes(sectionIds.length);
       expect(savePayments).toHaveBeenCalledTimes(3);
-      expect(savePayments).toHaveBeenLastCalledWith("order-1", number, "channel-1", [expect.objectContaining({ amount: -40 })], "order");
+      expect(savePayments).toHaveBeenLastCalledWith("order-1", number, "channel-1", [expect.objectContaining({ amount: 50, paymentMethodId: "payme" })], "order");
       expect(saveFactorySettings).toHaveBeenCalledTimes(3);
     } else {
       expect(saveExistingLine).not.toHaveBeenCalled();
