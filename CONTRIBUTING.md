@@ -80,9 +80,9 @@ Test files must:
 - remain deterministic and must not call production services or mutate
   production data.
 
-`main` builds must run the complete automated suite. The project enforces this
-through `npm run build`, which executes `npm run test` before TypeScript and
-the production bundle build. A failed test blocks the build and integration.
+Run the complete automated suite with `npm test` or `npm run verify` before
+integrating. `npm run build` only typechecks and bundles so Vercel deploys
+are not blocked by the full Vitest suite.
 
 ## Completing work
 
@@ -92,6 +92,7 @@ Run checks appropriate to the changed scope. For the frontend baseline:
 npm run lint
 npm run test
 npm run build
+npm run verify
 ```
 
 Then commit and push the branch:

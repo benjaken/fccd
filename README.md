@@ -55,8 +55,8 @@ npm run test
 npm run build
 ```
 
-UI test cases are stored in [`test/`](test/). The production build runs the
-full test suite automatically.
+UI test cases are stored in [`test/`](test/). Use `npm run verify` for the
+full test suite plus typechecks. `npm run build` only compiles the bundle.
 
 The initial layout includes FCCD (Food Channel Catering Delivery) branding,
 responsive navigation, Traditional Chinese and English localization, dark mode,

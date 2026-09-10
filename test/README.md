@@ -20,5 +20,5 @@ npm run test
 npm run test:watch
 ```
 
-`npm run build` executes the full automated test suite before compiling the
-production bundle.
+`npm run verify` runs the full automated test suite plus typechecks.
+`npm run build` only typechecks and bundles so deploys stay fast.
