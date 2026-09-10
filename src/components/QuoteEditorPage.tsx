@@ -1063,9 +1063,9 @@ export function QuoteEditorPage({
       throw new Error("quote_line_invalid");
     }
 
-    // Payment method is not required on save. Only send rows the batch RPC
-    // accepts (date + method + amount > 0). "Add payment" stubs prefill date
-    // and outstanding amount with a blank method — those must be skipped.
+    // Payment method is not required on save. Only send complete rows
+    // (date + method + non-zero amount, including refunds). "Add payment"
+    // stubs prefill date and outstanding amount with a blank method — skip those.
     const paymentsToSave = isOrder
       ? payments.filter(isPersistableOrderPayment)
       : [];
