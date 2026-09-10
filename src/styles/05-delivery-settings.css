@@ -1994,11 +1994,12 @@
 .quote-file-history header svg { width: 18px; color: var(--primary); }
 .quote-file-history header > span { color: var(--muted-foreground); font-size: 14px; }
 .quote-file-history ul { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
-.quote-file-history li { display: grid; grid-template-columns: 42px minmax(0, 1fr) 40px; align-items: center; gap: 11px; padding: 13px; border: 1px solid var(--border); border-radius: 12px; background: var(--card); }
+.quote-file-history li { display: grid; grid-template-columns: 42px minmax(0, 1fr) auto; align-items: center; gap: 11px; padding: 13px; border: 1px solid var(--border); border-radius: 12px; background: var(--card); }
 .quote-file-history li > div { display: grid; min-width: 0; gap: 3px; }
 .quote-file-history li strong { overflow: hidden; font-size: 14px; text-overflow: ellipsis; white-space: nowrap; }
 .quote-file-history li small { color: var(--muted-foreground); font-size: 14px; }
 .quote-file-history li em { color: var(--destructive); font-size: 14px; font-style: normal; }
+.quote-file-actions { display: flex; align-items: center; gap: 6px; }
 .quote-file-type { display: grid; width: 42px; height: 42px; place-items: center; border-radius: 10px; color: var(--primary); background: color-mix(in oklch, var(--primary) 9%, transparent); }
 .quote-file-type svg { width: 20px; height: 20px; }
 .quote-file-state { display: flex; min-height: 120px; align-items: center; justify-content: center; gap: 8px; color: var(--muted-foreground); }

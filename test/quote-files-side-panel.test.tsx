@@ -118,4 +118,43 @@ describe("quote file side panel", () => {
     );
     open.mockRestore();
   });
+
+  it("hides delete controls without quote manage permission", async () => {
+    render(
+      <QuoteFilesSidePanel
+        quote={quote}
+        onClose={vi.fn()}
+        loadFiles={vi.fn().mockResolvedValue([historicalFile])}
+      />,
+    );
+
+    expect(await screen.findByText("報價版本-1.pdf")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "刪除 報價版本-1.pdf" })).toBeNull();
+  });
+
+  it("deletes a historical file after confirmation and refreshes", async () => {
+    const user = userEvent.setup();
+    const loadFiles = vi
+      .fn()
+      .mockResolvedValueOnce([historicalFile])
+      .mockResolvedValueOnce([]);
+    const removeFile = vi.fn().mockResolvedValue(undefined);
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(true);
+
+    render(
+      <QuoteFilesSidePanel
+        quote={quote}
+        canUpload
+        onClose={vi.fn()}
+        loadFiles={loadFiles}
+        removeFile={removeFile}
+      />,
+    );
+
+    await user.click(await screen.findByRole("button", { name: "刪除 報價版本-1.pdf" }));
+    expect(confirm).toHaveBeenCalled();
+    await waitFor(() => expect(removeFile).toHaveBeenCalledWith(historicalFile));
+    expect(await screen.findByText("尚未上傳文件")).toBeInTheDocument();
+    confirm.mockRestore();
+  });
 });

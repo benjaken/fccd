@@ -6,6 +6,7 @@ import {
   FileClock,
   LoaderCircle,
   RefreshCw,
+  Trash2,
   Upload,
 } from "lucide-react";
 
@@ -13,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { SidePanel } from "@/components/ui/side-panel";
 import {
   createQuoteFileUrl,
+  deleteQuoteFile,
   fetchQuoteFiles,
   MAX_QUOTE_FILE_SIZE,
   QUOTE_FILE_ACCEPT,
@@ -24,6 +26,7 @@ import type { QuoteListItem } from "@/lib/quotes";
 type FilesLoader = typeof fetchQuoteFiles;
 type FileUploader = typeof uploadQuoteFile;
 type FileUrlCreator = typeof createQuoteFileUrl;
+type FileDeleter = typeof deleteQuoteFile;
 
 export function QuoteFilesSidePanel({
   quote,
@@ -32,6 +35,7 @@ export function QuoteFilesSidePanel({
   loadFiles = fetchQuoteFiles,
   uploadFile = uploadQuoteFile,
   createFileUrl = createQuoteFileUrl,
+  removeFile = deleteQuoteFile,
 }: {
   quote: QuoteListItem | null;
   canUpload?: boolean;
@@ -39,6 +43,7 @@ export function QuoteFilesSidePanel({
   loadFiles?: FilesLoader;
   uploadFile?: FileUploader;
   createFileUrl?: FileUrlCreator;
+  removeFile?: FileDeleter;
 }) {
   const { t, i18n } = useTranslation();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -46,6 +51,7 @@ export function QuoteFilesSidePanel({
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [openingId, setOpeningId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -97,6 +103,23 @@ export function QuoteFilesSidePanel({
       setError("open");
     } finally {
       setOpeningId(null);
+    }
+  };
+
+  const remove = async (file: QuoteFile) => {
+    if (!canUpload || !file.available || file.id.startsWith("metadata:")) return;
+    if (!window.confirm(t("quotes.files.deleteConfirm", { name: file.name }))) {
+      return;
+    }
+    setDeletingId(file.id);
+    setError(null);
+    try {
+      await removeFile(file);
+      await load();
+    } catch {
+      setError("delete");
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -159,7 +182,9 @@ export function QuoteFilesSidePanel({
                   ? "quotes.files.loadError"
                   : error === "open"
                     ? "quotes.files.openError"
-                    : "quotes.files.uploadError",
+                    : error === "delete"
+                      ? "quotes.files.deleteError"
+                      : "quotes.files.uploadError",
             )}
           </span>
           {error === "load" && (
@@ -193,16 +218,30 @@ export function QuoteFilesSidePanel({
                   </small>
                   {!file.available && <em>{t("quotes.files.unavailable")}</em>}
                 </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon"
-                  disabled={!file.available || openingId === file.id}
-                  aria-label={t("quotes.files.open", { name: file.name })}
-                  onClick={() => void openFile(file)}
-                >
-                  {openingId === file.id ? <LoaderCircle className="spin" /> : <Download />}
-                </Button>
+                <div className="quote-file-actions">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    disabled={!file.available || openingId === file.id || deletingId === file.id}
+                    aria-label={t("quotes.files.open", { name: file.name })}
+                    onClick={() => void openFile(file)}
+                  >
+                    {openingId === file.id ? <LoaderCircle className="spin" /> : <Download />}
+                  </Button>
+                  {canUpload ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      disabled={!file.available || file.id.startsWith("metadata:") || deletingId === file.id}
+                      aria-label={t("quotes.files.delete", { name: file.name })}
+                      onClick={() => void remove(file)}
+                    >
+                      {deletingId === file.id ? <LoaderCircle className="spin" /> : <Trash2 />}
+                    </Button>
+                  ) : null}
+                </div>
               </li>
             ))}
           </ul>

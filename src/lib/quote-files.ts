@@ -243,3 +243,43 @@ export async function createQuoteFileUrl(file: QuoteFile) {
   if (error) throw error;
   return data.signedUrl;
 }
+
+export async function deleteQuoteFile(
+  file: Pick<QuoteFile, "id" | "bucketId" | "objectPath">,
+) {
+  if (!file.id || file.id.startsWith("metadata:")) {
+    throw new Error("quote_file_unavailable");
+  }
+
+  const { data: attachment, error: lookupError } = await supabase
+    .from("attachments")
+    .select("id,source_legacy_row_id,bucket_id,object_path")
+    .eq("id", file.id)
+    .maybeSingle();
+  if (lookupError) throw lookupError;
+  if (!attachment) throw new Error("quote_file_unavailable");
+
+  const { error: deleteError } = await supabase
+    .from("attachments")
+    .delete()
+    .eq("id", file.id);
+  if (deleteError) throw deleteError;
+
+  const legacyId = attachment.source_legacy_row_id;
+  if (legacyId) {
+    const { error: metadataError } = await supabase
+      .from("quote_file_metadata")
+      .delete()
+      .eq("legacy_id", legacyId);
+    if (metadataError) throw metadataError;
+  }
+
+  const objectPath = attachment.object_path || file.objectPath;
+  const bucketId = attachment.bucket_id || file.bucketId || QUOTE_FILE_BUCKET;
+  if (objectPath) {
+    const { error: storageError } = await supabase.storage
+      .from(bucketId)
+      .remove([objectPath]);
+    if (storageError) throw storageError;
+  }
+}
