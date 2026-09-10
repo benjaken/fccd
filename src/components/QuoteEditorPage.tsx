@@ -1056,9 +1056,17 @@ export function QuoteEditorPage({
     if (invalidLine) {
       throw new Error("quote_line_invalid");
     }
-    if (isOrder && payments.some((payment) => !payment.paymentAt || !payment.paymentMethodId || (!Number.isFinite(payment.amount) || payment.amount === 0))) {
-      throw new Error("quote_payment_invalid");
-    }
+
+    // Payment method is not required on save. Skip blank payment stubs so an
+    // empty "add payment" row cannot block details/line saves.
+    const paymentsToSave = isOrder
+      ? payments.filter((payment) => (
+        Boolean(payment.paymentAt)
+        || Boolean(payment.paymentMethodId)
+        || (Number.isFinite(payment.amount) && payment.amount !== 0)
+        || Boolean(payment.reference?.trim())
+      ))
+      : [];
 
     await saveCurrentDetails(quote.id);
     await flushPendingLines(quote.id);
@@ -1095,7 +1103,7 @@ export function QuoteEditorPage({
         documentType: isOrder ? "order" : "quote",
         lines: persistedLines,
         financials: financialValues,
-        payments: isOrder ? payments : [],
+        payments: paymentsToSave,
         channelId: draft.channelId,
         orderNumber: quote.orderNumber,
         factorySettings,
@@ -1106,7 +1114,7 @@ export function QuoteEditorPage({
       }
       await saveFinancialDetails(quote.id, financialValues);
       if (isOrder) {
-        await savePayments(quote.id, quote.orderNumber, draft.channelId, payments, "order");
+        await savePayments(quote.id, quote.orderNumber, draft.channelId, paymentsToSave, "order");
         await saveFactorySettings(quote.id, factorySettings);
       }
     }
