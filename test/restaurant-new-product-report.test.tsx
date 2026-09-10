@@ -1,13 +1,34 @@
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { RestaurantNewProductReport } from "@/components/RestaurantNewProductReport";
 import i18n from "@/i18n";
 import { defaultNewProductReportDates } from "@/lib/restaurant-new-product-report";
 
+const products = [
+  {
+    id: "product-1",
+    name: "Honey Green Tea",
+    remarks_enabled: true,
+    remarks_placeholder: "Guest notes",
+    is_active: true,
+  },
+  {
+    id: "product-2",
+    name: "Matcha Latte",
+    remarks_enabled: false,
+    remarks_placeholder: null,
+    is_active: true,
+  },
+];
+
 const database = vi.hoisted(() => ({
   insert: vi.fn(async () => ({ error: null })),
+  update: vi.fn(() => ({
+    eq: vi.fn(async () => ({ error: null })),
+  })),
+  rows: [] as typeof products,
 }));
 
 vi.mock("@/auth/use-page-access", () => ({
@@ -22,8 +43,9 @@ vi.mock("@/lib/supabase", () => ({
         is: () => query,
         order: () => query,
         insert: database.insert,
+        update: database.update,
         then: (resolve: (value: { data: unknown[] }) => void) =>
-          Promise.resolve({ data: [] }).then(resolve),
+          Promise.resolve({ data: database.rows }).then(resolve),
       };
       return query;
     },
@@ -31,6 +53,13 @@ vi.mock("@/lib/supabase", () => ({
 }));
 
 describe("restaurant new product report", () => {
+  beforeEach(async () => {
+    await i18n.changeLanguage("zh-HK");
+    database.insert.mockClear();
+    database.update.mockClear();
+    database.rows = structuredClone(products);
+  });
+
   it("defaults from January 1 through today", () => {
     expect(defaultNewProductReportDates(new Date(2026, 7, 21))).toEqual({
       startDate: "2026-01-01",
@@ -39,7 +68,6 @@ describe("restaurant new product report", () => {
   });
 
   it("renders the report table, pagination, and settings link", async () => {
-    await i18n.changeLanguage("zh-HK");
     const loadReport = vi.fn(async () => ({
       rows: [{
         saleDate: "2026-08-20",
@@ -75,7 +103,7 @@ describe("restaurant new product report", () => {
     expect(screen.getByText("顯示 1–1，共 1 筆")).toBeInTheDocument();
   });
 
-  it("opens the 80-percent settings panel and adds a product from a modal", async () => {
+  it("opens settings with search, editable names, and add modal", async () => {
     const user = userEvent.setup();
     render(<RestaurantNewProductReport loadReport={async () => ({ rows: [], total: 0 })} />);
 
@@ -87,6 +115,23 @@ describe("restaurant new product report", () => {
     expect(within(panel).getByRole("columnheader", { name: "備註欄" })).toBeInTheDocument();
     expect(within(panel).getByRole("columnheader", { name: "備註欄提示" })).toBeInTheDocument();
     expect(within(panel).getByRole("columnheader", { name: "狀態" })).toBeInTheDocument();
+    expect(within(panel).getByPlaceholderText("搜尋新品名稱")).toBeInTheDocument();
+    expect(await within(panel).findByDisplayValue("Honey Green Tea")).toBeInTheDocument();
+    expect(within(panel).getByDisplayValue("Matcha Latte")).toBeInTheDocument();
+
+    await user.type(within(panel).getByPlaceholderText("搜尋新品名稱"), "Matcha");
+    await waitFor(() => {
+      expect(within(panel).queryByDisplayValue("Honey Green Tea")).not.toBeInTheDocument();
+    });
+    expect(within(panel).getByDisplayValue("Matcha Latte")).toBeInTheDocument();
+
+    const nameInput = within(panel).getByDisplayValue("Matcha Latte");
+    await user.clear(nameInput);
+    await user.type(nameInput, "Hojicha Latte");
+    await user.tab();
+    await waitFor(() => expect(database.update).toHaveBeenCalledWith(
+      expect.objectContaining({ name: "Hojicha Latte" }),
+    ));
 
     await user.click(within(panel).getByRole("button", { name: "新增" }));
     const addDialog = screen.getByRole("dialog", { name: "新增新品" });

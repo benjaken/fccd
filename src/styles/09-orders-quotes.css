@@ -3329,32 +3329,33 @@
 
 .restaurant-new-products-settings {
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
   height: 100%;
   max-height: 100%;
   min-height: 0;
   overflow: hidden;
 }
 
-.restaurant-new-products-settings-toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 16px;
+.restaurant-new-products-settings-table {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  height: 100%;
+  max-height: 100%;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.restaurant-new-products-settings-table > .restaurant-settings-toolbar {
   padding: 14px 18px;
   border-bottom: 1px solid var(--border);
   background: var(--card);
 }
 
-.restaurant-new-products-settings-table {
-  display: grid;
-  grid-template-rows: minmax(0, 1fr) auto;
-  height: 100%;
-  max-height: 100%;
-  min-width: 0;
+.restaurant-new-products-settings-table > .restaurant-settings-table-wrap,
+.restaurant-new-products-settings-table > .restaurant-settings-list-state {
   min-height: 0;
-  padding: 16px 18px 18px;
-  overflow: hidden;
+  padding: 16px 18px 0;
 }
 
 .restaurant-new-products-settings-table > .operational-list-pagination {
@@ -3362,6 +3363,7 @@
   z-index: 3;
   align-self: end;
   margin: 0;
+  padding: 0 18px 18px;
   background: var(--card);
 }
 
@@ -3400,6 +3402,7 @@
   opacity: 0.72;
 }
 
+.restaurant-new-products-name-input,
 .restaurant-new-products-remarks-input {
   width: 100%;
   min-height: 36px;
@@ -3408,9 +3411,18 @@
   border-radius: 8px;
   background: color-mix(in oklch, var(--muted) 65%, var(--background));
   color: var(--foreground);
+}
+
+.restaurant-new-products-name-input {
+  font-weight: 600;
+  text-align: left;
+}
+
+.restaurant-new-products-remarks-input {
   text-align: center;
 }
 
+.restaurant-new-products-name-input:focus,
 .restaurant-new-products-remarks-input:focus {
   outline: 0;
   border-color: var(--ring);
