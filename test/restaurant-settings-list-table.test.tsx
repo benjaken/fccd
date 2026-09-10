@@ -82,4 +82,40 @@ describe("RestaurantSettingsListTable", () => {
     });
     expect(screen.getByText("顯示 0–0，共 0 筆")).toBeInTheDocument();
   });
+
+  it("filters rows by controlled input values", async () => {
+    const user = userEvent.setup();
+    render(
+      <RestaurantSettingsListTable
+        header={
+          <tr>
+            <th>Name</th>
+          </tr>
+        }
+        loading={false}
+        loadingLabel="Loading"
+        skeletonColumns={1}
+      >
+        <tr>
+          <td>
+            <input aria-label="Alpha name" value="Alpha Latte" readOnly />
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <input aria-label="Beta name" value="Beta Mocha" readOnly />
+          </td>
+        </tr>
+      </RestaurantSettingsListTable>,
+    );
+
+    const search = screen.getByRole("searchbox", {
+      name: "搜尋設定項目",
+    });
+    await user.type(search, "Mocha");
+    await waitFor(() => {
+      expect(screen.queryByDisplayValue("Alpha Latte")).not.toBeInTheDocument();
+    });
+    expect(screen.getByDisplayValue("Beta Mocha")).toBeInTheDocument();
+  });
 });
