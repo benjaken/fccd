@@ -97,6 +97,9 @@ vi.mock("@/lib/supabase", () => ({
   supabase: {
     from: vi.fn(() => createThenableQuery()),
     rpc: vi.fn(async () => ({ data: null, error: null })),
+    functions: {
+      invoke: vi.fn(async () => ({ data: null, error: null })),
+    },
     auth: {
       getSession: vi.fn(async () => ({ data: { session: null }, error: null })),
       getUser: vi.fn(async () => ({ data: { user: null }, error: null })),
