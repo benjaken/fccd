@@ -83,6 +83,8 @@ import {
   saveSalesDocumentBatch,
   quoteLineLabelRemarkRows,
   quoteLinePrintLabelName,
+  classifyQuoteSaveError,
+  isQuoteSaveErrorKey,
   type CreatedQuote,
   type QuoteCatalogItem,
   type QuoteDraft,
@@ -1118,7 +1120,8 @@ export function QuoteEditorPage({
     try {
       await persistAllChanges(activeQuote);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "quote_save_failed");
+      console.error("quote save failed", cause);
+      setError(classifyQuoteSaveError(cause));
       setCompletionError("save");
     } finally {
       setSaving(false);
@@ -1176,8 +1179,9 @@ export function QuoteEditorPage({
       // typing into a stale input that is about to be replaced.
       setLoading(true);
       navigate(`${listPath}/${quote.id}/edit`, { replace: true });
-    } catch {
-      setError("quote_create_failed");
+    } catch (cause) {
+      console.error("quote create failed", cause);
+      setError(classifyQuoteSaveError(cause));
     } finally {
       setSaving(false);
     }
@@ -2785,7 +2789,9 @@ export function QuoteEditorPage({
             <label><span>{t("quoteEditor.fields.internalNote")}<small>{t("quoteEditor.fields.internalNoteHint")}</small></span><textarea rows={2} value={draft.internalNote} onChange={(event) => patchDraft({ internalNote: event.target.value })} /></label>
           </div>
 
-          {error && <p className="quote-editor-error" role="alert">{t("quoteEditor.errors.create")}</p>}
+          {isQuoteSaveErrorKey(error) ? (
+            <p className="quote-editor-error" role="alert">{t(`quoteEditor.errors.${error}`)}</p>
+          ) : null}
           {conversionError && <p className="quote-editor-error" role="alert">{t("quoteEditor.errors.convert")}</p>}
           <footer>
             {activeQuote && isOrder ? <Button type="button" variant="outline" disabled={completing || saving} onClick={() => void saveAndSendCurrentOrderConfirmation()}>{completing ? <LoaderCircle className="spin" /> : <Mail />}{t(completing ? "quoteEditor.detailActions.sendingConfirmation" : "quoteEditor.payments.sendAndComplete")}</Button> : null}

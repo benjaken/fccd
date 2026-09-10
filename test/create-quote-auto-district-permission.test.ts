@@ -42,3 +42,20 @@ describe("create_quote auto district permission fix", () => {
     );
   });
 });
+
+describe("quote editor save error interception", () => {
+  const page = readFileSync(
+    path.resolve(process.cwd(), "src/components/QuoteEditorPage.tsx"),
+    "utf8",
+  );
+
+  it("classifies create failures instead of always showing the permissions copy", () => {
+    expect(page).toContain("classifyQuoteSaveError(cause)");
+    expect(page).toContain("isQuoteSaveErrorKey(error)");
+    expect(page).not.toContain('setError("quote_create_failed")');
+    expect(page).toContain("t(`quoteEditor.errors.${error}`)");
+    expect(page).not.toMatch(
+      /\{error && <p className="quote-editor-error" role="alert">\{t\("quoteEditor\.errors\.create"\)\}<\/p>\}/,
+    );
+  });
+});

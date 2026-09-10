@@ -1276,3 +1276,63 @@ export async function addQuoteUtensilLine(orderId: string) {
   });
   if (error) throw error;
 }
+
+export type QuoteSaveErrorKey =
+  | "create"
+  | "permission"
+  | "channelRequired"
+  | "customerRequired"
+  | "districtPermission";
+
+function errorText(cause: unknown) {
+  if (!cause || typeof cause !== "object") {
+    return typeof cause === "string" ? cause : "";
+  }
+  const record = cause as {
+    message?: unknown;
+    code?: unknown;
+    details?: unknown;
+    hint?: unknown;
+  };
+  return [record.message, record.code, record.details, record.hint]
+    .filter((value) => typeof value === "string" && value.trim())
+    .join(" ")
+    .toLowerCase();
+}
+
+const QUOTE_SAVE_ERROR_KEYS = new Set<QuoteSaveErrorKey>([
+  "create",
+  "permission",
+  "channelRequired",
+  "customerRequired",
+  "districtPermission",
+]);
+
+export function isQuoteSaveErrorKey(value: string | null | undefined): value is QuoteSaveErrorKey {
+  return Boolean(value && QUOTE_SAVE_ERROR_KEYS.has(value as QuoteSaveErrorKey));
+}
+
+/** Map raw create/save failures to UI copy. Avoid blaming permissions by default. */
+export function classifyQuoteSaveError(cause: unknown): QuoteSaveErrorKey {
+  const text = errorText(cause);
+  if (!text) return "create";
+  if (text.includes("channel_required")) return "channelRequired";
+  if (text.includes("customer_required")) return "customerRequired";
+  if (
+    text.includes("district_create_not_allowed") ||
+    text.includes("district_create_failed")
+  ) {
+    return "districtPermission";
+  }
+  if (
+    text.includes("42501") ||
+    text.includes("permission denied") ||
+    text.includes("row-level security") ||
+    text.includes("violates row-level security") ||
+    text.includes("forbidden") ||
+    text.includes("not authorized")
+  ) {
+    return "permission";
+  }
+  return "create";
+}
