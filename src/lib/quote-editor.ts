@@ -1327,13 +1327,32 @@ export function quoteDraftForSave(
   return { ...draft, districtName: autoName };
 }
 
+/**
+ * Payments the batch RPC will accept. Incomplete "add payment" stubs (date /
+ * outstanding amount filled, method still blank) must not be sent — the RPC
+ * rejects null method or amount <= 0 as `invalid_order_payment`.
+ */
+export function isPersistableOrderPayment(payment: QuotePayment): boolean {
+  return Boolean(
+    payment.paymentAt
+    && payment.paymentMethodId
+    && Number.isFinite(payment.amount)
+    && payment.amount > 0,
+  );
+}
+
 /** Map raw create/save failures to UI copy. Avoid blaming permissions by default. */
 export function classifyQuoteSaveError(cause: unknown): QuoteSaveErrorKey {
   const text = errorText(cause);
   if (!text) return "create";
   // Client-side checks run before any network call; keep their messages specific.
   if (text.includes("quote_line_invalid")) return "invalidLine";
-  if (text.includes("quote_payment_invalid")) return "paymentInvalid";
+  if (
+    text.includes("quote_payment_invalid")
+    || text.includes("invalid_order_payment")
+  ) {
+    return "paymentInvalid";
+  }
   if (text.includes("channel_required")) return "channelRequired";
   if (text.includes("customer_required")) return "customerRequired";
   if (

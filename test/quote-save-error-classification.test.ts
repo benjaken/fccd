@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   classifyQuoteSaveError,
+  isPersistableOrderPayment,
   isQuoteSaveErrorKey,
   quoteDraftForSave,
 } from "@/lib/quote-editor";
@@ -37,6 +38,55 @@ describe("classifyQuoteSaveError", () => {
     expect(
       classifyQuoteSaveError({ message: "district_create_not_allowed" }),
     ).toBe("districtPermission");
+    expect(
+      classifyQuoteSaveError({ message: "invalid_order_payment", code: "22023" }),
+    ).toBe("paymentInvalid");
+  });
+});
+
+describe("isPersistableOrderPayment", () => {
+  it("rejects add-payment stubs that only have date and outstanding amount", () => {
+    expect(isPersistableOrderPayment({
+      id: "p1",
+      paymentAt: "2026-09-10",
+      paymentMethodId: "",
+      amount: 120,
+      reference: "",
+    })).toBe(false);
+  });
+
+  it("accepts complete payment rows the batch RPC requires", () => {
+    expect(isPersistableOrderPayment({
+      id: "p1",
+      paymentAt: "2026-09-10",
+      paymentMethodId: "method-1",
+      amount: 120,
+      reference: "ref",
+    })).toBe(true);
+  });
+
+  it("rejects zero, NaN, or missing date/method", () => {
+    expect(isPersistableOrderPayment({
+      id: "p1",
+      paymentAt: "2026-09-10",
+      paymentMethodId: "method-1",
+      amount: 0,
+      reference: "",
+    })).toBe(false);
+    expect(isPersistableOrderPayment({
+      id: "p1",
+      paymentAt: "2026-09-10",
+      paymentMethodId: "method-1",
+      amount: Number.NaN,
+      reference: "",
+    })).toBe(false);
+    expect(isPersistableOrderPayment({
+      id: "p1",
+      paymentAt: "",
+      paymentMethodId: "method-1",
+      amount: 10,
+      reference: "",
+    })).toBe(false);
   });
 });
 
