@@ -39,3 +39,81 @@ afterEach(async () => {
   document.documentElement.classList.remove("dark");
   await i18n.changeLanguage("zh-HK");
 });
+
+
+const { createThenableQuery } = vi.hoisted(() => {
+  const emptyQueryResult = { data: [], error: null, count: 0 };
+
+  function createThenableQuery() {
+    const query: Record<string, unknown> = {};
+    const chain = [
+      "select",
+      "insert",
+      "update",
+      "upsert",
+      "delete",
+      "is",
+      "not",
+      "neq",
+      "eq",
+      "gt",
+      "gte",
+      "lt",
+      "lte",
+      "or",
+      "in",
+      "like",
+      "ilike",
+      "contains",
+      "containedBy",
+      "overlaps",
+      "order",
+      "limit",
+      "range",
+      "single",
+      "maybeSingle",
+      "csv",
+      "filter",
+      "match",
+    ];
+    for (const method of chain) {
+      query[method] = vi.fn(() => query);
+    }
+    query.then = (
+      onfulfilled?: (value: typeof emptyQueryResult) => unknown,
+      onrejected?: (reason: unknown) => unknown,
+    ) => Promise.resolve(emptyQueryResult).then(onfulfilled, onrejected);
+    return query;
+  }
+
+  return { createThenableQuery };
+});
+
+// Prevent unit tests from hitting a real Supabase project (especially main).
+vi.mock("@/lib/supabase", () => ({
+  supabaseUrl: "https://supabase.test",
+  supabasePublishableKey: "sb_publishable_test",
+  isSupabaseConfigured: true,
+  supabase: {
+    from: vi.fn(() => createThenableQuery()),
+    rpc: vi.fn(async () => ({ data: null, error: null })),
+    auth: {
+      getSession: vi.fn(async () => ({ data: { session: null }, error: null })),
+      getUser: vi.fn(async () => ({ data: { user: null }, error: null })),
+      onAuthStateChange: vi.fn(() => ({
+        data: { subscription: { unsubscribe: vi.fn() } },
+      })),
+      signInWithPassword: vi.fn(async () => ({
+        data: { session: null, user: null },
+        error: null,
+      })),
+      signOut: vi.fn(async () => ({ error: null })),
+    },
+    channel: vi.fn(() => ({
+      on: vi.fn().mockReturnThis(),
+      subscribe: vi.fn().mockReturnThis(),
+      unsubscribe: vi.fn(),
+    })),
+    removeChannel: vi.fn(),
+  },
+}));

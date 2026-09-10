@@ -36,8 +36,9 @@ function frontendVersionPlugin(version: string): Plugin {
 
 export default defineConfig(({ mode }) => {
   const isTest = mode === "test" || process.env.VITEST === "true";
-  const branch = isTest ? "" : deploymentBranch();
-  const vercelEnv = isTest ? "" : (process.env.VERCEL_ENV || "");
+  // Tests always resolve to the develop Supabase project (never main).
+  const branch = isTest ? "develop" : deploymentBranch();
+  const vercelEnv = isTest ? "preview" : (process.env.VERCEL_ENV || "");
   const version = isTest ? "test" : appVersion();
 
   return {
