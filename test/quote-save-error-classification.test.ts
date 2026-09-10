@@ -65,6 +65,16 @@ describe("isPersistableOrderPayment", () => {
     })).toBe(true);
   });
 
+  it("accepts complete refund rows with a negative amount", () => {
+    expect(isPersistableOrderPayment({
+      id: "refund-1",
+      paymentAt: "2026-09-10",
+      paymentMethodId: "method-1",
+      amount: -40,
+      reference: "Refund",
+    })).toBe(true);
+  });
+
   it("rejects zero, NaN, or missing date/method", () => {
     expect(isPersistableOrderPayment({
       id: "p1",

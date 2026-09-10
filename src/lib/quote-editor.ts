@@ -1328,16 +1328,17 @@ export function quoteDraftForSave(
 }
 
 /**
- * Payments the batch RPC will accept. Incomplete "add payment" stubs (date /
- * outstanding amount filled, method still blank) must not be sent — the RPC
- * rejects null method or amount <= 0 as `invalid_order_payment`.
+ * Payments worth sending to the order save path. Incomplete "add payment"
+ * stubs (date / outstanding amount filled, method still blank) must not be
+ * sent — the batch RPC rejects a null method. Refunds are negative amounts
+ * and must still persist.
  */
 export function isPersistableOrderPayment(payment: QuotePayment): boolean {
   return Boolean(
     payment.paymentAt
     && payment.paymentMethodId
     && Number.isFinite(payment.amount)
-    && payment.amount > 0,
+    && payment.amount !== 0,
   );
 }
 
