@@ -559,7 +559,7 @@ export function QuoteEditorPage({
   });
   const [savingFactorySettings, setSavingFactorySettings] = useState(false);
   const [factorySettingsError, setFactorySettingsError] = useState(false);
-  const sectionNavigationRef = useRef<HTMLElement>(null);
+  const sectionNavigationRef = useRef<HTMLDivElement>(null);
   const [sectionNavigationStuck, setSectionNavigationStuck] = useState(false);
 
   useEffect(() => {
