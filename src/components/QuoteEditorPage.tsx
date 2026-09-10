@@ -2148,9 +2148,19 @@ export function QuoteEditorPage({
     setConversionError(false);
     setConversionConfirmationOpen(true);
   };
+  const paymentStatusCard = isOrder && activeQuote ? (
+    <OrderPaymentStatus
+      total={grandTotal}
+      paid={paidTotal}
+      formatMoney={money.format}
+      navigationStuck={sectionNavigationStuck}
+      orderNumber={draft.orderNumber || activeQuote.orderNumber}
+      customerAndDistrict={`${draft.customerName || draft.companyName || "—"} (${automaticDistrictName || draft.districtName || districts.find((item) => item.id === draft.districtId)?.name || "—"})`}
+    />
+  ) : null;
+
   const sectionNavigation = (
     <nav
-      ref={sectionNavigationRef}
       className={cn(
         "quote-editor-tabs quote-editor-section-navigation",
         !isOrder && "is-quote",
@@ -2226,6 +2236,29 @@ export function QuoteEditorPage({
         </button>
       ) : null}
     </nav>
+  );
+
+  const sectionNavigationRow = (
+    <div
+      ref={sectionNavigationRef}
+      className={cn(
+        "quote-editor-step-row",
+        paymentStatusCard && "has-payment-status",
+        sectionNavigationStuck && "is-navigation-stuck",
+      )}
+    >
+      {sectionNavigation}
+      {paymentStatusCard ? (
+        <div
+          className={cn(
+            "quote-editor-payment-anchor",
+            sectionNavigationStuck && "is-stuck",
+          )}
+        >
+          {paymentStatusCard}
+        </div>
+      ) : null}
+    </div>
   );
 
   const enquirySection = hasEnquiryStep ? (
@@ -2422,7 +2455,6 @@ export function QuoteEditorPage({
           ) : null}
           {isOrder ? (
             <div className="quote-order-detail-summary">
-              <OrderPaymentStatus total={grandTotal} paid={paidTotal} formatMoney={money.format} navigationStuck={sectionNavigationStuck} orderNumber={draft.orderNumber || activeQuote.orderNumber} customerAndDistrict={`${draft.customerName || draft.companyName || "—"} (${automaticDistrictName || draft.districtName || districts.find((item) => item.id === draft.districtId)?.name || "—"})`} />
               <div className="quote-detail-actions">
                 <Button
                   type="button"
@@ -2477,7 +2509,7 @@ export function QuoteEditorPage({
           <p className="quote-editor-error" role="alert">未能更新加單狀態，請稍後再試。</p>
         ) : null}
 
-        {sectionNavigation}
+        {sectionNavigationRow}
 
         {enquirySection}
 
@@ -2670,10 +2702,9 @@ export function QuoteEditorPage({
               : activeQuote ? t(isOrder ? "quoteEditor.orderItemsReady" : "quoteEditor.itemsReady") : t("quoteEditor.description")}
           </p>
         </div>
-        {isOrder && activeQuote ? <OrderPaymentStatus total={grandTotal} paid={paidTotal} formatMoney={money.format} navigationStuck={sectionNavigationStuck} orderNumber={draft.orderNumber || activeQuote.orderNumber} customerAndDistrict={`${draft.customerName || draft.companyName || "—"} (${automaticDistrictName || draft.districtName || districts.find((item) => item.id === draft.districtId)?.name || "—"})`} /> : null}
       </header>
 
-      {sectionNavigation}
+      {sectionNavigationRow}
 
       {enquirySection}
 

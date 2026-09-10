@@ -63,12 +63,12 @@
 .order-editor-payment-status {
   --payment-status-accent: #c93636;
 
-  /* Float beside the page heading. Keep this above the step tabs; when the
-     section nav sticks, drop below it via .is-navigation-stuck. */
-  position: fixed;
-  z-index: 100;
-  top: calc(var(--topbar-height) + var(--workspace-height) + 16px);
-  right: 28px;
+  /* Sit in the step row beside the tabs. Only pin below the sticky tabs once
+     the section nav has stuck. */
+  position: relative;
+  z-index: 40;
+  top: auto;
+  right: auto;
   display: flex;
   align-items: center;
   gap: 13px;
@@ -84,8 +84,11 @@
 }
 
 .order-editor-payment-status.is-navigation-stuck {
-  /* Sticky step nav sits at topbar + workspace + 12px and is ~72px tall. */
+  /* Sticky step row sits at topbar + workspace + 12px and is ~72px tall. */
+  position: fixed;
   top: calc(var(--topbar-height) + var(--workspace-height) + 96px);
+  right: 28px;
+  z-index: 100;
   display: grid;
   grid-template-columns: 42px minmax(0, 1fr);
   max-width: min(420px, calc(100vw - 32px));
@@ -884,14 +887,13 @@
   }
 
   .order-editor-payment-status {
-    top: calc(var(--topbar-height) + 16px);
-    right: 14px;
     min-width: 205px;
     padding: 11px 13px;
   }
 
   .order-editor-payment-status.is-navigation-stuck {
     top: calc(var(--topbar-height) + 96px);
+    right: 14px;
   }
 
   .order-editor-payment-status-icon {
