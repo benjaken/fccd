@@ -2377,6 +2377,7 @@ export function QuoteEditorPage({
     }
     setCompleting(true);
     setCompletionError(null);
+    setError(null);
     try {
       await persistAllChanges(activeQuote);
       try {
@@ -2386,8 +2387,13 @@ export function QuoteEditorPage({
         return;
       }
       navigate(listPath, { replace: true });
-    } catch {
+    } catch (cause) {
+      console.error("quote save-and-send failed", cause);
+      const key = classifyQuoteSaveError(cause);
+      setError(key);
       setCompletionError("save");
+      if (key === "invalidLine") scrollToSection("items");
+      if (key === "paymentInvalid") scrollToSection("payments");
     } finally {
       setCompleting(false);
     }
