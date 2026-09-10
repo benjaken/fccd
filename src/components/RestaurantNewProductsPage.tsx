@@ -27,6 +27,7 @@ export function RestaurantNewProductsSettings() {
   const [newProductName, setNewProductName] = useState("");
   const [saving, setSaving] = useState(false);
   const [savingIds, setSavingIds] = useState<Set<string>>(new Set());
+  const [draftNames, setDraftNames] = useState<Record<string, string>>({});
 
   const load = useCallback(() => {
     setLoading(true);
@@ -78,12 +79,23 @@ export function RestaurantNewProductsSettings() {
 
   const updateProduct = async (
     row: NewProduct,
-    changes: Partial<Pick<NewProduct, "remarksEnabled" | "remarksPlaceholder" | "isActive">>,
+    changes: Partial<Pick<NewProduct, "name" | "remarksEnabled" | "remarksPlaceholder" | "isActive">>,
   ) => {
-    const next = { ...row, ...changes };
+    const next = {
+      ...row,
+      ...changes,
+      name: changes.name !== undefined ? changes.name.trim() : row.name,
+    };
+    if (!next.name) {
+      setRows((current) => current.map((item) => (
+        item.id === row.id ? { ...item, name: row.name } : item
+      )));
+      return;
+    }
     setRows((current) => current.map((item) => item.id === row.id ? next : item));
     setSavingIds((current) => new Set(current).add(row.id));
     await supabase.from("restaurant_new_products").update({
+      name: next.name,
       remarks_enabled: next.remarksEnabled,
       remarks_placeholder: next.remarksEnabled && next.remarksPlaceholder.trim()
         ? next.remarksPlaceholder.trim()
@@ -100,18 +112,16 @@ export function RestaurantNewProductsSettings() {
 
   return (
     <section className="restaurant-new-products-settings">
-      <header className="restaurant-new-products-settings-toolbar">
-        {canEdit ? (
-          <Button onClick={() => setAddOpen(true)}>
-            <Plus />
-            {t("restaurantNewProducts.add")}
-          </Button>
-        ) : null}
-      </header>
-
       <div className="restaurant-new-products-settings-table">
         <RestaurantSettingsListTable
-          searchable={false}
+          searchable
+          searchPlaceholder={t("restaurantNewProducts.searchPlaceholder")}
+          toolbarAction={canEdit ? (
+            <Button onClick={() => setAddOpen(true)}>
+              <Plus />
+              {t("restaurantNewProducts.add")}
+            </Button>
+          ) : null}
           loading={loading}
           loadingLabel={t("restaurantNewProducts.loading")}
           skeletonColumns={4}
@@ -126,8 +136,37 @@ export function RestaurantNewProductsSettings() {
           }
         >
           {rows.map((row) => (
-            <tr className={savingIds.has(row.id) ? "is-saving" : undefined} key={row.id}>
-              <td><strong>{row.name}</strong></td>
+            <tr
+              className={savingIds.has(row.id) ? "is-saving" : undefined}
+              data-search={row.name}
+              key={row.id}
+            >
+              <td>
+                {canEdit ? (
+                  <input
+                    className="restaurant-new-products-name-input"
+                    value={draftNames[row.id] ?? row.name}
+                    aria-label={t("restaurantNewProducts.nameFor", { name: row.name })}
+                    placeholder={t("restaurantNewProducts.fields.namePlaceholder")}
+                    onChange={(event) => {
+                      const value = event.target.value;
+                      setDraftNames((current) => ({ ...current, [row.id]: value }));
+                    }}
+                    onBlur={(event) => {
+                      const value = event.target.value.trim();
+                      setDraftNames((current) => {
+                        const next = { ...current };
+                        delete next[row.id];
+                        return next;
+                      });
+                      if (!value || value === row.name) return;
+                      void updateProduct(row, { name: value });
+                    }}
+                  />
+                ) : (
+                  <strong>{row.name}</strong>
+                )}
+              </td>
               <td>
                 {canEdit ? (
                   <Switch

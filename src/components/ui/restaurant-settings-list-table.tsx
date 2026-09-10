@@ -23,9 +23,27 @@ function searchableText(node: ReactNode): string {
   }
   if (Array.isArray(node)) return node.map(searchableText).join(" ");
   if (!isValidElement(node)) return "";
-  return searchableText(
-    (node.props as { children?: ReactNode }).children,
-  );
+  const props = node.props as {
+    children?: ReactNode;
+    value?: unknown;
+    defaultValue?: unknown;
+    "aria-label"?: unknown;
+    placeholder?: unknown;
+    title?: unknown;
+    "data-search"?: unknown;
+  };
+  return [
+    props["data-search"],
+    props.value,
+    props.defaultValue,
+    props["aria-label"],
+    props.placeholder,
+    props.title,
+    searchableText(props.children),
+  ]
+    .filter((part) => part != null && part !== "")
+    .map(String)
+    .join(" ");
 }
 
 export function RestaurantSettingsListTable({
