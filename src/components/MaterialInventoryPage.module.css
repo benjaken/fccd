@@ -9,20 +9,6 @@
   gap: 12px;
 }
 
-.toolbar :global([role="tablist"]) {
-  height: 40px;
-  box-sizing: border-box;
-  align-items: stretch;
-}
-
-.toolbar :global([role="tab"]) {
-  display: inline-flex;
-  align-items: center;
-  height: 100%;
-  padding-block: 0;
-  line-height: 1;
-}
-
 .inventorySearch {
   flex: 1 1 auto;
   width: auto;

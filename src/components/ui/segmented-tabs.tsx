@@ -15,14 +15,18 @@ export function SegmentedTabs<T extends string>({
   onChange: (value: T) => void;
 }) {
   return (
-    <div className="inline-flex shrink-0 rounded-lg bg-muted p-1" role="tablist" aria-label={label}>
+    <div
+      className="inline-flex h-10 shrink-0 items-stretch rounded-lg bg-muted p-1"
+      role="tablist"
+      aria-label={label}
+    >
       {tabs.map((tab) => (
         <button
           key={tab.value}
           type="button"
           role="tab"
           aria-selected={value === tab.value}
-          className={`cursor-pointer whitespace-nowrap rounded-md px-4 py-2 text-sm font-semibold transition-colors ${
+          className={`inline-flex h-full cursor-pointer items-center whitespace-nowrap rounded-md px-4 py-0 text-sm font-semibold leading-none transition-colors ${
             value === tab.value
               ? "bg-background text-foreground shadow-sm"
               : "text-muted-foreground hover:text-foreground"
