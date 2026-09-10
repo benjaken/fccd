@@ -30,7 +30,10 @@ export function supabaseDeploymentBranch(env: object) {
 export function usesDevelopSupabase(env: object) {
   const branch = supabaseDeploymentBranch(env).toLowerCase();
   const vercelEnv = envString(env, "VITE_VERCEL_ENV") || envString(env, "VERCEL_ENV");
-  return branch === "develop" || vercelEnv === "preview";
+  // Only Git `main` / Vercel production use Supabase main.
+  // develop, feature branches, previews, local, and tests use develop.
+  if (vercelEnv === "production" || branch === "main") return false;
+  return true;
 }
 
 export function resolveSupabasePublicConfig(env: object = {}) {

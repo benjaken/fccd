@@ -14,10 +14,10 @@ describe("Supabase configuration", () => {
     vi.resetModules();
   });
 
-  it("uses the production public configuration when deployment variables are absent", () => {
+  it("uses the develop public configuration for non-main branches and missing deployment variables", () => {
     expect(resolveSupabasePublicConfig({})).toEqual({
-      supabaseUrl: PRODUCTION_SUPABASE_URL,
-      supabasePublishableKey: PRODUCTION_SUPABASE_PUBLISHABLE_KEY,
+      supabaseUrl: DEVELOP_SUPABASE_URL,
+      supabasePublishableKey: DEVELOP_SUPABASE_PUBLISHABLE_KEY,
     });
     expect(
       resolveSupabasePublicConfig({
@@ -27,12 +27,12 @@ describe("Supabase configuration", () => {
         VERCEL_ENV: "",
       }),
     ).toEqual({
-      supabaseUrl: PRODUCTION_SUPABASE_URL,
-      supabasePublishableKey: PRODUCTION_SUPABASE_PUBLISHABLE_KEY,
+      supabaseUrl: DEVELOP_SUPABASE_URL,
+      supabasePublishableKey: DEVELOP_SUPABASE_PUBLISHABLE_KEY,
     });
-  });
-
-  it("points develop-branch and Vercel preview builds at the develop Supabase project", () => {
+    expect(resolveSupabasePublicConfig({ VITE_GIT_BRANCH: "feature/orders" }).supabaseUrl).toBe(
+      DEVELOP_SUPABASE_URL,
+    );
     expect(resolveSupabasePublicConfig({ VITE_GIT_BRANCH: "develop" })).toEqual({
       supabaseUrl: DEVELOP_SUPABASE_URL,
       supabasePublishableKey: DEVELOP_SUPABASE_PUBLISHABLE_KEY,
@@ -40,9 +40,19 @@ describe("Supabase configuration", () => {
     expect(resolveSupabasePublicConfig({ VITE_VERCEL_ENV: "preview" }).supabaseUrl).toBe(
       DEVELOP_SUPABASE_URL,
     );
+  });
+
+  it("uses the production public configuration only for main / Vercel production", () => {
+    expect(resolveSupabasePublicConfig({ VITE_GIT_BRANCH: "main" })).toEqual({
+      supabaseUrl: PRODUCTION_SUPABASE_URL,
+      supabasePublishableKey: PRODUCTION_SUPABASE_PUBLISHABLE_KEY,
+    });
+    expect(resolveSupabasePublicConfig({ VERCEL_ENV: "production" }).supabaseUrl).toBe(
+      PRODUCTION_SUPABASE_URL,
+    );
     expect(
       resolveSupabasePublicConfig({
-        VITE_GIT_BRANCH: "develop",
+        VITE_GIT_BRANCH: "main",
         VITE_SUPABASE_URL: "https://example.supabase.co",
         VITE_SUPABASE_PUBLISHABLE_KEY: "sb_publishable_override",
       }),

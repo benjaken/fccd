@@ -137,6 +137,16 @@ function orderPaidAmount(
   return Math.max(0, order.grandTotal - order.outstanding);
 }
 
+
+async function defaultLoadChannels() {
+  const { supabase } = await import("@/lib/supabase");
+  return supabase
+    .from("channels")
+    .select("id,name")
+    .is("archived_at", null)
+    .order("name");
+}
+
 export function OrdersListPage({
   preset = "all",
   canViewFinance = true,
@@ -146,6 +156,8 @@ export function OrdersListPage({
   loadListConfig = fetchOrderListConfigs,
   loadStatusCatalog = fetchOrderStatusCatalog,
   loadFilterOptions = fetchOrderListFilterOptions,
+  loadOrderTags = fetchOrderTags,
+  loadChannels = defaultLoadChannels,
   updateStatuses = updateOrderStatusSelections,
   assignFestivals = assignFestivalToOrders,
   loadCustomerMessages = fetchOrderMessages,
@@ -163,6 +175,8 @@ export function OrdersListPage({
   loadListConfig?: OrderListConfigLoader;
   loadStatusCatalog?: typeof fetchOrderStatusCatalog;
   loadFilterOptions?: typeof fetchOrderListFilterOptions;
+  loadOrderTags?: typeof fetchOrderTags;
+  loadChannels?: typeof defaultLoadChannels;
   updateStatuses?: OrderStatusesUpdater;
   assignFestivals?: FestivalAssigner;
   loadCustomerMessages?: typeof fetchOrderMessages;
@@ -456,10 +470,8 @@ export function OrdersListPage({
   useEffect(() => {
     let active = true;
     void Promise.all([
-      fetchOrderTags().catch(() => []),
-      import("@/lib/supabase").then(({ supabase }) =>
-        supabase.from("channels").select("id,name").is("archived_at", null).order("name"),
-      ).catch(() => ({ data: [] })),
+      loadOrderTags().catch(() => []),
+      loadChannels().catch(() => ({ data: [] })),
     ])
       .then(([tags, brandsResult]) => {
         if (!active) return;
@@ -470,7 +482,7 @@ export function OrdersListPage({
       })
       .catch(() => undefined);
     return () => { active = false; };
-  }, []);
+  }, [loadOrderTags, loadChannels]);
 
   useEffect(() => {
     let active = true;

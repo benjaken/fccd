@@ -16,7 +16,13 @@ FCCD 使用同一個 Supabase 專案的兩個 Supabase Branch（不是 Git 分�
 
 兩個分支都位於 `ap-northeast-1`。未經明確指示，不得從本地 CLI 對 `main` 執行 migration 或部署 Function。
 
-**前端連線（`src/lib/supabase.ts`）**使用環境變數：
+**前端連線（`src/lib/supabase.ts` / `src/lib/supabase-env.ts`）**：
+
+- `Git main` 或 `VERCEL_ENV=production` → Supabase `main`
+- 其他 Git 分支（含 `develop`、feature）、Vercel Preview、本機、Vitest → Supabase `develop`
+- 明確的 `VITE_SUPABASE_*` 永遠覆蓋上述預設
+
+環境變數：
 
 ```env
 VITE_SUPABASE_URL=https://mxiueauyylnpwlxrvgbo.supabase.co
