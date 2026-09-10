@@ -90,10 +90,11 @@ Run checks appropriate to the changed scope. For the frontend baseline:
 
 ```bash
 npm run lint
-npm run test
+npm run test:changed
 npm run build
-npm run verify
 ```
+
+Use `npm run test` or `npm run verify` when you need the full suite.
 
 Then commit and push the branch:
 
