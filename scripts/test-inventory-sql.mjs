@@ -38,6 +38,8 @@ try {
     'test/sql/inventory-forecast-delivery-window.sql',
     'supabase/migrations/20260909260000_restore_remaining_pack_stocktake_units.sql',
     'test/sql/inventory-leftover-pack-units.sql',
+    'supabase/migrations/20260910014636_aggregate_ledger_order_consumptions.sql',
+    'test/sql/inventory-ledger-aggregate.sql',
   ]) {
     const sql = (await readFile(new URL(`../${file}`, import.meta.url), 'utf8'))
       .replace(/^\\set .*$/gm, '');

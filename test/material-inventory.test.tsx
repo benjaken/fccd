@@ -37,6 +37,10 @@ const awaitingDriverMigration = readFileSync(
   "supabase/migrations/20260908170000_consume_materials_when_awaiting_driver.sql",
   "utf8",
 );
+const aggregateLedgerMigration = readFileSync(
+  "supabase/migrations/20260910014636_aggregate_ledger_order_consumptions.sql",
+  "utf8",
+);
 
 describe("material inventory ledger", () => {
   beforeEach(async () => {
@@ -75,6 +79,14 @@ describe("material inventory ledger", () => {
     expect(migration).toContain("material_inventory_ledger");
     expect(migration).toContain("correct_material_current_stock");
     expect(migration).toContain("correction_reason");
+  });
+
+  it("aggregates same-order line consumptions in the ledger", () => {
+    expect(aggregateLedgerMigration).toContain("group by");
+    expect(aggregateLedgerMigration).toContain("-sum(consumption.quantity)");
+    expect(aggregateLedgerMigration).toContain("orders.order_number");
+    expect(aggregateLedgerMigration).toContain("consumption.consumed_at");
+    expect(aggregateLedgerMigration).toContain("consumption.calculation_source");
   });
 
   it("shows ingredient and packaging tabs, ledger detail, and stock correction", async () => {
