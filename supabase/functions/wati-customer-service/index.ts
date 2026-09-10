@@ -178,6 +178,7 @@ type ReplyTemplates = Partial<
   Record<
     | "help"
     | "handoff"
+    | "same_day_urgent"
     | "collect_prompt"
     | "collect_more"
     | "collect_done"
@@ -959,6 +960,26 @@ async function sendInternalEmail(to: string[], subject: string, html: string) {
   }
 }
 
+/** Develop-branch lab recipient for internal WATI staff alerts. */
+const DEVELOP_INTERNAL_WATI_PHONE = "8613828747224";
+
+function resolveInternalWatiPhones(
+  candidates: string[],
+  guestPhone: string,
+  environment: string,
+) {
+  const phones = [
+    ...new Set(
+      candidates
+        .map((phone) => normalizeNotificationPhone(phone))
+        .filter((phone) => Boolean(phone) && phone !== guestPhone),
+    ),
+  ];
+  if (environment !== "develop") return phones;
+  // Develop must not blast production staff — only the pilot phone.
+  return [DEVELOP_INTERNAL_WATI_PHONE];
+}
+
 async function notifyInternal(
   admin: AdminClient,
   input: {
@@ -967,20 +988,23 @@ async function notifyInternal(
     orderNumber: string | null;
     summary: string;
     kind?: "inquiry" | "order_handoff";
+    urgent?: boolean;
   },
 ) {
   let delivered = false;
   const guestPhone = normalizeNotificationPhone(input.phone);
+  const environment = deploymentEnvironment();
   const appUrl = env("APP_URL").replace(/\/$/, "");
   const detailUrl =
     appUrl && input.quoteId
       ? `${appUrl}/${input.kind === "order_handoff" ? "orders" : "quotes"}/${input.quoteId}`
       : "";
   const contentInput = {
-    formTitle:
-      input.kind === "order_handoff"
-        ? "WhatsApp 客服人工跟進"
-        : "WhatsApp 到會意見",
+    formTitle: input.urgent
+      ? "【緊急】WhatsApp 即日訂餐"
+      : input.kind === "order_handoff"
+      ? "WhatsApp 客服人工跟進"
+      : "WhatsApp 到會意見",
     referenceCode: input.orderNumber || input.quoteId || input.phone,
     customerName: "WhatsApp 客人",
     phone: input.phone,
@@ -988,43 +1012,43 @@ async function notifyInternal(
     detailUrl,
   };
 
-  const { data: recipients, error } = await admin.rpc(
-    "enquiry_internal_email_recipients",
-  );
-  if (error) throw error;
-  const addresses = [
-    ...new Set(
-      ((recipients || []) as Array<{ recipient_address?: string }>)
-        .map((item) => (item.recipient_address || "").trim().toLowerCase())
-        .filter(
-          (address) =>
-            address &&
-            excludeGuestContacts([address], guestPhone).length > 0,
-        ),
-    ),
-  ];
-  if (addresses.length) {
-    const mail = buildEnquiryInternalContent(contentInput);
-    await sendInternalEmail(addresses, mail.subject, mail.html);
-    delivered = true;
+  // Production keeps email fan-out; develop lab is WATI-only to the pilot phone.
+  if (environment !== "develop") {
+    const { data: recipients, error } = await admin.rpc(
+      "enquiry_internal_email_recipients",
+    );
+    if (error) throw error;
+    const addresses = [
+      ...new Set(
+        ((recipients || []) as Array<{ recipient_address?: string }>)
+          .map((item) => (item.recipient_address || "").trim().toLowerCase())
+          .filter(
+            (address) =>
+              address &&
+              excludeGuestContacts([address], guestPhone).length > 0,
+          ),
+      ),
+    ];
+    if (addresses.length) {
+      const mail = buildEnquiryInternalContent(contentInput);
+      await sendInternalEmail(addresses, mail.subject, mail.html);
+      delivered = true;
+    }
   }
 
-  if (watiEmergencySwitchAllows("WATI_ENQUIRY_INTERNAL_ENABLED")) {
+  if (
+    environment === "develop" ||
+    watiEmergencySwitchAllows("WATI_ENQUIRY_INTERNAL_ENABLED")
+  ) {
     const { data: staff, error: staffError } = await admin
       .from("order_first_notification_recipients")
       .select("phone");
     if (staffError) throw staffError;
-    const phones = [
-      ...new Set(
-        ((staff || []) as Array<{ phone?: string }>)
-          .map((item) => normalizeNotificationPhone(item.phone))
-          .filter(
-            (phone) =>
-              Boolean(phone) &&
-              phone !== guestPhone,
-          ),
-      ),
-    ];
+    const phones = resolveInternalWatiPhones(
+      ((staff || []) as Array<{ phone?: string }>).map((item) => item.phone || ""),
+      guestPhone,
+      environment,
+    );
     const parameters = buildEnquiryInternalWatiParameters(contentInput);
     const endpoint = requiredEnv("WATI_API_ENDPOINT").replace(/\/$/, "");
     const token = requiredEnv("WATI_API_TOKEN");
@@ -1063,21 +1087,63 @@ type HandoffNotificationInput = {
   orderNumber: string | null;
   summary: string;
   kind?: "inquiry" | "order_handoff";
+  urgent?: boolean;
 };
 
 async function queueInternalHandoff(
   admin: AdminClient,
   input: HandoffNotificationInput,
 ) {
-  const { error } = await admin.rpc("customer_service_handoff_enqueue", {
-    p_environment: deploymentEnvironment(),
-    p_phone: input.phone,
-    p_order_id: input.quoteId,
-    p_order_number: input.orderNumber,
-    p_summary: input.summary,
-    p_kind: input.kind || "order_handoff",
-  });
+  const { data: handoffId, error } = await admin.rpc(
+    "customer_service_handoff_enqueue",
+    {
+      p_environment: deploymentEnvironment(),
+      p_phone: input.phone,
+      p_order_id: input.quoteId,
+      p_order_number: input.orderNumber,
+      p_summary: input.summary,
+      p_kind: input.kind || "order_handoff",
+      p_notify_immediately: Boolean(input.urgent),
+    },
+  );
   if (error) throw error;
+  if (!input.urgent || !handoffId) return;
+
+  const { data: existing, error: existingError } = await admin
+    .from("customer_service_handoff_requests")
+    .select("id,status,notified_at")
+    .eq("id", handoffId)
+    .maybeSingle();
+  if (existingError) throw existingError;
+  if (
+    existing?.status === "notified" ||
+    existing?.status === "in_progress" ||
+    existing?.status === "processing"
+  ) {
+    // Staff already received (or are handling) this phone's active handoff.
+    return;
+  }
+
+  await notifyInternal(admin, {
+    phone: input.phone,
+    quoteId: input.quoteId,
+    orderNumber: input.orderNumber,
+    summary: input.summary,
+    kind: input.kind || "inquiry",
+    urgent: true,
+  });
+  const now = new Date().toISOString();
+  const { error: updateError } = await admin
+    .from("customer_service_handoff_requests")
+    .update({
+      status: "notified",
+      notified_at: now,
+      last_error: null,
+      updated_at: now,
+    })
+    .eq("id", handoffId)
+    .in("status", ["pending", "failed"]);
+  if (updateError) throw updateError;
 }
 
 async function processHandoffDigest(request: Request) {
@@ -1343,6 +1409,7 @@ function createBotDeps(
       orderNumber: string | null;
       summary: string;
       kind?: "inquiry" | "order_handoff";
+      urgent?: boolean;
     }) {
       if (dryRun) return;
       await mutationGuard?.();

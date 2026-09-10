@@ -1,11 +1,15 @@
 import {
   classifyCustomerServiceMessage,
   customerServiceMenuFaqQuery,
+  extractInquirySlots,
   extractRequestedOrderFields,
   hasCollectableSlots,
+  hongKongCalendarDate,
   isCustomerServiceGreeting,
+  isHongKongCalendarDateToday,
   isMenuInformationRequest,
   isOrderConfirmationAcknowledgement,
+  isSameDayOrderDemand,
   normalizeCustomerServiceOrderNumber,
   type ClassifiedMessage,
   type InquirySlots,
@@ -103,6 +107,7 @@ export type CustomerServiceBotDeps = {
     Record<
       | "help"
       | "handoff"
+      | "same_day_urgent"
       | "collect_prompt"
       | "collect_more"
       | "collect_done"
@@ -139,6 +144,8 @@ export type CustomerServiceBotDeps = {
     orderNumber: string | null;
     summary: string;
     kind?: "inquiry" | "order_handoff";
+    /** Same-day / urgent catering: notify staff via WATI immediately. */
+    urgent?: boolean;
   }) => Promise<void>;
   cancelHandoff: (phone: string) => Promise<boolean>;
 };
@@ -693,6 +700,7 @@ async function replyCollect(
   phone: string,
   classified: ClassifiedMessage,
   conversation: CustomerServiceConversation,
+  text: string,
 ): Promise<BotTurn> {
   const saved = conversation.workflow_slots ?? {};
   const slots: InquirySlots = {
@@ -720,6 +728,10 @@ async function replyCollect(
       usedModel: classified.usedModel,
     };
   }
+  const sameDayDemand = isSameDayOrderDemand(text);
+  if (!slots.eventDate && sameDayDemand) {
+    slots.eventDate = hongKongCalendarDate();
+  }
   const written = await deps.writeInquiry(
     phone,
     slots,
@@ -734,22 +746,29 @@ async function replyCollect(
   ]
     .filter(Boolean)
     .join("，");
+  const urgent = sameDayDemand || isHongKongCalendarDateToday(slots.eventDate);
   await deps.queueHandoff({
     phone,
     quoteId: written.quote_id,
     orderNumber: written.order_number,
-    summary,
+    summary: urgent ? `【緊急即日】${summary}` : summary,
+    kind: "inquiry",
+    urgent,
   });
   const restored = deps.workflowAutoResume?.catering_inquiry === false
     ? null
     : restoreSuspendedConversation(conversation);
   return {
-    reply: `${configuredReply(deps, "collect_done", REPLIES.collectDone)}${
+    reply: `${
+      urgent
+        ? configuredReply(deps, "same_day_urgent", REPLIES.sameDayUrgent)
+        : configuredReply(deps, "collect_done", REPLIES.collectDone)
+    }${
       restored ? " 已返回上一個未完成事項。" : ""
     }`,
     conversation: restored ?? resetPilotConversation(conversation),
     wroteInquiry: true,
-    notified: false,
+    notified: urgent,
     queuedHandoff: true,
     usedModel: classified.usedModel,
   };
@@ -952,6 +971,37 @@ export async function handleCustomerServiceTurn({
     };
   }
 
+  // Same-day / urgent order demand must not be swallowed by Express FAQ and
+  // must notify staff immediately (not deferred to the 09:00 HKT digest).
+  // If date/headcount are already present, continue into collect so a quote is written.
+  if (
+    isSameDayOrderDemand(text) &&
+    !hasCollectableSlots(extractInquirySlots(text))
+  ) {
+    await deps.queueHandoff({
+      phone,
+      quoteId: null,
+      orderNumber: null,
+      summary: `【緊急即日】客戶即日訂餐需求：${text.trim().slice(0, 500)}`,
+      kind: "inquiry",
+      urgent: true,
+    });
+    return {
+      reply: configuredReply(deps, "same_day_urgent", REPLIES.sameDayUrgent),
+      conversation: nextConversation(conversation, {
+        state: "awaiting_human",
+        handoff_at: new Date().toISOString(),
+      }),
+      wroteInquiry: false,
+      notified: true,
+      queuedHandoff: true,
+      usedModel: false,
+      intentKey: "kitchen_confirmation",
+      toolKeys: ["notify_internal"],
+      failureReason: null,
+    };
+  }
+
   const faqSearchCache = new Map<string, Promise<CustomerServiceFaqHit[]>>();
   const searchFaqsOnce = (query: string) => {
     const key = normalizedFaqText(query);
@@ -972,32 +1022,36 @@ export async function handleCustomerServiceTurn({
   // Published, strongly matching FAQ knowledge is authoritative for stable
   // public information. Resolve it before intent classification so words such
   // as "廚師" do not get mistaken for a request requiring kitchen approval.
-  try {
-    const asksForMenu = isMenuInformationRequest(text);
-    const menuQuery = asksForMenu ? customerServiceMenuFaqQuery(text) : "";
-    const faqHits = await searchFaqsOnce(asksForMenu ? menuQuery : text);
-    const preferredFaq = asksForMenu
-      ? faqHits.find((hit) => strongPublishedFaqMatch(menuQuery, hit)) ??
-        faqHits.find(isMenuFaq)
-      : faqHits.find((hit) => strongPublishedFaqMatch(text, hit));
-    if (preferredFaq) {
-      return {
-        reply: faqReply(preferredFaq.answer),
-        conversation,
-        wroteInquiry: false,
-        notified: false,
-        usedModel: false,
-        intentKey: asksForMenu ? "browse_menu" : "search_faq",
-        toolKeys: ["search_faqs"],
-        faqSourceIds: [preferredFaq.id],
-        failureReason: null,
-      };
+  // Same-day order demand still bypasses FAQ so Express how-to copy cannot
+  // swallow an urgent booking request that already includes slots.
+  if (!isSameDayOrderDemand(text)) {
+    try {
+      const asksForMenu = isMenuInformationRequest(text);
+      const menuQuery = asksForMenu ? customerServiceMenuFaqQuery(text) : "";
+      const faqHits = await searchFaqsOnce(asksForMenu ? menuQuery : text);
+      const preferredFaq = asksForMenu
+        ? faqHits.find((hit) => strongPublishedFaqMatch(menuQuery, hit)) ??
+          faqHits.find(isMenuFaq)
+        : faqHits.find((hit) => strongPublishedFaqMatch(text, hit));
+      if (preferredFaq) {
+        return {
+          reply: faqReply(preferredFaq.answer),
+          conversation,
+          wroteInquiry: false,
+          notified: false,
+          usedModel: false,
+          intentKey: asksForMenu ? "browse_menu" : "search_faq",
+          toolKeys: ["search_faqs"],
+          faqSourceIds: [preferredFaq.id],
+          failureReason: null,
+        };
+      }
+    } catch (error) {
+      console.error(
+        "customer-service FAQ preflight failed",
+        error instanceof Error ? error.message.slice(0, 200) : String(error),
+      );
     }
-  } catch (error) {
-    console.error(
-      "customer-service FAQ preflight failed",
-      error instanceof Error ? error.message.slice(0, 200) : String(error),
-    );
   }
 
   const modelClassified = await classify(text);
@@ -1129,21 +1183,27 @@ export async function handleCustomerServiceTurn({
     });
   }
   if (classified.intent === "handoff") {
+    const urgent = isSameDayOrderDemand(text) ||
+      (classified.configuredIntentKey === "kitchen_confirmation" &&
+        /即日|今日|今天|急單|same\s*day|today/i.test(text));
     await deps.queueHandoff({
       phone,
       quoteId: null,
       orderNumber: null,
-      summary: `客戶要求人工協助：${text.trim().slice(0, 500)}`,
-      kind: "order_handoff",
+      summary: `${urgent ? "【緊急即日】" : ""}客戶要求人工協助：${text.trim().slice(0, 500)}`,
+      kind: urgent ? "inquiry" : "order_handoff",
+      urgent,
     });
     return annotate({
-      reply: configuredReply(deps, "handoff", REPLIES.handoff),
+      reply: urgent
+        ? configuredReply(deps, "same_day_urgent", REPLIES.sameDayUrgent)
+        : configuredReply(deps, "handoff", REPLIES.handoff),
       conversation: nextConversation(routedConversation, {
         state: "awaiting_human",
         handoff_at: new Date().toISOString(),
       }),
       wroteInquiry: false,
-      notified: false,
+      notified: urgent,
       queuedHandoff: true,
       usedModel: classified.usedModel,
     });
@@ -1160,7 +1220,7 @@ export async function handleCustomerServiceTurn({
     classified.intent === "collect_inquiry" ||
     pilotAction === "continue_catering"
   ) {
-    return annotate(await replyCollect(deps, phone, classified, routedConversation));
+    return annotate(await replyCollect(deps, phone, classified, routedConversation, text));
   }
   const faqQuery = classified.configuredIntentKey === "browse_menu" ||
       isMenuInformationRequest(text)
