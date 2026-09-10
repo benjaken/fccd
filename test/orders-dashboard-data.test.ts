@@ -112,7 +112,7 @@ describe("orders dashboard data", () => {
     )).toBe(true);
     expect(eqFilters).toContainEqual(["is_sent_to_factory", false]);
     expect(eqFilters).toContainEqual(["do_not_send_to_factory", false]);
-    expect(gtFilters).toContainEqual(["grand_total", 0]);
+    expect(gtFilters).not.toContainEqual(["grand_total", 0]);
     expect(
       orFilters.filter((filter) =>
         filter.includes('quote_status.not.in.("Done Deal","Case Closed")'),

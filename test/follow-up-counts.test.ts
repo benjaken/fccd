@@ -92,6 +92,7 @@ describe("follow-up menu counts", () => {
     expect(filters).toContainEqual(["eq", "delivery_status", "待接單"]);
     expect(filters).toContainEqual(["eq", "is_sent_to_factory", false]);
     expect(filters).toContainEqual(["gt", "outstanding", 0]);
+    expect(filters).not.toContainEqual(["gt", "grand_total", 0]);
     expect(filters).toContainEqual([
       "gte",
       "delivery_at",
