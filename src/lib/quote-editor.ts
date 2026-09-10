@@ -1,5 +1,6 @@
 import { supabase } from "@/lib/supabase";
 import { hongKongDateKey } from "@/lib/date-time";
+import { createDeliveryDistrictOption } from "@/lib/delivery-districts";
 import { productListDisplayName } from "@/lib/products";
 import type { OrderFactorySettings } from "@/lib/order-factory-settings";
 import type { QuotePdfSupplementDraft } from "@/lib/quote-pdf-draft";
@@ -301,29 +302,10 @@ export async function createQuote(input: QuoteDraft): Promise<CreatedQuote> {
 async function resolveDeliveryDistrictId(input: QuoteDraft) {
   let districtId = input.districtId || null;
   if (!districtId && input.districtName.trim()) {
-    const { data: district, error } = await supabase
-      .from("delivery_districts")
-      .select("id")
-      .ilike("name", input.districtName.trim())
-      .is("archived_at", null)
-      .limit(1)
-      .maybeSingle();
-    if (error) throw error;
-    districtId = district?.id || null;
-    if (!districtId) {
-      const createdDistrictId = crypto.randomUUID();
-      const { data: createdDistrict, error: createError } = await supabase
-        .from("delivery_districts")
-        .insert({
-          id: createdDistrictId,
-          legacy_id: `web-auto-district-${createdDistrictId}`,
-          name: input.districtName.trim(),
-        })
-        .select("id")
-        .single();
-      if (createError) throw createError;
-      districtId = createdDistrict.id;
-    }
+    // Quote managers may lack settings.districts.edit, so create through the
+    // security-definer helper instead of a direct table insert.
+    const district = await createDeliveryDistrictOption(input.districtName);
+    districtId = district.id;
   }
   return districtId;
 }
@@ -822,15 +804,8 @@ export async function updateQuote(
 ) {
   let districtId = input.districtId || null;
   if (!districtId && input.districtName.trim()) {
-    const { data: district, error: districtError } = await supabase
-      .from("delivery_districts")
-      .select("id")
-      .ilike("name", input.districtName.trim())
-      .is("archived_at", null)
-      .limit(1)
-      .maybeSingle();
-    if (districtError) throw districtError;
-    districtId = district?.id || null;
+    const district = await createDeliveryDistrictOption(input.districtName);
+    districtId = district.id;
   }
   const deliveryAt = input.deliveryDate
     ? `${input.deliveryDate}T00:00:00+08:00`
