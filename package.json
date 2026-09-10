@@ -9,7 +9,7 @@
   },
   "scripts": {
     "dev": "vite",
-    "build": "npm run check:edge-functions && tsc -b && vite build",
+    "build": "npm run test:changed && npm run check:edge-functions && tsc -b && vite build",
     "verify": "npm run test && npm run check:edge-functions && tsc -b",
     "lint": "tsc -b --pretty false",
     "preview": "vite preview",

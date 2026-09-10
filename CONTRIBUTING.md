@@ -80,9 +80,9 @@ Test files must:
 - remain deterministic and must not call production services or mutate
   production data.
 
-Run the complete automated suite with `npm test` or `npm run verify` before
-integrating. `npm run build` only typechecks and bundles so Vercel deploys
-are not blocked by the full Vitest suite.
+Run the tests for pages/modules in the current change with `npm run test:changed`
+(also runs as the first step of `npm run build`). Use `npm test` or
+`npm run verify` for the full suite.
 
 ## Completing work
 
@@ -94,7 +94,8 @@ npm run test:changed
 npm run build
 ```
 
-Use `npm run test` or `npm run verify` when you need the full suite.
+Use `npm run test` or `npm run verify` when you need the full suite. `npm run build`
+already runs `test:changed` for the pages touched by the current commit.
 
 Then commit and push the branch:
 

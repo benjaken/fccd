@@ -49,6 +49,10 @@ describe("test:changed mapping", () => {
     ]);
   });
 
+  it("includes the page test when a supporting lib changes", () => {
+    expect(related(["src/lib/quote-editor.ts"])).toContain("test/quote-editor-page.test.tsx");
+  });
+
   it("maps a changed test file to itself", () => {
     expect(related(["test/quote-editor-page.test.tsx"])).toEqual([
       "test/quote-editor-page.test.tsx",

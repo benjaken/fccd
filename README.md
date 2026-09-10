@@ -55,9 +55,9 @@ npm run test:changed
 npm run build
 ```
 
-UI test cases are stored in [`test/`](test/). `npm run test:changed` runs tests
-for the current commit or uncommitted files. Use `npm run verify` for the
-full suite plus typechecks. `npm run build` only compiles the bundle.
+UI test cases are stored in [`test/`](test/). `npm run build` runs
+`test:changed` first — only tests for pages/modules in the current commit.
+Use `npm run verify` for the full suite plus typechecks.
 
 The initial layout includes FCCD (Food Channel Catering Delivery) branding,
 responsive navigation, Traditional Chinese and English localization, dark mode,

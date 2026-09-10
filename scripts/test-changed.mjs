@@ -65,6 +65,19 @@ function stemMatchesTest(stem, testFile) {
   return false;
 }
 
+function isPageTest(testFile) {
+  return /(?:^|[-/])page\.test\.(tsx?|jsx?)$/.test(testFile)
+    || testName(testFile).endsWith("-page");
+}
+
+function pageStem(file) {
+  const relative = file.replaceAll("\\", "/");
+  const base = path.parse(relative).name;
+  const kebab = kebabCase(base).replace(/-page$/, "");
+  if (relative.includes("/components/") && /Page$/.test(base)) return kebab;
+  return null;
+}
+
 export function selectRelatedTests(changedFiles, testFiles, readText = () => "") {
   const tests = testFiles.map((file) => file.replaceAll("\\", "/"));
   const selected = new Set();
@@ -80,6 +93,15 @@ export function selectRelatedTests(changedFiles, testFiles, readText = () => "")
     for (const stem of sourceStems(file)) {
       for (const testFile of tests) {
         if (stemMatchesTest(stem, testFile)) selected.add(testFile);
+      }
+    }
+
+    const page = pageStem(file);
+    if (page) {
+      for (const testFile of tests) {
+        if (testName(testFile) === `${page}-page` || testName(testFile) === page) {
+          selected.add(testFile);
+        }
       }
     }
 
@@ -178,8 +200,12 @@ async function main() {
   }
   console.log(`Changed files (${changed.length}):\n${changed.map((file) => `  ${file}`).join("\n")}`);
   if (!related.length) {
-    console.log("No matching module tests. Skip (use npm test for the full suite).");
+    console.log("No matching page/module tests for this change. Use npm test for the full suite.");
     return 0;
+  }
+  const pageTests = related.filter(isPageTest);
+  if (pageTests.length) {
+    console.log(`Page tests (${pageTests.length}):\n${pageTests.map((file) => `  ${file}`).join("\n")}`);
   }
   console.log(`Running ${related.length} test file(s):\n${related.map((file) => `  ${file}`).join("\n")}`);
   if (options.dryRun) return 0;
