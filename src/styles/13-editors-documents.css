@@ -63,12 +63,16 @@
 .order-editor-payment-status {
   --payment-status-accent: #c93636;
 
-  position: fixed;
-  z-index: 100;
-  top: calc(var(--topbar-height) + var(--workspace-height) + 96px);
-  right: 28px;
+  /* Stay in the page heading until the step nav sticks. A permanent fixed
+     offset lands on the step tabs at the top of the page and looks "錯位". */
+  position: relative;
+  z-index: 40;
+  top: auto;
+  right: auto;
   display: flex;
+  flex: 0 0 auto;
   align-items: center;
+  align-self: flex-start;
   gap: 13px;
   min-width: 245px;
   padding: 15px 18px;
@@ -82,7 +86,11 @@
 }
 
 .order-editor-payment-status.is-navigation-stuck {
+  /* Sticky step nav sits at topbar + workspace + 12px and is ~72px tall. */
+  position: fixed;
   top: calc(var(--topbar-height) + var(--workspace-height) + 96px);
+  right: 28px;
+  z-index: 100;
   display: grid;
   grid-template-columns: 42px minmax(0, 1fr);
   max-width: min(420px, calc(100vw - 32px));
@@ -881,14 +889,13 @@
   }
 
   .order-editor-payment-status {
-    top: calc(var(--topbar-height) + 62px);
-    right: 14px;
     min-width: 205px;
     padding: 11px 13px;
   }
 
   .order-editor-payment-status.is-navigation-stuck {
     top: calc(var(--topbar-height) + 96px);
+    right: 14px;
   }
 
   .order-editor-payment-status-icon {
