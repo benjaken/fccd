@@ -123,13 +123,8 @@
 }
 
 .quote-editor-heading {
-  align-items: flex-start;
+  align-items: flex-end;
   flex-wrap: wrap;
-  gap: 16px 24px;
-}
-
-.quote-editor-heading .order-editor-payment-status:not(.is-navigation-stuck) {
-  margin-left: auto;
 }
 
 .quote-detail-actions {
