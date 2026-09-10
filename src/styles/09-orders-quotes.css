@@ -123,8 +123,52 @@
 }
 
 .quote-editor-heading {
-  align-items: flex-end;
+  align-items: flex-start;
   flex-wrap: wrap;
+  gap: 12px 16px;
+  margin-bottom: 12px;
+}
+
+.quote-editor-step-row {
+  display: flex;
+  align-items: stretch;
+  gap: 16px;
+  position: sticky;
+  z-index: 30;
+  top: calc(var(--topbar-height) + var(--workspace-height) + 12px);
+}
+
+.quote-editor-step-row .quote-editor-section-navigation {
+  position: relative;
+  top: auto;
+  flex: 1 1 auto;
+  min-width: 0;
+  box-shadow: 0 8px 18px color-mix(in oklch, var(--foreground) 8%, transparent);
+}
+
+.quote-editor-step-row:not(.has-payment-status) .quote-editor-section-navigation.is-quote {
+  flex: 0 1 auto;
+}
+
+.quote-editor-payment-anchor {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: flex-end;
+  width: min(280px, 34vw);
+  transition: width 200ms ease;
+}
+
+.quote-editor-payment-anchor.is-stuck {
+  width: 0;
+  min-width: 0;
+  margin: 0;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.quote-editor-payment-anchor.is-stuck .order-editor-payment-status {
+  pointer-events: auto;
 }
 
 .quote-detail-actions {
@@ -212,6 +256,20 @@
   .quote-editor-tabs {
     width: 100%;
     min-width: 0;
+  }
+
+  .quote-editor-step-row {
+    top: calc(var(--topbar-height) + 12px);
+    flex-wrap: wrap;
+  }
+
+  .quote-editor-payment-anchor {
+    width: 100%;
+    justify-content: flex-end;
+  }
+
+  .quote-editor-payment-anchor.is-stuck {
+    width: 0;
   }
 
   .quote-editor-section-navigation {
