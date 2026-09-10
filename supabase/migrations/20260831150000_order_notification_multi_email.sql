@@ -253,45 +253,10 @@ begin
 end;
 $$;
 
-create or replace function public.enqueue_driver_assignment_internal_reminders(p_reminder_date date)
-returns integer
-language plpgsql
-security definer
-set search_path = public, private, pg_temp
-as $$
-declare
-  v_inserted integer;
-  v_whatsapp_inserted integer;
-begin
-  if p_reminder_date is null then
-    raise exception 'reminder_date_required' using errcode = '22004';
-  end if;
-
-  insert into public.driver_assignment_internal_reminder_outbox (
-    reminder_date, channel, recipient_key, recipient_name, recipient_address
-  )
-  select p_reminder_date, 'email', recipient.recipient_key,
-    recipient.recipient_name, recipient.recipient_address
-  from private.order_email_notification_recipients() recipient
-  on conflict (reminder_date, channel, recipient_key) do nothing;
-  get diagnostics v_inserted = row_count;
-
-  insert into public.driver_assignment_internal_reminder_outbox (
-    reminder_date, channel, recipient_key, recipient_name, recipient_address
-  )
-  select p_reminder_date, 'whatsapp', recipient.id::text, recipient.name, recipient.phone
-  from public.order_first_notification_recipients recipient
-  on conflict (reminder_date, channel, recipient_key) do nothing;
-  get diagnostics v_whatsapp_inserted = row_count;
-
-  return v_inserted + v_whatsapp_inserted;
-end;
-$$;
-
-revoke all on function public.enqueue_driver_assignment_internal_reminders(date)
-  from public, anon, authenticated;
-grant execute on function public.enqueue_driver_assignment_internal_reminders(date)
-  to service_role;
+-- Keep the (date, smallint) enqueue signature introduced by
+-- 20260831133000_repeat_driver_assignment_reminders. Recreating the 1-arg
+-- overload here previously caused PostgREST 404s when the Edge Function posted
+-- both p_reminder_date and p_reminder_hour.
 
 create or replace function private.enqueue_order_reconciliation_alerts(
   p_now timestamptz,
