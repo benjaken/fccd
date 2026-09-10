@@ -59,10 +59,12 @@ describe("customer-service backend conversation preview", () => {
     expect(source).not.toContain("notificationRecipientAllowlist");
   });
 
-  it("queues handoffs and only sends them from the authenticated morning digest", () => {
-    expect(source).toContain('admin.rpc("customer_service_handoff_enqueue"');
+  it("queues handoffs for the morning digest and sends same-day urgent ones immediately", () => {
+    expect(source).toContain("customer_service_handoff_enqueue");
+    expect(source).toContain("p_notify_immediately: Boolean(input.urgent)");
     expect(source).toContain('payload.mode === "handoff_digest"');
     expect(source).toContain('admin.rpc("customer_service_handoff_claim"');
     expect(source).toContain('status: "notified"');
+    expect(source).toContain("【緊急】WhatsApp 即日訂餐");
   });
 });

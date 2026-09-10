@@ -227,6 +227,47 @@ export function isCustomerServiceGreeting(text: string) {
   return GREETING.test(text.trim());
 }
 
+/** Hong Kong calendar date YYYY-MM-DD for a given instant. */
+export function hongKongCalendarDate(now: Date = new Date()) {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Hong_Kong",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(now);
+}
+
+export function isHongKongCalendarDateToday(
+  value: string | null | undefined,
+  now: Date = new Date(),
+) {
+  const date = (value ?? "").trim();
+  return /^\d{4}-\d{2}-\d{2}$/.test(date) && date === hongKongCalendarDate(now);
+}
+
+/**
+ * Clear same-day / urgent catering order demand (not a pure how-to FAQ).
+ * Used to bypass Express FAQ preflight and trigger immediate staff WATI.
+ */
+export function isSameDayOrderDemand(text: string) {
+  const body = text.trim();
+  if (!body) return false;
+  const sameDay =
+    /即日|今日|今天|急單|same\s*day|today/i.test(body);
+  if (!sameDay) return false;
+  const demand =
+    /急單|(?:即日|今日|今天).{0,12}(?:訂|落單|叫|要餐|要送|到會)|(?:想|要|幫我|可以|可唔可以|做唔做(?:到)?|得唔得).{0,16}(?:即日|今日|今天|急)|(?:訂|落|叫).{0,10}(?:即日|今日|今天)|(?:今日|今天|即日)(?:想|要)?(?:訂餐|訂到會|到會)/i
+      .test(body);
+  if (!demand) return false;
+  // Pure how-to / menu browse stays on FAQ unless the guest also asks us to place/confirm an urgent order.
+  const pureHowto =
+    /(?:點(?:樣)?(?:喺|在)?(?:網站)?落單|點樣訂|how\s*to\s*order|有冇餐牌|餐牌可以睇|運費)/i
+      .test(body) &&
+    !/(?:急單|幫我訂|幫我落|想即日訂|今日想訂|今天想訂|即日想訂|做唔做到|得唔得)/i
+      .test(body);
+  return !pureHowto;
+}
+
 export function classifyCustomerServiceMessage(text: string): ClassifiedMessage {
   const body = text.trim();
   const slots = extractInquirySlots(body);
