@@ -2959,6 +2959,7 @@ const resources = {
           customerRequired: "未能儲存報價表，請填寫客人或公司名稱。",
           districtPermission: "未能儲存報價表，目前帳號無法新增運送地區。",
           line: "未能更新貨品，請重試。", invalidLine: "數量須為 0 或以上的整數，單價不可小於 0。",
+          paymentInvalid: "未能儲存；請完整填寫收款日期、付款方式及金額。",
           convert: "未能轉成訂單，請確認報價資料後重試。",
         },
         items: {
@@ -8969,6 +8970,7 @@ const resources = {
           customerRequired: "The quote could not be saved. Enter a customer or company name.",
           districtPermission: "The quote could not be saved because this account cannot create delivery districts.",
           line: "The product could not be updated. Please retry.", invalidLine: "Quantity must be a whole number of 0 or more and price cannot be negative.",
+          paymentInvalid: "Could not save. Complete each payment date, method, and amount.",
           convert: "The quote could not be converted to an order. Check the quote details and retry.",
         },
         items: {
