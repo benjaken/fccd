@@ -67,4 +67,12 @@ describe("customer-service backend conversation preview", () => {
     expect(source).toContain('status: "notified"');
     expect(source).toContain("【緊急】WhatsApp 即日訂餐");
   });
+
+  it("limits develop internal WATI staff alerts to the pilot phone only", () => {
+    expect(source).toContain('const DEVELOP_INTERNAL_WATI_PHONE = "8613828747224"');
+    expect(source).toContain("function resolveInternalWatiPhones");
+    expect(source).toContain("return [DEVELOP_INTERNAL_WATI_PHONE]");
+    expect(source).toContain('environment === "develop" ||');
+    expect(source).toContain("environment !== \"develop\"");
+  });
 });

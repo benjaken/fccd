@@ -3,6 +3,8 @@ import { resolve } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
+import { REPLIES } from "../supabase/functions/_shared/customer-service-replies.ts";
+
 const deferredSql = readFileSync(
   resolve(
     process.cwd(),
@@ -15,6 +17,14 @@ const urgentSql = readFileSync(
   resolve(
     process.cwd(),
     "supabase/migrations/20260910054000_customer_service_same_day_urgent_handoff.sql",
+  ),
+  "utf8",
+);
+
+const brandSitesSql = readFileSync(
+  resolve(
+    process.cwd(),
+    "supabase/migrations/20260911023000_customer_service_same_day_urgent_brand_sites.sql",
   ),
   "utf8",
 );
@@ -57,5 +67,18 @@ describe("deferred customer-service handoffs", () => {
     expect(urgentSql).toContain("when coalesce(p_notify_immediately, false)");
     expect(urgentSql).toContain("same_day_urgent");
     expect(urgentSql).toContain("即日訂餐");
+  });
+
+  it("lists each brand ordering site in the same-day urgent reply", () => {
+    for (const sql of [urgentSql, brandSitesSql]) {
+      expect(sql).toContain("foodchannels-express.com");
+      expect(sql).toContain("foodchannels-catering.com");
+      expect(sql).toContain("hklunchbox.com");
+      expect(sql).toContain("hkpartyfood.com");
+    }
+    expect(REPLIES.sameDayUrgent).toContain("foodchannels-express.com");
+    expect(REPLIES.sameDayUrgent).toContain("foodchannels-catering.com");
+    expect(REPLIES.sameDayUrgent).toContain("hklunchbox.com");
+    expect(REPLIES.sameDayUrgent).toContain("hkpartyfood.com");
   });
 });

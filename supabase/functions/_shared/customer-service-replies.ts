@@ -8,7 +8,7 @@ export const REPLIES = {
   handoff:
     "唔好意思，呢個問題需要同事處理。我已經幫你記錄，客服會喺上午 9 點後跟進；你可以繼續補充資料。",
   sameDayUrgent:
-    "你好。已收到你嘅即日／急單訂餐需求，我已經即時通知同事跟進。即日到會亦可先喺 FC Express 網站查看供應同落單：https://www.foodchannels-express.com/ 。未收到同事回覆前，系統唔可以保證當日一定做到；你可以繼續補充人數、時間或地址。",
+    "你好。已收到你嘅即日／急單訂餐需求，我已經即時通知同事跟進。你亦可先喺對應品牌網站查看供應同落單：\n• FC Express（即日到會）：https://www.foodchannels-express.com/\n• Food Channels Catering（中西式到會）：https://foodchannels-catering.com/\n• HK Lunch Box（飯盒及便當）：https://hklunchbox.com/\n• HK Party Food（派對套餐及一口小食）：https://www.hkpartyfood.com/\n未收到同事回覆前，系統唔可以保證當日一定做到；你可以繼續補充人數、時間、地址或想訂邊個品牌。",
   handoffQueued:
     "收到，我已經將補充資料加入同一個跟進事項，客服會喺上午 9 點後回覆你。",
   handoffCancelled:

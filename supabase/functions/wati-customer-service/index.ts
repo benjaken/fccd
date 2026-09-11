@@ -1115,14 +1115,14 @@ async function queueInternalHandoff(
     .eq("id", handoffId)
     .maybeSingle();
   if (existingError) throw existingError;
-  if (
-    existing?.status === "notified" ||
-    existing?.status === "in_progress" ||
-    existing?.status === "processing"
-  ) {
-    // Staff already received (or are handling) this phone's active handoff.
-    return;
-  }
+  // Same-day urgent must still ping staff even if an older handoff is in_progress.
+  // Only suppress duplicate blasts within a short window after a successful notify.
+  const notifiedAtMs = existing?.notified_at
+    ? Date.parse(String(existing.notified_at))
+    : NaN;
+  const recentlyNotified =
+    Number.isFinite(notifiedAtMs) && Date.now() - notifiedAtMs < 5 * 60 * 1000;
+  if (recentlyNotified) return;
 
   await notifyInternal(admin, {
     phone: input.phone,
@@ -1142,7 +1142,7 @@ async function queueInternalHandoff(
       updated_at: now,
     })
     .eq("id", handoffId)
-    .in("status", ["pending", "failed"]);
+    .in("status", ["pending", "failed", "in_progress", "processing", "notified"]);
   if (updateError) throw updateError;
 }
 
