@@ -26,6 +26,7 @@ import {
   handleCustomerServiceTurn,
   type CustomerServiceConversation,
 } from "../_shared/customer-service-bot.ts";
+import { withEnvironmentOutboundMarker } from "../_shared/customer-service-replies.ts";
 import {
   classifyCustomerServiceMessage,
   explicitCustomerServiceOrderNumber,
@@ -1573,12 +1574,15 @@ async function persistCustomerServiceTurn(
 ) {
   const { conversation, startedAt, turn } = input.prepared;
   let outboundId: string | null = null;
-  if (turn.reply) {
+  const outboundReply = turn.reply
+    ? withEnvironmentOutboundMarker(turn.reply, deploymentEnvironment())
+    : null;
+  if (outboundReply) {
     const localMessageId = `fcc-bot-${crypto.randomUUID()}`;
     const outbound = await queueOutboundMessage(admin, {
       inboundId: input.providerMessageId,
       phone: input.phone,
-      body: turn.reply,
+      body: outboundReply,
       localMessageId,
     });
     outboundId = outbound?.id ?? null;
@@ -1593,7 +1597,7 @@ async function persistCustomerServiceTurn(
       const raw = await deliverWatiSessionMessage({
         creds: watiCredentials(),
         phone: input.phone,
-        text: turn.reply,
+        text: outboundReply,
         channelNumber: env("WATI_CHANNEL_NUMBER") || BRAND_WHATSAPP_CHANNEL,
         localMessageId,
       });
@@ -1621,7 +1625,7 @@ async function persistCustomerServiceTurn(
         question: input.text,
         stateBefore: conversation.state,
         startedAt,
-        turn,
+        turn: { ...turn, reply: outboundReply },
         replyAttempted: true,
         replySent: false,
         deliveryStatus: "failed",
@@ -1631,7 +1635,7 @@ async function persistCustomerServiceTurn(
         providerMessageId: input.providerMessageId,
         phone: input.phone,
         question: input.text,
-        answer: turn.reply,
+        answer: outboundReply,
         intent: turn.intentKey,
         dialogAction: turn.dialogAction,
       });
@@ -1645,16 +1649,16 @@ async function persistCustomerServiceTurn(
     question: input.text,
     stateBefore: conversation.state,
     startedAt,
-    turn,
-    replyAttempted: Boolean(turn.reply),
-    replySent: Boolean(turn.reply),
-    deliveryStatus: turn.reply ? "sent" : "not_required",
+    turn: outboundReply ? { ...turn, reply: outboundReply } : turn,
+    replyAttempted: Boolean(outboundReply),
+    replySent: Boolean(outboundReply),
+    deliveryStatus: outboundReply ? "sent" : "not_required",
   });
   await recordCustomerServiceMessages(admin, {
     providerMessageId: input.providerMessageId,
     phone: input.phone,
     question: input.text,
-    answer: turn.reply,
+    answer: outboundReply,
     intent: turn.intentKey,
     dialogAction: turn.dialogAction,
   });

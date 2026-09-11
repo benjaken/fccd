@@ -14,6 +14,8 @@ import {
   faqReply,
   REPLIES,
   sanitizeOutboundReply,
+  withEnvironmentOutboundMarker,
+  DEVELOP_OUTBOUND_MARKER,
 } from "../supabase/functions/_shared/customer-service-replies.ts";
 import {
   buildSessionMessageUrl,
@@ -819,6 +821,16 @@ describe("customer-service bot turns", () => {
 
   it("replaces profane outbound copy", () => {
     expect(sanitizeOutboundReply("你好屌")).toBe(REPLIES.fallback);
+  });
+
+  it("prefixes develop outbound replies with a visible marker", () => {
+    expect(withEnvironmentOutboundMarker("你好", "develop")).toBe(
+      `${DEVELOP_OUTBOUND_MARKER}你好`,
+    );
+    expect(withEnvironmentOutboundMarker("你好", "production")).toBe("你好");
+    expect(
+      withEnvironmentOutboundMarker(`${DEVELOP_OUTBOUND_MARKER}你好`, "develop"),
+    ).toBe(`${DEVELOP_OUTBOUND_MARKER}你好`);
   });
 
   it("does not duplicate a model greeting", () => {
