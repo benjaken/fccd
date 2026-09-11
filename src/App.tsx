@@ -605,6 +605,7 @@ function OperationsShell() {
 
   return (
     <div className={cn("app-shell", isBusinessMenu && "menu-style-one", documentEditorMode && "document-editor-shell", comfortMode && "comfort-mode")}>
+      {!documentEditorMode ? <FrontendUpdateNotice /> : null}
       <header className="topbar">
         <div className="topbar-brand">
           <Button
@@ -801,7 +802,6 @@ function OperationsShell() {
         </aside>
 
         <main className="main-content">
-          {!documentEditorMode ? <FrontendUpdateNotice /> : null}
           <div className="page-transition" key={pageKey}>
             {pageAccess.loading ? (
               <PageSkeleton label={t("settings.loadingPermissions")} />
