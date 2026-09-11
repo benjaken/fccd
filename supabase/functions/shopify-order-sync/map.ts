@@ -1415,7 +1415,7 @@ export function normalizeNameForMatch(value: string | null | undefined): string 
     .trim()
     .replace(/[（(]/g, "(")
     .replace(/[）)]/g, ")")
-    .replace(/[，,]/g, ",")
+    .replace(/[，,、]/g, ",")
     .replace(/乾/g, "干")
     .replace(/^\(素\)/, "")
     .replace(/\s+/g, "")
@@ -1836,6 +1836,9 @@ export function resolveAliasSku(name: string | null | undefined): string | null 
     return "CDR001";
   }
   if (normalized === "川式涼拌青瓜魚片(1磅)") return "CCO024-1";
+  // Shopify mid-autumn packages label this upgrade as 中秋三味乳鴿皇, while the
+  // approved kitchen catalog stores it as 秘製三味乳鴿皇 under CCHC78.
+  if (/^(?:中秋|秘製)三味乳鴿皇(?:\([^)]*\))?$/.test(normalized)) return "CCHC78";
   return null;
 }
 

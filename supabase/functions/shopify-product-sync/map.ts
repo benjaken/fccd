@@ -125,8 +125,25 @@ type GloboOptionValue = {
   "value_zh-TW"?: string;
   variant_id?: number | string;
   variant_price?: number | string;
+  /** Direct add-on amount when Globo does not link a variant. */
+  price?: number | string;
+  addon?: number | string;
+  addon_price?: number | string;
   selected?: boolean;
 };
+
+/** Prefer an explicit Globo add-on amount, then a surcharge written into the
+ * option label such as "中秋三味乳鴿皇 ... [ $40.00 ]". */
+export function globoOptionAddonPrice(value: GloboOptionValue): number {
+  const labeled = nullableText(value["value_zh-TW"]) ?? nullableText(value.value) ?? "";
+  const fromLabel = labeled.match(/\[\s*\$?\s*([\d,]+(?:\.\d+)?)\s*\]\s*$/)?.[1];
+  return nullableNumber(value.variant_price) ??
+    nullableNumber(value.price) ??
+    nullableNumber(value.addon_price) ??
+    nullableNumber(value.addon) ??
+    (fromLabel ? Number(fromLabel.replace(/,/g, "")) : null) ??
+    0;
+}
 
 type GloboOptionElement = {
   id?: string;
@@ -262,14 +279,19 @@ export function parseGloboPackageSchema(html: string, productId: number): Config
         name: nullableText(element.label) ?? nullableText(element.label_on_cart) ?? code,
         min: nullableNumber(element.min) ?? (element.required ? 1 : 0),
         max: positiveNumber(element.max, Math.max(1, values.length)),
-        items: values.map((value, valueIndex) => ({
-          key: `${code}:${String(value.name ?? value.id ?? valueIndex + 1)}`,
-          variant_id: numericId(value.variant_id) ?? undefined,
-          name: nullableText(value["value_zh-TW"]) ?? nullableText(value.value) ?? `Item ${valueIndex + 1}`,
-          quantity: 1,
-          addon_price: nullableNumber(value.variant_price) ?? 0,
-          default: value.selected === true,
-        })),
+        items: values.map((value, valueIndex) => {
+          const rawName = nullableText(value["value_zh-TW"]) ??
+            nullableText(value.value) ??
+            `Item ${valueIndex + 1}`;
+          return {
+            key: `${code}:${String(value.name ?? value.id ?? valueIndex + 1)}`,
+            variant_id: numericId(value.variant_id) ?? undefined,
+            name: rawName.replace(/\s*\[\s*\$?\s*[\d,]+(?:\.\d+)?\s*\]\s*$/, "").trim() || rawName,
+            quantity: 1,
+            addon_price: globoOptionAddonPrice(value),
+            default: value.selected === true,
+          };
+        })
       });
     }
     // Globo may leave an older option set assigned to the same product. The
