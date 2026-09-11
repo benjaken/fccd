@@ -28,6 +28,8 @@ export type ReceiptPdfDraft = {
   deliveryFeeLabel: string;
   deliveryFee: string;
   discount: string;
+  cashdollarRedeemed: string;
+  cashdollarPurchased: string;
   paymentInformation: string;
   receiptPayments: ReceiptPdfPaymentDraft[];
   terms: string[];
