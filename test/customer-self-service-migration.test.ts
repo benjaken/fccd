@@ -78,4 +78,17 @@ describe("customer self-service receipt data", () => {
     expect(sql).toContain("'discount', coalesce(v_order.discount_amount, 0)");
     expect(sql).toContain("private.self_service_order_matches");
   });
+
+  it("exposes Cashdollar amounts used by the self-service receipt PDF", () => {
+    const sql = readFileSync(
+      resolve(
+        process.cwd(),
+        "supabase/migrations/20260911080120_expose_self_service_order_cashdollar.sql",
+      ),
+      "utf8",
+    );
+    expect(sql).toContain("'cashdollarRedeemed', coalesce(v_order.cashdollar_redeemed, 0)");
+    expect(sql).toContain("'cashdollarPurchased', coalesce(v_order.cashdollar_purchased, 0)");
+    expect(sql).toContain("private.self_service_order_matches");
+  });
 });

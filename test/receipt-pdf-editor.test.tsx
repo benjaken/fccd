@@ -218,6 +218,50 @@ describe("Receipt PDF editor", () => {
     expect(within(invoice).getByText("$1,550")).toBeInTheDocument();
   });
 
+  it("shows Cashdollar rows only when amounts are present and deducts redeemed from the total", async () => {
+    render(
+      <MemoryRouter initialEntries={["/orders/order-1/invoice"]}>
+        <Routes>
+          <Route path="/orders/:id/invoice" element={<ReceiptPdfEditorPage documentKind="invoice" loadDetail={vi.fn().mockResolvedValue({
+            ...result,
+            order: result.order
+              ? {
+                  ...result.order,
+                  cashdollarRedeemed: 50,
+                  cashdollarPurchased: 20,
+                  grandTotal: 1600,
+                }
+              : null,
+          })} loadShippingFees={vi.fn().mockResolvedValue(shippingFees)} />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    const invoice = await screen.findByRole("main", { name: "發票 PDF" });
+    expect(within(invoice).getByText("扣除 Cashdollar:")).toBeInTheDocument();
+    expect(within(invoice).getByLabelText("扣除 Cashdollar")).toHaveValue("50");
+    expect(within(invoice).getByText("購買 Cashdollar:")).toBeInTheDocument();
+    expect(within(invoice).getByLabelText("購買 Cashdollar")).toHaveValue("20");
+    expect(within(invoice).getByText("$1,600")).toBeInTheDocument();
+  });
+
+  it("hides Cashdollar rows when amounts are zero", async () => {
+    renderPage(vi.fn().mockResolvedValue({
+      ...result,
+      order: result.order
+        ? {
+            ...result.order,
+            cashdollarRedeemed: 0,
+            cashdollarPurchased: 0,
+          }
+        : null,
+    }));
+
+    const receipt = await screen.findByRole("main", { name: "收據 PDF" });
+    expect(within(receipt).queryByText("扣除 Cashdollar:")).not.toBeInTheDocument();
+    expect(within(receipt).queryByText("購買 Cashdollar:")).not.toBeInTheDocument();
+  });
+
   it("keeps receipt number edits only for the current page session", async () => {
     const user = userEvent.setup();
     renderPage();

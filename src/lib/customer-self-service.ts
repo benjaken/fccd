@@ -59,6 +59,8 @@ export type CustomerSelfServiceOrderDetail = {
   currency: string;
   shippingFee?: number;
   discount?: number;
+  cashdollarRedeemed?: number;
+  cashdollarPurchased?: number;
   grandTotal: number;
   outstanding: number;
   paid: boolean;

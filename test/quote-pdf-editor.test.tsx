@@ -356,7 +356,7 @@ describe("editable quote PDF page", () => {
 
     await screen.findByRole("heading", { name: "便當報價" });
     expect(screen.getByLabelText("活動折扣")).toHaveValue("100");
-    expect(within(screen.getByRole("region", { name: "活動報價表" })).getByText("$5,300")).toBeInTheDocument();
+    expect(within(screen.getByRole("region", { name: "活動報價表" })).getByText("$5,260")).toBeInTheDocument();
     await waitFor(() => {
       const saved = JSON.parse(localStorage.getItem("fccd:quote-pdf-draft:quote-1") || "{}");
       expect(saved.discount).toBe("100");
@@ -661,6 +661,28 @@ describe("editable quote PDF page", () => {
     expect(screen.getByLabelText("折扣顯示文字")).toHaveValue("折扣 (-)");
     expect(screen.getByLabelText("折扣")).toHaveValue("100");
     expect(screen.getByText("$5,300")).toBeInTheDocument();
+  });
+
+  it("shows CashDollar rows on the generated quote PDF when amounts are present", async () => {
+    renderPage(vi.fn().mockResolvedValue({
+      ...result,
+      order: result.order
+        ? {
+            ...result.order,
+            cashdollarRedeemed: 50,
+            cashdollarPurchased: 20,
+            grandTotal: 5350,
+          }
+        : null,
+    }));
+
+    await screen.findByRole("heading", { name: "到會套餐報價" });
+
+    expect(screen.getByText("扣除 CashDollar")).toBeInTheDocument();
+    expect(screen.getByLabelText("扣除 CashDollar")).toHaveValue("50");
+    expect(screen.getByText("購買 CashDollar")).toBeInTheDocument();
+    expect(screen.getByLabelText("購買 CashDollar")).toHaveValue("20");
+    expect(screen.getByText("$5,350")).toBeInTheDocument();
   });
 
   it("uses the lunch-box logo and shows unit price, servings, and line total", async () => {
