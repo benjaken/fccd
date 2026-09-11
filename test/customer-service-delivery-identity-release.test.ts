@@ -34,6 +34,7 @@ describe("customer service delivery, identity, and release controls", () => {
     expect(sql).toContain("attempt_count < candidate.max_attempts");
     expect(sql).toContain("customer_service_outbound_retry");
     expect(webhook).toContain("queueOutboundMessage");
+    expect(webhook).toContain("withEnvironmentOutboundMarker");
     expect(webhook).toContain('payload.mode === "retry_outbound"');
     expect(webhook).toContain("recordWatiDeliveryEvent");
     expect(retryScheduleSql).toContain("'*/5 * * * *'");
