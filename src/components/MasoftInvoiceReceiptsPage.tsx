@@ -243,7 +243,23 @@ export function MasoftInvoiceReceiptsPage({
           </>}
         />
         {monthTotals || (canManageActions && selectedItems.length) ? <div className="masoft-selection-actions">
-          {monthTotals ? <span className="masoft-month-totals" data-testid="masoft-month-totals">{t("masoft.monthTotals", { month: monthTotals.monthKey, gross: formatter.format(monthTotals.grossAmount), net: formatter.format(monthTotals.netAmount) })}</span> : null}
+          {monthTotals ? (
+            <div className="masoft-month-totals" data-testid="masoft-month-totals">
+              <strong className="masoft-month-totals-title">{t("masoft.monthTotalsTitle")}</strong>
+              <div className="masoft-month-totals-row">
+                <span>{t("masoft.monthTotalsMonth")}</span>
+                <strong>{monthTotals.monthKey}</strong>
+              </div>
+              <div className="masoft-month-totals-row">
+                <span>{t("masoft.monthTotalsGross")}</span>
+                <strong>{formatter.format(monthTotals.grossAmount)}</strong>
+              </div>
+              <div className="masoft-month-totals-row">
+                <span>{t("masoft.monthTotalsNet")}</span>
+                <strong>{formatter.format(monthTotals.netAmount)}</strong>
+              </div>
+            </div>
+          ) : null}
           {canManageActions && selectedItems.length ? <><span>{t("masoft.selected", { count: selectedItems.length, gross: formatter.format(selectedGross), amount: formatter.format(selectedNet) })}</span><Button type="button" variant="outline" onClick={openInvoiceModal}>{t("masoft.addInvoice")}</Button></> : null}
         </div> : null}
       </header>
