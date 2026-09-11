@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { MasoftInvoiceReceiptsPage } from "@/components/MasoftInvoiceReceiptsPage";
 import i18n from "@/i18n";
-import type { MasoftSettlement } from "@/lib/masoft-invoice-receipts";
+import { resolveMasoftMonthKey, type MasoftSettlement } from "@/lib/masoft-invoice-receipts";
 
 const settlement: MasoftSettlement = {
   id: "settlement-1",
@@ -30,6 +30,18 @@ function mockMatchMedia(matches: boolean) {
   }));
 }
 
+describe("resolveMasoftMonthKey", () => {
+  it("uses the payout filter month, otherwise today's Hong Kong month", () => {
+    expect(resolveMasoftMonthKey({ dateMode: "range", payoutDateStart: "2026-08-01", payoutDateEnd: "2026-08-31" })).toBe("2026-08");
+    expect(resolveMasoftMonthKey({ dateMode: "single", payoutDate: "2026-07-15" })).toBe("2026-07");
+    expect(resolveMasoftMonthKey({
+      dateMode: "single",
+      payoutDate: "",
+      now: new Date("2026-09-11T06:00:00.000Z"),
+    })).toBe("2026-09");
+  });
+});
+
 describe("MasoftInvoiceReceiptsPage", () => {
   beforeEach(async () => {
     mockMatchMedia(false);
@@ -51,7 +63,7 @@ describe("MasoftInvoiceReceiptsPage", () => {
     }));
     const user = userEvent.setup();
 
-    render(<MemoryRouter><MasoftInvoiceReceiptsPage canViewFinance loadSettlements={loadSettlements} loadFilterOptions={async () => ({ channels: [], paymentMethods: [] })} /></MemoryRouter>);
+    render(<MemoryRouter><MasoftInvoiceReceiptsPage canViewFinance loadSettlements={loadSettlements} loadFilterOptions={async () => ({ channels: [], paymentMethods: [] })} loadMonthTotals={async () => ({ monthKey: "2026-09", grossAmount: 0, netAmount: 0 })} /></MemoryRouter>);
 
     const mobileList = await waitFor(() => {
       const node = document.querySelector<HTMLElement>(".masoft-mobile-list");
@@ -75,7 +87,7 @@ describe("MasoftInvoiceReceiptsPage", () => {
     const loadSettlements = vi.fn().mockResolvedValue({ total: 1, items: [settlement] });
     const user = userEvent.setup();
 
-    render(<MemoryRouter><MasoftInvoiceReceiptsPage canViewFinance loadSettlements={loadSettlements} loadFilterOptions={async () => ({ channels: [], paymentMethods: [] })} /></MemoryRouter>);
+    render(<MemoryRouter><MasoftInvoiceReceiptsPage canViewFinance loadSettlements={loadSettlements} loadFilterOptions={async () => ({ channels: [], paymentMethods: [] })} loadMonthTotals={async () => ({ monthKey: "2026-09", grossAmount: 0, netAmount: 0 })} /></MemoryRouter>);
 
     await screen.findByText("INV-1001");
     await user.type(screen.getByRole("searchbox", { name: "Search order number" }), "B-1001");
@@ -95,10 +107,40 @@ describe("MasoftInvoiceReceiptsPage", () => {
     const user = userEvent.setup();
     vi.spyOn(window, "confirm").mockReturnValue(true);
 
-    render(<MemoryRouter><MasoftInvoiceReceiptsPage canViewFinance loadSettlements={async () => ({ total: 1, items: [pending] })} loadFilterOptions={async () => ({ channels: [], paymentMethods: [] })} deleteSettlement={deleteSettlement} /></MemoryRouter>);
+    render(<MemoryRouter><MasoftInvoiceReceiptsPage canViewFinance loadSettlements={async () => ({ total: 1, items: [pending] })} loadFilterOptions={async () => ({ channels: [], paymentMethods: [] })} loadMonthTotals={async () => ({ monthKey: "2026-09", grossAmount: 0, netAmount: 0 })} deleteSettlement={deleteSettlement} /></MemoryRouter>);
 
     await user.click(await screen.findByRole("button", { name: "Delete" }));
     await waitFor(() => expect(deleteSettlement).toHaveBeenCalledWith("settlement-1"));
     expect(screen.queryByRole("button", { name: /open/i })).not.toBeInTheDocument();
+  });
+
+  it("shows payment amount column and monthly all-brand totals with selection payment amount", async () => {
+    const expectedMonth = resolveMasoftMonthKey({ dateMode: "single", payoutDate: "", now: new Date() });
+    const loadMonthTotals = vi.fn().mockImplementation(async (monthKey: string) => ({
+      monthKey,
+      grossAmount: 93556.75,
+      netAmount: 92000,
+    }));
+    const user = userEvent.setup();
+
+    render(<MemoryRouter><MasoftInvoiceReceiptsPage
+      canViewFinance
+      loadSettlements={async () => ({ total: 1, items: [settlement] })}
+      loadFilterOptions={async () => ({ channels: [], paymentMethods: [] })}
+      loadMonthTotals={loadMonthTotals}
+    /></MemoryRouter>);
+
+    await screen.findByText("INV-1001");
+    expect(screen.getByText("Payment amount", { selector: "th" })).toBeInTheDocument();
+    expect(screen.getByText("Net received", { selector: "th" })).toBeInTheDocument();
+    await waitFor(() => expect(loadMonthTotals).toHaveBeenCalledWith(expectedMonth));
+    expect(await screen.findByTestId("masoft-month-totals")).toHaveTextContent(`All brands this month (${expectedMonth})`);
+    expect(screen.getByTestId("masoft-month-totals")).toHaveTextContent("Payment amount");
+    expect(screen.getByTestId("masoft-month-totals")).toHaveTextContent("Net received");
+
+    await user.click(screen.getByRole("checkbox", { name: "Select receipt INV-1001" }));
+    expect(screen.getByText(/1 receipt\(s\) selected/)).toHaveTextContent("Payment amount");
+    expect(screen.getByText(/1 receipt\(s\) selected/)).toHaveTextContent("HK$120.00");
+    expect(screen.getByText(/1 receipt\(s\) selected/)).toHaveTextContent("HK$115.00");
   });
 });

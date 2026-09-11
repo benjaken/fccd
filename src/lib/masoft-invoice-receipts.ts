@@ -41,6 +41,8 @@ export type MasoftFilters = {
 
 export type MasoftFilterOptions = { channels: Array<{ id: string; name: string }>; paymentMethods: Array<{ id: string; name: string }> };
 
+export type MasoftMonthTotals = { monthKey: string; grossAmount: number; netAmount: number };
+
 function dayStart(day: string) { return `${day}T00:00:00+08:00`; }
 function nextDay(day: string) {
   const value = new Date(`${day}T12:00:00+08:00`);
@@ -49,6 +51,65 @@ function nextDay(day: string) {
 }
 
 function single<T>(value: T | T[] | null) { return Array.isArray(value) ? value[0] ?? null : value; }
+
+function amountSumFromAggregate(data: unknown) {
+  const rows = Array.isArray(data) ? data : data ? [data] : [];
+  let total = 0;
+  for (const row of rows) {
+    if (!row || typeof row !== "object") continue;
+    const record = row as Record<string, unknown>;
+    const raw = record.sum ?? record.gross_amount ?? record.net_amount;
+    if (raw === null || raw === undefined || typeof raw === "object") continue;
+    const value = typeof raw === "number" ? raw : Number.parseFloat(String(raw));
+    if (Number.isFinite(value)) total += value;
+  }
+  return total;
+}
+
+/** Resolve YYYY-MM from the active payout filter, else today's Hong Kong month. */
+export function resolveMasoftMonthKey(input: {
+  dateMode: "single" | "range";
+  payoutDate?: string | null;
+  payoutDateStart?: string | null;
+  payoutDateEnd?: string | null;
+  now?: Date;
+}) {
+  const anchor =
+    input.dateMode === "range"
+      ? (input.payoutDateStart?.trim() || input.payoutDateEnd?.trim() || "")
+      : (input.payoutDate?.trim() || "");
+  if (/^\d{4}-\d{2}-\d{2}$/.test(anchor)) return anchor.slice(0, 7);
+  const now = input.now ?? new Date();
+  return now.toLocaleDateString("en-CA", { timeZone: "Asia/Hong_Kong" }).slice(0, 7);
+}
+
+function monthBounds(monthKey: string) {
+  if (!/^\d{4}-\d{2}$/.test(monthKey)) throw new Error("invalid_month");
+  const startDay = `${monthKey}-01`;
+  const [yearText, monthText] = monthKey.split("-");
+  const year = Number(yearText);
+  const month = Number(monthText);
+  const nextMonth = month === 12 ? 1 : month + 1;
+  const nextYear = month === 12 ? year + 1 : year;
+  const nextStart = `${String(nextYear).padStart(4, "0")}-${String(nextMonth).padStart(2, "0")}-01`;
+  return { start: dayStart(startDay), end: dayStart(nextStart) };
+}
+
+/** Sum payment amount + net received for every brand in the given calendar month (Hong Kong). */
+export async function fetchMasoftMonthTotals(monthKey: string): Promise<MasoftMonthTotals> {
+  const { start, end } = monthBounds(monthKey);
+  const [grossResult, netResult] = await Promise.all([
+    supabase.from("payment_settlements").select("gross_amount.sum()").gte("payout_at", start).lt("payout_at", end),
+    supabase.from("payment_settlements").select("net_amount.sum()").gte("payout_at", start).lt("payout_at", end),
+  ]);
+  if (grossResult.error) throw grossResult.error;
+  if (netResult.error) throw netResult.error;
+  return {
+    monthKey,
+    grossAmount: amountSumFromAggregate(grossResult.data),
+    netAmount: amountSumFromAggregate(netResult.data),
+  };
+}
 
 export async function fetchMasoftSettlements(filters: MasoftFilters) {
   const start = (filters.page - 1) * MASOFT_PAGE_SIZE;

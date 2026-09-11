@@ -663,10 +663,17 @@
 .masoft-selection-actions {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   gap: .65rem;
   margin-left: auto;
   color: var(--primary);
   font-weight: 700;
+}
+
+.masoft-month-totals {
+  color: var(--muted-foreground);
+  font-weight: 650;
 }
 
 .masoft-orders-cell {
