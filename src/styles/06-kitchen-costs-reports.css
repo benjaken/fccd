@@ -660,15 +660,61 @@
   min-width: 76rem;
 }
 
-.masoft-selection-actions {
+.masoft-toolbar {
+  align-items: stretch;
+}
+
+.masoft-toolbar-main {
   display: flex;
   align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem 1.25rem;
+  width: 100%;
+}
+
+.masoft-toolbar-search-stack {
+  display: grid;
+  gap: 0.7rem;
+  flex: 1 1 28rem;
+  min-width: min(100%, 18rem);
+}
+
+.masoft-toolbar-search-stack > .payments-order-search,
+.masoft-toolbar-search-stack > .list-search-host {
+  min-width: 0;
+}
+
+.masoft-update-invoice-button {
+  justify-self: start;
+  min-width: 10.5rem;
+}
+
+.masoft-selection-actions {
+  display: flex;
+  align-items: stretch;
   flex-wrap: wrap;
   justify-content: flex-end;
   gap: .75rem;
   margin-left: auto;
   color: var(--primary);
   font-weight: 700;
+}
+
+@media (max-width: 900px) {
+  .masoft-toolbar-main {
+    flex-direction: column;
+  }
+
+  .masoft-selection-actions {
+    width: 100%;
+    margin-left: 0;
+    justify-content: stretch;
+  }
+
+  .masoft-selection-actions > .masoft-month-totals {
+    flex: 1 1 14rem;
+  }
 }
 
 .masoft-month-totals {
