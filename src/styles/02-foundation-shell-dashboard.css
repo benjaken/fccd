@@ -845,8 +845,18 @@ button.bg-primary:focus-visible {
   white-space: nowrap;
 }
 
+.topbar-center {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  min-width: 0;
+  height: 100%;
+}
+
 .workspace-links {
   display: flex;
+  flex: 0 0 auto;
   align-items: center;
   justify-content: flex-end;
   gap: 4px;
