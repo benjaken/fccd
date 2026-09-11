@@ -2439,7 +2439,14 @@ export function QuoteEditorPage({
           ) : null}
           {isOrder ? (
             <div className="quote-order-detail-summary">
-              <OrderPaymentStatus total={grandTotal} paid={paidTotal} formatMoney={money.format} navigationStuck={sectionNavigationStuck} orderNumber={draft.orderNumber || activeQuote.orderNumber} customerAndDistrict={`${draft.customerName || draft.companyName || "—"} (${automaticDistrictName || draft.districtName || districts.find((item) => item.id === draft.districtId)?.name || "—"})`} />
+              <OrderPaymentStatus
+                total={grandTotal}
+                paid={paidTotal}
+                formatMoney={money.format}
+                navigationStuck={sectionNavigationStuck}
+                orderNumber={draft.orderNumber || activeQuote.orderNumber}
+                customerAndDistrict={`${draft.customerName || draft.companyName || "—"} (${automaticDistrictName || draft.districtName || districts.find((item) => item.id === draft.districtId)?.name || "—"})`}
+              />
               <div className="quote-detail-actions">
                 <Button
                   type="button"
@@ -2687,7 +2694,16 @@ export function QuoteEditorPage({
               : activeQuote ? t(isOrder ? "quoteEditor.orderItemsReady" : "quoteEditor.itemsReady") : t("quoteEditor.description")}
           </p>
         </div>
-        {isOrder && activeQuote ? <OrderPaymentStatus total={grandTotal} paid={paidTotal} formatMoney={money.format} navigationStuck={sectionNavigationStuck} orderNumber={draft.orderNumber || activeQuote.orderNumber} customerAndDistrict={`${draft.customerName || draft.companyName || "—"} (${automaticDistrictName || draft.districtName || districts.find((item) => item.id === draft.districtId)?.name || "—"})`} /> : null}
+        {isOrder && activeQuote ? (
+          <OrderPaymentStatus
+            total={grandTotal}
+            paid={paidTotal}
+            formatMoney={money.format}
+            navigationStuck={sectionNavigationStuck}
+            orderNumber={draft.orderNumber || activeQuote.orderNumber}
+            customerAndDistrict={`${draft.customerName || draft.companyName || "—"} (${automaticDistrictName || draft.districtName || districts.find((item) => item.id === draft.districtId)?.name || "—"})`}
+          />
+        ) : null}
       </header>
 
       {sectionNavigation}
