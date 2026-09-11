@@ -245,16 +245,17 @@ export function MasoftInvoiceReceiptsPage({
         {monthTotals || (canManageActions && selectedItems.length) ? <div className="masoft-selection-actions">
           {monthTotals ? (
             <div className="masoft-month-totals" data-testid="masoft-month-totals">
-              <strong className="masoft-month-totals-title">{t("masoft.monthTotalsTitle")}</strong>
-              <div className="masoft-month-totals-row">
+              <p className="masoft-month-totals-title">{t("masoft.monthTotalsTitle")}</p>
+              <div className="masoft-month-totals-row is-month">
                 <span>{t("masoft.monthTotalsMonth")}</span>
                 <strong>{monthTotals.monthKey}</strong>
               </div>
+              <div className="masoft-month-totals-divider" aria-hidden="true" />
               <div className="masoft-month-totals-row">
                 <span>{t("masoft.monthTotalsGross")}</span>
                 <strong>{formatter.format(monthTotals.grossAmount)}</strong>
               </div>
-              <div className="masoft-month-totals-row">
+              <div className="masoft-month-totals-row is-net">
                 <span>{t("masoft.monthTotalsNet")}</span>
                 <strong>{formatter.format(monthTotals.netAmount)}</strong>
               </div>

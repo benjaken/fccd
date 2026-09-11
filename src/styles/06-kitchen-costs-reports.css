@@ -673,52 +673,77 @@
 
 .masoft-month-totals {
   display: grid;
-  gap: 0.34rem;
-  min-width: 13.25rem;
-  padding: 0.78rem 0.95rem 0.82rem;
-  border: 1px solid #7eafd9;
-  border-left: 4px solid #2f78b8;
-  border-radius: 0.75rem;
+  gap: 0.42rem;
+  min-width: 14rem;
+  padding: 0.85rem 1rem 0.9rem;
+  border: 1px solid #9bc2e3;
+  border-radius: 0.85rem;
   background:
-    linear-gradient(165deg, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0.08) 42%, rgba(255, 255, 255, 0) 100%),
-    linear-gradient(180deg, #e7f2fc 0%, #d2e6f7 100%);
+    radial-gradient(120% 90% at 0% 0%, rgba(255, 255, 255, 0.72), transparent 55%),
+    linear-gradient(180deg, #edf5fc 0%, #d9ebf8 100%);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.7),
-    0 1px 2px rgba(30, 74, 120, 0.08);
-  color: #1d3f66;
-  font-weight: 650;
-  line-height: 1.25;
+    inset 0 1px 0 rgba(255, 255, 255, 0.85),
+    0 6px 16px rgba(36, 90, 140, 0.08);
+  color: #1a3c63;
+  line-height: 1.2;
 }
 
 .masoft-month-totals-title {
-  margin: 0 0 0.18rem;
-  padding-bottom: 0.28rem;
-  border-bottom: 1px solid rgba(47, 120, 184, 0.22);
-  color: #14426f;
-  font-size: 0.78rem;
-  font-weight: 800;
-  letter-spacing: 0.03em;
+  margin: 0;
+  color: #3f6b96;
+  font-size: 0.72rem;
+  font-weight: 750;
+  letter-spacing: 0.04em;
+}
+
+.masoft-month-totals-divider {
+  height: 1px;
+  margin: 0.08rem 0 0.02rem;
+  background: linear-gradient(90deg, rgba(47, 120, 184, 0.28), rgba(47, 120, 184, 0.06));
 }
 
 .masoft-month-totals-row {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 0.9rem;
-  font-size: 0.87rem;
+  gap: 1rem;
+  font-size: 0.84rem;
 }
 
 .masoft-month-totals-row > span {
-  color: #3a5f87;
+  color: #4a6f95;
   font-weight: 650;
 }
 
 .masoft-month-totals-row > strong {
-  color: #0f3352;
+  color: #12334f;
   font-variant-numeric: tabular-nums;
   font-weight: 800;
   text-align: right;
   white-space: nowrap;
+}
+
+.masoft-month-totals-row.is-month > strong {
+  color: #0d4f8a;
+  font-size: 1.05rem;
+  font-weight: 850;
+  letter-spacing: 0.01em;
+}
+
+.masoft-month-totals-row.is-net {
+  margin-top: 0.06rem;
+  padding: 0.38rem 0.5rem;
+  border-radius: 0.55rem;
+  background: rgba(255, 255, 255, 0.55);
+}
+
+.masoft-month-totals-row.is-net > span {
+  color: #2b5f8d;
+}
+
+.masoft-month-totals-row.is-net > strong {
+  color: #0b5ea8;
+  font-size: 0.95rem;
 }
 
 .masoft-orders-cell {
