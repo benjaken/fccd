@@ -1030,6 +1030,14 @@ describe("mapShopifyOrder remark collection", () => {
       { name: "龍躉兩食 (粉絲金菇蒸頭腩+荷豆炒龍躉)", quantity: 1, surcharge: 100 },
     ]);
 
+    expect(parseMenuRemark(`中式小菜 4選2:
+川式涼拌青瓜魚片 (1磅), 蠔皇花膠炆大花菇 (2磅), 中秋三味乳鴿皇 (紅燒、麻辣、花雕共3隻) [ $40.00 ], 沙茶鮑魚炆牛腩 (2磅)`)).toEqual([
+      { name: "川式涼拌青瓜魚片 (1磅)", quantity: 1 },
+      { name: "蠔皇花膠炆大花菇 (2磅)", quantity: 1 },
+      { name: "中秋三味乳鴿皇 (紅燒、麻辣、花雕共3隻)", quantity: 1, surcharge: 40 },
+      { name: "沙茶鮑魚炆牛腩 (2磅)", quantity: 1 },
+    ]);
+
     const plan = planShopifyMenuOptions({
       sources: [{
         lineId: 30,
@@ -1265,6 +1273,12 @@ describe("resolveAliasSku", () => {
 
   it("maps the renamed 2026 cold fish option to its catalog SKU", () => {
     expect(resolveAliasSku("川式涼拌青瓜魚片 (1磅)")).toBe("CCO024-1");
+  });
+
+  it("maps Shopify mid-autumn pigeon upgrade names to CCHC78", () => {
+    expect(resolveAliasSku("中秋三味乳鴿皇 (紅燒、麻辣、花雕共3隻)")).toBe("CCHC78");
+    expect(resolveAliasSku("秘製三味乳鴿皇 (紅燒, 麻辣, 花雕共3隻)")).toBe("CCHC78");
+    expect(resolveAliasSku("中秋三味乳鴿皇")).toBe("CCHC78");
   });
 });
 

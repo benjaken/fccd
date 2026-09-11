@@ -227,12 +227,6 @@ export function isCustomerServiceGreeting(text: string) {
   return GREETING.test(text.trim());
 }
 
-/** WATI order-confirmation template quick-reply; no bot reply or handoff needed. */
-export function isOrderConfirmationAcknowledgement(text: string) {
-  const normalized = text.trim().replace(/[!！.。?？\s]/g, "");
-  return normalized === "確定訂單" || normalized === "确认订单";
-}
-
 /** Hong Kong calendar date YYYY-MM-DD for a given instant. */
 export function hongKongCalendarDate(now: Date = new Date()) {
   return new Intl.DateTimeFormat("en-CA", {
@@ -272,6 +266,12 @@ export function isSameDayOrderDemand(text: string) {
     !/(?:急單|幫我訂|幫我落|想即日訂|今日想訂|今天想訂|即日想訂|做唔做到|得唔得)/i
       .test(body);
   return !pureHowto;
+}
+
+/** WATI order-confirmation template quick-reply; no bot reply or handoff needed. */
+export function isOrderConfirmationAcknowledgement(text: string) {
+  const normalized = text.trim().replace(/[!！.。?？\s]/g, "");
+  return normalized === "確定訂單" || normalized === "确认订单";
 }
 
 export function classifyCustomerServiceMessage(text: string): ClassifiedMessage {

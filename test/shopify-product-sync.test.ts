@@ -106,6 +106,23 @@ describe("Shopify product catalog mapping", () => {
     ]));
   });
 
+  it("captures Globo direct add-on prices and surcharges written in option labels", () => {
+    const html = `<script>
+      window.GPOConfigs.options[1195855] = {"elements":[
+        {"id":"checkbox-2","type":"checkbox","label":"中式小菜 4選2","min":"2","max":"2","required":true,"option_values":[
+          {"name":1,"value":"川式涼拌青瓜魚片 (1磅)"},
+          {"name":2,"value":"中秋三味乳鴿皇 (紅燒、麻辣、花雕共3隻) [ $40.00 ]","price":"40.00"},
+          {"name":3,"value":"薑蔥霸王雞 (1隻)","addon":"40"}
+        ]}
+      ],"products":{"rule":{"manual":{"enable":true,"ids":[6962418974887]}}}};
+    </script>`;
+    const schema = parseGloboPackageSchema(html, 6962418974887);
+    expect(schema?.groups?.[0]?.items).toEqual(expect.arrayContaining([
+      expect.objectContaining({ name: "中秋三味乳鴿皇 (紅燒、麻辣、花雕共3隻)", addon_price: 40 }),
+      expect.objectContaining({ name: "薑蔥霸王雞 (1隻)", addon_price: 40 }),
+    ]));
+  });
+
   it("falls back to the stored shop domain when the configured secret is invalid", () => {
     expect(resolveShopDomain("https://", "valid-store.myshopify.com"))
       .toBe("valid-store.myshopify.com");
