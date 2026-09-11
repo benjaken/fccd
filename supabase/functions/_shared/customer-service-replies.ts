@@ -7,6 +7,8 @@ export const REPLIES = {
     "唔好意思，我哋呢度只可以幫你查訂單、到會查詢，或者公司已公布嘅政策。如果需要其他協助，請等同事上線。",
   handoff:
     "唔好意思，呢個問題需要同事處理。我已經幫你記錄，客服會喺上午 9 點後跟進；你可以繼續補充資料。",
+  sameDayUrgent:
+    "你好。已收到你嘅即日／急單訂餐需求，我已經即時通知同事跟進。你亦可先喺對應品牌網站查看供應同落單：\n• FC Express（即日到會）：https://www.foodchannels-express.com/\n• Food Channels Catering（中西式到會）：https://foodchannels-catering.com/\n• HK Lunch Box（飯盒及便當）：https://hklunchbox.com/\n• HK Party Food（派對套餐及一口小食）：https://www.hkpartyfood.com/\n未收到同事回覆前，系統唔可以保證當日一定做到；你可以繼續補充人數、時間、地址或想訂邊個品牌。",
   handoffQueued:
     "收到，我已經將補充資料加入同一個跟進事項，客服會喺上午 9 點後回覆你。",
   handoffCancelled:
@@ -36,6 +38,18 @@ export function sanitizeOutboundReply(value: string) {
   const text = value.trim();
   if (!text || containsProfanity(text)) return REPLIES.fallback;
   return text;
+}
+
+/** Visible marker so develop-branch WhatsApp replies are distinguishable from production. */
+export const DEVELOP_OUTBOUND_MARKER = "【develop】";
+
+export function withEnvironmentOutboundMarker(
+  text: string,
+  environment: string,
+) {
+  if (environment !== "develop") return text;
+  if (text.startsWith(DEVELOP_OUTBOUND_MARKER)) return text;
+  return `${DEVELOP_OUTBOUND_MARKER}${text}`;
 }
 
 export function lookupSummaryReply(order: {

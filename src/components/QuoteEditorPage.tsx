@@ -84,6 +84,7 @@ import {
   quoteLineLabelRemarkRows,
   quoteLinePrintLabelName,
   classifyQuoteSaveError,
+  isPersistableOrderPayment,
   isQuoteSaveErrorKey,
   quoteDraftForSave,
   type CreatedQuote,
@@ -1051,21 +1052,22 @@ export function QuoteEditorPage({
 
   const persistAllChanges = async (quote: CreatedQuote) => {
     const invalidLine = lines.find(
-      (line) => !Number.isInteger(line.quantity) || line.quantity < 0 || line.unitPrice < 0,
+      (line) => (
+        !Number.isInteger(line.quantity)
+        || line.quantity < 0
+        || !Number.isFinite(line.unitPrice)
+        || line.unitPrice < 0
+      ),
     );
     if (invalidLine) {
       throw new Error("quote_line_invalid");
     }
 
-    // Payment method is not required on save. Skip blank payment stubs so an
-    // empty "add payment" row cannot block details/line saves.
+    // Payment method is not required on save. Only send complete rows
+    // (date + method + non-zero amount, including refunds). "Add payment"
+    // stubs prefill date and outstanding amount with a blank method — skip those.
     const paymentsToSave = isOrder
-      ? payments.filter((payment) => (
-        Boolean(payment.paymentAt)
-        || Boolean(payment.paymentMethodId)
-        || (Number.isFinite(payment.amount) && payment.amount !== 0)
-        || Boolean(payment.reference?.trim())
-      ))
+      ? payments.filter(isPersistableOrderPayment)
       : [];
 
     await saveCurrentDetails(quote.id);
@@ -1080,7 +1082,11 @@ export function QuoteEditorPage({
         setFinancialsDirty(false);
       }
       writeQuotePdfSupplements(quote.id, supplements);
-      await releaseCurrentEditSession();
+      try {
+        await releaseCurrentEditSession();
+      } catch (releaseError) {
+        console.warn("edit session release failed after quote save", releaseError);
+      }
       return;
     }
     const batchSaver = saveBatch ?? (
@@ -1119,7 +1125,12 @@ export function QuoteEditorPage({
       }
     }
     writeQuotePdfSupplements(quote.id, supplements);
-    await releaseCurrentEditSession();
+    // Document already persisted; do not surface release failures as save errors.
+    try {
+      await releaseCurrentEditSession();
+    } catch (releaseError) {
+      console.warn("edit session release failed after order save", releaseError);
+    }
   };
 
   const saveAllChanges = async () => {
@@ -2333,6 +2344,7 @@ export function QuoteEditorPage({
     }
     setCompleting(true);
     setCompletionError(null);
+    setError(null);
     try {
       await persistAllChanges(activeQuote);
       try {
@@ -2342,8 +2354,13 @@ export function QuoteEditorPage({
         return;
       }
       navigate(listPath, { replace: true });
-    } catch {
+    } catch (cause) {
+      console.error("quote save-and-send failed", cause);
+      const key = classifyQuoteSaveError(cause);
+      setError(key);
       setCompletionError("save");
+      if (key === "invalidLine") scrollToSection("items");
+      if (key === "paymentInvalid") scrollToSection("payments");
     } finally {
       setCompleting(false);
     }
@@ -3211,7 +3228,16 @@ export function QuoteEditorPage({
               overpaid: t("quoteEditor.payments.overpaid"),
             }}
           />
-          {completionError ? <p className="quote-editor-error" role="alert">{t(`quoteEditor.payments.${completionError === "send" ? "sendError" : "saveError"}`)}</p> : null}
+          {completionError === "send" ? (
+            <p className="quote-editor-error" role="alert">{t("quoteEditor.payments.sendError")}</p>
+          ) : null}
+          {completionError === "save" ? (
+            <p className="quote-editor-error" role="alert">
+              {isQuoteSaveErrorKey(error)
+                ? t(`quoteEditor.errors.${error}`)
+                : t("quoteEditor.payments.saveError")}
+            </p>
+          ) : null}
           <footer>
             <Button type="button" variant="outline" onClick={addPayment}><Plus />{t("quoteEditor.payments.add")}</Button>
             <Button type="button" disabled={saving || completing} onClick={() => void saveAllChanges()}>{saving ? <LoaderCircle className="spin" /> : <Check />}{saving ? t("quoteEditor.saving") : t("quoteEditor.saveChanges")}</Button>

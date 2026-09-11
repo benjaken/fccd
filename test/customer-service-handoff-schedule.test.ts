@@ -3,7 +3,9 @@ import { resolve } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-const sql = readFileSync(
+import { REPLIES } from "../supabase/functions/_shared/customer-service-replies.ts";
+
+const deferredSql = readFileSync(
   resolve(
     process.cwd(),
     "supabase/migrations/20260904183000_defer_customer_service_handoffs.sql",
@@ -11,36 +13,72 @@ const sql = readFileSync(
   "utf8",
 );
 
+const urgentSql = readFileSync(
+  resolve(
+    process.cwd(),
+    "supabase/migrations/20260910054000_customer_service_same_day_urgent_handoff.sql",
+  ),
+  "utf8",
+);
+
+const brandSitesSql = readFileSync(
+  resolve(
+    process.cwd(),
+    "supabase/migrations/20260911023000_customer_service_same_day_urgent_brand_sites.sql",
+  ),
+  "utf8",
+);
+
 describe("deferred customer-service handoffs", () => {
   it("stores customer, order, questions, and notification lifecycle", () => {
-    expect(sql).toContain(
+    expect(deferredSql).toContain(
       "create table if not exists public.customer_service_handoff_requests",
     );
-    expect(sql).toContain("phone_normalized text not null");
-    expect(sql).toContain("questions jsonb not null");
-    expect(sql).toContain("message_count integer not null");
-    expect(sql).toContain("'awaiting_human'");
-    expect(sql).toContain("'in_progress'");
-    expect(sql).toContain("'resolved'");
+    expect(deferredSql).toContain("phone_normalized text not null");
+    expect(deferredSql).toContain("questions jsonb not null");
+    expect(deferredSql).toContain("message_count integer not null");
+    expect(deferredSql).toContain("'awaiting_human'");
+    expect(deferredSql).toContain("'in_progress'");
+    expect(deferredSql).toContain("'resolved'");
   });
 
   it("schedules the digest for 09:00 Hong Kong and restores the overnight bot window", () => {
-    expect(sql).toContain("'0 1 * * *'");
-    expect(sql).toContain("Asia/Hong_Kong");
-    expect(sql).toContain(
+    expect(deferredSql).toContain("'0 1 * * *'");
+    expect(deferredSql).toContain("Asia/Hong_Kong");
+    expect(deferredSql).toContain(
       "set auto_reply_start = '19:00', auto_reply_end = '09:00'",
     );
-    expect(sql).toContain(
+    expect(deferredSql).toContain(
       "private.next_customer_service_handoff_notification_at(now())",
     );
   });
 
   it("supports explicit human claim and return-to-bot actions", () => {
-    expect(sql).toContain("customer_service_conversation_set_mode");
-    expect(sql).toContain("p_mode not in ('human', 'bot')");
-    expect(sql).toContain(
+    expect(deferredSql).toContain("customer_service_conversation_set_mode");
+    expect(deferredSql).toContain("p_mode not in ('human', 'bot')");
+    expect(deferredSql).toContain(
       "case when p_mode = 'human' then 'human_owned' else 'identifying' end",
     );
-    expect(sql).toContain("set status = 'resolved'");
+    expect(deferredSql).toContain("set status = 'resolved'");
+  });
+
+  it("allows same-day urgent handoffs to notify immediately", () => {
+    expect(urgentSql).toContain("p_notify_immediately boolean default false");
+    expect(urgentSql).toContain("when coalesce(p_notify_immediately, false)");
+    expect(urgentSql).toContain("same_day_urgent");
+    expect(urgentSql).toContain("即日訂餐");
+  });
+
+  it("lists each brand ordering site in the same-day urgent reply", () => {
+    for (const sql of [urgentSql, brandSitesSql]) {
+      expect(sql).toContain("foodchannels-express.com");
+      expect(sql).toContain("foodchannels-catering.com");
+      expect(sql).toContain("hklunchbox.com");
+      expect(sql).toContain("hkpartyfood.com");
+    }
+    expect(REPLIES.sameDayUrgent).toContain("foodchannels-express.com");
+    expect(REPLIES.sameDayUrgent).toContain("foodchannels-catering.com");
+    expect(REPLIES.sameDayUrgent).toContain("hklunchbox.com");
+    expect(REPLIES.sameDayUrgent).toContain("hkpartyfood.com");
   });
 });

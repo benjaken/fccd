@@ -1415,7 +1415,7 @@ export function normalizeNameForMatch(value: string | null | undefined): string 
     .trim()
     .replace(/[（(]/g, "(")
     .replace(/[）)]/g, ")")
-    .replace(/[，,]/g, ",")
+    .replace(/[，,、]/g, ",")
     .replace(/乾/g, "干")
     .replace(/^\(素\)/, "")
     .replace(/\s+/g, "")
@@ -1525,6 +1525,7 @@ export function mapShopifyTransaction(input: {
     input.transaction.currency ?? input.orderCurrency ?? "HKD",
   ).trim().slice(0, 3).toUpperCase();
   const currency = rawCurrency || "HKD";
+  const txnCreatedAt = input.transaction.created_at ?? null;
 
   return {
     legacy_id: shopifyTransactionLegacyId(input.shopDomain, input.orderId, txnId),
@@ -1537,12 +1538,13 @@ export function mapShopifyTransaction(input: {
     order_number_snapshot: input.orderNumber,
     currency,
     amount,
-    payment_at: input.transaction.created_at ?? null,
+    // Keep Bubble's date-only convention (HKT midnight); raw txn time stays on bubble_created_at.
+    payment_at: hongKongDayStartIso(txnCreatedAt) ?? txnCreatedAt,
     payout_at: null,
     paypal_reference: gateway.toLowerCase().includes("paypal") ? authorization : null,
     receipt_reference: authorization ?? String(txnId),
-    bubble_created_at: input.transaction.created_at ?? null,
-    bubble_modified_at: input.transaction.created_at ?? null,
+    bubble_created_at: txnCreatedAt,
+    bubble_modified_at: txnCreatedAt,
     voided_at: null,
   };
 }
@@ -1596,7 +1598,7 @@ export function resolveOperationalOrderMatch(input: {
   return { status: "unique", orderId: matches[0].id };
 }
 
-function hongKongDate(value: unknown): string | null {
+export function hongKongDate(value: unknown): string | null {
   if (typeof value !== "string" || !value.trim()) return null;
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return null;
@@ -1612,6 +1614,94 @@ function hongKongDate(value: unknown): string | null {
   const month = valueOf("month");
   const day = valueOf("day");
   return year && month && day ? `${year}-${month}-${day}` : null;
+}
+
+/**
+ * Bubble stored payment dates as Hong Kong calendar days (midnight HKT).
+ * Shopify transaction timestamps are normalised to the same convention so
+ * receipts stay comparable with legacy Bubble rows.
+ */
+export function hongKongDayStartIso(value: unknown): string | null {
+  const day = hongKongDate(value);
+  if (!day) return null;
+  return new Date(`${day}T00:00:00+08:00`).toISOString();
+}
+
+
+export function paymentMethodForGateway(
+  gateway: string,
+  methodsByName: Map<string, { id: string; legacy_id: string }>,
+): { payment_method_id: string | null; payment_method_legacy_id: string | null } {
+  const g = gateway.toLowerCase();
+  let target: string | null = null;
+  if (g.includes("paypal")) target = "Paypal";
+  else if (
+    g.includes("shopify_payments") || g.includes("visa") ||
+    g.includes("mastercard") || g.includes("amex") || g.includes("credit")
+  ) target = "Credit card";
+  else if (g.includes("bank") || g.includes("deposit") || g.includes("transfer")) {
+    target = "Bank Transfer";
+  } else if (g.includes("fps") || g.includes("faster payment")) target = "FPS";
+  else if (g.includes("payme")) target = "PayMe";
+  else if (g.includes("octopus")) target = "Octopus";
+  else if (
+    g.includes("alipay") || g.includes("wechat") || g.includes("qfpay")
+  ) target = "QFpay (Alipay / Wechat Pay)";
+  else if (g.includes("cash")) target = "Cash";
+  else if (g.includes("cheque") || g.includes("check")) target = "Cheque";
+
+  const row = target ? methodsByName.get(target.toLowerCase()) : null;
+  return {
+    payment_method_id: row?.id ?? null,
+    payment_method_legacy_id: row?.legacy_id ?? null,
+  };
+}
+
+export type LegacyPaymentTwin = {
+  legacy_id?: unknown;
+  order_id?: unknown;
+  amount?: unknown;
+  currency?: unknown;
+  payment_at?: unknown;
+  payment_method_id?: unknown;
+  payment_method_legacy_id?: unknown;
+};
+
+/**
+ * Prefer a matching Bubble/legacy receipt's payment date and method so Shopify
+ * sync keeps Bubble's original bookkeeping. Match by order+amount+currency only
+ * — Bubble's payment date can differ from the Shopify transaction timestamp
+ * (e.g. B-1515 Bubble 2026-08-20 vs Shopify txn 2026-08-24).
+ */
+export function applyBubblePaymentTwin<T extends {
+  order_id?: unknown;
+  amount?: unknown;
+  currency?: unknown;
+  payment_at?: unknown;
+  payment_method_id?: unknown;
+  payment_method_legacy_id?: unknown;
+  bubble_created_at?: unknown;
+}>(row: T, legacyRows: LegacyPaymentTwin[]): T {
+  const orderId = typeof row.order_id === "string" ? row.order_id : "";
+  const amount = Number(row.amount);
+  const currency = String(row.currency ?? "HKD").trim().toUpperCase();
+  if (!orderId || !Number.isFinite(amount)) return row;
+
+  const twin = legacyRows.find((candidate) => {
+    if (String(candidate.legacy_id ?? "").startsWith("shopify:")) return false;
+    if (candidate.order_id !== orderId) return false;
+    if (Number(candidate.amount) !== amount) return false;
+    return String(candidate.currency ?? "HKD").trim().toUpperCase() === currency;
+  });
+  if (!twin) return row;
+
+  const next = { ...row };
+  if (twin.payment_at) next.payment_at = twin.payment_at;
+  if (!next.payment_method_id && twin.payment_method_id) {
+    next.payment_method_id = twin.payment_method_id;
+    next.payment_method_legacy_id = twin.payment_method_legacy_id ?? null;
+  }
+  return next;
 }
 
 /** Identifies one receipt across Bubble's date-only value and Shopify time. */
@@ -1836,6 +1926,9 @@ export function resolveAliasSku(name: string | null | undefined): string | null 
     return "CDR001";
   }
   if (normalized === "川式涼拌青瓜魚片(1磅)") return "CCO024-1";
+  // Shopify mid-autumn packages label this upgrade as 中秋三味乳鴿皇, while the
+  // approved kitchen catalog stores it as 秘製三味乳鴿皇 under CCHC78.
+  if (/^(?:中秋|秘製)三味乳鴿皇(?:\([^)]*\))?$/.test(normalized)) return "CCHC78";
   return null;
 }
 
