@@ -75,4 +75,11 @@ describe("customer-service backend conversation preview", () => {
     expect(source).toContain('environment === "develop" ||');
     expect(source).toContain("environment !== \"develop\"");
   });
+
+  it("keeps guest replies flowing when urgent staff notify fails", () => {
+    expect(source).toContain("urgent staff notify failed");
+    expect(source).toContain("Never block the guest reply on staff-notify failure");
+    expect(source).toContain("Fall back to a session text so staff still get the urgent ping");
+    expect(source).toContain("fcc-bot-staff-");
+  });
 });
