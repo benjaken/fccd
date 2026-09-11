@@ -473,21 +473,32 @@ export function QuotePdfEditorPage({
       0,
     );
     const activitySubtotal = productSubtotal + activityItemsTotal;
-    const activityTotal = activitySubtotal
-      + numberValue(draft?.activityShippingFee ?? "")
-      - numberValue(draft?.discount ?? "");
     const isLunchBoxDraft = getBrandKind(
       sourceBrand.name,
       sourceBrand.quoteNumber,
       draft?.brandName ?? "",
       draft?.quoteNumber ?? "",
     ) === "lunch-box";
+    const cashDollarDeduction = numberValue(draft?.cashDollarDeduction ?? "");
+    const cashDollarPurchase = numberValue(draft?.cashDollarPurchase ?? "");
+    const activityTotal = activitySubtotal
+      + numberValue(draft?.activityShippingFee ?? "")
+      - numberValue(draft?.discount ?? "")
+      - (isLunchBoxDraft ? cashDollarDeduction : 0)
+      + (isLunchBoxDraft ? cashDollarPurchase : 0);
     const productTotal = productSubtotal
       + numberValue(draft?.shippingFee ?? "")
       - numberValue(draft?.discount ?? "")
-      - (isLunchBoxDraft ? numberValue(draft?.cashDollarDeduction ?? "") : 0)
-      + (isLunchBoxDraft ? numberValue(draft?.cashDollarPurchase ?? "") : 0);
-    return { productSubtotal, activitySubtotal, activityTotal, productTotal };
+      - cashDollarDeduction
+      + (isLunchBoxDraft ? cashDollarPurchase : 0);
+    return {
+      productSubtotal,
+      activitySubtotal,
+      activityTotal,
+      productTotal,
+      cashDollarDeduction,
+      cashDollarPurchase,
+    };
   }, [draft, sourceBrand]);
 
   const filteredAdditional = useMemo(() => {
@@ -680,6 +691,14 @@ export function QuotePdfEditorPage({
             <td colSpan={2}><PdfBlurCommitInput className="quote-pdf-adjustment-label" aria-label="折扣顯示文字" value={draft.discountLabel} onDirty={markDraftDirty} onCommit={(value) => update("discountLabel", value)} /></td>
             <td><QuotePdfMoneyInput aria-label="活動折扣" value={draft.discount} onDirty={markDraftDirty} onCommit={(value) => update("discount", value)} /></td>
           </tr>
+          {totals.cashDollarDeduction > 0 ? <tr>
+            <td colSpan={2}>扣除 CashDollar</td>
+            <td><QuotePdfMoneyInput aria-label="扣除 CashDollar" value={draft.cashDollarDeduction} onDirty={markDraftDirty} onCommit={(value) => update("cashDollarDeduction", value)} /></td>
+          </tr> : null}
+          {totals.cashDollarPurchase > 0 ? <tr>
+            <td colSpan={2}>購買 CashDollar</td>
+            <td><QuotePdfMoneyInput aria-label="購買 CashDollar" value={draft.cashDollarPurchase} onDirty={markDraftDirty} onCommit={(value) => update("cashDollarPurchase", value)} /></td>
+          </tr> : null}
           <tr><td colSpan={2}>總數：</td><td>${totals.activityTotal.toLocaleString("zh-HK")}</td></tr>
         </tfoot>
       </table>
@@ -740,6 +759,14 @@ export function QuotePdfEditorPage({
           {numberValue(draft.discount) > 0 ? <tr>
             <td colSpan={4}><PdfBlurCommitInput className="quote-pdf-adjustment-label" aria-label="折扣顯示文字" value={draft.discountLabel} onDirty={markDraftDirty} onCommit={(value) => update("discountLabel", value)} /></td>
             <td><QuotePdfMoneyInput aria-label="折扣" value={draft.discount} onDirty={markDraftDirty} onCommit={(value) => update("discount", value)} /></td>
+          </tr> : null}
+          {totals.cashDollarDeduction > 0 ? <tr>
+            <td colSpan={4}>扣除 CashDollar</td>
+            <td><QuotePdfMoneyInput aria-label="扣除 CashDollar" value={draft.cashDollarDeduction} onDirty={markDraftDirty} onCommit={(value) => update("cashDollarDeduction", value)} /></td>
+          </tr> : null}
+          {totals.cashDollarPurchase > 0 ? <tr>
+            <td colSpan={4}>購買 CashDollar</td>
+            <td><QuotePdfMoneyInput aria-label="購買 CashDollar" value={draft.cashDollarPurchase} onDirty={markDraftDirty} onCommit={(value) => update("cashDollarPurchase", value)} /></td>
           </tr> : null}
           <tr><td className="quote-pdf-summary-label" colSpan={4}>總數：</td><td><strong>${totals.productTotal.toLocaleString("zh-HK")}</strong></td></tr>
         </tbody> : null}
