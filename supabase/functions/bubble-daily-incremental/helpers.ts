@@ -73,6 +73,19 @@ export function canAdvanceCheckpoint(
   return completed && !failed && !resumable;
 }
 
+/** One Bubble payment may only sit on one settlement; later rows win. */
+export function dedupePaymentSettlementPaymentRows(
+  rows: Array<Record<string, unknown>>,
+): Array<Record<string, unknown>> {
+  const byPaymentLegacyId = new Map<string, Record<string, unknown>>();
+  for (const row of rows) {
+    const paymentLegacyId = row.payment_legacy_id;
+    if (typeof paymentLegacyId !== "string" || !paymentLegacyId) continue;
+    byPaymentLegacyId.set(paymentLegacyId, row);
+  }
+  return [...byPaymentLegacyId.values()];
+}
+
 export function hongKongBusinessDate(value: Date | string) {
   const date = value instanceof Date ? value : new Date(value);
   const parts = new Intl.DateTimeFormat("en-CA", {

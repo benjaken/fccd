@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import {
   canAdvanceCheckpoint,
   canonicalJson,
+  dedupePaymentSettlementPaymentRows,
   partitionConflicts,
   sha256Hex,
 } from "../supabase/functions/bubble-daily-incremental/helpers.ts";
@@ -83,6 +84,47 @@ describe("bubble daily incremental helpers", () => {
       "existing-1",
       "existing-2",
     ]);
+  });
+
+  it("keeps only one settlement link per Bubble payment legacy id", () => {
+    const rows = [
+      {
+        payment_settlement_id: "settlement-empty",
+        payment_legacy_id: "pay-1",
+      },
+      {
+        payment_settlement_id: "settlement-with-inv",
+        payment_legacy_id: "pay-1",
+      },
+      {
+        payment_settlement_id: "settlement-other",
+        payment_legacy_id: "pay-2",
+      },
+    ];
+
+    expect(dedupePaymentSettlementPaymentRows(rows)).toEqual([
+      {
+        payment_settlement_id: "settlement-with-inv",
+        payment_legacy_id: "pay-1",
+      },
+      {
+        payment_settlement_id: "settlement-other",
+        payment_legacy_id: "pay-2",
+      },
+    ]);
+  });
+
+  it("claims exclusive payment settlement links when importing payment reports", () => {
+    const source = fs.readFileSync(
+      path.join(
+        process.cwd(),
+        "supabase/functions/bubble-daily-incremental/index.ts",
+      ),
+      "utf8",
+    );
+    expect(source).toContain("claimPaymentSettlementPayments");
+    expect(source).toContain('table === "payment_settlement_payments"');
+    expect(source).toContain("dedupePaymentSettlementPaymentRows");
   });
 
   it("advances a checkpoint only after complete successful work", () => {
