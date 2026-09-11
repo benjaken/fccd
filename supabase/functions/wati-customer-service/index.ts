@@ -960,6 +960,26 @@ async function sendInternalEmail(to: string[], subject: string, html: string) {
   }
 }
 
+/** Develop-branch lab recipient for internal WATI staff alerts. */
+const DEVELOP_INTERNAL_WATI_PHONE = "8613828747224";
+
+function resolveInternalWatiPhones(
+  candidates: string[],
+  guestPhone: string,
+  environment: string,
+) {
+  const phones = [
+    ...new Set(
+      candidates
+        .map((phone) => normalizeNotificationPhone(phone))
+        .filter((phone) => Boolean(phone) && phone !== guestPhone),
+    ),
+  ];
+  if (environment !== "develop") return phones;
+  // Develop must not blast production staff — only the pilot phone.
+  return [DEVELOP_INTERNAL_WATI_PHONE];
+}
+
 async function notifyInternal(
   admin: AdminClient,
   input: {
@@ -973,6 +993,7 @@ async function notifyInternal(
 ) {
   let delivered = false;
   const guestPhone = normalizeNotificationPhone(input.phone);
+  const environment = deploymentEnvironment();
   const appUrl = env("APP_URL").replace(/\/$/, "");
   const detailUrl =
     appUrl && input.quoteId
@@ -991,43 +1012,43 @@ async function notifyInternal(
     detailUrl,
   };
 
-  const { data: recipients, error } = await admin.rpc(
-    "enquiry_internal_email_recipients",
-  );
-  if (error) throw error;
-  const addresses = [
-    ...new Set(
-      ((recipients || []) as Array<{ recipient_address?: string }>)
-        .map((item) => (item.recipient_address || "").trim().toLowerCase())
-        .filter(
-          (address) =>
-            address &&
-            excludeGuestContacts([address], guestPhone).length > 0,
-        ),
-    ),
-  ];
-  if (addresses.length) {
-    const mail = buildEnquiryInternalContent(contentInput);
-    await sendInternalEmail(addresses, mail.subject, mail.html);
-    delivered = true;
+  // Production keeps email fan-out; develop lab is WATI-only to the pilot phone.
+  if (environment !== "develop") {
+    const { data: recipients, error } = await admin.rpc(
+      "enquiry_internal_email_recipients",
+    );
+    if (error) throw error;
+    const addresses = [
+      ...new Set(
+        ((recipients || []) as Array<{ recipient_address?: string }>)
+          .map((item) => (item.recipient_address || "").trim().toLowerCase())
+          .filter(
+            (address) =>
+              address &&
+              excludeGuestContacts([address], guestPhone).length > 0,
+          ),
+      ),
+    ];
+    if (addresses.length) {
+      const mail = buildEnquiryInternalContent(contentInput);
+      await sendInternalEmail(addresses, mail.subject, mail.html);
+      delivered = true;
+    }
   }
 
-  if (watiEmergencySwitchAllows("WATI_ENQUIRY_INTERNAL_ENABLED")) {
+  if (
+    environment === "develop" ||
+    watiEmergencySwitchAllows("WATI_ENQUIRY_INTERNAL_ENABLED")
+  ) {
     const { data: staff, error: staffError } = await admin
       .from("order_first_notification_recipients")
       .select("phone");
     if (staffError) throw staffError;
-    const phones = [
-      ...new Set(
-        ((staff || []) as Array<{ phone?: string }>)
-          .map((item) => normalizeNotificationPhone(item.phone))
-          .filter(
-            (phone) =>
-              Boolean(phone) &&
-              phone !== guestPhone,
-          ),
-      ),
-    ];
+    const phones = resolveInternalWatiPhones(
+      ((staff || []) as Array<{ phone?: string }>).map((item) => item.phone || ""),
+      guestPhone,
+      environment,
+    );
     const parameters = buildEnquiryInternalWatiParameters(contentInput);
     const endpoint = requiredEnv("WATI_API_ENDPOINT").replace(/\/$/, "");
     const token = requiredEnv("WATI_API_TOKEN");
@@ -1053,8 +1074,32 @@ async function notifyInternal(
           }),
         },
       );
-      if (!response.ok) throw new Error(`wati_internal_send_failed:${response.status}`);
-      delivered = true;
+      if (response.ok) {
+        delivered = true;
+        continue;
+      }
+      // Develop lab often lacks the production enquiry template / token scope.
+      // Fall back to a session text so staff still get the urgent ping.
+      if (environment === "develop") {
+        const title = contentInput.formTitle;
+        const detail = [
+          title,
+          `客人：${input.phone}`,
+          input.orderNumber ? `單號：${input.orderNumber}` : null,
+          input.summary,
+        ].filter(Boolean).join("\n");
+        await deliverWatiSessionMessage({
+          creds: watiCredentials(),
+          phone,
+          text: detail.slice(0, 1500),
+          channelNumber: env("WATI_CHANNEL_NUMBER") || BRAND_WHATSAPP_CHANNEL,
+          // Must use fcc-bot- prefix so WATI owner echoes are not treated as human takeover.
+          localMessageId: `fcc-bot-staff-${crypto.randomUUID()}`,
+        });
+        delivered = true;
+        continue;
+      }
+      throw new Error(`wati_internal_send_failed:${response.status}`);
     }
   }
   if (!delivered) throw new Error("internal_notification_recipient_missing");
@@ -1094,23 +1139,43 @@ async function queueInternalHandoff(
     .eq("id", handoffId)
     .maybeSingle();
   if (existingError) throw existingError;
-  if (
-    existing?.status === "notified" ||
-    existing?.status === "in_progress" ||
-    existing?.status === "processing"
-  ) {
-    // Staff already received (or are handling) this phone's active handoff.
+  // Same-day urgent must still ping staff even if an older handoff is in_progress.
+  // Only suppress duplicate blasts within a short window after a successful notify.
+  const notifiedAtMs = existing?.notified_at
+    ? Date.parse(String(existing.notified_at))
+    : NaN;
+  const recentlyNotified =
+    Number.isFinite(notifiedAtMs) && Date.now() - notifiedAtMs < 5 * 60 * 1000;
+  if (recentlyNotified) return;
+
+  try {
+    await notifyInternal(admin, {
+      phone: input.phone,
+      quoteId: input.quoteId,
+      orderNumber: input.orderNumber,
+      summary: input.summary,
+      kind: input.kind || "inquiry",
+      urgent: true,
+    });
+  } catch (error) {
+    // Never block the guest reply on staff-notify failure; leave the handoff
+    // pending so the morning digest / retry can pick it up.
+    const detail = error instanceof Error ? error.message : String(error);
+    console.error("urgent staff notify failed", detail);
+    const now = new Date().toISOString();
+    await admin
+      .from("customer_service_handoff_requests")
+      .update({
+        status: "pending",
+        last_error: detail.slice(0, 500),
+        updated_at: now,
+      })
+      .eq("id", handoffId)
+      .catch((auditError) =>
+        console.error("urgent handoff failure audit failed", auditError)
+      );
     return;
   }
-
-  await notifyInternal(admin, {
-    phone: input.phone,
-    quoteId: input.quoteId,
-    orderNumber: input.orderNumber,
-    summary: input.summary,
-    kind: input.kind || "inquiry",
-    urgent: true,
-  });
   const now = new Date().toISOString();
   const { error: updateError } = await admin
     .from("customer_service_handoff_requests")
@@ -1121,7 +1186,7 @@ async function queueInternalHandoff(
       updated_at: now,
     })
     .eq("id", handoffId)
-    .in("status", ["pending", "failed"]);
+    .in("status", ["pending", "failed", "in_progress", "processing", "notified"]);
   if (updateError) throw updateError;
 }
 

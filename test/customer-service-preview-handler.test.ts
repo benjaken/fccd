@@ -67,4 +67,19 @@ describe("customer-service backend conversation preview", () => {
     expect(source).toContain('status: "notified"');
     expect(source).toContain("【緊急】WhatsApp 即日訂餐");
   });
+
+  it("limits develop internal WATI staff alerts to the pilot phone only", () => {
+    expect(source).toContain('const DEVELOP_INTERNAL_WATI_PHONE = "8613828747224"');
+    expect(source).toContain("function resolveInternalWatiPhones");
+    expect(source).toContain("return [DEVELOP_INTERNAL_WATI_PHONE]");
+    expect(source).toContain('environment === "develop" ||');
+    expect(source).toContain("environment !== \"develop\"");
+  });
+
+  it("keeps guest replies flowing when urgent staff notify fails", () => {
+    expect(source).toContain("urgent staff notify failed");
+    expect(source).toContain("Never block the guest reply on staff-notify failure");
+    expect(source).toContain("Fall back to a session text so staff still get the urgent ping");
+    expect(source).toContain("fcc-bot-staff-");
+  });
 });
