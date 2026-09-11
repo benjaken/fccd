@@ -1337,4 +1337,31 @@ describe("Shopify payment Bubble conventions", () => {
     expect(row.payment_method_legacy_id).toBe("fps-legacy");
     expect(row.payment_at).toBe("2026-08-12T16:00:00.000Z");
   });
+
+  it("prefers Bubble payment_at even when the Shopify txn falls on another HK day", () => {
+    // B-1515: Bubble 2026-08-20, Shopify txn 2026-08-24
+    const row = applyBubblePaymentTwin(
+      {
+        order_id: "order-1515",
+        amount: 1638,
+        currency: "HKD",
+        payment_at: "2026-08-23T16:00:00.000Z", // 2026-08-24 00:00 HKT
+        payment_method_id: "bank-id",
+        payment_method_legacy_id: "bank-legacy",
+        bubble_created_at: "2026-08-24T08:53:27.000Z",
+      },
+      [{
+        legacy_id: "bubble-1515",
+        order_id: "order-1515",
+        amount: 1638,
+        currency: "HKD",
+        payment_at: "2026-08-19T16:00:00.000Z", // 2026-08-20 00:00 HKT
+        payment_method_id: "cheque-id",
+        payment_method_legacy_id: "cheque-legacy",
+      }],
+    );
+    expect(row.payment_at).toBe("2026-08-19T16:00:00.000Z");
+    // Existing Shopify gateway mapping is kept; only null methods are filled.
+    expect(row.payment_method_id).toBe("bank-id");
+  });
 });

@@ -1669,7 +1669,9 @@ export type LegacyPaymentTwin = {
 
 /**
  * Prefer a matching Bubble/legacy receipt's payment date and method so Shopify
- * sync keeps Bubble's original bookkeeping values when the gateway is unknown.
+ * sync keeps Bubble's original bookkeeping. Match by order+amount+currency only
+ * — Bubble's payment date can differ from the Shopify transaction timestamp
+ * (e.g. B-1515 Bubble 2026-08-20 vs Shopify txn 2026-08-24).
  */
 export function applyBubblePaymentTwin<T extends {
   order_id?: unknown;
@@ -1683,19 +1685,13 @@ export function applyBubblePaymentTwin<T extends {
   const orderId = typeof row.order_id === "string" ? row.order_id : "";
   const amount = Number(row.amount);
   const currency = String(row.currency ?? "HKD").trim().toUpperCase();
-  const paymentDate = hongKongDate(
-    row.payment_at ?? row.bubble_created_at,
-  );
-  if (!orderId || !Number.isFinite(amount) || !paymentDate) return row;
+  if (!orderId || !Number.isFinite(amount)) return row;
 
   const twin = legacyRows.find((candidate) => {
     if (String(candidate.legacy_id ?? "").startsWith("shopify:")) return false;
     if (candidate.order_id !== orderId) return false;
     if (Number(candidate.amount) !== amount) return false;
-    if (String(candidate.currency ?? "HKD").trim().toUpperCase() !== currency) {
-      return false;
-    }
-    return hongKongDate(candidate.payment_at) === paymentDate;
+    return String(candidate.currency ?? "HKD").trim().toUpperCase() === currency;
   });
   if (!twin) return row;
 
