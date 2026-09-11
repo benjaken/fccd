@@ -81,7 +81,6 @@ export async function fetchFollowUpCounts(
       .is("archived_at", null)
       .eq("is_sent_to_factory", false)
       .eq("do_not_send_to_factory", false)
-      .gt("grand_total", 0)
       .gte("delivery_at", todayStart),
     supabase
       .from("orders")

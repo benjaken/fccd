@@ -426,10 +426,10 @@ export async function fetchOrders({
   } else if (preset === "not-sent-factory") {
     // Only an explicit false is actionable. Migrated legacy orders often have
     // a null flag, which does not mean they still need to be sent.
+    // Zero-total splits / placeholders still need factory follow-up.
     query = query
       .eq("is_sent_to_factory", false)
       .eq("do_not_send_to_factory", false)
-      .gt("grand_total", 0)
       .gte("delivery_at", `${hongKongDateKey(now)}T00:00:00+08:00`);
   }
 

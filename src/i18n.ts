@@ -2953,8 +2953,13 @@ const resources = {
           district: "請選擇地區。", districtCreateFailed: "未能新增地區，請檢查權限後重試。", deliveryDate: "請選擇送貨日期。", deliveryTime: "請選擇或輸入送貨時間。",
         },
         errors: {
-          create: "未能儲存報價表，請確認資料與權限後重試。",
+          create: "未能儲存報價表，請確認資料後重試。",
+          permission: "未能儲存報價表，目前帳號沒有足夠權限。",
+          channelRequired: "未能儲存報價表，請先選擇品牌。",
+          customerRequired: "未能儲存報價表，請填寫客人或公司名稱。",
+          districtPermission: "未能儲存報價表，目前帳號無法新增運送地區。",
           line: "未能更新貨品，請重試。", invalidLine: "數量須為 0 或以上的整數，單價不可小於 0。",
+          paymentInvalid: "未能儲存；請完整填寫收款日期、付款方式及金額（或刪除未完成的收款列）。",
           convert: "未能轉成訂單，請確認報價資料後重試。",
         },
         items: {
@@ -3042,7 +3047,7 @@ const resources = {
           add: "新增收款", date: "日期", method: "付款方式", amount: "金額", reference: "付款參考",
           remove: "刪除收款", empty: "尚未輸入收款記錄", receivable: "應收", paid: "已收", outstanding: "尚欠", overpaid: "多付",
           previous: "上一步", complete: "完成", sendAndComplete: "傳送 WATI 及電郵訂單確認通知及加單 link",
-          saveError: "未能完成儲存；如已新增收款，請完整填寫日期、付款方式及金額。",
+          saveError: "未能完成儲存；請確認資料後重試。",
           sendError: "WATI 或電郵未能傳送；訂單內容仍然保留，請檢查通知服務設定後重試。",
         },
         detailActions: {
@@ -8959,8 +8964,13 @@ const resources = {
           district: "Choose a district.", districtCreateFailed: "The district could not be added. Check your permissions and retry.", deliveryDate: "Choose a delivery date.", deliveryTime: "Choose or enter a delivery time.",
         },
         errors: {
-          create: "The quote could not be saved. Check the details and your permissions, then retry.",
+          create: "The quote could not be saved. Check the details and try again.",
+          permission: "The quote could not be saved because this account lacks permission.",
+          channelRequired: "The quote could not be saved. Choose a brand first.",
+          customerRequired: "The quote could not be saved. Enter a customer or company name.",
+          districtPermission: "The quote could not be saved because this account cannot create delivery districts.",
           line: "The product could not be updated. Please retry.", invalidLine: "Quantity must be a whole number of 0 or more and price cannot be negative.",
+          paymentInvalid: "Could not save. Complete each payment date, method, and amount (or remove incomplete payment rows).",
           convert: "The quote could not be converted to an order. Check the quote details and retry.",
         },
         items: {
@@ -9048,7 +9058,7 @@ const resources = {
           add: "Add payment", date: "Date", method: "Payment method", amount: "Amount", reference: "Reference",
           remove: "Remove payment", empty: "No payment records", receivable: "Receivable", paid: "Paid", outstanding: "Outstanding", overpaid: "Overpaid",
           previous: "Previous", complete: "Complete", sendAndComplete: "Send WATI and email order confirmation with add-on link",
-          saveError: "Could not complete the save. If a payment was added, fill in its date, method, and amount.",
+          saveError: "Could not complete the save. Check the details and try again.",
           sendError: "WATI or email could not be sent. The order remains available; check the notification service configuration and retry.",
         },
         detailActions: {

@@ -8,6 +8,7 @@ import {
   isCustomerServiceGreeting,
   isHongKongCalendarDateToday,
   isMenuInformationRequest,
+  isOrderConfirmationAcknowledgement,
   isSameDayOrderDemand,
   normalizeCustomerServiceOrderNumber,
   type ClassifiedMessage,
@@ -843,6 +844,18 @@ export async function handleCustomerServiceTurn({
   classify?: (text: string) => ClassifiedMessage | Promise<ClassifiedMessage>;
 }): Promise<BotTurn> {
   if (conversation.state === "human_owned") {
+    return {
+      reply: null,
+      conversation,
+      wroteInquiry: false,
+      notified: false,
+      usedModel: false,
+    };
+  }
+
+  // Delivery-confirmation template button (e.g. 「確定訂單」): acknowledge silently.
+  // Must run before awaiting_human supplement / LOOKUP("訂單") so we neither reply nor re-queue.
+  if (isOrderConfirmationAcknowledgement(text)) {
     return {
       reply: null,
       conversation,

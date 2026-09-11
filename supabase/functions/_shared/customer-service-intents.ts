@@ -268,6 +268,12 @@ export function isSameDayOrderDemand(text: string) {
   return !pureHowto;
 }
 
+/** WATI order-confirmation template quick-reply; no bot reply or handoff needed. */
+export function isOrderConfirmationAcknowledgement(text: string) {
+  const normalized = text.trim().replace(/[!！.。?？\s]/g, "");
+  return normalized === "確定訂單" || normalized === "确认订单";
+}
+
 export function classifyCustomerServiceMessage(text: string): ClassifiedMessage {
   const body = text.trim();
   const slots = extractInquirySlots(body);

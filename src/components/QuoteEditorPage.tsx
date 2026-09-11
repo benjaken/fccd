@@ -83,6 +83,10 @@ import {
   saveSalesDocumentBatch,
   quoteLineLabelRemarkRows,
   quoteLinePrintLabelName,
+  classifyQuoteSaveError,
+  isPersistableOrderPayment,
+  isQuoteSaveErrorKey,
+  quoteDraftForSave,
   type CreatedQuote,
   type QuoteCatalogItem,
   type QuoteDraft,
@@ -811,8 +815,14 @@ export function QuoteEditorPage({
     };
   }, [copyFrom, id, isOrder, loadLines, loadOptions, loadSummary, navigate, pendingEnquiry, sourceId]);
 
-  const saveCurrentDetails = (orderId: string) =>
-    isOrder ? saveDetails(orderId, draft, "order") : saveDetails(orderId, draft);
+  const saveCurrentDetails = (orderId: string) => {
+    const method = options.shippingMethods.find((item) => item.id === draft.shippingMethodId);
+    const payload = quoteDraftForSave(
+      draft,
+      automaticDistrictForMethod(method?.name ?? ""),
+    );
+    return isOrder ? saveDetails(orderId, payload, "order") : saveDetails(orderId, payload);
+  };
 
   const saveCurrentEnquiryAnswers = async () => {
     if (!pendingEnquiry || !enquirySubmission || !canEdit || savingEnquiry) return;
@@ -1042,14 +1052,23 @@ export function QuoteEditorPage({
 
   const persistAllChanges = async (quote: CreatedQuote) => {
     const invalidLine = lines.find(
-      (line) => !Number.isInteger(line.quantity) || line.quantity < 0 || line.unitPrice < 0,
+      (line) => (
+        !Number.isInteger(line.quantity)
+        || line.quantity < 0
+        || !Number.isFinite(line.unitPrice)
+        || line.unitPrice < 0
+      ),
     );
     if (invalidLine) {
       throw new Error("quote_line_invalid");
     }
-    if (isOrder && payments.some((payment) => !payment.paymentAt || !payment.paymentMethodId || (!Number.isFinite(payment.amount) || payment.amount === 0))) {
-      throw new Error("quote_payment_invalid");
-    }
+
+    // Payment method is not required on save. Only send complete rows
+    // (date + method + non-zero amount, including refunds). "Add payment"
+    // stubs prefill date and outstanding amount with a blank method — skip those.
+    const paymentsToSave = isOrder
+      ? payments.filter(isPersistableOrderPayment)
+      : [];
 
     await saveCurrentDetails(quote.id);
     await flushPendingLines(quote.id);
@@ -1063,7 +1082,11 @@ export function QuoteEditorPage({
         setFinancialsDirty(false);
       }
       writeQuotePdfSupplements(quote.id, supplements);
-      await releaseCurrentEditSession();
+      try {
+        await releaseCurrentEditSession();
+      } catch (releaseError) {
+        console.warn("edit session release failed after quote save", releaseError);
+      }
       return;
     }
     const batchSaver = saveBatch ?? (
@@ -1086,7 +1109,7 @@ export function QuoteEditorPage({
         documentType: isOrder ? "order" : "quote",
         lines: persistedLines,
         financials: financialValues,
-        payments: isOrder ? payments : [],
+        payments: paymentsToSave,
         channelId: draft.channelId,
         orderNumber: quote.orderNumber,
         factorySettings,
@@ -1097,12 +1120,17 @@ export function QuoteEditorPage({
       }
       await saveFinancialDetails(quote.id, financialValues);
       if (isOrder) {
-        await savePayments(quote.id, quote.orderNumber, draft.channelId, payments, "order");
+        await savePayments(quote.id, quote.orderNumber, draft.channelId, paymentsToSave, "order");
         await saveFactorySettings(quote.id, factorySettings);
       }
     }
     writeQuotePdfSupplements(quote.id, supplements);
-    await releaseCurrentEditSession();
+    // Document already persisted; do not surface release failures as save errors.
+    try {
+      await releaseCurrentEditSession();
+    } catch (releaseError) {
+      console.warn("edit session release failed after order save", releaseError);
+    }
   };
 
   const saveAllChanges = async () => {
@@ -1118,8 +1146,12 @@ export function QuoteEditorPage({
     try {
       await persistAllChanges(activeQuote);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "quote_save_failed");
+      console.error("quote save failed", cause);
+      const key = classifyQuoteSaveError(cause);
+      setError(key);
       setCompletionError("save");
+      if (key === "invalidLine") scrollToSection("items");
+      if (key === "paymentInvalid") scrollToSection("payments");
     } finally {
       setSaving(false);
     }
@@ -1136,6 +1168,7 @@ export function QuoteEditorPage({
 
     setSaving(true);
     setError(null);
+    const draftPayload = quoteDraftForSave(draft, automaticDistrictName);
     try {
       if (pendingEnquiry && enquirySubmission) {
         await saveEnquirySubmissionAnswers(
@@ -1145,11 +1178,11 @@ export function QuoteEditorPage({
         );
         const quote = await convertEnquiryToQuote({
           submissionId: enquirySubmission.id,
-          channelId: draft.channelId,
-          draft,
+          channelId: draftPayload.channelId,
+          draft: draftPayload,
         });
         setCreated(quote);
-        setChannelId(draft.channelId);
+        setChannelId(draftPayload.channelId);
         setActiveTab("items");
         setLoading(true);
         navigate(`/quotes/${quote.id}/edit?nav=catering.quotes`, { replace: true });
@@ -1157,11 +1190,11 @@ export function QuoteEditorPage({
       }
       const quote = copyFrom
         ? isOrder
-          ? await copyOrder(copyFrom, draft)
-          : await copyQuote(copyFrom, draft)
+          ? await copyOrder(copyFrom, draftPayload)
+          : await copyQuote(copyFrom, draftPayload)
         : isOrder
-          ? await createOrder(draft)
-          : await saveQuote(draft);
+          ? await createOrder(draftPayload)
+          : await saveQuote(draftPayload);
       if (copyFrom) {
         writeQuotePdfSupplements(
           quote.id,
@@ -1169,15 +1202,16 @@ export function QuoteEditorPage({
         );
       }
       setCreated(quote);
-      setChannelId(draft.channelId);
+      setChannelId(draftPayload.channelId);
       setActiveTab("items");
       // The route change remounts this editor. Hide the old route's product
       // controls while the saved quote is being loaded so callers cannot start
       // typing into a stale input that is about to be replaced.
       setLoading(true);
       navigate(`${listPath}/${quote.id}/edit`, { replace: true });
-    } catch {
-      setError("quote_create_failed");
+    } catch (cause) {
+      console.error("quote create failed", cause);
+      setError(classifyQuoteSaveError(cause));
     } finally {
       setSaving(false);
     }
@@ -2310,6 +2344,7 @@ export function QuoteEditorPage({
     }
     setCompleting(true);
     setCompletionError(null);
+    setError(null);
     try {
       await persistAllChanges(activeQuote);
       try {
@@ -2319,8 +2354,13 @@ export function QuoteEditorPage({
         return;
       }
       navigate(listPath, { replace: true });
-    } catch {
+    } catch (cause) {
+      console.error("quote save-and-send failed", cause);
+      const key = classifyQuoteSaveError(cause);
+      setError(key);
       setCompletionError("save");
+      if (key === "invalidLine") scrollToSection("items");
+      if (key === "paymentInvalid") scrollToSection("payments");
     } finally {
       setCompleting(false);
     }
@@ -2785,7 +2825,9 @@ export function QuoteEditorPage({
             <label><span>{t("quoteEditor.fields.internalNote")}<small>{t("quoteEditor.fields.internalNoteHint")}</small></span><textarea rows={2} value={draft.internalNote} onChange={(event) => patchDraft({ internalNote: event.target.value })} /></label>
           </div>
 
-          {error && <p className="quote-editor-error" role="alert">{t("quoteEditor.errors.create")}</p>}
+          {isQuoteSaveErrorKey(error) ? (
+            <p className="quote-editor-error" role="alert">{t(`quoteEditor.errors.${error}`)}</p>
+          ) : null}
           {conversionError && <p className="quote-editor-error" role="alert">{t("quoteEditor.errors.convert")}</p>}
           <footer>
             {activeQuote && isOrder ? <Button type="button" variant="outline" disabled={completing || saving} onClick={() => void saveAndSendCurrentOrderConfirmation()}>{completing ? <LoaderCircle className="spin" /> : <Mail />}{t(completing ? "quoteEditor.detailActions.sendingConfirmation" : "quoteEditor.payments.sendAndComplete")}</Button> : null}
@@ -2816,7 +2858,12 @@ export function QuoteEditorPage({
               <label><span>{t("quoteEditor.items.unitPrice")}</span><input type="number" min="0" step="0.01" value={unitPrice} onChange={(event) => setUnitPrice(event.target.value)} /></label>
             </div>
             <label><span>{t("quoteEditor.items.remarks")}</span><textarea rows={1} maxLength={16} value={lineRemarks} onChange={(event) => setLineRemarks(event.target.value)} /></label>
-            {error && <p className="quote-editor-error" role="alert">{t(`quoteEditor.errors.${error === "quote_line_invalid" ? "invalidLine" : "line"}`)}</p>}
+            {(error === "quote_line_invalid" || error === "invalidLine") ? (
+              <p className="quote-editor-error" role="alert">{t("quoteEditor.errors.invalidLine")}</p>
+            ) : null}
+            {(error === "quote_line_save_failed" || error === "quote_line_delete_failed") ? (
+              <p className="quote-editor-error" role="alert">{t("quoteEditor.errors.line")}</p>
+            ) : null}
             <div className="quote-item-form-actions">
               <Button type="button" variant="outline" onClick={() => setLunchboxPickerOpen(true)}><Search />{t("quoteEditor.items.lunchboxSearchButton")}</Button>
               <Button type="button" variant="outline" onClick={() => setCustomProductOpen(true)}><Pencil />{t("quoteEditor.items.customProduct")}</Button>
@@ -3165,7 +3212,16 @@ export function QuoteEditorPage({
               overpaid: t("quoteEditor.payments.overpaid"),
             }}
           />
-          {completionError ? <p className="quote-editor-error" role="alert">{t(`quoteEditor.payments.${completionError === "send" ? "sendError" : "saveError"}`)}</p> : null}
+          {completionError === "send" ? (
+            <p className="quote-editor-error" role="alert">{t("quoteEditor.payments.sendError")}</p>
+          ) : null}
+          {completionError === "save" ? (
+            <p className="quote-editor-error" role="alert">
+              {isQuoteSaveErrorKey(error)
+                ? t(`quoteEditor.errors.${error}`)
+                : t("quoteEditor.payments.saveError")}
+            </p>
+          ) : null}
           <footer>
             <Button type="button" variant="outline" onClick={addPayment}><Plus />{t("quoteEditor.payments.add")}</Button>
             <Button type="button" disabled={saving || completing} onClick={() => void saveAllChanges()}>{saving ? <LoaderCircle className="spin" /> : <Check />}{saving ? t("quoteEditor.saving") : t("quoteEditor.saveChanges")}</Button>

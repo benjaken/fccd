@@ -7,6 +7,7 @@ import {
   explicitCustomerServiceOrderNumber,
   extractOrderNumber,
   isHongKongCalendarDateToday,
+  isOrderConfirmationAcknowledgement,
   isSameDayOrderDemand,
   normalizeCustomerServiceOrderNumber,
   shouldBypassCustomerServiceAi,
@@ -547,6 +548,32 @@ describe("customer-service bot turns", () => {
     });
     expect(turn.reply).toBe(REPLIES.help);
     expect(turn.conversation.state).toBe("identifying");
+  });
+
+  it("stays silent for WATI order-confirmation button 確定訂單", async () => {
+    expect(isOrderConfirmationAcknowledgement("確定訂單")).toBe(true);
+    expect(isOrderConfirmationAcknowledgement("確定訂單！")).toBe(true);
+    expect(isOrderConfirmationAcknowledgement("我想確定訂單時間")).toBe(false);
+
+    const queueHandoff = vi.fn();
+    const lookupOrders = vi.fn();
+    for (const state of ["identifying", "awaiting_human"] as const) {
+      const turn = await handleCustomerServiceTurn({
+        phone: conversation.phone_normalized,
+        text: "確定訂單",
+        conversation: {
+          ...conversation,
+          state,
+          handoff_at: state === "awaiting_human" ? new Date().toISOString() : null,
+        },
+        deps: deps({ queueHandoff, lookupOrders }),
+      });
+      expect(turn.reply).toBeNull();
+      expect(turn.conversation.state).toBe(state);
+      expect(turn.queuedHandoff).toBeFalsy();
+    }
+    expect(queueHandoff).not.toHaveBeenCalled();
+    expect(lookupOrders).not.toHaveBeenCalled();
   });
 
   it("lists only undelivered orders before queuing morning staff follow-up", async () => {

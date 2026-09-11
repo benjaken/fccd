@@ -1,5 +1,6 @@
 import { supabase } from "@/lib/supabase";
 import { hongKongDateKey } from "@/lib/date-time";
+import { createDeliveryDistrictOption } from "@/lib/delivery-districts";
 import { productListDisplayName } from "@/lib/products";
 import type { OrderFactorySettings } from "@/lib/order-factory-settings";
 import type { QuotePdfSupplementDraft } from "@/lib/quote-pdf-draft";
@@ -301,29 +302,10 @@ export async function createQuote(input: QuoteDraft): Promise<CreatedQuote> {
 async function resolveDeliveryDistrictId(input: QuoteDraft) {
   let districtId = input.districtId || null;
   if (!districtId && input.districtName.trim()) {
-    const { data: district, error } = await supabase
-      .from("delivery_districts")
-      .select("id")
-      .ilike("name", input.districtName.trim())
-      .is("archived_at", null)
-      .limit(1)
-      .maybeSingle();
-    if (error) throw error;
-    districtId = district?.id || null;
-    if (!districtId) {
-      const createdDistrictId = crypto.randomUUID();
-      const { data: createdDistrict, error: createError } = await supabase
-        .from("delivery_districts")
-        .insert({
-          id: createdDistrictId,
-          legacy_id: `web-auto-district-${createdDistrictId}`,
-          name: input.districtName.trim(),
-        })
-        .select("id")
-        .single();
-      if (createError) throw createError;
-      districtId = createdDistrict.id;
-    }
+    // Quote managers may lack settings.districts.edit, so create through the
+    // security-definer helper instead of a direct table insert.
+    const district = await createDeliveryDistrictOption(input.districtName);
+    districtId = district.id;
   }
   return districtId;
 }
@@ -822,15 +804,8 @@ export async function updateQuote(
 ) {
   let districtId = input.districtId || null;
   if (!districtId && input.districtName.trim()) {
-    const { data: district, error: districtError } = await supabase
-      .from("delivery_districts")
-      .select("id")
-      .ilike("name", input.districtName.trim())
-      .is("archived_at", null)
-      .limit(1)
-      .maybeSingle();
-    if (districtError) throw districtError;
-    districtId = district?.id || null;
+    const district = await createDeliveryDistrictOption(input.districtName);
+    districtId = district.id;
   }
   const deliveryAt = input.deliveryDate
     ? `${input.deliveryDate}T00:00:00+08:00`
@@ -1300,4 +1275,102 @@ export async function addQuoteUtensilLine(orderId: string) {
     p_order_id: orderId,
   });
   if (error) throw error;
+}
+
+export type QuoteSaveErrorKey =
+  | "create"
+  | "permission"
+  | "channelRequired"
+  | "customerRequired"
+  | "districtPermission"
+  | "invalidLine"
+  | "paymentInvalid";
+
+function errorText(cause: unknown) {
+  if (!cause || typeof cause !== "object") {
+    return typeof cause === "string" ? cause : "";
+  }
+  const record = cause as {
+    message?: unknown;
+    code?: unknown;
+    details?: unknown;
+    hint?: unknown;
+  };
+  return [record.message, record.code, record.details, record.hint]
+    .filter((value) => typeof value === "string" && value.trim())
+    .join(" ")
+    .toLowerCase();
+}
+
+const QUOTE_SAVE_ERROR_KEYS = new Set<QuoteSaveErrorKey>([
+  "create",
+  "permission",
+  "channelRequired",
+  "customerRequired",
+  "districtPermission",
+  "invalidLine",
+  "paymentInvalid",
+]);
+
+export function isQuoteSaveErrorKey(value: string | null | undefined): value is QuoteSaveErrorKey {
+  return Boolean(value && QUOTE_SAVE_ERROR_KEYS.has(value as QuoteSaveErrorKey));
+}
+
+/** Ensure auto-filled shipping districts are present on the draft before save/create. */
+export function quoteDraftForSave(
+  draft: QuoteDraft,
+  automaticDistrictName?: string | null,
+): QuoteDraft {
+  if (draft.districtId || draft.districtName.trim()) return draft;
+  const autoName = automaticDistrictName?.trim() ?? "";
+  if (!autoName) return draft;
+  return { ...draft, districtName: autoName };
+}
+
+/**
+ * Payments worth sending to the order save path. Incomplete "add payment"
+ * stubs (date / outstanding amount filled, method still blank) must not be
+ * sent — the batch RPC rejects a null method. Refunds are negative amounts
+ * and must still persist.
+ */
+export function isPersistableOrderPayment(payment: QuotePayment): boolean {
+  return Boolean(
+    payment.paymentAt
+    && payment.paymentMethodId
+    && Number.isFinite(payment.amount)
+    && payment.amount !== 0,
+  );
+}
+
+/** Map raw create/save failures to UI copy. Avoid blaming permissions by default. */
+export function classifyQuoteSaveError(cause: unknown): QuoteSaveErrorKey {
+  const text = errorText(cause);
+  if (!text) return "create";
+  // Client-side checks run before any network call; keep their messages specific.
+  if (text.includes("quote_line_invalid")) return "invalidLine";
+  if (
+    text.includes("quote_payment_invalid")
+    || text.includes("invalid_order_payment")
+  ) {
+    return "paymentInvalid";
+  }
+  if (text.includes("channel_required")) return "channelRequired";
+  if (text.includes("customer_required")) return "customerRequired";
+  if (
+    text.includes("district_create_not_allowed") ||
+    text.includes("district_create_failed")
+  ) {
+    return "districtPermission";
+  }
+  if (
+    text.includes("42501") ||
+    text.includes("permission denied") ||
+    text.includes("row-level security") ||
+    text.includes("violates row-level security") ||
+    text.includes("forbidden") ||
+    text.includes("not authorized")
+  ) {
+    return "permission";
+  }
+  return "create";
 }

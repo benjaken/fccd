@@ -51,12 +51,13 @@ The full design system (shadcn + Ant Design → FCCD) is in
 
 ```bash
 npm run lint
-npm run test
+npm run test:changed
 npm run build
 ```
 
-UI test cases are stored in [`test/`](test/). The production build runs the
-full test suite automatically.
+UI test cases are stored in [`test/`](test/). `npm run build` runs
+`test:changed` first — only tests for pages/modules in the current commit.
+Use `npm run verify` for the full suite plus typechecks.
 
 The initial layout includes FCCD (Food Channel Catering Delivery) branding,
 responsive navigation, Traditional Chinese and English localization, dark mode,
