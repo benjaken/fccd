@@ -7,6 +7,9 @@ import {
   filterLegacyPaymentDuplicates,
   mapShopifyOrder,
   mapShopifyTransaction,
+  hongKongDayStartIso,
+  paymentMethodForGateway,
+  applyBubblePaymentTwin,
   normalizeShopifyDeliveryTime,
   normalizeShopifyPhone,
   linkedOrderLineSnapshotPatch,
@@ -141,7 +144,8 @@ describe("shopify transaction mapping", () => {
     expect(row!.order_id).toBe("order-uuid");
     expect(row!.amount).toBe(1234.56);
     expect(row!.currency).toBe("HKD");
-    expect(row!.payment_at).toBe("2026-08-01T12:00:00.000Z");
+    expect(row!.payment_at).toBe("2026-07-31T16:00:00.000Z"); // 2026-08-01 00:00 HKT
+    expect(row!.bubble_created_at).toBe("2026-08-01T12:00:00.000Z");
     expect(row!.voided_at).toBeNull();
   });
 
@@ -1288,5 +1292,76 @@ describe("extractOptionRemark", () => {
     expect(extractOptionRemark("(三格) 肉醬意粉盒   配菠蘿芝士腸串 2串")).toBe("菠蘿芝士腸串 2串");
     expect(extractOptionRemark("(三格) 肉醬意粉盒")).toBeNull();
     expect(extractOptionRemark(null)).toBeNull();
+  });
+});
+
+describe("Shopify payment Bubble conventions", () => {
+  it("normalises Shopify transaction times to Hong Kong midnight", () => {
+    expect(hongKongDayStartIso("2026-08-13T09:21:33.000Z")).toBe(
+      "2026-08-12T16:00:00.000Z",
+    ); // 2026-08-13 00:00 HKT
+  });
+
+  it("maps common Shopify gateways onto payment_methods names", () => {
+    const methods = new Map([
+      ["fps", { id: "fps-id", legacy_id: "fps-legacy" }],
+      ["credit card", { id: "cc-id", legacy_id: "cc-legacy" }],
+    ]);
+    expect(paymentMethodForGateway("shopify_payments", methods).payment_method_id)
+      .toBe("cc-id");
+    expect(paymentMethodForGateway("manual", methods).payment_method_id).toBeNull();
+  });
+
+  it("backfills missing method and Bubble payment_at from a legacy twin", () => {
+    const row = applyBubblePaymentTwin(
+      {
+        order_id: "order-1",
+        amount: 4590,
+        currency: "HKD",
+        payment_at: "2026-08-12T16:00:00.000Z",
+        payment_method_id: null,
+        payment_method_legacy_id: null,
+        bubble_created_at: "2026-08-13T09:21:33.000Z",
+      },
+      [{
+        legacy_id: "bubble-1",
+        order_id: "order-1",
+        amount: 4590,
+        currency: "HKD",
+        payment_at: "2026-08-12T16:00:00.000Z",
+        payment_method_id: "fps-id",
+        payment_method_legacy_id: "fps-legacy",
+      }],
+    );
+    expect(row.payment_method_id).toBe("fps-id");
+    expect(row.payment_method_legacy_id).toBe("fps-legacy");
+    expect(row.payment_at).toBe("2026-08-12T16:00:00.000Z");
+  });
+
+  it("prefers Bubble payment_at even when the Shopify txn falls on another HK day", () => {
+    // B-1515: Bubble 2026-08-20, Shopify txn 2026-08-24
+    const row = applyBubblePaymentTwin(
+      {
+        order_id: "order-1515",
+        amount: 1638,
+        currency: "HKD",
+        payment_at: "2026-08-23T16:00:00.000Z", // 2026-08-24 00:00 HKT
+        payment_method_id: "bank-id",
+        payment_method_legacy_id: "bank-legacy",
+        bubble_created_at: "2026-08-24T08:53:27.000Z",
+      },
+      [{
+        legacy_id: "bubble-1515",
+        order_id: "order-1515",
+        amount: 1638,
+        currency: "HKD",
+        payment_at: "2026-08-19T16:00:00.000Z", // 2026-08-20 00:00 HKT
+        payment_method_id: "cheque-id",
+        payment_method_legacy_id: "cheque-legacy",
+      }],
+    );
+    expect(row.payment_at).toBe("2026-08-19T16:00:00.000Z");
+    // Existing Shopify gateway mapping is kept; only null methods are filled.
+    expect(row.payment_method_id).toBe("bank-id");
   });
 });

@@ -6,6 +6,8 @@ import {
   linkedOrderLineSnapshotPatch,
   mapShopifyOrder,
   mapShopifyTransaction,
+  paymentMethodForGateway,
+  applyBubblePaymentTwin,
   normalizeNameForMatch,
   normalizeShopDomain,
   orderNumberKey,
@@ -504,34 +506,6 @@ async function fetchOrderTransactions(input: {
   return { transactions: payload.transactions ?? [] };
 }
 
-function paymentMethodForGateway(
-  gateway: string,
-  methodsByName: Map<string, { id: string; legacy_id: string }>,
-): { payment_method_id: string | null; payment_method_legacy_id: string | null } {
-  const g = gateway.toLowerCase();
-  let target: string | null = null;
-  if (g.includes("paypal")) target = "Paypal";
-  else if (
-    g.includes("shopify_payments") || g.includes("visa") ||
-    g.includes("mastercard") || g.includes("amex") || g.includes("credit")
-  ) target = "Credit card";
-  else if (g.includes("bank") || g.includes("deposit")) target = "Bank Transfer";
-  else if (g.includes("fps")) target = "FPS";
-  else if (g.includes("payme")) target = "PayMe";
-  else if (g.includes("octopus")) target = "Octopus";
-  else if (
-    g.includes("alipay") || g.includes("wechat") || g.includes("qfpay")
-  ) target = "QFpay (Alipay / Wechat Pay)";
-  else if (g.includes("cash")) target = "Cash";
-  else if (g.includes("cheque") || g.includes("check")) target = "Cheque";
-
-  const row = target ? methodsByName.get(target.toLowerCase()) : null;
-  return {
-    payment_method_id: row?.id ?? null,
-    payment_method_legacy_id: row?.legacy_id ?? null,
-  };
-}
-
 function createAdminClient() {
   return createClient(
     Deno.env.get("SUPABASE_URL") ?? "",
@@ -833,14 +807,29 @@ async function syncPaymentsForOrders(input: {
     amount: number;
     currency: string;
     payment_at: string | null;
+    payment_method_id: string | null;
+    payment_method_legacy_id: string | null;
+  }> = [];
+  // Include voided Bubble rows so we can restore their method/date onto Shopify receipts
+  // after reconcile voided the legacy twin.
+  const legacyPaymentTwins: Array<{
+    legacy_id: string;
+    order_id: string;
+    amount: number;
+    currency: string;
+    payment_at: string | null;
+    payment_method_id: string | null;
+    payment_method_legacy_id: string | null;
   }> = [];
   for (let index = 0; index < payable.length; index += PAYMENT_LOOKUP_CHUNK) {
     const chunk = payable.slice(index, index + PAYMENT_LOOKUP_CHUNK);
+    const orderIds = chunk.map((order) => order.supabaseOrderId);
     const { data, error } = await client
       .from("payments")
-      .select("legacy_id,order_id,amount,currency,payment_at")
-      .in("order_id", chunk.map((order) => order.supabaseOrderId))
-      .is("voided_at", null);
+      .select(
+        "legacy_id,order_id,amount,currency,payment_at,payment_method_id,payment_method_legacy_id,voided_at",
+      )
+      .in("order_id", orderIds);
     if (error) {
       issues.push({
         store_id: storeRow.id,
@@ -851,11 +840,25 @@ async function syncPaymentsForOrders(input: {
       return { inserted: 0, pending: payable.length };
     }
     for (const row of data ?? []) {
-      if (String(row.legacy_id).startsWith("shopify:")) {
-        ordersWithPayments.add(row.order_id as string);
-      } else {
-        existingLegacyPayments.push(row as typeof existingLegacyPayments[number]);
+      const legacyId = String(row.legacy_id ?? "");
+      if (legacyId.startsWith("shopify:")) {
+        if (row.voided_at == null) {
+          ordersWithPayments.add(row.order_id as string);
+        }
+        continue;
       }
+      const twin = {
+        legacy_id: legacyId,
+        order_id: row.order_id as string,
+        amount: Number(row.amount),
+        currency: String(row.currency ?? "HKD"),
+        payment_at: (row.payment_at as string | null) ?? null,
+        payment_method_id: (row.payment_method_id as string | null) ?? null,
+        payment_method_legacy_id:
+          (row.payment_method_legacy_id as string | null) ?? null,
+      };
+      legacyPaymentTwins.push(twin);
+      if (row.voided_at == null) existingLegacyPayments.push(twin);
     }
   }
 
@@ -906,7 +909,7 @@ async function syncPaymentsForOrders(input: {
       const pm = paymentMethodForGateway(String(txn.gateway ?? ""), methodsByName);
       row.payment_method_id = pm.payment_method_id;
       row.payment_method_legacy_id = pm.payment_method_legacy_id;
-      paymentRows.push(row);
+      paymentRows.push(applyBubblePaymentTwin(row, legacyPaymentTwins));
     }
   }
 
