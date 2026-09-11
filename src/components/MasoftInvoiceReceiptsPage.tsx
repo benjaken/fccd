@@ -222,47 +222,75 @@ export function MasoftInvoiceReceiptsPage({
   return <section className="orders-page masoft-page">
     <header className="page-heading orders-heading"><div><span className="eyebrow">{t("masoft.eyebrow")}</span><h1>{t("masoft.title")}</h1><p>{t("masoft.description")}</p></div></header>
     <article className="panel orders-panel responsive-card-list-panel">
-      <header className="orders-toolbar payments-reconciliation-toolbar">
-        <ListSearchBar
-          className="payments-order-search"
-          id="masoft-order-number-search"
-          value={orderNumberDraft}
-          onChange={setOrderNumberDraft}
-          onSubmit={() => { setOrderNumber(orderNumberDraft.trim()); resetPage(); }}
-          label={t("masoft.orderSearch")}
-          placeholder={t("masoft.orderSearchPlaceholder")}
-          filtersActive={Boolean(date || startDate || endDate || channelId || methodId || amountMin)}
-          filters={<>
-            <label className="payments-date-filter-mode"><span>{t("masoft.payoutFilter")}</span><select value={dateMode} onChange={(event) => { setDateMode(event.target.value as DateMode); resetPage(); }}><option value="single">{t("masoft.singleDate")}</option><option value="range">{t("masoft.dateRange")}</option></select></label>
-            {dateMode === "single" ? <DatePicker id="masoft-payout-date" value={date} onChange={(value) => { setDate(value); resetPage(); }} label={t("masoft.payoutFilter")} hideLabel /> : <DateRangePicker startId="masoft-payout-start" endId="masoft-payout-end" startValue={startDate} endValue={endDate} onStartChange={(value) => { setStartDate(value); resetPage(); }} onEndChange={(value) => { setEndDate(value); resetPage(); }} startLabel={t("masoft.from")} endLabel={t("masoft.to")} legend={t("masoft.payoutRange")} />}
-            <div className="payments-filter-fields">
-              <label className="payments-filter-field"><span>{t("masoft.brand")}</span><FilterableSelect value={channelId} onChange={(event) => { setChannelId(event.target.value); resetPage(); }}><option value="">{t("masoft.allBrands")}</option>{options.channels.map((option) => <option key={option.id} value={option.id}>{option.name}</option>)}</FilterableSelect></label>
-              <label className="payments-filter-field"><span>{t("masoft.paymentMethod")}</span><FilterableSelect value={methodId} onChange={(event) => { setMethodId(event.target.value); resetPage(); }}><option value="">{t("masoft.allPaymentMethods")}</option>{options.paymentMethods.map((option) => <option key={option.id} value={option.id}>{option.name}</option>)}</FilterableSelect></label>
-              <label className="payments-filter-field"><span>{t("masoft.amountExact")}</span><input type="text" inputMode="decimal" aria-label={t("masoft.amountExact")} value={amountMin} onChange={(event) => { setAmountMin(event.target.value); resetPage(); }} placeholder={t("masoft.amountExactPlaceholder")} /></label>
-            </div>
-          </>}
-        />
-        {monthTotals || (canManageActions && selectedItems.length) ? <div className="masoft-selection-actions">
-          {monthTotals ? (
-            <div className="masoft-month-totals" data-testid="masoft-month-totals">
-              <p className="masoft-month-totals-title">{t("masoft.monthTotalsTitle")}</p>
-              <div className="masoft-month-totals-row is-month">
-                <span>{t("masoft.monthTotalsMonth")}</span>
-                <strong>{monthTotals.monthKey}</strong>
-              </div>
-              <div className="masoft-month-totals-divider" aria-hidden="true" />
-              <div className="masoft-month-totals-row">
-                <span>{t("masoft.monthTotalsGross")}</span>
-                <strong>{formatter.format(monthTotals.grossAmount)}</strong>
-              </div>
-              <div className="masoft-month-totals-row is-net">
-                <span>{t("masoft.monthTotalsNet")}</span>
-                <strong>{formatter.format(monthTotals.netAmount)}</strong>
-              </div>
+      <header className="orders-toolbar payments-reconciliation-toolbar masoft-toolbar">
+        <div className="masoft-toolbar-main">
+          <div className="masoft-toolbar-search-stack">
+            <ListSearchBar
+              className="payments-order-search"
+              id="masoft-order-number-search"
+              value={orderNumberDraft}
+              onChange={setOrderNumberDraft}
+              onSubmit={() => { setOrderNumber(orderNumberDraft.trim()); resetPage(); }}
+              label={t("masoft.orderSearch")}
+              placeholder={t("masoft.orderSearchPlaceholder")}
+              filtersActive={Boolean(date || startDate || endDate || channelId || methodId || amountMin)}
+              filters={<>
+                <label className="payments-date-filter-mode"><span>{t("masoft.payoutFilter")}</span><select value={dateMode} onChange={(event) => { setDateMode(event.target.value as DateMode); resetPage(); }}><option value="single">{t("masoft.singleDate")}</option><option value="range">{t("masoft.dateRange")}</option></select></label>
+                {dateMode === "single" ? <DatePicker id="masoft-payout-date" value={date} onChange={(value) => { setDate(value); resetPage(); }} label={t("masoft.payoutFilter")} hideLabel /> : <DateRangePicker startId="masoft-payout-start" endId="masoft-payout-end" startValue={startDate} endValue={endDate} onStartChange={(value) => { setStartDate(value); resetPage(); }} onEndChange={(value) => { setEndDate(value); resetPage(); }} startLabel={t("masoft.from")} endLabel={t("masoft.to")} legend={t("masoft.payoutRange")} />}
+                <div className="payments-filter-fields">
+                  <label className="payments-filter-field"><span>{t("masoft.brand")}</span><FilterableSelect value={channelId} onChange={(event) => { setChannelId(event.target.value); resetPage(); }}><option value="">{t("masoft.allBrands")}</option>{options.channels.map((option) => <option key={option.id} value={option.id}>{option.name}</option>)}</FilterableSelect></label>
+                  <label className="payments-filter-field"><span>{t("masoft.paymentMethod")}</span><FilterableSelect value={methodId} onChange={(event) => { setMethodId(event.target.value); resetPage(); }}><option value="">{t("masoft.allPaymentMethods")}</option>{options.paymentMethods.map((option) => <option key={option.id} value={option.id}>{option.name}</option>)}</FilterableSelect></label>
+                  <label className="payments-filter-field"><span>{t("masoft.amountExact")}</span><input type="text" inputMode="decimal" aria-label={t("masoft.amountExact")} value={amountMin} onChange={(event) => { setAmountMin(event.target.value); resetPage(); }} placeholder={t("masoft.amountExactPlaceholder")} /></label>
+                </div>
+              </>}
+            />
+            {canManageActions && selectedItems.length ? (
+              <Button type="button" variant="outline" className="masoft-update-invoice-button" onClick={openInvoiceModal}>
+                {t("masoft.addInvoice")}
+              </Button>
+            ) : null}
+          </div>
+          {monthTotals || (canManageActions && selectedItems.length) ? (
+            <div className="masoft-selection-actions">
+              {monthTotals ? (
+                <div className="masoft-month-totals" data-testid="masoft-month-totals">
+                  <p className="masoft-month-totals-title">{t("masoft.monthTotalsTitle")}</p>
+                  <div className="masoft-month-totals-row is-month">
+                    <span>{t("masoft.monthTotalsMonth")}</span>
+                    <strong>{monthTotals.monthKey}</strong>
+                  </div>
+                  <div className="masoft-month-totals-divider" aria-hidden="true" />
+                  <div className="masoft-month-totals-row">
+                    <span>{t("masoft.monthTotalsGross")}</span>
+                    <strong>{formatter.format(monthTotals.grossAmount)}</strong>
+                  </div>
+                  <div className="masoft-month-totals-row is-net">
+                    <span>{t("masoft.monthTotalsNet")}</span>
+                    <strong>{formatter.format(monthTotals.netAmount)}</strong>
+                  </div>
+                </div>
+              ) : null}
+              {canManageActions && selectedItems.length ? (
+                <div className="masoft-month-totals" data-testid="masoft-selected-totals">
+                  <p className="masoft-month-totals-title">{t("masoft.selectedTotalsTitle")}</p>
+                  <div className="masoft-month-totals-row is-month">
+                    <span>{t("masoft.selectedTotalsCount")}</span>
+                    <strong>{t("masoft.selectedTotalsCountValue", { count: selectedItems.length })}</strong>
+                  </div>
+                  <div className="masoft-month-totals-divider" aria-hidden="true" />
+                  <div className="masoft-month-totals-row">
+                    <span>{t("masoft.monthTotalsGross")}</span>
+                    <strong>{formatter.format(selectedGross)}</strong>
+                  </div>
+                  <div className="masoft-month-totals-row is-net">
+                    <span>{t("masoft.monthTotalsNet")}</span>
+                    <strong>{formatter.format(selectedNet)}</strong>
+                  </div>
+                </div>
+              ) : null}
             </div>
           ) : null}
-          {canManageActions && selectedItems.length ? <><span>{t("masoft.selected", { count: selectedItems.length, gross: formatter.format(selectedGross), amount: formatter.format(selectedNet) })}</span><Button type="button" variant="outline" onClick={openInvoiceModal}>{t("masoft.addInvoice")}</Button></> : null}
-        </div> : null}
+        </div>
       </header>
       {error ? <OperationalListState icon={ReceiptText} title={t("masoft.loadError")} description={t("masoft.loadErrorDescription")} retryLabel={t("masoft.retry")} onRetry={() => setReloadKey((key) => key + 1)} /> : !loading && !items.length ? <OperationalListState icon={ReceiptText} title={t("masoft.empty")} description={t("masoft.emptyDescription")} /> : <ListTable
         className="orders-table-wrap masoft-table"

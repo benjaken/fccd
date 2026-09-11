@@ -144,8 +144,14 @@ describe("MasoftInvoiceReceiptsPage", () => {
     expect(monthTotals).toHaveTextContent("HK$92,000.00");
 
     await user.click(screen.getByRole("checkbox", { name: "Select receipt INV-1001" }));
-    expect(screen.getByText(/1 receipt\(s\) selected/)).toHaveTextContent("Payment amount");
-    expect(screen.getByText(/1 receipt\(s\) selected/)).toHaveTextContent("HK$120.00");
-    expect(screen.getByText(/1 receipt\(s\) selected/)).toHaveTextContent("HK$115.00");
+    const selectedTotals = screen.getByTestId("masoft-selected-totals");
+    expect(selectedTotals).toHaveTextContent("Selected receipts");
+    expect(selectedTotals).toHaveTextContent("Count");
+    expect(selectedTotals).toHaveTextContent("1");
+    expect(selectedTotals).toHaveTextContent("Payment amount");
+    expect(selectedTotals).toHaveTextContent("HK$120.00");
+    expect(selectedTotals).toHaveTextContent("Net received");
+    expect(selectedTotals).toHaveTextContent("HK$115.00");
+    expect(screen.getByRole("button", { name: "Update selected INV" })).toBeInTheDocument();
   });
 });
