@@ -40,6 +40,18 @@ export function sanitizeOutboundReply(value: string) {
   return text;
 }
 
+/** Visible marker so develop-branch WhatsApp replies are distinguishable from production. */
+export const DEVELOP_OUTBOUND_MARKER = "【develop】";
+
+export function withEnvironmentOutboundMarker(
+  text: string,
+  environment: string,
+) {
+  if (environment !== "develop") return text;
+  if (text.startsWith(DEVELOP_OUTBOUND_MARKER)) return text;
+  return `${DEVELOP_OUTBOUND_MARKER}${text}`;
+}
+
 export function lookupSummaryReply(order: {
   order_number: string | null;
   delivery_at: string | null;
