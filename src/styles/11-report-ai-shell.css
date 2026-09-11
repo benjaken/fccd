@@ -749,7 +749,7 @@ body:has(.kitchen-channel-sales-report-page) .shell-body.sidebar-is-collapsed .r
   }
 
   .topbar {
-    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-columns: auto minmax(0, 1fr) auto;
     padding: 0 10px;
   }
 
@@ -765,6 +765,10 @@ body:has(.kitchen-channel-sales-report-page) .shell-body.sidebar-is-collapsed .r
   .workspace-links,
   .user-menu {
     display: none;
+  }
+
+  .topbar-center {
+    justify-content: stretch;
   }
 
   .topbar-actions {

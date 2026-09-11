@@ -605,7 +605,6 @@ function OperationsShell() {
 
   return (
     <div className={cn("app-shell", isBusinessMenu && "menu-style-one", documentEditorMode && "document-editor-shell", comfortMode && "comfort-mode")}>
-      {!documentEditorMode ? <FrontendUpdateNotice /> : null}
       <header className="topbar">
         <div className="topbar-brand">
           <Button
@@ -620,34 +619,37 @@ function OperationsShell() {
           <Brand />
         </div>
 
-        <nav className="workspace-links" aria-label="Workspaces">
-          {visibleWorkspaceLinks.map(({ key, to, icon: WorkspaceIcon, disabled }) =>
-            disabled ? (
-              <span
-                key={key}
-                className="workspace-soft-link disabled"
-                aria-disabled="true"
-              >
-                <WorkspaceIcon />
-                <span>{t(`workspace.${key}`)}</span>
-              </span>
-            ) : (
-              <Link
-                key={key}
-                to={to}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={cn(
-                  "workspace-soft-link",
-                  isWorkspaceNavActive(key, location.pathname) && "active",
-                )}
-              >
-                <WorkspaceIcon />
-                <span>{t(`workspace.${key}`)}</span>
-              </Link>
-            ),
-          )}
-        </nav>
+        <div className="topbar-center">
+          {!documentEditorMode ? <FrontendUpdateNotice /> : null}
+          <nav className="workspace-links" aria-label="Workspaces">
+            {visibleWorkspaceLinks.map(({ key, to, icon: WorkspaceIcon, disabled }) =>
+              disabled ? (
+                <span
+                  key={key}
+                  className="workspace-soft-link disabled"
+                  aria-disabled="true"
+                >
+                  <WorkspaceIcon />
+                  <span>{t(`workspace.${key}`)}</span>
+                </span>
+              ) : (
+                <Link
+                  key={key}
+                  to={to}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={cn(
+                    "workspace-soft-link",
+                    isWorkspaceNavActive(key, location.pathname) && "active",
+                  )}
+                >
+                  <WorkspaceIcon />
+                  <span>{t(`workspace.${key}`)}</span>
+                </Link>
+              ),
+            )}
+          </nav>
+        </div>
 
         <div className="topbar-actions">
           <Button
