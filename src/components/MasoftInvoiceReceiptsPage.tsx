@@ -17,13 +17,16 @@ import { hongKongDateKey } from "@/lib/date-time";
 import { useMediaQuery } from "@/lib/use-media-query";
 import {
   fetchMasoftFilterOptions,
+  fetchMasoftMonthTotals,
   fetchMasoftSettlements,
   fetchSettlementPaymentCandidates,
   assignMasoftInvoiceNumber,
   deleteMasoftSettlement,
   MASOFT_PAGE_SIZE,
+  resolveMasoftMonthKey,
   updateMasoftSettlement,
   type MasoftFilterOptions,
+  type MasoftMonthTotals,
   type MasoftPayment,
   type MasoftSettlement,
 } from "@/lib/masoft-invoice-receipts";
@@ -43,12 +46,14 @@ export function MasoftInvoiceReceiptsPage({
   canManageActions = true,
   loadSettlements = fetchMasoftSettlements,
   loadFilterOptions = fetchMasoftFilterOptions,
+  loadMonthTotals = fetchMasoftMonthTotals,
   deleteSettlement = deleteMasoftSettlement,
 }: {
   canViewFinance: boolean;
   canManageActions?: boolean;
   loadSettlements?: typeof fetchMasoftSettlements;
   loadFilterOptions?: typeof fetchMasoftFilterOptions;
+  loadMonthTotals?: typeof fetchMasoftMonthTotals;
   deleteSettlement?: typeof deleteMasoftSettlement;
 }) {
   const { t, i18n } = useTranslation();
@@ -85,12 +90,17 @@ export function MasoftInvoiceReceiptsPage({
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState(false);
   const [selected, setSelected] = useState<Map<string, MasoftSettlement>>(new Map());
+  const [monthTotals, setMonthTotals] = useState<MasoftMonthTotals | null>(null);
   const [invoiceModalOpen, setInvoiceModalOpen] = useState(false);
   const [batchInvoiceNumber, setBatchInvoiceNumber] = useState("");
   const [invoiceSaving, setInvoiceSaving] = useState(false);
   const [invoiceError, setInvoiceError] = useState(false);
   const isMobileList = useMediaQuery("(max-width: 760px)");
   const previousMobileListRef = useRef(isMobileList);
+  const monthKey = useMemo(
+    () => resolveMasoftMonthKey({ dateMode, payoutDate: date, payoutDateStart: startDate, payoutDateEnd: endDate }),
+    [date, dateMode, endDate, startDate],
+  );
 
   const load = useCallback(async () => {
     if (!canViewFinance) { setLoading(false); return; }
@@ -129,6 +139,14 @@ export function MasoftInvoiceReceiptsPage({
     setItems([]); setPage(1); setLoadMoreError(false);
   }, [isMobileList]);
   useEffect(() => { if (canViewFinance) void loadFilterOptions().then(setOptions).catch(() => setOptions({ channels: [], paymentMethods: [] })); }, [canViewFinance, loadFilterOptions]);
+  useEffect(() => {
+    if (!canViewFinance) { setMonthTotals(null); return; }
+    let cancelled = false;
+    void loadMonthTotals(monthKey)
+      .then((totals) => { if (!cancelled) setMonthTotals(totals); })
+      .catch(() => { if (!cancelled) setMonthTotals(null); });
+    return () => { cancelled = true; };
+  }, [canViewFinance, loadMonthTotals, monthKey, reloadKey]);
 
   const formatter = useMemo(() => new Intl.NumberFormat(i18n.language, { style: "currency", currency: "HKD" }), [i18n.language]);
   const selectedPayments = candidates.filter((payment) => paymentIds.includes(payment.id));
@@ -142,6 +160,7 @@ export function MasoftInvoiceReceiptsPage({
   const visibleTo = Math.min(page * MASOFT_PAGE_SIZE, total);
   const resetPage = () => setPage(1);
   const selectedItems = [...selected.values()];
+  const selectedGross = selectedItems.reduce((total, item) => total + item.grossAmount, 0);
   const selectedNet = selectedItems.reduce((total, item) => total + item.netAmount, 0);
   const canDeleteEditing = editing ? !hasVerifiedOrderLinks(editing) : false;
   const pageAllSelected = items.length > 0 && items.every((item) => selected.has(item.id));
@@ -223,7 +242,10 @@ export function MasoftInvoiceReceiptsPage({
             </div>
           </>}
         />
-        {canManageActions && selectedItems.length ? <div className="masoft-selection-actions"><span>{t("masoft.selected", { count: selectedItems.length, amount: formatter.format(selectedNet) })}</span><Button type="button" variant="outline" onClick={openInvoiceModal}>{t("masoft.addInvoice")}</Button></div> : null}
+        {monthTotals || (canManageActions && selectedItems.length) ? <div className="masoft-selection-actions">
+          {monthTotals ? <span className="masoft-month-totals" data-testid="masoft-month-totals">{t("masoft.monthTotals", { month: monthTotals.monthKey, gross: formatter.format(monthTotals.grossAmount), net: formatter.format(monthTotals.netAmount) })}</span> : null}
+          {canManageActions && selectedItems.length ? <><span>{t("masoft.selected", { count: selectedItems.length, gross: formatter.format(selectedGross), amount: formatter.format(selectedNet) })}</span><Button type="button" variant="outline" onClick={openInvoiceModal}>{t("masoft.addInvoice")}</Button></> : null}
+        </div> : null}
       </header>
       {error ? <OperationalListState icon={ReceiptText} title={t("masoft.loadError")} description={t("masoft.loadErrorDescription")} retryLabel={t("masoft.retry")} onRetry={() => setReloadKey((key) => key + 1)} /> : !loading && !items.length ? <OperationalListState icon={ReceiptText} title={t("masoft.empty")} description={t("masoft.emptyDescription")} /> : <ListTable
         className="orders-table-wrap masoft-table"
@@ -265,7 +287,7 @@ export function MasoftInvoiceReceiptsPage({
     <SidePanel open={Boolean(editing)} title={t("masoft.editTitle")} description={t("masoft.editDescription")} onClose={() => !saving && !deleting && setEditing(null)} closeLabel={t("common.close")} wide footer={<>{canDeleteEditing ? <Button variant="destructive" disabled={saving || deleting} onClick={() => void remove()}>{deleting ? t("masoft.deleting") : t("masoft.delete")}</Button> : null}<Button variant="outline" disabled={saving || deleting} onClick={() => setEditing(null)}>{t("common.cancel")}</Button>{!canDeleteEditing ? <Button disabled={saving || deleting || invalid} onClick={() => void save()}>{saving ? t("masoft.saving") : t("masoft.save")}</Button> : null}</>}>
       <div className="masoft-edit-form"><label><span>{t("masoft.invoice")}</span><input value={invoiceNumber} onChange={(event) => setInvoiceNumber(event.target.value)} /></label><label><span>{t("masoft.receipt")}</span><input value={receiptNumber} onChange={(event) => setReceiptNumber(event.target.value)} /></label><DatePicker id="masoft-edit-payout" value={payoutAt} onChange={setPayoutAt} label={t("masoft.payoutDate")} /><label><span>{t("masoft.charges")}</span><div className="currency-input"><span aria-hidden="true">HK$</span><input type="number" min="0" step="0.01" value={charges} onChange={(event) => setCharges(event.target.value)} /></div></label><fieldset hidden={!(editing && hasVerifiedOrderLinks(editing))}><legend>{t("masoft.paymentOrders")}</legend>{candidates.map((payment) => <label key={payment.id} className="masoft-payment-option"><input type="checkbox" checked={paymentIds.includes(payment.id)} onChange={() => togglePayment(payment.id)} /><span>{payment.orderNumber || "—"}</span><strong>{formatter.format(payment.amount)}</strong></label>)}</fieldset><dl className="payments-settlement-totals"><div><dt>{t("masoft.gross")}</dt><dd>{formatter.format(displayedGross)}</dd></div><div><dt>{t("masoft.charges")}</dt><dd>{formatter.format(Number.isFinite(chargeAmount) ? chargeAmount : 0)}</dd></div><div><dt>{t("masoft.net")}</dt><dd>{formatter.format(Number.isFinite(displayedGross - chargeAmount) ? displayedGross - chargeAmount : 0)}</dd></div></dl>{invalid ? <p className="payments-form-error">{t("masoft.netInvalid")}</p> : null}{saveError ? <p className="payments-form-error">{t("masoft.saveError")}</p> : null}{deleteError ? <p className="payments-form-error">{t("masoft.deleteError")}</p> : null}</div>
     </SidePanel>
-    <Modal open={invoiceModalOpen} title={t("masoft.addInvoice")} description={t("masoft.invoiceModalDescription", { count: selectedItems.length, amount: formatter.format(selectedNet) })} onClose={() => !invoiceSaving && setInvoiceModalOpen(false)} closeLabel={t("common.close")} size="sm" closeOnBackdrop={!invoiceSaving} closeOnEscape={!invoiceSaving} footer={<Button disabled={invoiceSaving || !batchInvoiceNumber.trim()} onClick={() => void saveInvoiceNumber()}>{invoiceSaving ? t("masoft.saving") : t("masoft.submit")}</Button>}>
+    <Modal open={invoiceModalOpen} title={t("masoft.addInvoice")} description={t("masoft.invoiceModalDescription", { count: selectedItems.length, gross: formatter.format(selectedGross), amount: formatter.format(selectedNet) })} onClose={() => !invoiceSaving && setInvoiceModalOpen(false)} closeLabel={t("common.close")} size="sm" closeOnBackdrop={!invoiceSaving} closeOnEscape={!invoiceSaving} footer={<Button disabled={invoiceSaving || !batchInvoiceNumber.trim()} onClick={() => void saveInvoiceNumber()}>{invoiceSaving ? t("masoft.saving") : t("masoft.submit")}</Button>}>
       <div className="masoft-edit-form"><label><span>{t("masoft.invoice")}</span><input autoFocus value={batchInvoiceNumber} onChange={(event) => setBatchInvoiceNumber(event.target.value)} placeholder={t("masoft.invoicePlaceholder")} /></label>{invoiceError ? <p className="payments-form-error">{t("masoft.invoiceSaveError")}</p> : null}</div>
     </Modal>
   </section>;
