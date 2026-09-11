@@ -22,6 +22,8 @@ describe("customer-service backend conversation preview", () => {
   it("returns conversation state and AI or handoff evidence to the UI", () => {
     expect(source).toContain("conversation: turn.conversation");
     expect(source).toContain("used_model: turn.usedModel");
+    expect(source).toContain("related_faqs: turn.relatedFaqs");
+    expect(source).toContain("appendRelatedFaqsToReply");
     expect(source).toContain(
       'human_handoff: ["awaiting_human", "human_owned"].includes',
     );

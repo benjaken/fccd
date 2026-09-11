@@ -1174,6 +1174,7 @@ const resources = {
           previewRule: "規則／FAQ fallback 回覆",
           previewHuman: "已進入人工接手範圍",
           previewSilent: "Bot 已停止回覆，等待人工客服接手。",
+          previewRelatedLabel: "你可能仲想問",
           previewSimulatedWrite: "已模擬記錄到會查詢",
           previewSimulatedNotify: "已模擬通知內部同事",
           categories: {
@@ -7126,6 +7127,7 @@ const resources = {
           previewRule: "Rule / FAQ fallback reply",
           previewHuman: "Conversation is now in human-handoff scope",
           previewSilent: "The bot is silent and waiting for a human operator.",
+          previewRelatedLabel: "You may also want to ask",
           previewSimulatedWrite: "Inquiry write simulated",
           previewSimulatedNotify: "Internal staff notification simulated",
           categories: {

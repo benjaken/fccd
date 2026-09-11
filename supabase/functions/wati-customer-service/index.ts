@@ -26,7 +26,10 @@ import {
   handleCustomerServiceTurn,
   type CustomerServiceConversation,
 } from "../_shared/customer-service-bot.ts";
-import { withEnvironmentOutboundMarker } from "../_shared/customer-service-replies.ts";
+import {
+  appendRelatedFaqsToReply,
+  withEnvironmentOutboundMarker,
+} from "../_shared/customer-service-replies.ts";
 import {
   classifyCustomerServiceMessage,
   explicitCustomerServiceOrderNumber,
@@ -1632,6 +1635,7 @@ async function handleBackendPreview(
     intent_key: turn.intentKey,
     confidence: turn.confidence,
     tool_keys: turn.toolKeys ?? [],
+    related_faqs: turn.relatedFaqs ?? [],
   });
 }
 
@@ -1685,8 +1689,11 @@ async function persistCustomerServiceTurn(
 ) {
   const { conversation, startedAt, turn } = input.prepared;
   let outboundId: string | null = null;
-  const outboundReply = turn.reply
-    ? withEnvironmentOutboundMarker(turn.reply, deploymentEnvironment())
+  const replyWithRelated = turn.reply
+    ? appendRelatedFaqsToReply(turn.reply, turn.relatedFaqs ?? [])
+    : null;
+  const outboundReply = replyWithRelated
+    ? withEnvironmentOutboundMarker(replyWithRelated, deploymentEnvironment())
     : null;
   if (outboundReply) {
     const localMessageId = `fcc-bot-${crypto.randomUUID()}`;

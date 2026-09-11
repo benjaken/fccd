@@ -82,6 +82,11 @@ export type CustomerServicePreviewConversation = {
   }>;
 };
 
+export type RelatedFaqSuggestion = {
+  id: string;
+  question: string;
+};
+
 export type CustomerServicePreviewResult = {
   reply: string | null;
   conversation: CustomerServicePreviewConversation;
@@ -92,6 +97,7 @@ export type CustomerServicePreviewResult = {
   intentKey?: string;
   confidence?: number;
   toolKeys?: string[];
+  relatedFaqs?: RelatedFaqSuggestion[];
 };
 
 export type CustomerServiceHandoff = {
@@ -504,9 +510,22 @@ export async function previewCustomerServiceTurn(input: {
     intent_key?: unknown;
     confidence?: unknown;
     tool_keys?: unknown;
+    related_faqs?: unknown;
   } | null;
   if (!payload?.conversation)
     throw new Error("customer_service_preview_invalid_response");
+  const relatedFaqs = Array.isArray(payload.related_faqs)
+    ? payload.related_faqs.flatMap((item) => {
+        if (!item || typeof item !== "object") return [];
+        const row = item as { id?: unknown; question?: unknown };
+        if (typeof row.id !== "string" || typeof row.question !== "string") {
+          return [];
+        }
+        const question = row.question.trim();
+        if (!question) return [];
+        return [{ id: row.id, question }];
+      })
+    : [];
   return {
     reply: typeof payload.reply === "string" ? payload.reply : null,
     conversation: payload.conversation,
@@ -523,6 +542,7 @@ export async function previewCustomerServiceTurn(input: {
           (key): key is string => typeof key === "string",
         )
       : [],
+    relatedFaqs,
   };
 }
 

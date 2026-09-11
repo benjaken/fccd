@@ -463,6 +463,51 @@ describe("customer-service bot turns", () => {
     expect(turn.wroteInquiry).toBe(true);
   });
 
+  it("returns related FAQ suggestions after a multi-hit FAQ answer", async () => {
+    const turn = await handleCustomerServiceTurn({
+      phone: conversation.phone_normalized,
+      text: "運費幾多",
+      conversation,
+      deps: deps({
+        searchFaqs: vi.fn().mockResolvedValue([
+          { id: "1", question: "運費幾多？", answer: "新界 HK$50。" },
+          { id: "2", question: "可唔可以自取？", answer: "可以喺工場自取。" },
+          { id: "3", question: "送貨需時幾耐？", answer: "通常 1 至 2 日。" },
+          { id: "4", question: "可唔可以改地址？", answer: "改地址要請同事跟進。" },
+        ]),
+      }),
+    });
+    expect(turn.reply).toContain("新界 HK$50。");
+    expect(turn.relatedFaqs).toEqual([
+      { id: "2", question: "可唔可以自取？" },
+      { id: "3", question: "送貨需時幾耐？" },
+      { id: "4", question: "可唔可以改地址？" },
+    ]);
+  });
+
+  it("omits related FAQ suggestions for single-hit and no-faq turns", async () => {
+    const single = await handleCustomerServiceTurn({
+      phone: conversation.phone_normalized,
+      text: "運費幾多",
+      conversation,
+      deps: deps({
+        searchFaqs: vi.fn().mockResolvedValue([
+          { id: "1", question: "運費幾多？", answer: "新界 HK$50。" },
+        ]),
+      }),
+    });
+    expect(single.relatedFaqs ?? []).toEqual([]);
+
+    const miss = await handleCustomerServiceTurn({
+      phone: conversation.phone_normalized,
+      text: "運費幾多",
+      conversation,
+      deps: deps({ searchFaqs: vi.fn().mockResolvedValue([]) }),
+    });
+    expect(miss.failureReason).toBe("faq_not_found");
+    expect(miss.relatedFaqs).toBeUndefined();
+  });
+
   it("answers FAQ text unchanged and hands off when nothing matches", async () => {
     const hit = await handleCustomerServiceTurn({
       phone: conversation.phone_normalized,
