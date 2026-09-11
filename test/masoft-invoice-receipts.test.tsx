@@ -134,9 +134,14 @@ describe("MasoftInvoiceReceiptsPage", () => {
     expect(screen.getByText("Payment amount", { selector: "th" })).toBeInTheDocument();
     expect(screen.getByText("Net received", { selector: "th" })).toBeInTheDocument();
     await waitFor(() => expect(loadMonthTotals).toHaveBeenCalledWith(expectedMonth));
-    expect(await screen.findByTestId("masoft-month-totals")).toHaveTextContent(`All brands this month (${expectedMonth})`);
-    expect(screen.getByTestId("masoft-month-totals")).toHaveTextContent("Payment amount");
-    expect(screen.getByTestId("masoft-month-totals")).toHaveTextContent("Net received");
+    const monthTotals = await screen.findByTestId("masoft-month-totals");
+    expect(monthTotals).toHaveTextContent("All brands this month");
+    expect(monthTotals).toHaveTextContent("Month");
+    expect(monthTotals).toHaveTextContent(expectedMonth);
+    expect(monthTotals).toHaveTextContent("Payment amount");
+    expect(monthTotals).toHaveTextContent("Net received");
+    expect(monthTotals).toHaveTextContent("HK$93,556.75");
+    expect(monthTotals).toHaveTextContent("HK$92,000.00");
 
     await user.click(screen.getByRole("checkbox", { name: "Select receipt INV-1001" }));
     expect(screen.getByText(/1 receipt\(s\) selected/)).toHaveTextContent("Payment amount");
