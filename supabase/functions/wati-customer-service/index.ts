@@ -1171,7 +1171,7 @@ async function queueInternalHandoff(
         updated_at: now,
       })
       .eq("id", handoffId)
-      .catch((auditError) =>
+      .catch((auditError: unknown) =>
         console.error("urgent handoff failure audit failed", auditError)
       );
     return;
@@ -1727,7 +1727,7 @@ async function persistCustomerServiceTurn(
           status: "failed",
           last_error: detail.slice(0, 500),
           next_retry_at: retryAt(1),
-        }).catch((auditError) => console.error("outbound failure audit failed", auditError));
+        }).catch((auditError: unknown) => console.error("outbound failure audit failed", auditError));
       }
       await saveConversation(admin, turn.conversation);
       await recordCustomerServiceTurn(admin, {
