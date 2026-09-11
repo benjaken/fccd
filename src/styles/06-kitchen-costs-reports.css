@@ -662,18 +662,88 @@
 
 .masoft-selection-actions {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   flex-wrap: wrap;
   justify-content: flex-end;
-  gap: .65rem;
+  gap: .75rem;
   margin-left: auto;
   color: var(--primary);
   font-weight: 700;
 }
 
 .masoft-month-totals {
-  color: var(--muted-foreground);
+  display: grid;
+  gap: 0.42rem;
+  min-width: 14rem;
+  padding: 0.85rem 1rem 0.9rem;
+  border: 1px solid #9bc2e3;
+  border-radius: 0.85rem;
+  background:
+    radial-gradient(120% 90% at 0% 0%, rgba(255, 255, 255, 0.72), transparent 55%),
+    linear-gradient(180deg, #edf5fc 0%, #d9ebf8 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.85),
+    0 6px 16px rgba(36, 90, 140, 0.08);
+  color: #1a3c63;
+  line-height: 1.2;
+}
+
+.masoft-month-totals-title {
+  margin: 0;
+  color: #3f6b96;
+  font-size: 0.72rem;
+  font-weight: 750;
+  letter-spacing: 0.04em;
+}
+
+.masoft-month-totals-divider {
+  height: 1px;
+  margin: 0.08rem 0 0.02rem;
+  background: linear-gradient(90deg, rgba(47, 120, 184, 0.28), rgba(47, 120, 184, 0.06));
+}
+
+.masoft-month-totals-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  font-size: 0.84rem;
+}
+
+.masoft-month-totals-row > span {
+  color: #4a6f95;
   font-weight: 650;
+}
+
+.masoft-month-totals-row > strong {
+  color: #12334f;
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.masoft-month-totals-row.is-month > strong {
+  color: #0d4f8a;
+  font-size: 1.05rem;
+  font-weight: 850;
+  letter-spacing: 0.01em;
+}
+
+.masoft-month-totals-row.is-net {
+  margin-top: 0.06rem;
+  padding: 0.38rem 0.5rem;
+  border-radius: 0.55rem;
+  background: rgba(255, 255, 255, 0.55);
+}
+
+.masoft-month-totals-row.is-net > span {
+  color: #2b5f8d;
+}
+
+.masoft-month-totals-row.is-net > strong {
+  color: #0b5ea8;
+  font-size: 0.95rem;
 }
 
 .masoft-orders-cell {
