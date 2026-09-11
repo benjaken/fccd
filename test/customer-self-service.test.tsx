@@ -112,7 +112,9 @@ describe("CustomerSelfServicePage", () => {
       ...detail,
       shippingFee: 100,
       discount: 50,
-      grandTotal: 1054,
+      cashdollarRedeemed: 30,
+      cashdollarPurchased: 20,
+      grandTotal: 1024,
       lines: [{ ...detail.lines[0], quantity: 2, unitPrice: 552, totalPrice: 1004 }],
     });
     render(
@@ -154,7 +156,11 @@ describe("CustomerSelfServicePage", () => {
     expect(within(receipt).getByDisplayValue("100")).toBeInTheDocument();
     expect(receipt).toHaveTextContent("Discount:");
     expect(receipt).toHaveTextContent("-$50");
-    expect(receipt).toHaveTextContent("$1,054");
+    expect(receipt).toHaveTextContent("扣除 Cashdollar:");
+    expect(receipt).toHaveTextContent("-$30");
+    expect(receipt).toHaveTextContent("購買 Cashdollar:");
+    expect(receipt).toHaveTextContent("$20");
+    expect(receipt).toHaveTextContent("$1,024");
     expect(receipt).toHaveTextContent("Payment information:");
     const receiptFields = Array.from(receipt.querySelectorAll("input, textarea"));
     expect(receiptFields.length).toBeGreaterThan(0);

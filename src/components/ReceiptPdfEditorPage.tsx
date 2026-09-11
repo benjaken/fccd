@@ -117,6 +117,8 @@ function resultToDraft(
     deliveryFeeLabel: "Delivery Fee",
     deliveryFee: order?.shippingFee ? String(order.shippingFee) : "",
     discount: order?.discount ? String(order.discount) : "",
+    cashdollarRedeemed: order?.cashdollarRedeemed ? String(order.cashdollarRedeemed) : "",
+    cashdollarPurchased: order?.cashdollarPurchased ? String(order.cashdollarPurchased) : "",
     paymentInformation:
       outstanding > 0
         ? `Outstanding: ${money(outstanding, true)}`
@@ -238,7 +240,15 @@ export function ReceiptPdfEditorPage({
     );
     const deliveryFee = numberValue(draft?.deliveryFee ?? "");
     const discount = numberValue(draft?.discount ?? "");
-    return { subtotal, discount, grandTotal: subtotal + deliveryFee - discount };
+    const cashdollarRedeemed = numberValue(draft?.cashdollarRedeemed ?? "");
+    const cashdollarPurchased = numberValue(draft?.cashdollarPurchased ?? "");
+    return {
+      subtotal,
+      discount,
+      cashdollarRedeemed,
+      cashdollarPurchased,
+      grandTotal: subtotal + deliveryFee - discount - cashdollarRedeemed,
+    };
   }, [draft]);
 
   const update = <K extends keyof ReceiptPdfDraft>(
@@ -509,6 +519,8 @@ export function ReceiptPdfEditorPage({
           <tr><td colSpan={4}>Subtotal:</td><td>{money(totals.subtotal)}</td></tr>
           <tr><td colSpan={4}><FilterableSelect className="quote-pdf-edit-only shipping-fee-select" aria-label="運費選項" value={draft.deliveryFeeId} onChange={(event) => selectDeliveryFee(event.target.value)}><option value="">Delivery Fee</option>{shippingFees.map((fee) => <option key={fee.id} value={fee.id}>{fee.item}</option>)}</FilterableSelect><span className="quote-pdf-print-only">{draft.deliveryFeeLabel}</span></td><td><span className="receipt-pdf-price-input">{draft.deliveryFee ? <span aria-hidden="true">$</span> : null}<PdfBlurCommitInput aria-label="運費" inputMode="decimal" size={Math.max(draft.deliveryFee.length, 1)} value={draft.deliveryFee} onCommit={(value) => update("deliveryFee", value.trim() ? value : "0")} /></span></td></tr>
           {totals.discount > 0 ? <tr><td colSpan={4}>Discount:</td><td><span className="receipt-pdf-price-input"><span aria-hidden="true">-$</span><PdfBlurCommitInput aria-label="折扣" inputMode="decimal" size={Math.max(draft.discount.length, 1)} value={draft.discount} onCommit={(value) => update("discount", value.trim() ? value : "0")} /></span></td></tr> : null}
+          {totals.cashdollarRedeemed > 0 ? <tr><td colSpan={4}>扣除 Cashdollar:</td><td><span className="receipt-pdf-price-input"><span aria-hidden="true">-$</span><PdfBlurCommitInput aria-label="扣除 Cashdollar" inputMode="decimal" size={Math.max(draft.cashdollarRedeemed.length, 1)} value={draft.cashdollarRedeemed} onCommit={(value) => update("cashdollarRedeemed", value.trim() ? value : "0")} /></span></td></tr> : null}
+          {totals.cashdollarPurchased > 0 ? <tr><td colSpan={4}>購買 Cashdollar:</td><td><span className="receipt-pdf-price-input"><span aria-hidden="true">$</span><PdfBlurCommitInput aria-label="購買 Cashdollar" inputMode="decimal" size={Math.max(draft.cashdollarPurchased.length, 1)} value={draft.cashdollarPurchased} onCommit={(value) => update("cashdollarPurchased", value.trim() ? value : "0")} /></span></td></tr> : null}
           <tr><td colSpan={4}>Grand Total:</td><td>{money(totals.grandTotal)}</td></tr>
         </tfoot> : null}
       </table>
