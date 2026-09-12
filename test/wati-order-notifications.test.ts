@@ -201,27 +201,35 @@ describe("WATI order notifications", () => {
     expect(quote.html).toContain("Hello 陳先生,");
   });
 
-  it("lists every unassigned delivery order with its FCCD link", () => {
+  it("lists every unassigned delivery order with region and order quantity", () => {
     const reminder = buildUnassignedDriverReminderContent({
       date: "28/08/2026",
+      weekday: "星期五",
       orders: [
         {
           order_number: "R/202608/88",
           customer_name: "Customer A",
           delivery_time: "12:00 - 13:00",
+          region: "荃灣",
+          order_quantity: "25",
           order_link: "https://admin.example.com/orders/order-a",
         },
         {
           order_number: "R/202608/89",
           customer_name: "Customer B",
           delivery_time: "13:00 - 14:00",
+          region: "觀塘",
+          order_quantity: "40.5",
           order_link: "https://admin.example.com/orders/order-b",
         },
       ],
     });
 
-    expect(reminder.subject).toContain("2 張");
-    expect(reminder.text).toContain("今日 28/08/2026 有 2 張送貨訂單尚未安排司機");
+    expect(reminder.subject).toBe("28/08/2026 星期五 未派司機訂單提醒（2 張）");
+    expect(reminder.text).toContain("28/08/2026 星期五 有 2 張送貨訂單尚未安排司機");
+    expect(reminder.text).not.toContain("今日");
+    expect(reminder.text).toContain("R/202608/88｜Customer A｜12:00 - 13:00｜荃灣｜25");
+    expect(reminder.text).toContain("R/202608/89｜Customer B｜13:00 - 14:00｜觀塘｜40.5");
     expect(reminder.html).toContain("https://admin.example.com/orders/order-a");
     expect(reminder.html).toContain("https://admin.example.com/orders/order-b");
   });
