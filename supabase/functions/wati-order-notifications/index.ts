@@ -130,12 +130,14 @@ type DriverReminderOrderRow = {
   delivery_time: string | null;
   delivery_status: string | null;
   shipping_methods: unknown;
+  order_lines: unknown;
 };
 type DriverReminderDeliveryRow = {
   delivery_at: string | null;
   delivery_time: string | null;
   delivery_status: string | null;
   shipping_methods: unknown;
+  district: unknown;
   order: unknown;
 };
 
@@ -252,6 +254,36 @@ function isPendingReview(order: OrderRow) {
     );
 }
 
+function formatHongKongWeekday(value: string) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.valueOf())) return "";
+  return new Intl.DateTimeFormat("zh-HK", {
+    timeZone: "Asia/Hong_Kong",
+    weekday: "long",
+  }).format(date);
+}
+
+function formatOrderQuantity(value: number) {
+  if (!Number.isFinite(value)) return "0";
+  return String(Math.round(value * 1000) / 1000);
+}
+
+function unassignedDriverReminderRegion(row: DriverReminderDeliveryRow) {
+  const district = relation<{ name?: unknown }>(row.district);
+  const name = typeof district?.name === "string" ? district.name.trim() : "";
+  return name || "-";
+}
+
+function unassignedDriverReminderQuantity(order: DriverReminderOrderRow) {
+  const lines = Array.isArray(order.order_lines) ? order.order_lines : [];
+  const total = lines.reduce((sum, line) => {
+    const quantity = Number(relation<{ quantity?: unknown }>(line)?.quantity ?? 0);
+    return sum + (Number.isFinite(quantity) ? quantity : 0);
+  }, 0);
+  return formatOrderQuantity(total);
+}
+
 function unassignedDriverReminderOrders(
   rows: DriverReminderDeliveryRow[],
   baseUrl: string,
@@ -281,6 +313,8 @@ function unassignedDriverReminderOrders(
         || order.company_name_snapshot?.trim()
         || "-",
       delivery_time: row.delivery_time?.trim() || order.delivery_time?.trim() || "-",
+      region: unassignedDriverReminderRegion(row),
+      order_quantity: unassignedDriverReminderQuantity(order),
       order_link: baseUrl ? `${baseUrl}/orders/${encodeURIComponent(order.id)}` : "",
     });
   }
@@ -1176,7 +1210,7 @@ Deno.serve(async (request) => {
           const end = `${nextDateKey(job.reminder_date)}T00:00:00+08:00`;
           const { data: deliveryRows, error: deliveryError } = await admin
             .from("deliveries")
-            .select("delivery_at,delivery_time,delivery_status,motorcade_id,fulfilled_at,shipping_methods(name,display_name,requires_address_check),order:orders!inner(id,order_number,customer_name_snapshot,company_name_snapshot,document_type,archived_at,delivery_time,delivery_status,shipping_methods(name,display_name,requires_address_check))")
+            .select("delivery_at,delivery_time,delivery_status,motorcade_id,fulfilled_at,shipping_methods(name,display_name,requires_address_check),district:delivery_districts(name),order:orders!inner(id,order_number,customer_name_snapshot,company_name_snapshot,document_type,archived_at,delivery_time,delivery_status,shipping_methods(name,display_name,requires_address_check),order_lines(quantity))")
             .gte("delivery_at", start)
             .lt("delivery_at", end)
             .is("motorcade_id", null)
@@ -1204,6 +1238,7 @@ Deno.serve(async (request) => {
 
         const notification = buildUnassignedDriverReminderContent({
           date: formatHongKongDate(`${job.reminder_date}T00:00:00+08:00`),
+          weekday: formatHongKongWeekday(`${job.reminder_date}T00:00:00+08:00`),
           orders: reminderOrders,
         });
         let providerPayload: unknown;

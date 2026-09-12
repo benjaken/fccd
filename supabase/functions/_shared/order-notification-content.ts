@@ -107,6 +107,8 @@ export type UnassignedDriverReminderOrder = {
   order_number: string;
   customer_name: string;
   delivery_time: string;
+  region: string;
+  order_quantity: string;
   order_link: string;
 };
 
@@ -377,14 +379,16 @@ export function buildOrderNotificationContent(
 
 export function buildUnassignedDriverReminderContent(input: {
   date: string;
+  weekday: string;
   orders: UnassignedDriverReminderOrder[];
 }): NotificationContent {
   const count = input.orders.length;
-  return content(`今日未派司機訂單提醒（${count} 張）`, [
-    `今日 ${input.date} 有 ${count} 張送貨訂單尚未安排司機。`,
+  const dateLabel = [input.date, input.weekday].filter(Boolean).join(" ");
+  return content(`${dateLabel} 未派司機訂單提醒（${count} 張）`, [
+    `${dateLabel} 有 ${count} 張送貨訂單尚未安排司機。`,
     "",
     ...input.orders.flatMap((order, index) => [
-      `${index + 1}. ${order.order_number}｜${order.customer_name}｜${order.delivery_time}`,
+      `${index + 1}. ${order.order_number}｜${order.customer_name}｜${order.delivery_time}｜${order.region}｜${order.order_quantity}`,
       order.order_link,
       index === input.orders.length - 1 ? null : "",
     ]),
