@@ -2,6 +2,7 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 import {
   type BubbleRecord,
   canAdvanceCheckpoint,
+  dedupePaymentSettlementPaymentRows,
   hashBubblePayload,
   partitionConflicts,
   requireLegacyId,
@@ -927,6 +928,103 @@ async function upsertJunctions(
   return updated;
 }
 
+async function deleteEmptyPaymentSettlements(
+  client: AdminClient,
+  settlementIds: string[],
+): Promise<void> {
+  const unique = [...new Set(settlementIds.filter(Boolean))];
+  for (const settlementId of unique) {
+    const { count, error } = await client
+      .from("payment_settlement_payments")
+      .select("id", { count: "exact", head: true })
+      .eq("payment_settlement_id", settlementId);
+    if (error) throw error;
+    if ((count ?? 0) > 0) continue;
+    const { error: deleteError } = await client
+      .from("payment_settlements")
+      .delete()
+      .eq("id", settlementId);
+    if (deleteError) throw deleteError;
+  }
+}
+
+/** Move Bubble payment links onto the settlements in `rows`, dropping prior links. */
+async function claimPaymentSettlementPayments(
+  client: AdminClient,
+  rows: Array<Record<string, unknown>>,
+  mode: "insert" | "upsert",
+): Promise<number> {
+  const deduped = dedupePaymentSettlementPaymentRows(rows);
+  if (!deduped.length) return 0;
+
+  const legacyIds = [
+    ...new Set(
+      deduped
+        .map((row) => row.payment_legacy_id)
+        .filter((value): value is string => typeof value === "string" && Boolean(value)),
+    ),
+  ];
+  const previousSettlementIds: string[] = [];
+  for (let index = 0; index < legacyIds.length; index += QUERY_CHUNK) {
+    const chunk = legacyIds.slice(index, index + QUERY_CHUNK);
+    const { data, error } = await client
+      .from("payment_settlement_payments")
+      .select("payment_settlement_id")
+      .in("payment_legacy_id", chunk);
+    if (error) throw error;
+    for (const row of data ?? []) {
+      if (typeof row.payment_settlement_id === "string") {
+        previousSettlementIds.push(row.payment_settlement_id);
+      }
+    }
+    const { error: deleteError } = await client
+      .from("payment_settlement_payments")
+      .delete()
+      .in("payment_legacy_id", chunk);
+    if (deleteError) throw deleteError;
+  }
+
+  const written = mode === "insert"
+    ? await insertOnlyJunctions(
+      client,
+      "payment_settlement_payments",
+      "payment_settlement_id,payment_legacy_id",
+      deduped,
+    )
+    : await upsertJunctions(
+      client,
+      "payment_settlement_payments",
+      "payment_settlement_id,payment_legacy_id",
+      deduped,
+    );
+
+  const targetSettlementIds = new Set(
+    deduped
+      .map((row) => row.payment_settlement_id)
+      .filter((value): value is string => typeof value === "string"),
+  );
+  await deleteEmptyPaymentSettlements(
+    client,
+    previousSettlementIds.filter((id) => !targetSettlementIds.has(id)),
+  );
+  return written;
+}
+
+async function writeJunctionRows(
+  client: AdminClient,
+  table: string,
+  onConflict: string,
+  rows: Array<Record<string, unknown>>,
+  mode: "insert" | "upsert",
+): Promise<number> {
+  if (table === "payment_settlement_payments") {
+    return claimPaymentSettlementPayments(client, rows, mode);
+  }
+  return mode === "insert"
+    ? insertOnlyJunctions(client, table, onConflict, rows)
+    : upsertJunctions(client, table, onConflict, rows);
+}
+
 async function backfillPaymentReports(
   client: AdminClient,
   bubbleToken: string,
@@ -956,7 +1054,13 @@ async function backfillPaymentReports(
     const parentIds = new Map(parentRows.map((row) => [row.legacy_id, row.id]));
     for (const child of mapping.children(fetched.records, parentIds)) {
       await resolveRelations(client, child.rows, child.relations);
-      linksUpdated += await upsertJunctions(client, child.table, child.onConflict, child.rows);
+      linksUpdated += await writeJunctionRows(
+        client,
+        child.table,
+        child.onConflict,
+        child.rows,
+        "upsert",
+      );
     }
   }
   return { status: "completed" as const, fetched: fetched.records.length, updated, linksUpdated, pages: fetched.pages };
@@ -1160,11 +1264,12 @@ async function processType(
       }
       for (const child of mapping.children(insertedRecords, parentIds)) {
         await resolveRelations(client, child.rows, child.relations);
-        result.junctionsInserted += await insertOnlyJunctions(
+        result.junctionsInserted += await writeJunctionRows(
           client,
           child.table,
           child.onConflict,
           child.rows,
+          "insert",
         );
       }
     }
@@ -1309,11 +1414,12 @@ async function replaceOverwriteChildren(
       deleted += data?.length ?? 0;
     }
     await resolveRelations(client, child.rows, child.relations);
-    written += await upsertJunctions(
+    written += await writeJunctionRows(
       client,
       child.table,
       child.onConflict,
       child.rows,
+      "upsert",
     );
   }
   return { deleted, written };
@@ -1432,11 +1538,12 @@ async function processReconciliationAudit(
           if (error) throw error;
           removed += data?.length ?? 0;
         }
-        upserted = await upsertJunctions(
+        upserted = await writeJunctionRows(
           client,
           child.table,
           child.onConflict,
           child.rows,
+          "upsert",
         );
       }
       children.push({
