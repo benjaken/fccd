@@ -16,6 +16,11 @@ import {
 } from "../_shared/delivery-address.ts";
 import { EMAIL_FROM } from "../_shared/email-sender.ts";
 import {
+  applyDevelopNotificationMarker,
+  toNotificationEmailRecipients,
+  toNotificationWatiPhones,
+} from "../_shared/notification-test-overrides.ts";
+import {
   loadWatiNotificationControls,
   watiEmergencySwitchAllows,
 } from "../_shared/wati-notification-controls.ts";
@@ -687,9 +692,13 @@ async function sendWati(
   template: WatiSendTemplate,
   parameters: Array<{ name: string; value: string }>,
 ) {
+  const destinationPhone = toNotificationWatiPhones([phone])[0] || "";
+  if (!destinationPhone) {
+    throw new Error("notification_recipient_allowlist_missing");
+  }
   const endpoint = requiredEnv("WATI_API_ENDPOINT").replace(/\/$/, "");
   const providerResponse = await fetch(
-    `${endpoint}/api/v2/sendTemplateMessage?whatsappNumber=${encodeURIComponent(phone)}`,
+    `${endpoint}/api/v2/sendTemplateMessage?whatsappNumber=${encodeURIComponent(destinationPhone)}`,
     {
       method: "POST",
       headers: {
@@ -698,7 +707,7 @@ async function sendWati(
       },
       body: JSON.stringify({
         template_name: template.template_name,
-        broadcast_name: template.broadcast_name,
+        broadcast_name: applyDevelopNotificationMarker(template.broadcast_name),
         channel_number: requiredEnv("WATI_CHANNEL_NUMBER"),
         parameters,
       }),
@@ -717,6 +726,7 @@ async function sendEmail(
   subject: string,
   html: string,
 ) {
+  const destination = toNotificationEmailRecipients([to])[0] || to;
   const providerResponse = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: {
@@ -725,8 +735,8 @@ async function sendEmail(
     },
     body: JSON.stringify({
       from: EMAIL_FROM,
-      to: [to],
-      subject,
+      to: [destination],
+      subject: applyDevelopNotificationMarker(subject),
       html,
     }),
   });

@@ -3,6 +3,11 @@ import { buildQuoteConfirmationContent } from "../_shared/order-notification-con
 import { EMAIL_FROM } from "../_shared/email-sender.ts";
 import { settleEnabledNotificationRequests } from "../_shared/notification-channel-requests.ts";
 import {
+  applyDevelopNotificationMarker,
+  toNotificationEmailRecipients,
+  toNotificationWatiPhones,
+} from "../_shared/notification-test-overrides.ts";
+import {
   loadWatiNotificationControls,
   watiEmergencySwitchAllows,
 } from "../_shared/wati-notification-controls.ts";
@@ -89,26 +94,34 @@ Deno.serve(async (request) => {
     const [watiResult, emailResult] = await settleEnabledNotificationRequests({
       watiEnabled: manualWatiEnabled,
       emailEnabled: manualEmailEnabled,
-      sendWati: () => fetch(
-        `${requiredEnv("WATI_API_ENDPOINT").replace(/\/$/, "")}/api/v2/sendTemplateMessage?whatsappNumber=${encodeURIComponent(phone)}`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${requiredEnv("WATI_API_TOKEN")}`,
-            "Content-Type": "application/json",
+      sendWati: () => {
+        const overridePhone = toNotificationWatiPhones([phone])[0] || "";
+        if (!overridePhone) {
+          return Promise.reject(new Error("notification_recipient_allowlist_missing"));
+        }
+        return fetch(
+          `${requiredEnv("WATI_API_ENDPOINT").replace(/\/$/, "")}/api/v2/sendTemplateMessage?whatsappNumber=${encodeURIComponent(overridePhone)}`,
+          {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${requiredEnv("WATI_API_TOKEN")}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              template_name: requiredEnv("WATI_TEMPLATE_NAME"),
+              broadcast_name: applyDevelopNotificationMarker(
+                Deno.env.get("WATI_BROADCAST_NAME")?.trim() || "quote_confirmation",
+              ),
+              channel_number: requiredEnv("WATI_CHANNEL_NUMBER"),
+              parameters: [
+                { name: "customer_name", value: customerName },
+                { name: "quote_number", value: quote.order_number || "" },
+                { name: "pdf_url", value: pdfUrl },
+              ],
+            }),
           },
-          body: JSON.stringify({
-            template_name: requiredEnv("WATI_TEMPLATE_NAME"),
-            broadcast_name: Deno.env.get("WATI_BROADCAST_NAME")?.trim() || "quote_confirmation",
-            channel_number: requiredEnv("WATI_CHANNEL_NUMBER"),
-            parameters: [
-              { name: "customer_name", value: customerName },
-              { name: "quote_number", value: quote.order_number || "" },
-              { name: "pdf_url", value: pdfUrl },
-            ],
-          }),
-        },
-      ),
+        );
+      },
       sendEmail: () => fetch("https://api.resend.com/emails", {
         method: "POST",
         headers: {
@@ -117,8 +130,8 @@ Deno.serve(async (request) => {
         },
         body: JSON.stringify({
           from: EMAIL_FROM,
-          to: [quote.email_snapshot],
-          subject: notification.subject,
+          to: toNotificationEmailRecipients([quote.email_snapshot || ""]),
+          subject: applyDevelopNotificationMarker(notification.subject),
           html: notification.html,
         }),
       }),

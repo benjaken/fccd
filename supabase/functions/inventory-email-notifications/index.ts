@@ -6,6 +6,10 @@ import {
   type InventoryForecastLine,
   type MinimumStockAlert,
 } from "../_shared/inventory-email.ts";
+import {
+  applyDevelopNotificationMarker,
+  toNotificationEmailRecipients,
+} from "../_shared/notification-test-overrides.ts";
 
 type Job = {
   id: string;
@@ -60,7 +64,11 @@ Deno.serve(async (request) => {
 
   const { data: recipientRows, error: recipientError } = await admin.rpc("enquiry_internal_email_recipients");
   if (recipientError) return json({ error: "recipient_lookup_failed" }, 500);
-  const recipients = [...new Set((recipientRows ?? []).map((row: { recipient_address?: string }) => row.recipient_address?.trim().toLowerCase()).filter(Boolean))] as string[];
+  const recipients = toNotificationEmailRecipients(
+    [...new Set((recipientRows ?? []).map((row: { recipient_address?: string }) =>
+      row.recipient_address?.trim().toLowerCase()
+    ).filter(Boolean))] as string[],
+  );
   let sent = 0;
   let failed = 0;
 
@@ -104,7 +112,12 @@ Deno.serve(async (request) => {
       const provider = await fetch("https://api.resend.com/emails", {
         method: "POST",
         headers: { Authorization: `Bearer ${requiredEnv("RESEND_API_KEY")}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ from: EMAIL_FROM, to: recipients, subject: email.subject, html: email.html }),
+        body: JSON.stringify({
+          from: EMAIL_FROM,
+          to: recipients,
+          subject: applyDevelopNotificationMarker(email.subject),
+          html: email.html,
+        }),
       });
       if (!provider.ok) throw new Error("email_send_failed");
       const payload = await provider.json().catch(() => ({})) as { id?: string };
