@@ -3,6 +3,7 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 import { EMAIL_FROM } from "../_shared/email-sender.ts";
 import {
   answerCustomerServiceFaqWithTieredAi,
+  answerCustomerServiceFallbackWithTieredAi,
   classifyCustomerServiceWithTieredAi,
   customerServiceAiConfig,
   type CustomerServiceAiTierConfig,
@@ -13,6 +14,11 @@ import {
   sanitizeCustomerServiceRecentMessages,
   type CustomerServiceRecentMessage,
 } from "../_shared/customer-service-context.ts";
+import {
+  customerServiceCatalogSearchAnchor,
+  rankCustomerServiceCatalog,
+  type CustomerServiceCatalogCandidate,
+} from "../_shared/customer-service-catalog.ts";
 import {
   assessCustomerServiceAdvertisement,
   isCustomerServiceMediaType,
@@ -59,6 +65,7 @@ import {
   normalizeNotificationPhone,
 } from "../_shared/notification-phone.ts";
 import { watiEmergencySwitchAllows } from "../_shared/wati-notification-controls.ts";
+import { isWithinCustomerServiceSchedule } from "../_shared/customer-service-schedule.ts";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -87,41 +94,6 @@ function requiredEnv(name: string) {
 function normalizeScheduleTime(value: unknown, fallback: string) {
   const match = String(value ?? "").match(/^(\d{2}):(\d{2})/);
   return match ? `${match[1]}:${match[2]}` : fallback;
-}
-
-function timeToMinutes(value: string) {
-  const [hours, minutes] = value.split(":").map(Number);
-  return hours * 60 + minutes;
-}
-
-export function isWithinAutoReplyWindow({
-  now = new Date(),
-  start,
-  end,
-  timeZone,
-}: {
-  now?: Date;
-  start: string;
-  end: string;
-  timeZone: string;
-}) {
-  const parts = new Intl.DateTimeFormat("en-GB", {
-    timeZone,
-    hour: "2-digit",
-    minute: "2-digit",
-    hourCycle: "h23",
-  }).formatToParts(now);
-  const hour = Number(parts.find((part) => part.type === "hour")?.value ?? 0);
-  const minute = Number(
-    parts.find((part) => part.type === "minute")?.value ?? 0,
-  );
-  const current = hour * 60 + minute;
-  const from = timeToMinutes(start);
-  const until = timeToMinutes(end);
-  if (from === until) return true;
-  return from < until
-    ? current >= from && current < until
-    : current >= from || current < until;
 }
 
 function serviceRoleKey() {
@@ -410,6 +382,10 @@ async function loadBotControls(admin: AdminClient) {
       allowed_phones?: string[] | null;
       auto_reply_start?: string | null;
       auto_reply_end?: string | null;
+      weekday_auto_reply_start?: string | null;
+      weekday_auto_reply_end?: string | null;
+      weekend_auto_reply_start?: string | null;
+      weekend_auto_reply_end?: string | null;
       auto_reply_timezone?: string | null;
     }> | null
   )?.[0];
@@ -419,8 +395,22 @@ async function loadBotControls(admin: AdminClient) {
   return {
     botEnabled: Boolean(row?.bot_enabled),
     allowedPhones,
-    autoReplyStart: normalizeScheduleTime(row?.auto_reply_start, "19:00"),
-    autoReplyEnd: normalizeScheduleTime(row?.auto_reply_end, "09:00"),
+    weekdayAutoReplyStart: normalizeScheduleTime(
+      row?.weekday_auto_reply_start ?? row?.auto_reply_start,
+      "19:00",
+    ),
+    weekdayAutoReplyEnd: normalizeScheduleTime(
+      row?.weekday_auto_reply_end ?? row?.auto_reply_end,
+      "09:00",
+    ),
+    weekendAutoReplyStart: normalizeScheduleTime(
+      row?.weekend_auto_reply_start ?? row?.auto_reply_start,
+      "19:00",
+    ),
+    weekendAutoReplyEnd: normalizeScheduleTime(
+      row?.weekend_auto_reply_end ?? row?.auto_reply_end,
+      "09:00",
+    ),
     autoReplyTimezone: row?.auto_reply_timezone || "Asia/Hong_Kong",
   };
 }
@@ -654,9 +644,9 @@ function automaticTurnEvaluation(input: {
           : input.intent === "collect_inquiry" && input.routes.has("write_inquiry")
             ? "write_inquiry"
             : undefined;
-  const toolCorrect = !expected || input.routes.has(expected) || (
-    expected === "queue_handoff" && input.routes.has("notify_internal")
-  );
+  const toolCorrect = !expected || input.routes.has(expected) ||
+    (expected === "search_faqs" && input.routes.has("search_catalog")) ||
+    (expected === "queue_handoff" && input.routes.has("notify_internal"));
   const workflowProgress = [
     "collecting",
     "verifying_order",
@@ -667,6 +657,7 @@ function automaticTurnEvaluation(input: {
     input.faqSourceIds.length ||
     [...input.routes].some((route) => [
       "lookup_orders",
+      "search_catalog",
       "write_inquiry",
       "queue_handoff",
       "notify_internal",
@@ -1430,6 +1421,111 @@ function createBotDeps(
         answer: string;
       }>;
     },
+    async searchCatalog(query: string) {
+      const searchAnchor = customerServiceCatalogSearchAnchor(query);
+      if (!searchAnchor) return [];
+      const { data: packageRows, error: packageError } = await admin
+        .from("packages")
+        .select("id,sku,name,chinese_name,price,channels(name)")
+        .eq("is_active", true)
+        .is("archived_at", null)
+        .or(
+          `name.ilike.%${searchAnchor}%,chinese_name.ilike.%${searchAnchor}%`,
+        )
+        .limit(500);
+      if (packageError) throw packageError;
+
+      const candidates: CustomerServiceCatalogCandidate[] =
+        ((packageRows ?? []) as Array<{
+          id: string;
+          sku?: string | null;
+          name?: string | null;
+          chinese_name?: string | null;
+          price?: number | string | null;
+          channels?: { name?: string | null } | Array<unknown> | null;
+        }>).map((row) => {
+          const channel = row.channels && !Array.isArray(row.channels)
+            ? row.channels as { name?: string | null }
+            : null;
+          return {
+            id: String(row.id),
+            sku: typeof row.sku === "string" ? row.sku : null,
+            name: String(row.chinese_name || row.name || "").trim(),
+            price: row.price === null || row.price === undefined
+              ? null
+              : Number(row.price),
+            channelName: channel?.name ?? null,
+          };
+        });
+      const matches = rankCustomerServiceCatalog(query, candidates).slice(0, 3);
+      if (!matches.length) return [];
+
+      const packageIds = matches.map((match) => match.id);
+      const handles = matches
+        .map((match) => match.sku?.toLowerCase())
+        .filter((handle): handle is string => Boolean(handle));
+      const [membersResult, draftsResult] = await Promise.all([
+        admin
+          .from("package_products")
+          .select("package_id,quantity,products(name,chinese_name)")
+          .in("package_id", packageIds)
+          .order("bubble_created_at", { ascending: true, nullsFirst: false })
+          .limit(200),
+        handles.length
+          ? admin
+            .from("shopify_catalog_drafts")
+            .select(
+              "handle,featured_image_url,shopify_stores(shop_domain,channels(name))",
+            )
+            .in("handle", handles)
+            .eq("shopify_status", "active")
+          : Promise.resolve({ data: [], error: null }),
+      ]);
+      if (membersResult.error) throw membersResult.error;
+      if (draftsResult.error) throw draftsResult.error;
+
+      const membersByPackage = new Map<string, string[]>();
+      for (const row of membersResult.data ?? []) {
+        const product = row.products && !Array.isArray(row.products)
+          ? row.products as { name?: string | null; chinese_name?: string | null }
+          : null;
+        const name = String(product?.chinese_name || product?.name || "").trim();
+        if (!name) continue;
+        const packageId = String(row.package_id);
+        const current = membersByPackage.get(packageId) ?? [];
+        if (!current.includes(name)) current.push(name);
+        membersByPackage.set(packageId, current);
+      }
+
+      const drafts = (draftsResult.data ?? []) as Array<{
+        handle?: string | null;
+        featured_image_url?: string | null;
+        shopify_stores?: {
+          shop_domain?: string | null;
+          channels?: { name?: string | null } | null;
+        } | null;
+      }>;
+      return matches.map((match) => {
+        const handle = match.sku?.toLowerCase() ?? "";
+        const matchingDrafts = drafts.filter((draft) => draft.handle === handle);
+        const draft = matchingDrafts.find(
+          (item) =>
+            item.shopify_stores?.channels?.name === match.channelName,
+        ) ?? matchingDrafts[0];
+        const shopDomain = draft?.shopify_stores?.shop_domain?.trim() ?? "";
+        const publicDomain = shopDomain === "foodchannels-catering.myshopify.com"
+          ? "foodchannels-catering.com"
+          : shopDomain;
+        return {
+          ...match,
+          imageUrl: draft?.featured_image_url?.trim() || null,
+          productUrl: publicDomain && handle
+            ? `https://${publicDomain}/products/${encodeURIComponent(handle)}`
+            : null,
+          items: membersByPackage.get(match.id) ?? [],
+        };
+      });
+    },
     async answerFaqWithModel(
       query: string,
       candidates: Array<{
@@ -1449,6 +1545,22 @@ function createBotDeps(
         tiers,
       });
       return result ?? null;
+    },
+    async answerWithoutFaqWithModel(input: {
+      query: string;
+      intentKey: string;
+      confidence?: number;
+      missingFields: string[];
+      recentMessages: CustomerServiceRecentMessage[];
+    }) {
+      return await answerCustomerServiceFallbackWithTieredAi({
+        question: input.query,
+        intentKey: input.intentKey,
+        confidence: input.confidence,
+        missingFields: input.missingFields,
+        recentMessages: input.recentMessages,
+        tiers,
+      });
     },
     async queueHandoff(input: {
       phone: string;
@@ -2049,9 +2161,11 @@ Deno.serve(async (request) => {
       });
     }
     if (
-      !isWithinAutoReplyWindow({
-        start: controls.autoReplyStart,
-        end: controls.autoReplyEnd,
+      !isWithinCustomerServiceSchedule({
+        weekdayStart: controls.weekdayAutoReplyStart,
+        weekdayEnd: controls.weekdayAutoReplyEnd,
+        weekendStart: controls.weekendAutoReplyStart,
+        weekendEnd: controls.weekendAutoReplyEnd,
         timeZone: controls.autoReplyTimezone,
       })
     ) {

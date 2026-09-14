@@ -1994,8 +1994,11 @@
 .customer-faq-preview-list p { margin: 0; color: var(--muted-foreground); white-space: pre-wrap; }
 .customer-faq-auto-reply-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 28px; padding: 14px 16px; border: 1px solid var(--border); border-radius: 12px; background: var(--card); }
 .customer-faq-auto-reply-switch { display: flex; align-items: center; gap: 12px; font-weight: 650; }
+.customer-faq-auto-reply-windows { display: grid; gap: 8px; }
+.customer-faq-auto-reply-windows > span:first-child { font-weight: 650; }
+.customer-faq-auto-reply-windows > small { color: var(--muted-foreground); }
 .customer-faq-auto-reply-window { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
-.customer-faq-auto-reply-window > span:first-child { font-weight: 650; }
+.customer-faq-auto-reply-window strong { min-width: 104px; font-size: 14px; }
 .customer-faq-auto-reply-window input[type='time'] { min-width: 112px; height: 38px; padding: 7px 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--background); color: var(--foreground); font: inherit; }
 .customer-faq-auto-reply-window small { color: var(--muted-foreground); }
 .customer-faq-auto-reply-controls > [role='alert'] { flex-basis: 100%; margin: 0; }

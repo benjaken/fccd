@@ -212,6 +212,168 @@ describe("customer-service intents", () => {
 });
 
 describe("customer-service FAQ routing priority", () => {
+  it("answers a named catering brand question from its menu FAQ", async () => {
+    const stages: string[] = [];
+    const searchFaqs = vi.fn().mockImplementation(async () => {
+      stages.push("faq");
+      return [{
+        id: "kitchen-menu",
+        category: "menu",
+        question: "Food Channels Kitchen 有冇餐牌可以睇？",
+        answer:
+          "桂花‧八月高級中菜到會餐牌：https://foodchannels-kitchen.com/",
+      }];
+    });
+    const classify = vi.fn().mockImplementation(async () => {
+      stages.push("intent");
+      return {
+        intent: "collect_inquiry",
+        slots: classifyCustomerServiceMessage("").slots,
+        orderNumber: "",
+        usedModel: true,
+        configuredIntentKey: "catering_inquiry",
+      };
+    });
+
+    const turn = await handleCustomerServiceTurn({
+      phone: conversation.phone_normalized,
+      text: "你好，我想問有關桂花‧八月高級中菜到會的問題。",
+      conversation,
+      deps: deps({ searchFaqs }),
+      classify,
+    });
+
+    expect(searchFaqs).toHaveBeenCalledWith(
+      "Food Channels Kitchen 有冇餐牌可以睇？",
+    );
+    expect(turn.reply).toContain("桂花‧八月高級中菜到會");
+    expect(turn.reply).toContain("foodchannels-kitchen.com");
+    expect(turn.reply).not.toContain("未搵到用呢個 WhatsApp 號碼");
+    expect(classify).toHaveBeenCalledOnce();
+    expect(stages).toEqual(["intent", "faq"]);
+  });
+
+  it("answers the original seasonal menu question without asking for a brand", async () => {
+    const searchCatalog = vi.fn().mockResolvedValue([{
+      id: "package-mid-autumn-6-8",
+      sku: "CCMA0608",
+      name: "【2026中秋】中秋到會套餐 (6-8人)",
+      price: 2080,
+      imageUrl: "https://cdn.example.com/mid-autumn.jpg",
+      productUrl: "https://foodchannels-catering.com/products/ccma0608",
+      items: ["醬香牛展拌粉皮 (1磅)"],
+    }]);
+    const classify = vi.fn().mockResolvedValue({
+      intent: "search_faq",
+      slots: classifyCustomerServiceMessage("").slots,
+      orderNumber: "",
+      usedModel: true,
+      configuredIntentKey: "browse_menu",
+    });
+
+    const turn = await handleCustomerServiceTurn({
+      phone: conversation.phone_normalized,
+      text: "你好，打算訂中秋六至八人餐，請問有參考圖片嗎？關於菜式方面。",
+      conversation,
+      deps: deps({ searchCatalog }),
+      classify,
+    });
+
+    expect(turn.reply).toContain("【2026中秋】中秋到會套餐 (6-8人)");
+    expect(turn.reply).toContain("參考圖片");
+    expect(turn.reply).toContain(
+      "https://foodchannels-catering.com/products/ccma0608",
+    );
+    expect(turn.reply).not.toContain("請問你想查看哪一個品牌");
+    expect(classify).toHaveBeenCalledOnce();
+  });
+
+  it("answers a shorthand seasonal package follow-up from the live catalog", async () => {
+    const searchCatalog = vi.fn().mockResolvedValue([{
+      id: "package-mid-autumn-6-8",
+      sku: "CCMA0608",
+      name: "【2026中秋】中秋到會套餐 (6-8人)",
+      price: 2080,
+      imageUrl: "https://cdn.example.com/mid-autumn.jpg",
+      productUrl: "https://foodchannels-catering.com/products/ccma0608",
+      items: ["醬香牛展拌粉皮 (1磅)", "川香椒麻魚片 (1磅)"],
+    }]);
+    const classify = vi.fn().mockResolvedValue({
+      intent: "collect_inquiry",
+      slots: classifyCustomerServiceMessage("").slots,
+      orderNumber: "",
+      usedModel: true,
+      configuredIntentKey: "catering_inquiry",
+    });
+
+    const turn = await handleCustomerServiceTurn({
+      phone: conversation.phone_normalized,
+      text: "未有訂單，想參考",
+      conversation: {
+        ...conversation,
+        recent_messages: [
+          {
+            role: "customer",
+            text: "你好，打算訂中秋六至八人餐，請問有參考圖片及菜式嗎？",
+          },
+          { role: "assistant", text: "請問你想查看哪一個品牌的餐牌？" },
+          { role: "customer", text: "中秋6-8" },
+          { role: "assistant", text: REPLIES.collectPrompt },
+        ],
+      },
+      deps: deps({ searchCatalog }),
+      classify,
+    });
+
+    expect(searchCatalog).toHaveBeenCalledWith(
+      expect.stringContaining("中秋6-8"),
+    );
+    expect(turn.reply).toContain("【2026中秋】中秋到會套餐 (6-8人)");
+    expect(turn.reply).toContain("HK$2,080");
+    expect(turn.reply).toContain("川香椒麻魚片");
+    expect(turn.reply).toContain("mid-autumn.jpg");
+    expect(turn.reply).toContain(
+      "https://foodchannels-catering.com/products/ccma0608",
+    );
+    expect(turn.reply).not.toBe(REPLIES.collectPrompt);
+    expect(turn.toolKeys).toContain("search_catalog");
+    expect(classify).toHaveBeenCalledOnce();
+  });
+
+  it("uses a safe AI reply when the classified FAQ intent has no match", async () => {
+    const answerWithoutFaqWithModel = vi.fn().mockResolvedValue({
+      answer: "可以先講活動日期同大概人數，我會按你嘅需要再提供合適方向。",
+      model: "grok-4.5",
+    });
+    const classify = vi.fn().mockResolvedValue({
+      intent: "search_faq",
+      slots: classifyCustomerServiceMessage("").slots,
+      orderNumber: "",
+      usedModel: true,
+      configuredIntentKey: "catering_inquiry",
+      confidence: 0.91,
+    });
+
+    const turn = await handleCustomerServiceTurn({
+      phone: conversation.phone_normalized,
+      text: "想搵適合公司聚會嘅到會，有咩建議？",
+      conversation,
+      deps: deps({ answerWithoutFaqWithModel }),
+      classify,
+    });
+
+    expect(answerWithoutFaqWithModel).toHaveBeenCalledWith(
+      expect.objectContaining({
+        query: "想搵適合公司聚會嘅到會，有咩建議？",
+        intentKey: "catering_inquiry",
+      }),
+    );
+    expect(turn.reply).toContain("活動日期");
+    expect(turn.usedModel).toBe(true);
+    expect(turn.model).toBe("grok-4.5");
+    expect(turn.failureReason).toBeNull();
+  });
+
   it("urgently notifies staff for same-day order demand before Express FAQ", async () => {
     const queueHandoff = vi.fn().mockResolvedValue(undefined);
     const searchFaqs = vi.fn().mockResolvedValue([{
@@ -244,7 +406,7 @@ describe("customer-service FAQ routing priority", () => {
     expect(classify).not.toHaveBeenCalled();
   });
 
-  it("answers an exact published chef FAQ before a kitchen handoff classification", async () => {
+  it("uses an exact published chef FAQ after intent classification", async () => {
     const queueHandoff = vi.fn().mockResolvedValue(undefined);
     const classify = vi.fn().mockResolvedValue({
       intent: "handoff",
@@ -271,11 +433,11 @@ describe("customer-service FAQ routing priority", () => {
     expect(turn.reply).toContain("廚師上門而家暫停");
     expect(turn.intentKey).toBe("search_faq");
     expect(turn.conversation.state).toBe("identifying");
-    expect(classify).not.toHaveBeenCalled();
+    expect(classify).toHaveBeenCalledOnce();
     expect(queueHandoff).not.toHaveBeenCalled();
   });
 
-  it("provides the published menu before starting a catering inquiry", async () => {
+  it("provides the published menu after classifying a catering inquiry", async () => {
     const searchFaqs = vi.fn().mockResolvedValue([{
       id: "menu-links",
       category: "menu",
@@ -300,7 +462,7 @@ describe("customer-service FAQ routing priority", () => {
     expect(searchFaqs).toHaveBeenCalledWith("有冇餐牌可以睇？");
     expect(turn.reply).toContain("foodchannels-catering.com");
     expect(turn.intentKey).toBe("browse_menu");
-    expect(classify).not.toHaveBeenCalled();
+    expect(classify).toHaveBeenCalledOnce();
   });
 
   it("selects the Lunch Box menu instead of the generic brand list", async () => {
@@ -319,7 +481,13 @@ describe("customer-service FAQ routing priority", () => {
         answer: "請選擇品牌",
       },
     ]);
-    const classify = vi.fn();
+    const classify = vi.fn().mockResolvedValue({
+      intent: "search_faq",
+      slots: classifyCustomerServiceMessage("").slots,
+      orderNumber: "",
+      usedModel: true,
+      configuredIntentKey: "browse_menu",
+    });
     const turn = await handleCustomerServiceTurn({
       phone: conversation.phone_normalized,
       text: "我想訂飯盒，有菜單嗎？",
@@ -331,7 +499,7 @@ describe("customer-service FAQ routing priority", () => {
     expect(searchFaqs).toHaveBeenCalledWith("HK Lunch Box 有冇餐牌可以睇？");
     expect(turn.reply).toBe(lunchBoxAnswer);
     expect(turn.faqSourceIds).toEqual(["lunch-box-menu"]);
-    expect(classify).not.toHaveBeenCalled();
+    expect(classify).toHaveBeenCalledOnce();
   });
 
   it("reuses one FAQ search result for preflight and the final FAQ answer", async () => {
@@ -354,6 +522,19 @@ describe("customer-service FAQ routing priority", () => {
 });
 
 describe("customer-service bot turns", () => {
+  it("does not tell a general new catering customer that no order was found", async () => {
+    const turn = await handleCustomerServiceTurn({
+      phone: conversation.phone_normalized,
+      text: "我想問到會資料",
+      conversation,
+      deps: deps(),
+    });
+
+    expect(turn.reply).not.toContain("未搵到用呢個 WhatsApp 號碼嘅正式訂單");
+    expect(turn.reply).toContain("活動日期");
+    expect(turn.reply).toContain("人數");
+  });
+
   it("returns a one-order summary without asking for order email", async () => {
     const unverified = { ...conversation, identity_verified_at: null };
     const lookupOrderItems = vi.fn().mockResolvedValue([{
@@ -459,7 +640,9 @@ describe("customer-service bot turns", () => {
         quoteId: "quote-1",
       }),
     );
-    expect(turn.reply).toBe(REPLIES.collectDone);
+    expect(turn.reply).toBe(
+      "已經幫你記低，客服會喺下一個工作日上午 9 點後跟進。",
+    );
     expect(turn.wroteInquiry).toBe(true);
   });
 

@@ -32,6 +32,11 @@ import {
   type CustomerServicePilotGoal,
 } from "./customer-service-pilot-graph.ts";
 import type { CustomerServiceRecentMessage } from "./customer-service-context.ts";
+import {
+  customerServiceCatalogQuery,
+  customerServiceCatalogReply,
+  type CustomerServiceCatalogHit,
+} from "./customer-service-catalog.ts";
 
 export type CustomerServiceTaskSnapshot = {
   goal: CustomerServicePilotGoal;
@@ -157,12 +162,20 @@ export type CustomerServiceBotDeps = {
     anotherEvent: boolean,
   ) => Promise<CustomerServiceInquiryWrite>;
   searchFaqs: (query: string) => Promise<CustomerServiceFaqHit[]>;
+  searchCatalog?: (query: string) => Promise<CustomerServiceCatalogHit[]>;
   answerFaqWithModel?: (
     query: string,
     candidates: CustomerServiceFaqHit[],
   ) => Promise<
     string | { answer: string; sourceIds: string[]; model: string } | null
   >;
+  answerWithoutFaqWithModel?: (input: {
+    query: string;
+    intentKey: string;
+    confidence?: number;
+    missingFields: string[];
+    recentMessages: CustomerServiceRecentMessage[];
+  }) => Promise<string | { answer: string; model: string } | null>;
   queueHandoff: (input: {
     phone: string;
     quoteId: string | null;
@@ -226,9 +239,13 @@ function strongPublishedFaqMatch(query: string, hit: CustomerServiceFaqHit) {
   const right = normalizedFaqText(hit.question);
   if (!left || !right) return false;
   if (left === right) return true;
-  return Math.min(left.length, right.length) >= 5 &&
+  if (Math.min(left.length, right.length) >= 5 &&
     Math.abs(left.length - right.length) <= 5 &&
-    (left.includes(right) || right.includes(left));
+    (left.includes(right) || right.includes(left))) return true;
+  return [
+    "運費", "送貨費", "付款", "餐牌", "菜單", "飯盒", "便當",
+    "自取", "餐具", "廚師上門", "收據", "發票", "最低消費",
+  ].some((keyword) => left.includes(keyword) && right.includes(keyword));
 }
 
 function isMenuFaq(hit: CustomerServiceFaqHit) {
@@ -843,16 +860,47 @@ async function replyFaq(
       );
     }
   }
-  if (hits[0]?.answer) {
+  const deterministicHit = hits.find((hit) => strongPublishedFaqMatch(query, hit));
+  if (deterministicHit?.answer) {
     return {
-      reply: faqReply(hits[0].answer),
+      reply: faqReply(deterministicHit.answer),
       conversation,
       wroteInquiry: false,
       notified: false,
       usedModel: classified.usedModel,
-      faqSourceIds: [hits[0].id],
-      relatedFaqs: selectRelatedFaqs(hits, [hits[0].id]),
+      faqSourceIds: [deterministicHit.id],
+      relatedFaqs: selectRelatedFaqs(hits, [deterministicHit.id]),
     };
+  }
+  if (deps.answerWithoutFaqWithModel) {
+    try {
+      const modelAnswer = await deps.answerWithoutFaqWithModel({
+        query,
+        intentKey: classified.configuredIntentKey || classified.intent,
+        confidence: classified.confidence,
+        missingFields: classified.missingFields ?? [],
+        recentMessages: conversation.recent_messages ?? [],
+      });
+      const answer = typeof modelAnswer === "string"
+        ? modelAnswer
+        : modelAnswer?.answer;
+      if (answer) {
+        return {
+          reply: sanitizeOutboundReply(answer),
+          conversation,
+          wroteInquiry: false,
+          notified: false,
+          usedModel: true,
+          model: typeof modelAnswer === "string" ? null : modelAnswer?.model,
+          failureReason: null,
+        };
+      }
+    } catch (error) {
+      console.error(
+        "customer-service AI fallback answer failed",
+        error instanceof Error ? error.message.slice(0, 200) : String(error),
+      );
+    }
   }
   return {
     reply: configuredReply(deps, "no_faq", REPLIES.noFaq),
@@ -1053,42 +1101,6 @@ export async function handleCustomerServiceTurn({
     searchFaqs: searchFaqsOnce,
   };
 
-  // Published, strongly matching FAQ knowledge is authoritative for stable
-  // public information. Resolve it before intent classification so words such
-  // as "廚師" do not get mistaken for a request requiring kitchen approval.
-  // Same-day order demand still bypasses FAQ so Express how-to copy cannot
-  // swallow an urgent booking request that already includes slots.
-  if (!isSameDayOrderDemand(text)) {
-    try {
-      const asksForMenu = isMenuInformationRequest(text);
-      const menuQuery = asksForMenu ? customerServiceMenuFaqQuery(text) : "";
-      const faqHits = await searchFaqsOnce(asksForMenu ? menuQuery : text);
-      const preferredFaq = asksForMenu
-        ? faqHits.find((hit) => strongPublishedFaqMatch(menuQuery, hit)) ??
-          faqHits.find(isMenuFaq)
-        : faqHits.find((hit) => strongPublishedFaqMatch(text, hit));
-      if (preferredFaq) {
-        return {
-          reply: faqReply(preferredFaq.answer),
-          conversation,
-          wroteInquiry: false,
-          notified: false,
-          usedModel: false,
-          intentKey: asksForMenu ? "browse_menu" : "search_faq",
-          toolKeys: ["search_faqs"],
-          faqSourceIds: [preferredFaq.id],
-          relatedFaqs: selectRelatedFaqs(faqHits, [preferredFaq.id]),
-          failureReason: null,
-        };
-      }
-    } catch (error) {
-      console.error(
-        "customer-service FAQ preflight failed",
-        error instanceof Error ? error.message.slice(0, 200) : String(error),
-      );
-    }
-  }
-
   const modelClassified = await classify(text);
   // The current utterance is authoritative for the requested order fields.
   // This prevents recent context (for example, a previous dish lookup) from
@@ -1106,7 +1118,8 @@ export async function handleCustomerServiceTurn({
         : null;
     return {
       ...turn,
-      intentKey: classified.configuredIntentKey || classified.intent,
+      intentKey:
+        turn.intentKey ?? classified.configuredIntentKey ?? classified.intent,
       confidence: classified.confidence,
       toolKeys: [...new Set([
         ...(turn.toolKeys ?? []),
@@ -1118,6 +1131,70 @@ export async function handleCustomerServiceTurn({
       dialogAction: classified.dialogAction,
     };
   };
+
+  // For normal customer messages, intent analysis always happens before any
+  // FAQ or catalog tool. A strong knowledge hit may still override a mistaken
+  // business route, but it is now selected after the AI has understood the
+  // request and its conversation context.
+  const catalogQuery = deps.searchCatalog
+    ? customerServiceCatalogQuery(text, conversation.recent_messages)
+    : "";
+  if (catalogQuery && !isSameDayOrderDemand(text)) {
+    try {
+      const catalogHits = await deps.searchCatalog?.(catalogQuery);
+      if (catalogHits?.[0]) {
+        return annotate({
+          reply: sanitizeOutboundReply(
+            customerServiceCatalogReply(catalogHits[0]),
+          ),
+          conversation,
+          wroteInquiry: false,
+          notified: false,
+          usedModel: classified.usedModel,
+          intentKey: "browse_menu",
+          toolKeys: ["search_catalog"],
+          failureReason: null,
+        });
+      }
+    } catch (error) {
+      console.error(
+        "customer-service catalog search failed",
+        error instanceof Error ? error.message.slice(0, 200) : String(error),
+      );
+    }
+  }
+
+  if (!isSameDayOrderDemand(text)) {
+    try {
+      const asksForMenu = isMenuInformationRequest(text);
+      const menuQuery = asksForMenu ? customerServiceMenuFaqQuery(text) : "";
+      const faqHits = await searchFaqsOnce(asksForMenu ? menuQuery : text);
+      const preferredFaq = asksForMenu
+        ? faqHits.find((hit) => strongPublishedFaqMatch(menuQuery, hit)) ??
+          faqHits.find(isMenuFaq)
+        : faqHits.find((hit) => strongPublishedFaqMatch(text, hit));
+      if (preferredFaq) {
+        return annotate({
+          reply: faqReply(preferredFaq.answer),
+          conversation,
+          wroteInquiry: false,
+          notified: false,
+          usedModel: classified.usedModel,
+          intentKey: asksForMenu ? "browse_menu" : "search_faq",
+          toolKeys: ["search_faqs"],
+          faqSourceIds: [preferredFaq.id],
+          relatedFaqs: selectRelatedFaqs(faqHits, [preferredFaq.id]),
+          failureReason: null,
+        });
+      }
+    } catch (error) {
+      console.error(
+        "customer-service FAQ lookup failed",
+        error instanceof Error ? error.message.slice(0, 200) : String(error),
+      );
+    }
+  }
+
   if (classified.needsClarification) {
     return annotate({
       reply: sanitizeOutboundReply(

@@ -120,6 +120,8 @@ export function CustomerFaqPage({
   saveIntent = updateCustomerServiceIntent,
   saveReplyTemplate = updateCustomerServiceReplyTemplate,
   saveWorkflowPolicy = updateCustomerServiceWorkflowPolicy,
+  loadReviewTurns = fetchCustomerServiceReviewTurns,
+  submitTurnFeedback = submitCustomerServiceTurnFeedback,
 }: {
   loadFaqs?: typeof fetchCustomerFaqs;
   createFaq?: typeof createCustomerFaq;
@@ -135,6 +137,8 @@ export function CustomerFaqPage({
   saveIntent?: typeof updateCustomerServiceIntent;
   saveReplyTemplate?: typeof updateCustomerServiceReplyTemplate;
   saveWorkflowPolicy?: typeof updateCustomerServiceWorkflowPolicy;
+  loadReviewTurns?: typeof fetchCustomerServiceReviewTurns;
+  submitTurnFeedback?: typeof submitCustomerServiceTurnFeedback;
 }) {
   const { t } = useTranslation();
   const access = useCurrentPageAccess();
@@ -181,6 +185,7 @@ export function CustomerFaqPage({
   const [logicSaving, setLogicSaving] = useState(false);
   const [logicError, setLogicError] = useState("");
   const [insightsOpen, setInsightsOpen] = useState(false);
+  const [reviewOpen, setReviewOpen] = useState(false);
   const [reports, setReports] = useState<CustomerServiceDailyReport[]>([]);
   const [outboundMessages, setOutboundMessages] = useState<CustomerServiceOutboundMessage[]>([]);
   const [suggestions, setSuggestions] = useState<
@@ -197,15 +202,14 @@ export function CustomerFaqPage({
   >([]);
   const [insightsLoading, setInsightsLoading] = useState(false);
   const [insightsError, setInsightsError] = useState("");
+  const [reviewLoading, setReviewLoading] = useState(false);
+  const [reviewError, setReviewError] = useState("");
   const [reportDate, setReportDate] = useState(previousHongKongDate);
   const [generatingReport, setGeneratingReport] = useState(false);
   const [reviewingSuggestion, setReviewingSuggestion] = useState("");
   const [feedbackDrafts, setFeedbackDrafts] = useState<Record<string, string>>(
     {},
   );
-  const [feedbackLearningModes, setFeedbackLearningModes] = useState<
-    Record<string, "none" | "evaluation" | "faq_draft">
-  >({});
   const [reviewingTurn, setReviewingTurn] = useState("");
   const [configBusy, setConfigBusy] = useState("");
   const [outboundBusy, setOutboundBusy] = useState("");
@@ -346,18 +350,30 @@ export function CustomerFaqPage({
 
   const saveControls = async ({
     enabled = controls?.botEnabled ?? false,
-    start = controls?.autoReplyStart ?? "19:00",
-    end = controls?.autoReplyEnd ?? "09:00",
+    weekdayStart = controls?.weekdayAutoReplyStart ?? "19:00",
+    weekdayEnd = controls?.weekdayAutoReplyEnd ?? "09:00",
+    weekendStart = controls?.weekendAutoReplyStart ?? "19:00",
+    weekendEnd = controls?.weekendAutoReplyEnd ?? "09:00",
   }: {
     enabled?: boolean;
-    start?: string;
-    end?: string;
+    weekdayStart?: string;
+    weekdayEnd?: string;
+    weekendStart?: string;
+    weekendEnd?: string;
   }) => {
     if (!canEdit || savingControls) return;
     setSavingControls(true);
     setControlsError("");
     try {
-      setControls(await setBotEnabled(enabled, start, end));
+      setControls(
+        await setBotEnabled(
+          enabled,
+          weekdayStart,
+          weekdayEnd,
+          weekendStart,
+          weekendEnd,
+        ),
+      );
     } catch {
       setControlsError(t("settings.customerFaq.botSaveError"));
     } finally {
@@ -524,21 +540,18 @@ export function CustomerFaqPage({
       const [
         nextReports,
         nextSuggestions,
-        nextTurns,
         nextConfigs,
         nextRuns,
         nextOutbound,
       ] = await Promise.all([
         fetchCustomerServiceDailyReports(),
         fetchCustomerServiceLearningSuggestions(),
-        fetchCustomerServiceReviewTurns(),
         fetchCustomerServiceConfigVersions("develop"),
         fetchCustomerServiceEvaluationRuns(),
         fetchCustomerServiceOutboundMessages(),
       ]);
       setReports(nextReports);
       setSuggestions(nextSuggestions);
-      setReviewTurns(nextTurns);
       setConfigVersions(nextConfigs);
       setEvaluationRuns(nextRuns);
       setOutboundMessages(nextOutbound);
@@ -552,6 +565,22 @@ export function CustomerFaqPage({
   const openInsights = () => {
     setInsightsOpen(true);
     void loadInsights();
+  };
+  const loadReviewQueue = async () => {
+    setReviewLoading(true);
+    setReviewError("");
+    try {
+      setReviewTurns(await loadReviewTurns("unreviewed", 50));
+    } catch {
+      setReviewTurns([]);
+      setReviewError("載入人工覆核資料失敗。");
+    } finally {
+      setReviewLoading(false);
+    }
+  };
+  const openReviewQueue = () => {
+    setReviewOpen(true);
+    void loadReviewQueue();
   };
   const generateReport = async () => {
     if (!reportDate || generatingReport) return;
@@ -601,28 +630,26 @@ export function CustomerFaqPage({
     verdict: "correct" | "incorrect" | "needs_review",
   ) => {
     if (!canEdit || reviewingTurn) return;
-    const correctedAnswer = feedbackDrafts[turn.id]?.trim() || "";
-    const learningMode = feedbackLearningModes[turn.id] || "none";
-    if (verdict === "incorrect" && !correctedAnswer) {
-      setInsightsError("標記錯誤前，請先填寫正確回覆。");
+    const direction = feedbackDrafts[turn.id]?.trim() || "";
+    if (verdict === "incorrect" && !direction) {
+      setReviewError("標記錯誤前，請先填寫大概修正方向。");
       return;
     }
     setReviewingTurn(turn.id);
-    setInsightsError("");
+    setReviewError("");
     try {
-      await submitCustomerServiceTurnFeedback({
+      await submitTurnFeedback({
         turnId: turn.id,
         verdict,
-        correctedAnswer,
-        includeInLearning: learningMode !== "none",
-        createFaqDraft: learningMode === "faq_draft",
+        note: verdict === "incorrect" ? direction : undefined,
+        includeInLearning: false,
+        createFaqDraft: false,
       });
       setReviewTurns((current) =>
         current.filter((item) => item.id !== turn.id),
       );
-      if (learningMode === "faq_draft") setReloadKey((value) => value + 1);
     } catch {
-      setInsightsError("儲存人工覆核結果失敗。");
+      setReviewError("儲存人工覆核結果失敗。");
     } finally {
       setReviewingTurn("");
     }
@@ -689,6 +716,12 @@ export function CustomerFaqPage({
   const latestReport = reports[0];
   const formatRate = (value: number | null | undefined) =>
     typeof value === "number" ? `${Math.round(value * 100)}%` : "—";
+  const autoReplyWindowHint = (start: string, end: string) =>
+    start === end
+      ? t("settings.customerFaq.autoReplyAllDay")
+      : start > end
+        ? t("settings.customerFaq.autoReplyNextDay")
+        : t("settings.customerFaq.autoReplySameDay");
 
   const intentDraft = logic?.intents.find(
     (item) => item.intentKey === selectedIntent,
@@ -725,53 +758,117 @@ export function CustomerFaqPage({
             }
           />
         </label>
-        <div className="customer-faq-auto-reply-window">
+        <div className="customer-faq-auto-reply-windows">
           <span>{t("settings.customerFaq.autoReplyWindow")}</span>
-          <label>
-            <span className="sr-only">
-              {t("settings.customerFaq.autoReplyStart")}
-            </span>
-            <input
-              type="time"
-              value={controls?.autoReplyStart ?? "19:00"}
-              disabled={!canEdit || savingControls || !controls}
-              aria-label={t("settings.customerFaq.autoReplyStart")}
-              onChange={(event) => {
-                const start = event.target.value;
-                setControls((current) =>
-                  current ? { ...current, autoReplyStart: start } : current,
-                );
-              }}
-              onBlur={(event) =>
-                void saveControls({ start: event.target.value })
-              }
-            />
-          </label>
-          <span aria-hidden="true">–</span>
-          <label>
-            <span className="sr-only">
-              {t("settings.customerFaq.autoReplyEnd")}
-            </span>
-            <input
-              type="time"
-              value={controls?.autoReplyEnd ?? "09:00"}
-              disabled={!canEdit || savingControls || !controls}
-              aria-label={t("settings.customerFaq.autoReplyEnd")}
-              onChange={(event) => {
-                const end = event.target.value;
-                setControls((current) =>
-                  current ? { ...current, autoReplyEnd: end } : current,
-                );
-              }}
-              onBlur={(event) => void saveControls({ end: event.target.value })}
-            />
-          </label>
-          <small>
-            {(controls?.autoReplyStart ?? "19:00") ===
-            (controls?.autoReplyEnd ?? "09:00")
-              ? t("settings.customerFaq.autoReplyAllDay")
-              : t("settings.customerFaq.autoReplyNextDay")}
-          </small>
+          <div className="customer-faq-auto-reply-window">
+            <strong>{t("settings.customerFaq.weekdayAutoReplyWindow")}</strong>
+            <label>
+              <span className="sr-only">
+                {t("settings.customerFaq.weekdayAutoReplyStart")}
+              </span>
+              <input
+                type="time"
+                value={controls?.weekdayAutoReplyStart ?? "19:00"}
+                disabled={!canEdit || savingControls || !controls}
+                aria-label={t("settings.customerFaq.weekdayAutoReplyStart")}
+                onChange={(event) => {
+                  const weekdayStart = event.target.value;
+                  setControls((current) =>
+                    current
+                      ? { ...current, weekdayAutoReplyStart: weekdayStart }
+                      : current,
+                  );
+                }}
+                onBlur={(event) =>
+                  void saveControls({ weekdayStart: event.target.value })
+                }
+              />
+            </label>
+            <span aria-hidden="true">–</span>
+            <label>
+              <span className="sr-only">
+                {t("settings.customerFaq.weekdayAutoReplyEnd")}
+              </span>
+              <input
+                type="time"
+                value={controls?.weekdayAutoReplyEnd ?? "09:00"}
+                disabled={!canEdit || savingControls || !controls}
+                aria-label={t("settings.customerFaq.weekdayAutoReplyEnd")}
+                onChange={(event) => {
+                  const weekdayEnd = event.target.value;
+                  setControls((current) =>
+                    current
+                      ? { ...current, weekdayAutoReplyEnd: weekdayEnd }
+                      : current,
+                  );
+                }}
+                onBlur={(event) =>
+                  void saveControls({ weekdayEnd: event.target.value })
+                }
+              />
+            </label>
+            <small>
+              {autoReplyWindowHint(
+                controls?.weekdayAutoReplyStart ?? "19:00",
+                controls?.weekdayAutoReplyEnd ?? "09:00",
+              )}
+            </small>
+          </div>
+          <div className="customer-faq-auto-reply-window">
+            <strong>{t("settings.customerFaq.weekendAutoReplyWindow")}</strong>
+            <label>
+              <span className="sr-only">
+                {t("settings.customerFaq.weekendAutoReplyStart")}
+              </span>
+              <input
+                type="time"
+                value={controls?.weekendAutoReplyStart ?? "19:00"}
+                disabled={!canEdit || savingControls || !controls}
+                aria-label={t("settings.customerFaq.weekendAutoReplyStart")}
+                onChange={(event) => {
+                  const weekendStart = event.target.value;
+                  setControls((current) =>
+                    current
+                      ? { ...current, weekendAutoReplyStart: weekendStart }
+                      : current,
+                  );
+                }}
+                onBlur={(event) =>
+                  void saveControls({ weekendStart: event.target.value })
+                }
+              />
+            </label>
+            <span aria-hidden="true">–</span>
+            <label>
+              <span className="sr-only">
+                {t("settings.customerFaq.weekendAutoReplyEnd")}
+              </span>
+              <input
+                type="time"
+                value={controls?.weekendAutoReplyEnd ?? "09:00"}
+                disabled={!canEdit || savingControls || !controls}
+                aria-label={t("settings.customerFaq.weekendAutoReplyEnd")}
+                onChange={(event) => {
+                  const weekendEnd = event.target.value;
+                  setControls((current) =>
+                    current
+                      ? { ...current, weekendAutoReplyEnd: weekendEnd }
+                      : current,
+                  );
+                }}
+                onBlur={(event) =>
+                  void saveControls({ weekendEnd: event.target.value })
+                }
+              />
+            </label>
+            <small>
+              {autoReplyWindowHint(
+                controls?.weekendAutoReplyStart ?? "19:00",
+                controls?.weekendAutoReplyEnd ?? "09:00",
+              )}
+            </small>
+          </div>
+          <small>{t("settings.customerFaq.autoReplyTimezoneHint")}</small>
         </div>
         {canEdit ? (
           <Button
@@ -786,6 +883,10 @@ export function CustomerFaqPage({
         <Button type="button" variant="outline" onClick={openInsights}>
           <BarChart3 />
           AI 成效報告
+        </Button>
+        <Button type="button" variant="outline" onClick={openReviewQueue}>
+          <CheckCheck />
+          人工覆核學習
         </Button>
         <Button
           type="button"
@@ -1257,7 +1358,7 @@ export function CustomerFaqPage({
 
       <SidePanel
         open={insightsOpen}
-        title="AI 成效報告與學習"
+        title="AI 成效報告"
         onClose={() => setInsightsOpen(false)}
         closeLabel={t("common.close")}
         className="customer-service-insights-panel"
@@ -1442,90 +1543,6 @@ export function CustomerFaqPage({
                     </div>
                   ) : null}
                 </footer>
-              </article>
-            ))}
-          </section>
-
-          <section className="customer-service-review-queue customer-service-answer-review">
-            <header>
-              <div>
-                <h3 className="customer-service-section-title">
-                  <span><CheckCheck /></span>
-                  人工覆核學習
-                </h3>
-                <p>先判斷回覆是否正確，再自行選擇是否加入學習。</p>
-              </div>
-              <span className="status-badge neutral">{reviewTurns.length}</span>
-            </header>
-            {reviewTurns.map((turn) => (
-              <article key={turn.id}>
-                <small>
-                  {new Date(turn.createdAt).toLocaleString()} ·{" "}
-                  {turn.intent || turn.route || turn.processingStatus}
-                </small>
-                <strong>{turn.question}</strong>
-                <p>{turn.answer || "（沒有回覆）"}</p>
-                {canEdit ? (
-                  <>
-                    <textarea
-                      rows={3}
-                      value={feedbackDrafts[turn.id] || ""}
-                      placeholder={t("settings.customerFaq.reviewCorrectionPlaceholder")}
-                      onChange={(event) =>
-                        setFeedbackDrafts((current) => ({
-                          ...current,
-                          [turn.id]: event.target.value,
-                        }))
-                      }
-                    />
-                    <label className="customer-service-learning-mode">
-                      <span>學習方式</span>
-                      <select
-                        value={feedbackLearningModes[turn.id] || "none"}
-                        onChange={(event) =>
-                          setFeedbackLearningModes((current) => ({
-                            ...current,
-                            [turn.id]: event.target.value as
-                              | "none"
-                              | "evaluation"
-                              | "faq_draft",
-                          }))
-                        }
-                      >
-                        <option value="none">不加入學習（只記錄成效）</option>
-                        <option value="evaluation">加入模型評測案例</option>
-                        <option value="faq_draft">建立未發布 FAQ 草稿</option>
-                      </select>
-                    </label>
-                    <footer>
-                      <Button
-                        size="sm"
-                        disabled={reviewingTurn === turn.id}
-                        onClick={() => void reviewTurn(turn, "correct")}
-                      >
-                        <Check />
-                        正確
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        disabled={reviewingTurn === turn.id}
-                        onClick={() => void reviewTurn(turn, "incorrect")}
-                      >
-                        <X />
-                        錯誤
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        disabled={reviewingTurn === turn.id}
-                        onClick={() => void reviewTurn(turn, "needs_review")}
-                      >
-                        待覆核
-                      </Button>
-                    </footer>
-                  </>
-                ) : null}
               </article>
             ))}
           </section>
@@ -1735,6 +1752,118 @@ export function CustomerFaqPage({
               })}
             </div>
           </section>
+        </div>
+      </SidePanel>
+
+      <SidePanel
+        open={reviewOpen}
+        title="人工覆核學習"
+        description="逐項判斷 AI 回覆；如有錯誤，只需簡述修正方向，毋須撰寫完整答案。"
+        onClose={() => setReviewOpen(false)}
+        closeLabel={t("common.close")}
+        className="customer-service-review-panel side-panel-majority"
+      >
+        <div className="customer-service-review-workspace">
+          {reviewError ? (
+            <p className="orders-state-error" role="alert">
+              {reviewError}
+            </p>
+          ) : null}
+          <ListTable
+            header={
+              <tr>
+                <th>時間／分類</th>
+                <th>客戶問題</th>
+                <th>AI 回覆</th>
+                <th>修正方向</th>
+                <th aria-label="操作">判斷</th>
+              </tr>
+            }
+            loading={reviewLoading}
+            loadingLabel="載入人工覆核資料"
+            skeletonColumns={[
+              { width: "9rem" },
+              { width: "19%" },
+              { width: "28%" },
+              { width: "28%" },
+              { width: "12rem", variant: "action" },
+            ]}
+            skeletonRows={8}
+            className="customer-service-review-table-wrap"
+            tableClassName="customer-service-review-table"
+            onRefresh={loadReviewQueue}
+          >
+            {reviewTurns.map((turn) => (
+              <tr key={turn.id}>
+                <td className="customer-service-review-meta">
+                  <time dateTime={turn.createdAt}>
+                    {new Date(turn.createdAt).toLocaleString("zh-HK")}
+                  </time>
+                  <span>{turn.intent || turn.route || turn.processingStatus}</span>
+                </td>
+                <td className="customer-service-review-question">{turn.question}</td>
+                <td className="customer-service-review-answer">
+                  {turn.answer || "（沒有回覆）"}
+                </td>
+                <td>
+                  {canEdit ? (
+                    <textarea
+                      rows={3}
+                      aria-label={`修正方向：${turn.question}`}
+                      value={feedbackDrafts[turn.id] || ""}
+                      placeholder={t("settings.customerFaq.reviewCorrectionPlaceholder")}
+                      onChange={(event) =>
+                        setFeedbackDrafts((current) => ({
+                          ...current,
+                          [turn.id]: event.target.value,
+                        }))
+                      }
+                    />
+                  ) : (
+                    <span className="customer-service-review-muted">只讀</span>
+                  )}
+                </td>
+                <td className="customer-service-review-actions">
+                  {canEdit ? (
+                    <div>
+                      <Button
+                        size="sm"
+                        disabled={reviewingTurn === turn.id}
+                        onClick={() => void reviewTurn(turn, "correct")}
+                      >
+                        <Check />
+                        正確
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={reviewingTurn === turn.id}
+                        onClick={() => void reviewTurn(turn, "incorrect")}
+                      >
+                        <X />
+                        錯誤
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        disabled={reviewingTurn === turn.id}
+                        onClick={() => void reviewTurn(turn, "needs_review")}
+                      >
+                        待覆核
+                      </Button>
+                    </div>
+                  ) : null}
+                </td>
+              </tr>
+            ))}
+            {!reviewLoading && reviewTurns.length === 0 ? (
+              <tr>
+                <td colSpan={5} className="customer-service-review-empty">
+                  目前沒有待覆核回覆。
+                </td>
+              </tr>
+            ) : null}
+          </ListTable>
         </div>
       </SidePanel>
 

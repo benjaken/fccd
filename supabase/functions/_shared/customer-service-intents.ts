@@ -177,6 +177,10 @@ export function isMenuInformationRequest(value: string) {
   const text = value.trim();
   const asksToBrowse = /(?:有冇|有無|有沒有|有吗|有嗎|睇|看|看看|提供|發|发|send|想問|想问|詢問|询问|索取|想訂|想订|訂購|订购|落單|下单)/i.test(text);
   if (/(?:餐牌|菜單|菜单|menu)/i.test(text) && asksToBrowse) return true;
+  if (
+    /(?:food\s*channels?\s*(?:catering|express|kitchen|cuisine)|fc\s*(?:catering|express|kitchen|cuisine)|桂花[‧·・．.]?八月|福滿樓|福满楼|hk\s*(?:lunch\s*box|party\s*food))/i.test(text) &&
+    asksToBrowse
+  ) return true;
   return /(?:飯盒|便當|便当|餐盒|meal\s*box|lunch\s*box|lunchbox|派對小食|派对小食|party\s*food)/i.test(text) && asksToBrowse;
 }
 
@@ -191,10 +195,10 @@ export function customerServiceMenuFaqQuery(value: string) {
   if (/(?:food\s*channels?\s*express|fc\s*express|即日到會|即日到会)/i.test(text)) {
     return "Food Channels Express 有冇餐牌可以睇？";
   }
-  if (/(?:food\s*channels?\s*kitchen|fc\s*kitchen|高級中菜|高级中菜)/i.test(text)) {
+  if (/(?:food\s*channels?\s*kitchen|fc\s*kitchen|桂花[‧·・．.]?八月|高級中菜|高级中菜)/i.test(text)) {
     return "Food Channels Kitchen 有冇餐牌可以睇？";
   }
-  if (/(?:food\s*channels?\s*cuisine|fc\s*cuisine|養生中菜|养生中菜)/i.test(text)) {
+  if (/(?:food\s*channels?\s*cuisine|fc\s*cuisine|福滿樓|福满楼|養生中菜|养生中菜)/i.test(text)) {
     return "Food Channels Cuisine 有冇餐牌可以睇？";
   }
   if (/(?:food\s*channels?\s*catering|fc\s*catering|fcc|到會|到会|自助餐)/i.test(text)) {
