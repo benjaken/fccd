@@ -1245,7 +1245,8 @@ async function processHandoffDigest(request: Request) {
 
 async function authorizeOutboundRetry(request: Request) {
   const cronSecret = env("CUSTOMER_SERVICE_OUTBOUND_CRON_SECRET") ||
-    env("CUSTOMER_SERVICE_HANDOFF_CRON_SECRET");
+    env("CUSTOMER_SERVICE_HANDOFF_CRON_SECRET") ||
+    env("WATI_ORDER_CRON_SECRET");
   if (cronSecret && request.headers.get("x-cron-secret")?.trim() === cronSecret) return;
   const authorization = request.headers.get("authorization")?.trim() || "";
   if (!/^Bearer\s+\S+/i.test(authorization)) throw new Error("unauthorized");

@@ -70,6 +70,9 @@ describe("customer-service backend conversation preview", () => {
     expect(source).toContain('admin.rpc("customer_service_handoff_claim"');
     expect(source).toContain('status: "notified"');
     expect(source).toContain("【緊急】WhatsApp 即日訂餐");
+    expect(source).toMatch(
+      /CUSTOMER_SERVICE_OUTBOUND_CRON_SECRET[\s\S]*CUSTOMER_SERVICE_HANDOFF_CRON_SECRET[\s\S]*WATI_ORDER_CRON_SECRET/,
+    );
   });
 
   it("limits develop internal WATI staff alerts to the pilot phone only", () => {
