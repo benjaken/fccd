@@ -1368,6 +1368,78 @@ describe("customer-service bot turns", () => {
 });
 
 describe("precise order lookup replies", () => {
+  it("uses the selected order when a follow-up asks what dish it contains", async () => {
+    const selectedOrder = { ...order, order_number: "B-1555" };
+    const lookupOrders = vi.fn().mockResolvedValue([selectedOrder]);
+    const lookupOrderItems = vi.fn().mockResolvedValue([{
+      order_line_id: "line-1",
+      package_name: null,
+      item_kind: "item" as const,
+      item_name: "彩椒炒豬頸肉飯",
+      item_content: null,
+      quantity: 25,
+      quantity_text: null,
+      remarks: [],
+    }]);
+    const first = await handleCustomerServiceTurn({
+      phone: conversation.phone_normalized,
+      text: "B-1555",
+      conversation,
+      deps: deps({ lookupOrders, lookupOrderItems }),
+    });
+
+    const second = await handleCustomerServiceTurn({
+      phone: conversation.phone_normalized,
+      text: "這個菜式是什麼",
+      conversation: first.conversation,
+      deps: deps({ lookupOrders, lookupOrderItems }),
+      classify: vi.fn().mockResolvedValue({
+        ...classifyCustomerServiceMessage("這個菜式是什麼"),
+        intent: "handoff",
+        configuredIntentKey: "kitchen_confirmation",
+        requiresHuman: true,
+        usedModel: true,
+      }),
+    });
+
+    expect(first.conversation.selected_order_id).toBe(selectedOrder.order_id);
+    expect(second.reply).toContain("訂單內容");
+    expect(second.reply).toContain("彩椒炒豬頸肉飯");
+    expect(second.reply).not.toContain("交俾同事");
+    expect(second.conversation.selected_order_id).toBe(selectedOrder.order_id);
+    expect(lookupOrderItems).toHaveBeenCalledOnce();
+  });
+
+  it("still hands off a complaint about a dish in the selected order", async () => {
+    const selectedOrder = { ...order, order_number: "B-1555" };
+    const lookupOrderItems = vi.fn();
+    const queueHandoff = vi.fn().mockResolvedValue(undefined);
+    const turn = await handleCustomerServiceTurn({
+      phone: conversation.phone_normalized,
+      text: "這個菜式有問題，我要投訴",
+      conversation: {
+        ...conversation,
+        selected_order_id: selectedOrder.order_id,
+      },
+      deps: deps({
+        lookupOrders: vi.fn().mockResolvedValue([selectedOrder]),
+        lookupOrderItems,
+        queueHandoff,
+      }),
+      classify: vi.fn().mockResolvedValue({
+        ...classifyCustomerServiceMessage("這個菜式有問題，我要投訴"),
+        intent: "handoff",
+        configuredIntentKey: "complaint_refund",
+        requiresHuman: true,
+        usedModel: true,
+      }),
+    });
+
+    expect(turn.reply).toContain("同事處理");
+    expect(queueHandoff).toHaveBeenCalledOnce();
+    expect(lookupOrderItems).not.toHaveBeenCalled();
+  });
+
   it("changes from dish details to delivery time on a follow-up for the selected order", async () => {
     const selectedOrder = { ...order, order_number: "B-1555" };
     const otherOrder = {

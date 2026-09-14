@@ -285,6 +285,11 @@ function normalizedFaqText(value: string) {
     .replace(/^(請問|想問|我想問|可唔可以問)/, "");
 }
 
+function isSelectedOrderItemFollowUp(text: string) {
+  return /(?:這|这|呢|嗰)(?:個|个|款)?(?:菜式|餸菜|餐點|餐点).{0,8}(?:係|系|是|叫|咩|乜|甚麼|什麼|什么|邊款|哪款)/i
+    .test(text.trim());
+}
+
 const FAQ_DIRECT_MATCH_RULES: Array<{
   question: string;
   aliases: RegExp[];
@@ -1430,9 +1435,25 @@ export async function handleCustomerServiceTurn({
   // This prevents recent context (for example, a previous dish lookup) from
   // making the model repeat the old field for a new delivery-time follow-up.
   const explicitRequestedFields = extractRequestedOrderFields(text);
-  const classified = explicitRequestedFields.length
-    ? { ...modelClassified, requestedFields: explicitRequestedFields }
-    : modelClassified;
+  const selectedOrderItemFollowUp = Boolean(
+    conversation.selected_order_id &&
+      explicitRequestedFields.includes("items") &&
+      isSelectedOrderItemFollowUp(text),
+  );
+  const classified: ClassifiedMessage = selectedOrderItemFollowUp
+    ? {
+        ...modelClassified,
+        intent: "lookup_order" as const,
+        configuredIntentKey: "lookup_order",
+        toolKey: "lookup_orders",
+        requestedFields: ["items"],
+        requiresHuman: false,
+        needsClarification: false,
+        clarificationQuestion: undefined,
+      }
+    : explicitRequestedFields.length
+      ? { ...modelClassified, requestedFields: explicitRequestedFields }
+      : modelClassified;
   const annotate = (turn: BotTurn): BotTurn => {
     const defaultTool = classified.intent === "lookup_order" ||
         classified.intent === "handoff_order"
