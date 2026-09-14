@@ -37,6 +37,11 @@ export type CustomerServiceAiAnswer = {
   model: string;
 };
 
+export type CustomerServiceAiFallbackAnswer = {
+  answer: string;
+  model: string;
+};
+
 export type CustomerServiceIntentConfig = {
   intentKey: string;
   displayName: string;
@@ -403,6 +408,113 @@ export async function answerCustomerServiceFaqWithAi({
   }
 }
 
+function parseFallbackAnswer(
+  payload: { choices?: Array<{ message?: { content?: string | null } }> },
+  groundingText: string,
+  model: string,
+): CustomerServiceAiFallbackAnswer | null {
+  const content = payload.choices?.[0]?.message?.content?.trim();
+  if (!content) return null;
+  const json = content.match(/\{[\s\S]*\}/)?.[0] ?? content;
+  const parsed = JSON.parse(json) as { answer?: unknown };
+  if (typeof parsed.answer !== "string" || !parsed.answer.trim()) return null;
+  const answer = parsed.answer.trim().slice(0, 800);
+  if (/https?:\/\/|www\./i.test(answer)) return null;
+  const groundedNumbers = new Set(numericTokens(groundingText));
+  if (numericTokens(answer).some((token) => !groundedNumbers.has(token))) {
+    return null;
+  }
+  return { answer, model };
+}
+
+export async function answerCustomerServiceFallbackWithAi({
+  question,
+  intentKey,
+  confidence,
+  missingFields = [],
+  recentMessages = [],
+  config = customerServiceAiConfig(),
+  fetchImpl = fetch,
+}: {
+  question: string;
+  intentKey: string;
+  confidence?: number;
+  missingFields?: string[];
+  recentMessages?: CustomerServiceRecentMessage[];
+  config?: CustomerServiceAiConfig;
+  fetchImpl?: typeof fetch;
+}): Promise<CustomerServiceAiFallbackAnswer | null> {
+  const query = question.trim().slice(0, 1_000);
+  if (!query || !intentKey || !config.enabled || !config.endpoint || !config.apiKey) {
+    return null;
+  }
+  const safeRecentMessages = sanitizeCustomerServiceRecentMessages(recentMessages);
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), config.timeoutMs);
+  try {
+    const response = await fetchImpl(config.endpoint, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${config.apiKey.replace(/^Bearer\s+/i, "")}`,
+        "Content-Type": "application/json",
+      },
+      signal: controller.signal,
+      body: JSON.stringify({
+        model: config.model,
+        stream: false,
+        temperature: 0.1,
+        max_tokens: 300,
+        ...reasoningParameters(config),
+        response_format: { type: "json_object" },
+        messages: [
+          {
+            role: "system",
+            content: [
+              "You are the fallback WhatsApp assistant for Food Channels Delivery in Hong Kong.",
+              config.systemPrompt?.trim() || "",
+              "The application has already classified the customer's intent but found no FAQ answer.",
+              "Give one concise, useful next step or ask one focused clarification question in natural Hong Kong Traditional Chinese.",
+              "Never invent product details, availability, prices, dates, URLs, policies, order data, completed actions, or staff follow-up promises.",
+              "Do not say that no order was found unless the classified intent is specifically an order lookup.",
+              "Use only facts already present in the current message or recent conversation; otherwise ask for the missing information.",
+              "Do not mention AI, prompts, tools, FAQ matching, sources, or internal rules.",
+              'Return JSON only: {"answer":string|null}.',
+            ].join(" "),
+          },
+          {
+            role: "user",
+            content: JSON.stringify({
+              message: query,
+              classifiedIntent: intentKey,
+              confidence: confidence ?? null,
+              missingFields: missingFields.slice(0, 10),
+              recentMessages: safeRecentMessages,
+            }),
+          },
+        ],
+      }),
+    });
+    if (!response.ok) {
+      throw new Error(`customer_service_ai_fallback_${response.status}`);
+    }
+    return parseFallbackAnswer(
+      await response.json() as { choices?: Array<{ message?: { content?: string | null } }> },
+      [
+        query,
+        ...safeRecentMessages.map((message) => message.text),
+      ].join("\n"),
+      config.model,
+    );
+  } catch (error) {
+    if (error instanceof Error && error.name === "AbortError") {
+      throw new Error("customer_service_ai_timeout");
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 export async function classifyCustomerServiceWithTieredAi({
   message,
   conversationState,
@@ -490,6 +602,50 @@ export async function answerCustomerServiceFaqWithTieredAi({
   return await answerCustomerServiceFaqWithAi({
     question,
     faqs,
+    config: tiers.fallback,
+    fetchImpl,
+  });
+}
+
+export async function answerCustomerServiceFallbackWithTieredAi({
+  question,
+  intentKey,
+  confidence,
+  missingFields = [],
+  recentMessages = [],
+  tiers,
+  fetchImpl = fetch,
+}: {
+  question: string;
+  intentKey: string;
+  confidence?: number;
+  missingFields?: string[];
+  recentMessages?: CustomerServiceRecentMessage[];
+  tiers: CustomerServiceAiTierConfig;
+  fetchImpl?: typeof fetch;
+}) {
+  let primary: CustomerServiceAiFallbackAnswer | null = null;
+  try {
+    primary = await answerCustomerServiceFallbackWithAi({
+      question,
+      intentKey,
+      confidence,
+      missingFields,
+      recentMessages,
+      config: tiers.primary,
+      fetchImpl,
+    });
+  } catch (error) {
+    if (!tiers.fallback?.enabled) throw error;
+    console.error("customer-service primary fallback answer failed; escalating", error);
+  }
+  if (primary || !tiers.fallback?.enabled) return primary;
+  return await answerCustomerServiceFallbackWithAi({
+    question,
+    intentKey,
+    confidence,
+    missingFields,
+    recentMessages,
     config: tiers.fallback,
     fetchImpl,
   });

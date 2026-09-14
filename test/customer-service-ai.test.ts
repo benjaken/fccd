@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   answerCustomerServiceFaqWithAi,
   answerCustomerServiceFaqWithTieredAi,
+  answerCustomerServiceFallbackWithAi,
   classifyCustomerServiceWithAi,
   classifyCustomerServiceWithTieredAi,
 } from "../supabase/functions/_shared/customer-service-ai.ts";
@@ -23,6 +24,46 @@ const faqs = [{
 }];
 
 describe("customer-service grounded AI", () => {
+  it("composes a safe next-step reply when no FAQ can answer the intent", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      choices: [{ message: { content: JSON.stringify({
+        answer: "可以先提供活動日期同大概人數，我會按你嘅需要再提供合適方向。",
+      }) } }],
+    }), { status: 200 }));
+
+    const result = await answerCustomerServiceFallbackWithAi({
+      question: "想搵適合公司聚會嘅到會，有咩建議？",
+      intentKey: "catering_inquiry",
+      missingFields: ["eventDate", "headcount"],
+      recentMessages: [],
+      config,
+      fetchImpl: fetchMock,
+    });
+
+    expect(result).toMatchObject({
+      answer: expect.stringContaining("活動日期"),
+      model: "test-model",
+    });
+    const request = JSON.parse(fetchMock.mock.calls[0][1].body as string);
+    expect(request.messages[0].content).toContain("Never invent");
+    expect(request.messages[1].content).toContain("catering_inquiry");
+  });
+
+  it("rejects invented links and numbers in an ungrounded fallback reply", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      choices: [{ message: { content: JSON.stringify({
+        answer: "套餐只需 HK$999，詳情：https://invented.example/menu",
+      }) } }],
+    }), { status: 200 }));
+
+    await expect(answerCustomerServiceFallbackWithAi({
+      question: "有咩套餐推介？",
+      intentKey: "browse_menu",
+      config,
+      fetchImpl: fetchMock,
+    })).resolves.toBeNull();
+  });
+
   it("uses Grok 4.3 without reasoning and escalates low-confidence intent to Grok 4.5 low", async () => {
     const response = (confidence: number) => new Response(JSON.stringify({
       choices: [{ message: { content: JSON.stringify({

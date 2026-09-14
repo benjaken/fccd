@@ -49,8 +49,10 @@ export type CustomerFaqSearchHit = {
 export type CustomerServiceControls = {
   botEnabled: boolean;
   allowedPhones: string[];
-  autoReplyStart: string;
-  autoReplyEnd: string;
+  weekdayAutoReplyStart: string;
+  weekdayAutoReplyEnd: string;
+  weekendAutoReplyStart: string;
+  weekendAutoReplyEnd: string;
   autoReplyTimezone: string;
   updatedAt: string;
 };
@@ -282,6 +284,10 @@ type ControlsRow = {
   allowed_phones?: string[] | null;
   auto_reply_start?: string | null;
   auto_reply_end?: string | null;
+  weekday_auto_reply_start?: string | null;
+  weekday_auto_reply_end?: string | null;
+  weekend_auto_reply_start?: string | null;
+  weekend_auto_reply_end?: string | null;
   auto_reply_timezone?: string | null;
   updated_at: string;
 };
@@ -299,8 +305,22 @@ function mapControls(row: ControlsRow): CustomerServiceControls {
   return {
     botEnabled: Boolean(row.bot_enabled),
     allowedPhones: Array.isArray(row.allowed_phones) ? row.allowed_phones : [],
-    autoReplyStart: normalizeControlTime(row.auto_reply_start, "19:00"),
-    autoReplyEnd: normalizeControlTime(row.auto_reply_end, "09:00"),
+    weekdayAutoReplyStart: normalizeControlTime(
+      row.weekday_auto_reply_start ?? row.auto_reply_start,
+      "19:00",
+    ),
+    weekdayAutoReplyEnd: normalizeControlTime(
+      row.weekday_auto_reply_end ?? row.auto_reply_end,
+      "09:00",
+    ),
+    weekendAutoReplyStart: normalizeControlTime(
+      row.weekend_auto_reply_start ?? row.auto_reply_start,
+      "19:00",
+    ),
+    weekendAutoReplyEnd: normalizeControlTime(
+      row.weekend_auto_reply_end ?? row.auto_reply_end,
+      "09:00",
+    ),
     autoReplyTimezone: row.auto_reply_timezone || "Asia/Hong_Kong",
     updatedAt: row.updated_at,
   };
@@ -443,13 +463,17 @@ export async function fetchCustomerServiceControls(): Promise<CustomerServiceCon
 
 export async function setCustomerServiceBotEnabled(
   enabled: boolean,
-  autoReplyStart = "19:00",
-  autoReplyEnd = "09:00",
+  weekdayAutoReplyStart = "19:00",
+  weekdayAutoReplyEnd = "09:00",
+  weekendAutoReplyStart = weekdayAutoReplyStart,
+  weekendAutoReplyEnd = weekdayAutoReplyEnd,
 ) {
   const { data, error } = await supabase.rpc("customer_service_controls_set", {
     p_bot_enabled: enabled,
-    p_auto_reply_start: autoReplyStart,
-    p_auto_reply_end: autoReplyEnd,
+    p_weekday_auto_reply_start: weekdayAutoReplyStart,
+    p_weekday_auto_reply_end: weekdayAutoReplyEnd,
+    p_weekend_auto_reply_start: weekendAutoReplyStart,
+    p_weekend_auto_reply_end: weekendAutoReplyEnd,
   });
   if (error) throw error;
   const row = (data as ControlsRow[] | null)?.[0];

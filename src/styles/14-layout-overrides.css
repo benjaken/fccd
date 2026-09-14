@@ -499,6 +499,152 @@
   }
 }
 
+/* Human review is a separate, table-first workspace beside the AI report. */
+.customer-service-review-panel {
+  width: 80%;
+}
+
+.customer-service-review-panel > .side-panel-header {
+  min-height: 76px;
+  padding: 18px 24px;
+  background: #ffffff;
+}
+
+.customer-service-review-panel > .side-panel-body {
+  padding: 22px 24px 32px;
+  background: #f4f7f5;
+}
+
+.customer-service-review-workspace {
+  display: grid;
+  gap: 14px;
+}
+
+.customer-service-review-workspace > .orders-state-error {
+  margin: 0;
+}
+
+.customer-service-review-table-wrap {
+  border: 1px solid #dbe5df;
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: 0 6px 18px rgb(31 70 51 / 5%);
+}
+
+.customer-service-review-table {
+  min-width: 1120px;
+}
+
+.customer-service-review-table th,
+.customer-service-review-table td {
+  vertical-align: top;
+}
+
+.customer-service-review-table th:nth-child(1) {
+  width: 12%;
+}
+
+.customer-service-review-table th:nth-child(2) {
+  width: 18%;
+}
+
+.customer-service-review-table th:nth-child(3) {
+  width: 28%;
+}
+
+.customer-service-review-table th:nth-child(4) {
+  width: 27%;
+}
+
+.customer-service-review-table th:nth-child(5) {
+  width: 15%;
+}
+
+.customer-service-review-meta {
+  color: #607068;
+  font-size: 0.78rem;
+}
+
+.customer-service-review-meta time,
+.customer-service-review-meta span {
+  display: block;
+}
+
+.customer-service-review-meta span {
+  margin-top: 6px;
+  color: #365746;
+  font-weight: 700;
+}
+
+.customer-service-review-question,
+.customer-service-review-answer {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.55;
+}
+
+.customer-service-review-question {
+  color: #18382b;
+  font-weight: 700;
+}
+
+.customer-service-review-answer {
+  color: #44564d;
+}
+
+.customer-service-review-table textarea {
+  width: 100%;
+  min-height: 84px;
+  resize: vertical;
+  border: 1px solid #d5dfd9;
+  border-radius: 9px;
+  background: #ffffff;
+  padding: 9px 10px;
+  color: #203c30;
+  line-height: 1.45;
+}
+
+.customer-service-review-table textarea:focus-visible {
+  outline: 2px solid color-mix(in srgb, #12824c 35%, transparent);
+  outline-offset: 1px;
+  border-color: #12824c;
+}
+
+.customer-service-review-actions > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.customer-service-review-actions .ui-button {
+  flex: 1 1 auto;
+}
+
+.customer-service-review-muted,
+.customer-service-review-empty {
+  color: #6b7b73;
+}
+
+.customer-service-review-empty {
+  padding: 28px 16px !important;
+  text-align: center;
+}
+
+@media (max-width: 720px) {
+  .customer-service-review-panel {
+    width: 100%;
+  }
+
+  .customer-service-review-panel > .side-panel-header {
+    min-height: 64px;
+    padding: 12px 14px;
+  }
+
+  .customer-service-review-panel > .side-panel-body {
+    padding: 14px 12px 24px;
+  }
+}
+
 .restaurant-workspace,
 .factory-warehouse {
   min-height: 100dvh;

@@ -48,6 +48,8 @@ describe("customer-service backend conversation preview", () => {
   it("uses AI for business intent and clarifies low-confidence results instead of Regex routing", () => {
     expect(source).toContain("shouldBypassCustomerServiceAi(fallback)");
     expect(source).toContain("confidenceNeedsClarification");
+    expect(source).toContain("answerWithoutFaqWithModel");
+    expect(source).toContain("answerCustomerServiceFallbackWithTieredAi");
     expect(source).not.toContain('fallback.intent === "out_of_scope"');
   });
 

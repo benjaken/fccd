@@ -224,7 +224,73 @@ describe("CustomerFaqPage", () => {
     );
 
     await user.click(await screen.findByRole("switch", { name: "啟用 WhatsApp 自動回覆" }));
-    await waitFor(() => expect(setBotEnabled).toHaveBeenCalledWith(true, "19:00", "09:00"));
+    await waitFor(() =>
+      expect(setBotEnabled).toHaveBeenCalledWith(
+        true,
+        "19:00",
+        "09:00",
+        "19:00",
+        "09:00",
+      ),
+    );
+  });
+
+  it("edits weekday and weekend auto-reply windows independently", async () => {
+    const user = userEvent.setup();
+    const setBotEnabled = vi.fn().mockImplementation(
+      async (
+        botEnabled: boolean,
+        weekdayAutoReplyStart: string,
+        weekdayAutoReplyEnd: string,
+        weekendAutoReplyStart: string,
+        weekendAutoReplyEnd: string,
+      ) => ({
+        botEnabled,
+        allowedPhones: [],
+        weekdayAutoReplyStart,
+        weekdayAutoReplyEnd,
+        weekendAutoReplyStart,
+        weekendAutoReplyEnd,
+        autoReplyTimezone: "Asia/Hong_Kong",
+        updatedAt: faq.updatedAt,
+      }),
+    );
+
+    render(
+      <CustomerFaqPage
+        loadFaqs={vi.fn().mockResolvedValue({ items: [faq], total: 1 })}
+        loadControls={vi.fn().mockResolvedValue({
+          botEnabled: true,
+          allowedPhones: [],
+          weekdayAutoReplyStart: "19:00",
+          weekdayAutoReplyEnd: "09:00",
+          weekendAutoReplyStart: "10:00",
+          weekendAutoReplyEnd: "18:00",
+          autoReplyTimezone: "Asia/Hong_Kong",
+          updatedAt: faq.updatedAt,
+        })}
+        setBotEnabled={setBotEnabled}
+      />,
+    );
+
+    const weekdayStart = await screen.findByLabelText("星期一至五開始時間");
+    const weekendStart = screen.getByLabelText("星期六、日開始時間");
+    expect(weekdayStart).toHaveValue("19:00");
+    expect(weekendStart).toHaveValue("10:00");
+
+    await user.clear(weekendStart);
+    await user.type(weekendStart, "12:30");
+    await user.tab();
+
+    await waitFor(() =>
+      expect(setBotEnabled).toHaveBeenLastCalledWith(
+        true,
+        "19:00",
+        "09:00",
+        "12:30",
+        "18:00",
+      ),
+    );
   });
 
   it("hides the testing allowlist notice and keeps auto-reply controls above the content", async () => {
@@ -246,5 +312,68 @@ describe("CustomerFaqPage", () => {
     expect(controls).toBeTruthy();
     expect(layout).toBeTruthy();
     expect(controls?.nextElementSibling).toBe(layout);
+  });
+
+  it("opens human review in a separate 80% table and accepts correction direction", async () => {
+    const user = userEvent.setup();
+    const submitTurnFeedback = vi.fn().mockResolvedValue(undefined);
+    const loadReviewTurns = vi.fn().mockResolvedValue([
+      {
+        id: "turn-1",
+        createdAt: "2026-09-14T12:00:00.000Z",
+        question: "中秋6-8",
+        answer: "未搵到正式訂單。",
+        intent: "product_enquiry",
+        route: "faq",
+        processingStatus: "replied",
+        aiOutcome: null,
+        aiReason: null,
+        verdict: null,
+        failureCategory: null,
+        correctedAnswer: null,
+        note: null,
+      },
+    ]);
+
+    render(
+      <CustomerFaqPage
+        loadFaqs={vi.fn().mockResolvedValue({ items: [faq], total: 1 })}
+        loadControls={vi.fn().mockResolvedValue({ botEnabled: true, updatedAt: faq.updatedAt })}
+        loadReviewTurns={loadReviewTurns}
+        submitTurnFeedback={submitTurnFeedback}
+      />,
+    );
+
+    const reportButton = await screen.findByRole("button", { name: "AI 成效報告" });
+    const reviewButton = screen.getByRole("button", { name: "人工覆核學習" });
+    expect(
+      reportButton.compareDocumentPosition(reviewButton) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+
+    await user.click(reviewButton);
+    const panel = await screen.findByRole("dialog", { name: "人工覆核學習" });
+    expect(panel).toHaveClass("customer-service-review-panel", "side-panel-majority");
+    expect(within(panel).getByRole("columnheader", { name: "客戶問題" })).toBeInTheDocument();
+    expect(within(panel).getByRole("columnheader", { name: "AI 回覆" })).toBeInTheDocument();
+    expect(within(panel).getByRole("columnheader", { name: "修正方向" })).toBeInTheDocument();
+
+    await user.click(within(panel).getByRole("button", { name: "錯誤" }));
+    expect(await within(panel).findByRole("alert")).toHaveTextContent("大概修正方向");
+
+    await user.type(
+      within(panel).getByLabelText("修正方向：中秋6-8"),
+      "應先識別為套餐查詢，並提供相關 Shopify 連結。",
+    );
+    await user.click(within(panel).getByRole("button", { name: "錯誤" }));
+
+    await waitFor(() =>
+      expect(submitTurnFeedback).toHaveBeenCalledWith({
+        turnId: "turn-1",
+        verdict: "incorrect",
+        note: "應先識別為套餐查詢，並提供相關 Shopify 連結。",
+        includeInLearning: false,
+        createFaqDraft: false,
+      }),
+    );
   });
 });
