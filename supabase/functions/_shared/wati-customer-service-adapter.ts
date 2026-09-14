@@ -225,6 +225,47 @@ export function buildSessionMessageUrl({
   return url.toString();
 }
 
+export function buildSessionFileUrl({
+  endpoint,
+  phone,
+  caption,
+  channelNumber,
+  tenantId = "",
+  localMessageId = "",
+}: {
+  endpoint: string;
+  phone: string;
+  caption?: string;
+  channelNumber?: string;
+  tenantId?: string;
+  localMessageId?: string;
+}) {
+  const base = resolveWatiSessionEndpoint(endpoint, tenantId);
+  const url = new URL(
+    `${base}/api/v1/sendSessionFile/${encodeURIComponent(phone)}`,
+  );
+  if (caption) url.searchParams.set("caption", caption);
+  if (channelNumber) {
+    url.searchParams.set("channelPhoneNumber", channelNumber);
+  }
+  if (localMessageId) url.searchParams.set("localMessageId", localMessageId);
+  return url.toString();
+}
+
+export function isTrustedShopifyImageUrl(value: string) {
+  try {
+    const url = new URL(value);
+    const host = url.hostname.toLowerCase();
+    return url.protocol === "https:" && (
+      host === "cdn.shopify.com" ||
+      host.endsWith(".shopifycdn.com") ||
+      host.endsWith(".myshopify.com")
+    );
+  } catch {
+    return false;
+  }
+}
+
 export type WatiSessionCredentials = {
   apiEndpoint?: string;
   apiToken?: string;
@@ -389,4 +430,119 @@ export async function deliverWatiSessionMessage({
     }
   }
   throw new Error(errors[0] || "wati_session_failed:all_targets");
+}
+
+function imageFileName(imageUrl: string, contentType: string) {
+  const pathname = new URL(imageUrl).pathname;
+  const candidate = decodeURIComponent(pathname.split("/").at(-1) || "")
+    .replace(/[^a-zA-Z0-9._-]/g, "_");
+  if (candidate && /\.[a-zA-Z0-9]{2,5}$/.test(candidate)) return candidate;
+  const extension = contentType === "image/png"
+    ? "png"
+    : contentType === "image/webp"
+      ? "webp"
+      : "jpg";
+  return `shopify-package.${extension}`;
+}
+
+export async function deliverWatiSessionImage({
+  creds,
+  phone,
+  imageUrl,
+  caption = "套餐參考圖片",
+  channelNumber,
+  localMessageId = `fcc-bot-${crypto.randomUUID()}`,
+  fetchImpl = fetch,
+  log = console.error,
+}: {
+  creds: WatiSessionCredentials;
+  phone: string;
+  imageUrl: string;
+  caption?: string;
+  channelNumber: string;
+  localMessageId?: string;
+  fetchImpl?: typeof fetch;
+  log?: (...args: unknown[]) => void;
+}) {
+  if (!isTrustedShopifyImageUrl(imageUrl)) {
+    throw new Error("wati_image_failed:untrusted_shopify_url");
+  }
+  const source = await fetchImpl(imageUrl);
+  if (!source.ok) {
+    throw new Error(`wati_image_failed:download:${source.status}`);
+  }
+  const contentType = (source.headers.get("content-type") || "")
+    .split(";", 1)[0]
+    .trim()
+    .toLowerCase();
+  if (!contentType.startsWith("image/")) {
+    throw new Error("wati_image_failed:invalid_content_type");
+  }
+  const image = await source.blob();
+  if (!image.size) throw new Error("wati_image_failed:empty_file");
+
+  const targets = listWatiSessionTargets(creds);
+  if (!targets.length) throw new Error("wati_image_failed:missing_credentials");
+  const errors: string[] = [];
+  for (const target of targets) {
+    try {
+      const url = buildSessionFileUrl({
+        endpoint: target.endpoint,
+        phone,
+        caption,
+        channelNumber,
+        localMessageId,
+      });
+      const form = new FormData();
+      form.append("file", image, imageFileName(imageUrl, contentType));
+      const response = await fetchImpl(url, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${normalizeWatiToken(target.token)}` },
+        body: form,
+      });
+      const raw = await response.text();
+      if (!response.ok) {
+        throw new Error(
+          `wati_image_failed:${response.status}:${raw.slice(0, 300)}`,
+        );
+      }
+      try {
+        const parsed = JSON.parse(raw) as {
+          result?: boolean;
+          info?: string;
+          errors?: unknown;
+        };
+        if (parsed.result === false) {
+          throw new Error(
+            `wati_image_failed:result_false:${String(parsed.info || parsed.errors || raw).slice(0, 300)}`,
+          );
+        }
+      } catch (error) {
+        if (
+          error instanceof Error &&
+          error.message.startsWith("wati_image_failed:")
+        ) throw error;
+      }
+      log(
+        "wati image sent",
+        target.label,
+        describeWatiSessionTarget(target.endpoint),
+      );
+      return raw;
+    } catch (error) {
+      const detail = error instanceof Error
+        ? error.message.slice(0, 180)
+        : String(error);
+      errors.push(
+        `${target.label}@${describeWatiSessionTarget(target.endpoint)}:${detail}`,
+      );
+      log(
+        "wati image try failed",
+        target.label,
+        describeWatiSessionTarget(target.endpoint),
+        detail,
+      );
+    }
+  }
+  throw new Error(errors[0] || "wati_image_failed:all_targets");
 }

@@ -20,8 +20,10 @@ import {
   DEVELOP_OUTBOUND_MARKER,
 } from "../supabase/functions/_shared/customer-service-replies.ts";
 import {
+  buildSessionFileUrl,
   buildSessionMessageUrl,
   customerServicePhoneAllowed,
+  deliverWatiSessionImage,
   excludeGuestContacts,
   isHumanOperatorMessage,
   listWatiSessionTargets,
@@ -291,7 +293,8 @@ describe("customer-service FAQ routing priority", () => {
     });
 
     expect(turn.reply).toContain("【2026中秋】中秋到會套餐 (6-8人)");
-    expect(turn.reply).toContain("參考圖片");
+    expect(turn.reply).not.toContain("mid-autumn.jpg");
+    expect(turn.imageUrl).toBe("https://cdn.example.com/mid-autumn.jpg");
     expect(turn.reply).toContain(
       "https://foodchannels-catering.com/products/ccma0608",
     );
@@ -385,7 +388,8 @@ describe("customer-service FAQ routing priority", () => {
     expect(turn.reply).toContain("【2026中秋】中秋到會套餐 (6-8人)");
     expect(turn.reply).toContain("HK$2,080");
     expect(turn.reply).toContain("川香椒麻魚片");
-    expect(turn.reply).toContain("mid-autumn.jpg");
+    expect(turn.reply).not.toContain("mid-autumn.jpg");
+    expect(turn.imageUrl).toBe("https://cdn.example.com/mid-autumn.jpg");
     expect(turn.reply).toContain(
       "https://foodchannels-catering.com/products/ccma0608",
     );
@@ -1534,6 +1538,52 @@ describe("WATI adapter", () => {
       caption: "客人補充語音",
       mediaUrl: "https://media.example.test/voice.opus",
     });
+  });
+
+  it("downloads a Shopify image and uploads it through WATI session file", async () => {
+    const requests: Array<{ url: string; init?: RequestInit }> = [];
+    const fetchImpl = vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
+      const url = String(input);
+      requests.push({ url, init });
+      if (url.startsWith("https://cdn.shopify.com/")) {
+        return new Response(new Uint8Array([0xff, 0xd8, 0xff]), {
+          status: 200,
+          headers: { "content-type": "image/jpeg" },
+        });
+      }
+      return new Response(JSON.stringify({ result: true }), { status: 200 });
+    });
+
+    await deliverWatiSessionImage({
+      creds: { accessToken: "access-token" },
+      phone: "85291234567",
+      imageUrl: "https://cdn.shopify.com/s/files/1/0339/0642/5994/files/58.jpg?v=1",
+      caption: "套餐參考圖片",
+      channelNumber: "85253964335",
+      localMessageId: "fcc-bot-image-test",
+      fetchImpl: fetchImpl as typeof fetch,
+      log: vi.fn(),
+    });
+
+    expect(requests).toHaveLength(2);
+    expect(requests[1].url).toContain(
+      "/2552/api/v1/sendSessionFile/85291234567",
+    );
+    expect(requests[1].url).toContain("caption=%E5%A5%97%E9%A4%90");
+    expect(requests[1].init?.method).toBe("POST");
+    expect(requests[1].init?.body).toBeInstanceOf(FormData);
+    expect((requests[1].init?.body as FormData).get("file")).toBeInstanceOf(
+      Blob,
+    );
+    expect(
+      buildSessionFileUrl({
+        endpoint: "https://live-mt-server.wati.io",
+        phone: "85291234567",
+        caption: "套餐參考圖片",
+        channelNumber: "85253964335",
+        localMessageId: "fcc-bot-image-test",
+      }),
+    ).toContain("localMessageId=fcc-bot-image-test");
   });
 
   it("restricts bot processing to an explicit test-phone allowlist", () => {

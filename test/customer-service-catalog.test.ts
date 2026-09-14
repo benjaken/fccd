@@ -105,4 +105,17 @@ describe("customer-service catalog lookup", () => {
     expect(reply).not.toContain("套餐詳情：");
     expect(reply).not.toMatch(/(?:^|\n)1(?:$|\n)/);
   });
+
+  it("keeps the image URL out of the text reply for native WhatsApp media", () => {
+    const reply = customerServiceCatalogReply({
+      ...candidates[0],
+      imageUrl: "https://cdn.shopify.com/example/package.jpg",
+      productUrl: "https://foodchannels-catering.com/products/ccma0406",
+      items: [],
+    });
+
+    expect(reply).not.toContain("cdn.shopify.com");
+    expect(reply).not.toContain("參考圖片：");
+    expect(reply).toContain("套餐詳情：");
+  });
 });

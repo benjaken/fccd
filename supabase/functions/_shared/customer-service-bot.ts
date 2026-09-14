@@ -199,6 +199,7 @@ export type CustomerServiceBotDeps = {
 
 export type BotTurn = {
   reply: string | null;
+  imageUrl?: string | null;
   conversation: CustomerServiceConversation;
   wroteInquiry: boolean;
   notified: boolean;
@@ -1214,6 +1215,7 @@ export async function handleCustomerServiceTurn({
           reply: sanitizeOutboundReply(
             customerServiceCatalogReply(catalogHits[0]),
           ),
+          imageUrl: catalogHits[0].imageUrl,
           conversation,
           wroteInquiry: false,
           notified: false,
