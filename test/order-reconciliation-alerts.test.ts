@@ -125,7 +125,7 @@ describe("Shopify/FCCD order reconciliation alerts", () => {
     expect(notificationWorker).not.toContain("Shopify：${input.run.shopify_count}");
   });
 
-  it("queues a deduplicated internal WATI only for a newly imported Shopify order", () => {
+  it("records how the retired Shopify new-order WATI was historically queued", () => {
     expect(perOrderWatiMigration).toContain("'shopify_order_imported'");
     expect(perOrderWatiMigration).toContain("after insert or update of shopify_order_id");
     expect(perOrderWatiMigration).toContain("new.source_system is distinct from 'shopify'");
@@ -133,9 +133,6 @@ describe("Shopify/FCCD order reconciliation alerts", () => {
     expect(perOrderWatiMigration).toContain("coalesce(new.shopify_store_id::text, 'unknown-store')");
     expect(perOrderWatiMigration).toContain("'shopify_order_imported', v_cycle_key, 'whatsapp'");
     expect(perOrderWatiMigration).not.toContain("'shopify_order_imported', v_cycle_key, 'email'");
-    expect(internalTemplateConfig).toContain("WATI_SHOPIFY_NEW_ORDER_TEMPLATE_NAME");
-    expect(internalTemplateConfig).toContain("WATI_SHOPIFY_NEW_ORDER_BROADCAST_NAME");
-    expect(notificationWorker).toContain('"shopify_import_email_not_supported"');
   });
 
   it("counts only unresolved Shopify shadows and always ignores B-1523", () => {

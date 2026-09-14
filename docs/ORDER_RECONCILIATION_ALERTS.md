@@ -97,7 +97,6 @@ when WATI approves a different template or broadcast name:
 | Daily all clear | `fccd_internal_order_audit_clear` | `Internal order audit clear` |
 | Urgent issue | `fccd_internal_missing_order_6h_urgent` | `Internal missing order urgent` |
 | Order readiness | `fccd_internal_order_readiness_issue` | `Internal order readiness issue` |
-| Shopify new order | `fccd_internal_shopify_new_order` | `FCCD internal Shopify new order` |
 
 Optional overrides:
 
@@ -111,11 +110,8 @@ Optional overrides:
 - `WATI_ORDER_RECONCILIATION_URGENT_BROADCAST_NAME`
 - `WATI_ORDER_READINESS_ISSUE_TEMPLATE_NAME`
 - `WATI_ORDER_READINESS_ISSUE_BROADCAST_NAME`
-- `WATI_SHOPIFY_NEW_ORDER_TEMPLATE_NAME`
-- `WATI_SHOPIFY_NEW_ORDER_BROADCAST_NAME`
 
-The missing-order, factory-unsent, and Shopify-new-order templates share these
-parameters, in order:
+The missing-order and factory-unsent templates share these parameters, in order:
 
 1. `brand_name`
 2. `order_number`
@@ -200,27 +196,10 @@ FCCD 訂單連結：{{7}}
 請登入 FCCD 跟進處理，謝謝。
 ```
 
-Recommended Utility template body for a newly imported Shopify order:
-
-```text
-⚠️FCCD Shopify 新訂單通知⚠️（內部通知）
-
-同事你好，{{1}} 有一張新的 Shopify 訂單 #{{2}} 已導入 FCCD，請查看及處理。
-
-客人姓名：{{3}}
-送貨日期：{{4}}
-送貨時間：{{5}}
-送貨地址：{{6}}
-
-FCCD 訂單連結：{{7}}
-
-請登入 FCCD 跟進處理，謝謝。
-```
-
-The Shopify-import event is WhatsApp-only. It is queued only when a Shopify
-order is first inserted or first linked to an FCCD order. Store ID plus Shopify
-order ID forms the dedupe cycle, so webhook updates, reconciliation reruns, and
-shadow-to-operational relinking do not send it again.
+The former immediate Shopify-import WATI is disabled. Shopify webhooks and
+reconciliation continue to import orders normally, but they no longer enqueue
+or send a new-order message. Historical sent rows remain visible in the WATI /
+Email send log.
 
 Daily clear parameters, in order:
 
