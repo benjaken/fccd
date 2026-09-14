@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { createEvent, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { ListTable } from "@/components/ui/list-table";
@@ -132,6 +132,37 @@ describe("PullToRefresh", () => {
     outerScroller.scrollTop = 120;
 
     pullDown(container.querySelector(".pull-to-refresh")!, 200);
+    expect(onRefresh).not.toHaveBeenCalled();
+  });
+
+  it("does not capture an upward list scroll when a nested mobile list is away from the top", () => {
+    mockMatchMedia(true);
+    const onRefresh = vi.fn();
+
+    const { container } = render(
+      <PullToRefresh onRefresh={onRefresh}>
+        <div data-testid="order-list" style={{ overflowY: "auto" }}>
+          <article data-testid="order-card">Order</article>
+        </div>
+      </PullToRefresh>,
+    );
+
+    const orderList = screen.getByTestId("order-list");
+    Object.defineProperty(orderList, "scrollHeight", { configurable: true, value: 800 });
+    Object.defineProperty(orderList, "clientHeight", { configurable: true, value: 300 });
+    orderList.scrollTop = 120;
+
+    const orderCard = screen.getByTestId("order-card");
+    fireEvent.touchStart(orderCard, { touches: [{ clientY: 40 }] });
+    const moveEvent = createEvent.touchMove(orderCard, {
+      cancelable: true,
+      touches: [{ clientY: 240 }],
+    });
+    fireEvent(orderCard, moveEvent);
+    fireEvent.touchEnd(orderCard);
+
+    expect(moveEvent.defaultPrevented).toBe(false);
+    expect(container.querySelector(".pull-to-refresh")).not.toHaveClass("is-pulling");
     expect(onRefresh).not.toHaveBeenCalled();
   });
 

@@ -250,7 +250,7 @@ export function OrderDetailPage({
                 </Link>
               </Button>
               <Button asChild variant="outline">
-                <Link to={`/orders/${order.id}/edit`} target="_blank" rel="noopener noreferrer">
+                <Link to={`/orders/${order.id}/edit`}>
                   <Pencil />
                   編輯
                 </Link>

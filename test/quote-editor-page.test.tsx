@@ -315,6 +315,8 @@ describe("Quote editor", () => {
     expect(css).toMatch(/\.quote-payment-step\s*>\s*footer\s+\.ui-button\s*\{[^}]*width:\s*auto/);
     expect(css).toMatch(/@media \(max-width: 620px\)[\s\S]*?\.quote-payment-step\s*>\s*footer\s*\{[^}]*flex-direction:\s*row/);
     expect(css).toMatch(/@media \(max-width: 620px\)[\s\S]*?\.quote-payment-step\s*>\s*footer\s+\.ui-button\s*\{[^}]*flex:\s*1 1 0/);
+    expect(css).toMatch(/\.quote-payment-step\s*>\s*footer\.quote-payment-edit-actions\s*\{[^}]*grid-template-columns:\s*auto minmax\(0, 1fr\)/);
+    expect(css).toMatch(/\.quote-payment-edit-actions\s+\.quote-payment-factory-action,[\s\S]*?\.quote-payment-edit-actions\s+\.quote-payment-confirmation-action\s*\{[^}]*white-space:\s*nowrap/);
     expect(css).toMatch(/\.quote-payment-summary\s*\{[^}]*max-width:\s*640px/);
     expect(css).toMatch(/\.quote-payment-summary\s*>\s*div\.is-overpaid\s*\{/);
     expect(css).toMatch(/\.order-payment-context\s*\{[^}]*animation:\s*order-payment-context-in 240ms/);
@@ -1626,6 +1628,8 @@ describe("Quote editor", () => {
       const payments = document.getElementById("quote-editor-editable-payments")!;
       const paymentFooter = payments.querySelector("footer")!;
       expect(within(payments).queryByRole("button", { name: "Previous" })).not.toBeInTheDocument();
+      expect(within(paymentFooter).getByRole("button", { name: "Send to factory" })).toBeInTheDocument();
+      expect(within(paymentFooter).getByRole("button", { name: "Send WATI and email order confirmation with add-on link" })).toBeInTheDocument();
       expect(within(paymentFooter).getByRole("button", { name: "Add payment" })).toBeInTheDocument();
       expect(within(paymentFooter).getByRole("button", { name: "Save changes" })).toBeInTheDocument();
       expect(payments.querySelector("header")?.textContent).not.toContain("Add payment");
@@ -1883,6 +1887,7 @@ describe("Quote editor", () => {
     expect(screen.getByRole("heading", { name: "活動項目" })).toBeInTheDocument();
     expect(screen.getByText("尚未新增活動項目")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Edit|編輯/ })).toHaveAttribute("href", "/quotes/quote-1/edit");
+    expect(screen.getByRole("link", { name: /Edit|編輯/ })).not.toHaveAttribute("target");
     expect(screen.queryByRole("button", { name: /Send WATI and email/ })).not.toBeInTheDocument();
     expect(sendConfirmation).not.toHaveBeenCalled();
 
@@ -1952,14 +1957,17 @@ describe("Quote editor", () => {
     expect(screen.queryByLabelText(/Sales source|報價渠道/)).not.toBeInTheDocument();
     expect(screen.queryByLabelText(/Communication channel|溝通渠道/)).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Convert to order" })).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Send WATI and email order confirmation with add-on link" })).toBeInTheDocument();
+    const paymentFooter = document.getElementById("quote-editor-editable-payments")?.querySelector("footer");
+    const sendConfirmationButton = screen.getByRole("button", { name: "Send WATI and email order confirmation with add-on link" });
+    expect(sendConfirmationButton.closest("footer")).toBe(paymentFooter);
     await user.click(screen.getByRole("tab", { name: /Add products|加入貨品/ }));
     expect(screen.getByRole("combobox", { name: /Shipping fee option|運費選項/ })).toHaveValue("");
     const doNotSend = screen.queryByRole("checkbox", { name: /Do not send to factory|不傳送到工場/ });
     const suppressFactoryChange = screen.getByRole("checkbox", { name: /Do not notify factory of changes|不通知工場有更改/ });
     expect(doNotSend).not.toBeInTheDocument();
     expect(suppressFactoryChange).toBeEnabled();
-    expect(screen.getByRole("button", { name: /Send to factory|送至工場/ })).toBeInTheDocument();
+    const sendFactoryButton = screen.getByRole("button", { name: /Send to factory|送至工場/ });
+    expect(sendFactoryButton.closest("footer")).toBe(paymentFooter);
     await user.click(suppressFactoryChange);
     expect(suppressFactoryChange).toBeChecked();
     await user.click(screen.getByRole("button", { name: /Send to factory|送至工場/ }));
@@ -1998,6 +2006,8 @@ describe("Quote editor", () => {
     const detailSendButton = screen.getByRole("button", { name: /Send to factory|送至工場/ });
     const detailEditLink = screen.getByRole("link", { name: /Edit|編輯/ });
     expect(detailSendButton.closest(".quote-detail-actions")).toBe(detailEditLink.closest(".quote-detail-actions"));
+    expect(detailEditLink).toHaveAttribute("href", "/orders/order-1/edit");
+    expect(detailEditLink).not.toHaveAttribute("target");
     await user.click(detailSendButton);
     expect(setFactoryStatus).toHaveBeenLastCalledWith("order-1", true);
     await waitFor(() => expect(screen.queryByRole("button", { name: /Send to factory|送至工場/ })).not.toBeInTheDocument());

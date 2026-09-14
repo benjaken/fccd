@@ -2473,7 +2473,7 @@ export function QuoteEditorPage({
                       : t("quoteEditor.factoryStatus.send")}
                   </Button>
                 ) : null}
-                {canEdit ? <Button asChild variant="outline"><Link to={`/orders/${activeQuote.id}/edit`} target="_blank" rel="noopener noreferrer"><Pencil />編輯</Link></Button> : null}
+                {canEdit ? <Button asChild variant="outline"><Link to={`/orders/${activeQuote.id}/edit`}><Pencil />編輯</Link></Button> : null}
               </div>
             </div>
           ) : null}
@@ -2830,7 +2830,6 @@ export function QuoteEditorPage({
           ) : null}
           {conversionError && <p className="quote-editor-error" role="alert">{t("quoteEditor.errors.convert")}</p>}
           <footer>
-            {activeQuote && isOrder ? <Button type="button" variant="outline" disabled={completing || saving} onClick={() => void saveAndSendCurrentOrderConfirmation()}>{completing ? <LoaderCircle className="spin" /> : <Mail />}{t(completing ? "quoteEditor.detailActions.sendingConfirmation" : "quoteEditor.payments.sendAndComplete")}</Button> : null}
             {activeQuote && !isOrder ? <Button type="button" variant="outline" disabled={converting || saving} onClick={requestQuoteConversion}><ShoppingCart />{converting ? t("quotes.actions.converting") : t("quotes.actions.convert")}</Button> : <span />}
             <Button type="submit" disabled={saving || savingEnquiry || converting || (pendingEnquiry && !canEdit)}>{saving ? t("quoteEditor.saving") : activeQuote ? t("quoteEditor.saveChanges") : t("quoteEditor.saveAndContinue")}</Button>
           </footer>
@@ -3004,7 +3003,6 @@ export function QuoteEditorPage({
               </section>
             </div>
             <footer>
-              {isOrder && !factorySettings.doNotSendToFactory ? <div className="quote-factory-status-action"><Button type="button" variant={isSentToFactory ? "outline" : "default"} disabled={changingFactoryStatus} onClick={() => void toggleFactoryStatus()}>{isSentToFactory ? <Undo2 /> : <Factory />}{changingFactoryStatus ? t("quoteEditor.factoryStatus.saving") : isSentToFactory ? t("quoteEditor.factoryStatus.cancel") : t("quoteEditor.factoryStatus.send")}</Button>{factoryStatusError ? <span role="alert">{t("quoteEditor.factoryStatus.error")}</span> : null}</div> : null}
               <Button type="button" className="quote-utensil-button" variant="outline" disabled={addingUtensil || hasUtensilPack} onClick={() => void addUtensilPack()}>{hasUtensilPack ? <Check /> : <Plus />}{hasUtensilPack ? t("quoteEditor.items.utensilAdded") : addingUtensil ? t("quoteEditor.items.addingUtensil") : t("quoteEditor.items.addUtensil")}</Button>
               <Button type="button" disabled={saving} onClick={() => void saveAllChanges()}>{saving ? t("quoteEditor.saving") : t("quoteEditor.saveChanges")}</Button>
             </footer>
@@ -3222,7 +3220,36 @@ export function QuoteEditorPage({
                 : t("quoteEditor.payments.saveError")}
             </p>
           ) : null}
-          <footer>
+          {factoryStatusError ? (
+            <p className="quote-editor-error" role="alert">{t("quoteEditor.factoryStatus.error")}</p>
+          ) : null}
+          <footer className="quote-payment-edit-actions">
+            {!factorySettings.doNotSendToFactory ? (
+              <Button
+                type="button"
+                className="quote-payment-factory-action"
+                variant={isSentToFactory ? "outline" : "default"}
+                disabled={changingFactoryStatus}
+                onClick={() => void toggleFactoryStatus()}
+              >
+                {isSentToFactory ? <Undo2 /> : <Factory />}
+                {changingFactoryStatus
+                  ? t("quoteEditor.factoryStatus.saving")
+                  : isSentToFactory
+                    ? t("quoteEditor.factoryStatus.cancel")
+                    : t("quoteEditor.factoryStatus.send")}
+              </Button>
+            ) : null}
+            <Button
+              type="button"
+              className="quote-payment-confirmation-action"
+              variant="outline"
+              disabled={completing || saving}
+              onClick={() => void saveAndSendCurrentOrderConfirmation()}
+            >
+              {completing ? <LoaderCircle className="spin" /> : <Mail />}
+              {t(completing ? "quoteEditor.detailActions.sendingConfirmation" : "quoteEditor.payments.sendAndComplete")}
+            </Button>
             <Button type="button" variant="outline" onClick={addPayment}><Plus />{t("quoteEditor.payments.add")}</Button>
             <Button type="button" disabled={saving || completing} onClick={() => void saveAllChanges()}>{saving ? <LoaderCircle className="spin" /> : <Check />}{saving ? t("quoteEditor.saving") : t("quoteEditor.saveChanges")}</Button>
           </footer>

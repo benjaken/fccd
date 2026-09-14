@@ -94,6 +94,7 @@ export function mapFactoryShopOrders(requests: ShopOrderRequest[]): FactoryBoard
         grandTotal: null,
         deliveryStatus: null,
         isSentToFactory: supplierOrders.every((supplierOrder) => supplierOrder.status === "sent_to_factory"),
+        orderReceivedAt: order.createdAt,
         takenAt: null,
         fulfilledAt: null,
         imageReferences: [],

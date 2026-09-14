@@ -257,6 +257,10 @@
   justify-content: flex-end;
 }
 
+.quote-payment-step > footer.quote-payment-edit-actions {
+  flex-wrap: wrap;
+}
+
 .quote-payment-step > footer .ui-button {
   width: auto;
   min-width: 168px;
@@ -347,6 +351,25 @@
     flex: 1 1 0;
     width: auto;
     min-width: 0;
+  }
+
+  .quote-payment-step > footer.quote-payment-edit-actions {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 8px;
+  }
+
+  .quote-payment-edit-actions .quote-payment-factory-action,
+  .quote-payment-edit-actions .quote-payment-confirmation-action {
+    min-width: 0;
+    padding-inline: clamp(6px, 1.8vw, 12px);
+    font-size: clamp(10px, 2.8vw, 14px);
+    white-space: nowrap;
+  }
+
+  .quote-payment-edit-actions .ui-button {
+    height: auto;
+    min-height: 44px;
   }
   .quote-payment-row, .quote-payment-summary { grid-template-columns: 1fr; }
   .quote-payment-summary { max-width: none; }

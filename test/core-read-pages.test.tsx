@@ -170,6 +170,13 @@ describe("Core read pages", () => {
       "href",
       "/orders/new?copyFrom=order-1",
     );
+    expect(screen.getByRole("link", { name: "編輯" })).toHaveAttribute(
+      "href",
+      "/orders/order-1/edit",
+    );
+    expect(screen.getByRole("link", { name: "編輯" })).not.toHaveAttribute(
+      "target",
+    );
     expect(screen.queryByRole("checkbox", { name: /不傳送到工場/ })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "儲存工場設定" })).not.toBeInTheDocument();
   });
