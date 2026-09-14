@@ -499,6 +499,39 @@
   }
 }
 
+/* The notification control center is a long settings document. Let the shell
+   own its single scrollbar instead of nesting another scrollbar inside the
+   panel. Other compact order-settings tabs keep their fixed-height layout. */
+.main-content:has(
+    > .page-transition > .order-settings-page-notification-center
+  ) {
+  height: auto !important;
+  min-height: calc(100dvh - var(--topbar-height) - var(--workspace-height));
+  overflow: visible;
+}
+
+.main-content
+  > .page-transition:has(> .order-settings-page-notification-center) {
+  height: auto !important;
+  min-height: 0;
+}
+
+.order-settings-page-notification-center {
+  grid-template-rows: auto auto;
+  height: auto !important;
+  min-height: 0 !important;
+  overflow: visible;
+}
+
+.order-settings-page-notification-center .order-settings-panel,
+.order-settings-page-notification-center .wati-notification-settings {
+  flex: 0 0 auto;
+  height: auto;
+  min-height: 0;
+  overflow: visible;
+  scrollbar-gutter: auto;
+}
+
 /* AI performance report: compact operations workspace with progressive disclosure. */
 .customer-service-insights-panel{width:min(86vw,1280px);}
 .customer-service-insights-panel>.side-panel-header{position:relative;display:grid;grid-template-columns:minmax(0,1fr) auto;min-height:88px;padding:16px 24px;align-items:center;background:#ffffff;}

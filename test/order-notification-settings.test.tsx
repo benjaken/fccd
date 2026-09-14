@@ -62,7 +62,7 @@ describe("order notification settings", () => {
       setEmailNotificationUser: setUserEnabled,
     });
 
-    expect(await screen.findByRole("heading", { name: "電郵通知" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "郵件通知人設定" })).toBeInTheDocument();
     expect(await screen.findByText("packing@example.com")).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("switch", { name: "切換 Packing 的電郵通知" }));
@@ -126,10 +126,18 @@ describe("order notification settings", () => {
       manualQuoteConfirmationEmailEnabled: false,
       updatedAt: "2026-08-31T06:01:00.000Z",
     });
+    const setDeliveryControl = vi.fn().mockResolvedValue({
+      automaticNotificationsEnabled: true,
+      automaticEmailNotificationsEnabled: true,
+      manualOrderConfirmationEnabled: true,
+      manualOrderConfirmationEmailEnabled: false,
+      updatedAt: "2026-08-31T06:01:00.000Z",
+    });
 
     renderSettings("wati-notifications", {
       loadWatiNotificationControls: loadControls,
       setWatiNotificationControl: setControl,
+      setWatiNotificationDeliveryControl: setDeliveryControl,
     });
 
     expect(await screen.findByRole("heading", { name: "WATI 通知" }))
@@ -140,12 +148,52 @@ describe("order notification settings", () => {
       .not.toBeInTheDocument();
     expect(screen.queryByRole("switch", { name: "切換手動報價確認電郵" }))
       .not.toBeInTheDocument();
-    await userEvent.click(
-      screen.getByRole("switch", { name: "切換手動訂單確認 WATI" }),
-    );
+    expect(screen.getByText("WATI 7 / 8")).toBeInTheDocument();
+    expect(screen.getByText("Email 9 / 10")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("switch", {
+      name: "切換 手動訂單確認 的 WATI 通知",
+    }));
     await waitFor(() =>
-      expect(setControl).toHaveBeenCalledWith("manual_order_confirmation", true),
+      expect(setDeliveryControl).toHaveBeenCalledWith(
+        "manual_order_confirmation",
+        "wati",
+        true,
+      ),
     );
+  });
+
+  it("saves the notification recipient allowlist mode", async () => {
+    const controls = {
+      automaticNotificationsEnabled: true,
+      automaticEmailNotificationsEnabled: true,
+      manualOrderConfirmationEnabled: true,
+      manualOrderConfirmationEmailEnabled: true,
+      recipientMode: "environment" as const,
+      allowedWatiPhones: ["8613828747224"],
+      allowedEmails: ["cfb.app02@chifung.net"],
+      eventControls: {},
+      templateStates: {},
+      updatedAt: "2026-09-14T06:00:00.000Z",
+    };
+    const savePolicy = vi.fn().mockResolvedValue({
+      ...controls,
+      recipientMode: "allowlist" as const,
+    });
+
+    renderSettings("wati-notifications", {
+      loadWatiNotificationControls: vi.fn().mockResolvedValue(controls),
+      saveWatiNotificationRecipientPolicy: savePolicy,
+    });
+
+    await screen.findByText("收件人安全模式");
+    await userEvent.click(screen.getByRole("radio", { name: /^白名單/ }));
+    await userEvent.click(screen.getByRole("button", { name: "儲存收件人模式" }));
+
+    await waitFor(() => expect(savePolicy).toHaveBeenCalledWith({
+      mode: "allowlist",
+      allowedWatiPhones: ["8613828747224"],
+      allowedEmails: ["cfb.app02@chifung.net"],
+    }));
   });
 
   it("adds a first order recipient with a phone and delay", async () => {

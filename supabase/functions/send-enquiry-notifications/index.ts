@@ -16,7 +16,11 @@ import {
   toNotificationEmailRecipients,
   toNotificationWatiPhones,
 } from "../_shared/notification-test-overrides.ts";
-import { watiEmergencySwitchAllows } from "../_shared/wati-notification-controls.ts";
+import {
+  loadWatiNotificationControls,
+  notificationChannelEnabled,
+  watiEmergencySwitchAllows,
+} from "../_shared/wati-notification-controls.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -198,6 +202,7 @@ Deno.serve(async (request) => {
     if (!submissionId) return response({ error: "submission_id_required" }, 400);
 
     const admin = createClient(requiredEnv("SUPABASE_URL"), serviceRoleKey());
+    const controls = await loadWatiNotificationControls(admin);
     if (force && !await callerCanManageQuotes(request, admin)) {
       return response({ error: "quotes_manage_required" }, 403);
     }
@@ -226,7 +231,11 @@ Deno.serve(async (request) => {
       const retryable = force
         ? ["not_sent", "sending", "failed", "sent"]
         : ["not_sent"];
-      if (retryable.includes(internalStatus) && await claimStatus(admin, row.id, "internal_email_status", retryable)) {
+      if (
+        notificationChannelEnabled(controls, "enquiry_internal", "email")
+        && retryable.includes(internalStatus)
+        && await claimStatus(admin, row.id, "internal_email_status", retryable)
+      ) {
         try {
           const { data: recipients, error: recipientError } = await admin.rpc("enquiry_internal_email_recipients");
           if (recipientError) throw recipientError;
@@ -254,7 +263,7 @@ Deno.serve(async (request) => {
               detailUrl,
             });
             await sendResendEmail(
-              toNotificationEmailRecipients(addresses),
+              toNotificationEmailRecipients(addresses, controls.recipientPolicy),
               mail.subject,
               mail.html,
             );
@@ -274,6 +283,8 @@ Deno.serve(async (request) => {
         ? ["not_sent", "sending", "failed", "sent"]
         : ["not_sent"];
       if (
+        notificationChannelEnabled(controls, "enquiry_internal", "wati")
+        &&
         watiEmergencySwitchAllows("WATI_ENQUIRY_INTERNAL_ENABLED")
         && watiRetryable.includes(internalWatiStatus)
         && await claimStatus(admin, row.id, "internal_wati_status", watiRetryable)
@@ -306,7 +317,7 @@ Deno.serve(async (request) => {
               quoteDescription: row.quote_description || "",
               detailUrl,
             });
-            const targetPhones = toNotificationWatiPhones(phones);
+            const targetPhones = toNotificationWatiPhones(phones, controls.recipientPolicy);
             const results = await Promise.allSettled(
               targetPhones.map((phone) => sendEnquiryInternalWati(phone, parameters)),
             );
@@ -329,7 +340,7 @@ Deno.serve(async (request) => {
       }
     }
 
-    if (sendAck) {
+    if (sendAck && notificationChannelEnabled(controls, "enquiry_customer_ack", "email")) {
       if (!validEmail(row.email)) {
         if (ackStatus !== "no_email") {
           ackStatus = "no_email";
@@ -350,7 +361,7 @@ Deno.serve(async (request) => {
               body: formRow?.ack_email_body || "",
             });
             await sendResendEmail(
-              toNotificationEmailRecipients([row.email!.trim()]),
+              toNotificationEmailRecipients([row.email!.trim()], controls.recipientPolicy),
               mail.subject,
               mail.html,
             );

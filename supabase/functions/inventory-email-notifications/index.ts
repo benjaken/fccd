@@ -10,6 +10,10 @@ import {
   applyDevelopNotificationMarker,
   toNotificationEmailRecipients,
 } from "../_shared/notification-test-overrides.ts";
+import {
+  loadWatiNotificationControls,
+  notificationChannelEnabled,
+} from "../_shared/wati-notification-controls.ts";
 
 type Job = {
   id: string;
@@ -59,6 +63,10 @@ Deno.serve(async (request) => {
   }
 
   const admin = createClient(requiredEnv("SUPABASE_URL"), serviceRoleKey());
+  const controls = await loadWatiNotificationControls(admin);
+  if (!notificationChannelEnabled(controls, "inventory_email_alerts", "email")) {
+    return json({ disabled: true, processed: 0, sent: 0, failed: 0 });
+  }
   const { data: claimed, error: claimError } = await admin.rpc("claim_inventory_email_notifications", { p_limit: 25 });
   if (claimError) return json({ error: "claim_failed" }, 500);
 
@@ -68,6 +76,7 @@ Deno.serve(async (request) => {
     [...new Set((recipientRows ?? []).map((row: { recipient_address?: string }) =>
       row.recipient_address?.trim().toLowerCase()
     ).filter(Boolean))] as string[],
+    controls.recipientPolicy,
   );
   let sent = 0;
   let failed = 0;

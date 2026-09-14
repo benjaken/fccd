@@ -68,7 +68,15 @@ import {
 import {
   normalizeNotificationPhone,
 } from "../_shared/notification-phone.ts";
-import { watiEmergencySwitchAllows } from "../_shared/wati-notification-controls.ts";
+import {
+  toNotificationEmailRecipients,
+  toNotificationWatiPhones,
+} from "../_shared/notification-test-overrides.ts";
+import {
+  loadWatiNotificationControls,
+  notificationChannelEnabled,
+  watiEmergencySwitchAllows,
+} from "../_shared/wati-notification-controls.ts";
 import { isWithinCustomerServiceSchedule } from "../_shared/customer-service-schedule.ts";
 
 const CORS_HEADERS = {
@@ -1010,6 +1018,12 @@ async function notifyInternal(
   },
 ) {
   let delivered = false;
+  const controls = await loadWatiNotificationControls(admin);
+  const emailEnabled = notificationChannelEnabled(controls, "enquiry_internal", "email");
+  const watiEnabled = notificationChannelEnabled(controls, "enquiry_internal", "wati")
+    && (deploymentEnvironment() === "develop"
+      || watiEmergencySwitchAllows("WATI_ENQUIRY_INTERNAL_ENABLED"));
+  if (!emailEnabled && !watiEnabled) return;
   const guestPhone = normalizeNotificationPhone(input.phone);
   const environment = deploymentEnvironment();
   const appUrl = env("APP_URL").replace(/\/$/, "");
@@ -1030,8 +1044,7 @@ async function notifyInternal(
     detailUrl,
   };
 
-  // Production keeps email fan-out; develop lab is WATI-only to the pilot phone.
-  if (environment !== "develop") {
+  if (emailEnabled) {
     const { data: recipients, error } = await admin.rpc(
       "enquiry_internal_email_recipients",
     );
@@ -1047,26 +1060,29 @@ async function notifyInternal(
           ),
       ),
     ];
-    if (addresses.length) {
+    const targetAddresses = toNotificationEmailRecipients(
+      addresses,
+      controls.recipientPolicy,
+    );
+    if (targetAddresses.length) {
       const mail = buildEnquiryInternalContent(contentInput);
-      await sendInternalEmail(addresses, mail.subject, mail.html);
+      await sendInternalEmail(targetAddresses, mail.subject, mail.html);
       delivered = true;
     }
   }
 
   if (
-    environment === "develop" ||
-    watiEmergencySwitchAllows("WATI_ENQUIRY_INTERNAL_ENABLED")
+    watiEnabled
   ) {
     const { data: staff, error: staffError } = await admin
       .from("order_first_notification_recipients")
       .select("phone");
     if (staffError) throw staffError;
-    const phones = resolveInternalWatiPhones(
+    const phones = toNotificationWatiPhones(resolveInternalWatiPhones(
       ((staff || []) as Array<{ phone?: string }>).map((item) => item.phone || ""),
       guestPhone,
       environment,
-    );
+    ), controls.recipientPolicy);
     const parameters = buildEnquiryInternalWatiParameters(contentInput);
     const endpoint = requiredEnv("WATI_API_ENDPOINT").replace(/\/$/, "");
     const token = requiredEnv("WATI_API_TOKEN");

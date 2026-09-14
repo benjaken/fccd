@@ -48,3 +48,103 @@
   outline: 2px solid var(--ring);
   outline-offset: 2px;
 }
+
+.wati-email-settings-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.wati-email-settings-actions .ui-button {
+  min-height: 40px;
+  cursor: pointer;
+  transition: border-color 180ms ease, background-color 180ms ease, color 180ms ease;
+}
+
+.wati-email-settings-actions .ui-button:hover {
+  border-color: color-mix(in srgb, var(--primary) 45%, var(--border));
+  background: color-mix(in srgb, var(--primary) 7%, var(--background));
+  color: var(--primary);
+}
+
+.wati-email-settings-panel,
+.wati-email-settings-panel > .side-panel-header,
+.wati-email-settings-panel > .side-panel-body {
+  background: #fff;
+}
+
+.wati-email-settings-panel > .side-panel-body {
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.wati-email-controls-panel > .side-panel-body {
+  padding: 0;
+}
+
+.wati-email-controls-panel .wati-notification-settings {
+  height: auto;
+  overflow: visible;
+}
+
+.wati-email-recipient-panel > .side-panel-body {
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+}
+
+.wati-email-recipient-panel .order-settings-table-wrap {
+  flex: 1 1 auto;
+}
+
+@media (max-width: 900px) {
+  .list-search-actions:has(> .wati-email-settings-actions) {
+    width: 100%;
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .wati-email-settings-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 720px) {
+  .wati-email-settings-actions {
+    flex-wrap: nowrap;
+    max-width: 100%;
+    padding: 1px 1px 4px;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .wati-email-settings-actions::-webkit-scrollbar {
+    display: none;
+  }
+
+  .wati-email-settings-actions .ui-button {
+    flex: 0 0 auto;
+    width: auto;
+    justify-content: center;
+  }
+
+  .wati-email-settings-panel > .side-panel-header {
+    padding: 14px 12px;
+  }
+
+  .wati-email-settings-panel > .side-panel-body {
+    padding-right: 12px;
+    padding-left: 12px;
+  }
+
+  .wati-email-controls-panel > .side-panel-body {
+    padding: 0;
+  }
+}

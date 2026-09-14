@@ -1,10 +1,26 @@
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ChevronLeft, ChevronRight, MailCheck, RefreshCw } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Mail,
+  MailCheck,
+  MessageCircleMore,
+  Plus,
+  RefreshCw,
+  SlidersHorizontal,
+} from "lucide-react";
 
+import {
+  OrderEmailNotificationSettings,
+  OrderFirstNotificationRecipientsSettings,
+  WatiNotificationSettings,
+} from "@/components/OrderNotificationSettings";
+import { useCurrentPageAccess } from "@/auth/use-page-access";
 import { Button } from "@/components/ui/button";
 import { ListSearchBar } from "@/components/ui/list-search-bar";
 import { ListTable } from "@/components/ui/list-table";
+import { SidePanel } from "@/components/ui/side-panel";
 import { useDeferredFilter } from "@/lib/use-deferred-filter";
 import {
   fetchWatiEmailSendLogs,
@@ -15,6 +31,7 @@ import {
 import "./wati-email-send-logs.css";
 
 type LogsLoader = typeof fetchWatiEmailSendLogs;
+type SettingsPanel = "controls" | "email-recipients" | "wati-recipients" | null;
 
 const SKELETON_COLUMNS = [
   { width: "8rem" },
@@ -42,6 +59,11 @@ export function WatiEmailSendLogsPage({
   loadLogs?: LogsLoader;
 }) {
   const { t, i18n } = useTranslation();
+  const pageAccess = useCurrentPageAccess();
+  const canOpenNotificationControls = pageAccess.canAccess("orders.settings.wati_notifications");
+  const canOpenEmailRecipients = pageAccess.canAccess("orders.settings.email_notifications");
+  const canOpenWatiRecipients = pageAccess.canAccess("orders.settings.first_notification_recipients");
+  const canManageWatiRecipients = pageAccess.canManage("orders.settings.first_notification_recipients");
   const [draftSearch, setDraftSearch] = useState("");
   const [search, setSearch] = useState("");
   const [channel, setChannel] = useState<"" | WatiEmailLogChannel>("");
@@ -55,6 +77,8 @@ export function WatiEmailSendLogsPage({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
+  const [settingsPanel, setSettingsPanel] = useState<SettingsPanel>(null);
+  const [watiRecipientCreateOpen, setWatiRecipientCreateOpen] = useState(false);
 
   const totalPages = Math.max(1, Math.ceil(total / WATI_EMAIL_LOG_PAGE_SIZE));
   const visibleFrom = total === 0 ? 0 : (page - 1) * WATI_EMAIL_LOG_PAGE_SIZE + 1;
@@ -106,6 +130,33 @@ export function WatiEmailSendLogsPage({
             label={t("settings.watiEmailLogs.search")}
             placeholder={t("settings.watiEmailLogs.searchPlaceholder")}
             submitLabel={t("settings.watiEmailLogs.searchAction")}
+            actions={
+              canOpenNotificationControls || canOpenEmailRecipients || canOpenWatiRecipients ? (
+                <div
+                  className="wati-email-settings-actions"
+                  aria-label={t("settings.watiEmailLogs.settingsActionsLabel")}
+                >
+                  {canOpenNotificationControls ? (
+                    <Button type="button" variant="outline" onClick={() => setSettingsPanel("controls")}>
+                      <SlidersHorizontal />
+                      {t("settings.watiEmailLogs.notificationControls")}
+                    </Button>
+                  ) : null}
+                  {canOpenEmailRecipients ? (
+                    <Button type="button" variant="outline" onClick={() => setSettingsPanel("email-recipients")}>
+                      <Mail />
+                      {t("settings.watiEmailLogs.emailRecipients")}
+                    </Button>
+                  ) : null}
+                  {canOpenWatiRecipients ? (
+                    <Button type="button" variant="outline" onClick={() => setSettingsPanel("wati-recipients")}>
+                      <MessageCircleMore />
+                      {t("settings.watiEmailLogs.watiRecipients")}
+                    </Button>
+                  ) : null}
+                </div>
+              ) : undefined
+            }
             filtersActive={Boolean(channel)}
             onConfirmFilters={channelFilter.confirm}
             onDismissFilters={channelFilter.revert}
@@ -213,6 +264,52 @@ export function WatiEmailSendLogsPage({
           </div>
         </footer>
       </article>
+
+      <SidePanel
+        open={settingsPanel === "controls"}
+        half
+        className="wati-email-settings-panel wati-email-controls-panel"
+        title={t("settings.watiEmailLogs.notificationControls")}
+        description={t("settings.watiEmailLogs.notificationControlsDescription")}
+        closeLabel={t("settings.watiEmailLogs.closeSettings")}
+        onClose={() => setSettingsPanel(null)}
+      >
+        <WatiNotificationSettings />
+      </SidePanel>
+
+      <SidePanel
+        open={settingsPanel === "email-recipients"}
+        className="side-panel-majority wati-email-settings-panel wati-email-recipient-panel"
+        title={t("settings.watiEmailLogs.emailRecipients")}
+        description={t("settings.watiEmailLogs.emailRecipientsDescription")}
+        closeLabel={t("settings.watiEmailLogs.closeSettings")}
+        onClose={() => setSettingsPanel(null)}
+      >
+        <OrderEmailNotificationSettings />
+      </SidePanel>
+
+      <SidePanel
+        open={settingsPanel === "wati-recipients"}
+        className="side-panel-majority wati-email-settings-panel wati-email-recipient-panel"
+        title={t("settings.watiEmailLogs.watiRecipients")}
+        description={t("settings.watiEmailLogs.watiRecipientsDescription")}
+        closeLabel={t("settings.watiEmailLogs.closeSettings")}
+        headerActions={canManageWatiRecipients ? (
+          <Button type="button" size="sm" onClick={() => setWatiRecipientCreateOpen(true)}>
+            <Plus />
+            {t("settings.watiEmailLogs.addWatiRecipient")}
+          </Button>
+        ) : undefined}
+        onClose={() => {
+          setSettingsPanel(null);
+          setWatiRecipientCreateOpen(false);
+        }}
+      >
+        <OrderFirstNotificationRecipientsSettings
+          createOpen={watiRecipientCreateOpen}
+          onCreateOpenChange={setWatiRecipientCreateOpen}
+        />
+      </SidePanel>
     </section>
   );
 }

@@ -2,6 +2,12 @@ const TEST_EMAIL_RECIPIENT = "cfb.app02@chifung.net";
 const TEST_WATI_PHONE = "8613828747224";
 const TEST_MARKER = "【develop】";
 
+export type NotificationRecipientPolicy = {
+  mode: "environment" | "allowlist" | "live";
+  allowedWatiPhones: string[];
+  allowedEmails: string[];
+};
+
 function normalizeEmail(value: string) {
   return value.trim().toLowerCase();
 }
@@ -82,11 +88,33 @@ export function normalizeNotificationPhones(phones: string[]) {
     });
 }
 
-export function toNotificationEmailRecipients(recipients: string[]) {
-  return applyNotificationTestEmailRecipients(normalizeNotificationEmailRecipients(recipients));
+function recipientPolicyUsesAllowlist(policy?: NotificationRecipientPolicy) {
+  if (!policy || policy.mode === "environment") {
+    return isDevelopNotificationEnvironment();
+  }
+  return policy.mode === "allowlist";
 }
 
-export function toNotificationWatiPhones(phones: string[]) {
-  return applyNotificationTestWatiPhones(normalizeNotificationPhones(phones));
+export function toNotificationEmailRecipients(
+  recipients: string[],
+  policy?: NotificationRecipientPolicy,
+) {
+  if (!policy) {
+    return applyNotificationTestEmailRecipients(normalizeNotificationEmailRecipients(recipients));
+  }
+  return recipientPolicyUsesAllowlist(policy)
+    ? normalizeNotificationEmailRecipients(policy.allowedEmails)
+    : normalizeNotificationEmailRecipients(recipients);
 }
 
+export function toNotificationWatiPhones(
+  phones: string[],
+  policy?: NotificationRecipientPolicy,
+) {
+  if (!policy) {
+    return applyNotificationTestWatiPhones(normalizeNotificationPhones(phones));
+  }
+  return recipientPolicyUsesAllowlist(policy)
+    ? normalizeNotificationPhones(policy.allowedWatiPhones)
+    : normalizeNotificationPhones(phones);
+}
