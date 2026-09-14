@@ -1334,10 +1334,18 @@ Deno.serve(async (request) => {
     }
 
     for (const job of reconciliationAlertJobs) {
+      if (job.event_key === "shopify_order_imported") {
+        await admin.from("order_reconciliation_alert_outbox").update({
+          status: "skipped",
+          last_error: "shopify_new_order_wati_disabled",
+          locked_at: null,
+          updated_at: new Date().toISOString(),
+        }).eq("id", job.id);
+        continue;
+      }
       const loadedIssue = relation<ReconciliationIssueRow>(job.issue);
       const issue = loadedIssue?.status === "open" ? loadedIssue : null;
       const directOrder = relation<OrderRow>(job.direct_order);
-      const shopifyImported = job.event_key === "shopify_order_imported";
       const dailyOrderIssues = directOrder?.id
         ? dailyIssues.filter((candidate) =>
           reconciliationOrder(candidate)?.id === directOrder.id
@@ -1350,16 +1358,7 @@ Deno.serve(async (request) => {
             ? dailyOrderIssues.length ? dailyOrderIssues : issue ? [issue] : []
             : issue ? [issue] : []
         : issue ? [issue] : [];
-      if (shopifyImported && (!directOrder || job.channel !== "whatsapp")) {
-        await admin.from("order_reconciliation_alert_outbox").update({
-          status: "skipped",
-          last_error: directOrder ? "shopify_import_email_not_supported" : "shopify_import_order_unavailable",
-          locked_at: null,
-          updated_at: new Date().toISOString(),
-        }).eq("id", job.id);
-        continue;
-      }
-      if (!shopifyImported && !issues.length && job.event_key !== "daily_reconciliation") {
+      if (!issues.length && job.event_key !== "daily_reconciliation") {
         await admin.from("order_reconciliation_alert_outbox").update({
           status: "skipped",
           last_error: "reconciliation_issue_resolved",
@@ -1405,14 +1404,6 @@ Deno.serve(async (request) => {
         } else {
           const phone = normalizeWhatsAppNumber(job.recipient_address);
           if (!phone) throw new Error("recipient_phone_invalid");
-          if (shopifyImported && directOrder) {
-            const wati = await sendWati(
-              phone,
-              internalWatiTemplate("shopifyNewOrder"),
-              internalOrderWatiParameters(directOrder),
-            );
-            providerPayload = wati.payload;
-          } else {
           const daily = job.event_key === "daily_reconciliation";
           const clear = daily && issues.length === 0;
           const readiness = daily && issues.some((candidate) => [
@@ -1435,21 +1426,21 @@ Deno.serve(async (request) => {
           const issueText = issues.map(reconciliationIssueLine).join("；");
           const link = issues.length === 1 ? reconciliationOrderLink(issues[0]) :
             `${Deno.env.get("ORDER_ADMIN_BASE_URL")?.trim().replace(/\/$/, "") || ""}/orders/shopify-pending`;
-           const wati = await sendWati(phone, template, clear
-             ? numberedInternalWatiParameters([
-               job.recipient_name,
-               dailyRun?.run_date || "-",
-             ])
+          const wati = await sendWati(phone, template, clear
+            ? numberedInternalWatiParameters([
+              job.recipient_name,
+              dailyRun?.run_date || "-",
+            ])
             : daily && readiness && directOrder
               ? readinessOrderWatiParameters(directOrder, issues)
-            : daily && issue ? internalOrderWatiParameters(reconciliationOrder(issue)!)
-             : numberedInternalWatiParameters([
-               job.recipient_name,
-               issueText,
-               link,
-             ]));
+              : daily && issue
+                ? internalOrderWatiParameters(reconciliationOrder(issue)!)
+                : numberedInternalWatiParameters([
+                  job.recipient_name,
+                  issueText,
+                  link,
+                ]));
           providerPayload = wati.payload;
-          }
         }
         await admin.from("order_reconciliation_alert_outbox").update({
           status: "sent",

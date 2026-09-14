@@ -1,6 +1,5 @@
 export type InternalWatiTemplateKind =
   | "factoryUnsentReminder"
-  | "shopifyNewOrder"
   | "reconciliationMissing"
   | "reconciliationFactoryUnsent"
   | "reconciliationClear"
@@ -20,12 +19,6 @@ export const INTERNAL_WATI_TEMPLATE_DEFAULTS = {
     broadcastEnv: "WATI_FACTORY_UNSENT_BROADCAST_NAME",
     templateName: "factory_unsent_internal_reminder",
     broadcastName: "Factory unsent internal reminder",
-  },
-  shopifyNewOrder: {
-    templateEnv: "WATI_SHOPIFY_NEW_ORDER_TEMPLATE_NAME",
-    broadcastEnv: "WATI_SHOPIFY_NEW_ORDER_BROADCAST_NAME",
-    templateName: "fccd_internal_shopify_new_order",
-    broadcastName: "FCCD internal Shopify new order",
   },
   reconciliationMissing: {
     templateEnv: "WATI_ORDER_RECONCILIATION_MISSING_TEMPLATE_NAME",

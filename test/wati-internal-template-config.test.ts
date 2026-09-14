@@ -27,16 +27,16 @@ describe("internal WATI template configuration", () => {
   });
 
   it("provides defaults for every internal template", () => {
-    expect(resolveInternalWatiTemplate("shopifyNewOrder", () => undefined)).toEqual({
-      template_name: "fccd_internal_shopify_new_order",
-      broadcast_name: "FCCD internal Shopify new order",
+    expect(resolveInternalWatiTemplate("factoryUnsentReminder", () => undefined)).toEqual({
+      template_name: "factory_unsent_internal_reminder",
+      broadcast_name: "Factory unsent internal reminder",
     });
     expect(resolveInternalWatiTemplate("orderReadinessIssue", () => undefined)).toEqual({
       template_name: "fccd_internal_order_readiness_issue",
       broadcast_name: "Internal order readiness issue",
     });
 
-    expect(Object.keys(INTERNAL_WATI_TEMPLATE_DEFAULTS)).toHaveLength(7);
+    expect(Object.keys(INTERNAL_WATI_TEMPLATE_DEFAULTS)).toHaveLength(6);
     for (const definition of Object.values(INTERNAL_WATI_TEMPLATE_DEFAULTS)) {
       expect(definition.templateName).toBeTruthy();
       expect(definition.broadcastName).toBeTruthy();
@@ -45,13 +45,13 @@ describe("internal WATI template configuration", () => {
 
   it("uses trimmed Supabase Secret overrides when configured", () => {
     const values: Record<string, string> = {
-      WATI_SHOPIFY_NEW_ORDER_TEMPLATE_NAME: " custom_shopify ",
-      WATI_SHOPIFY_NEW_ORDER_BROADCAST_NAME: " Custom Shopify Broadcast ",
+      WATI_FACTORY_UNSENT_TEMPLATE_NAME: " custom_factory_unsent ",
+      WATI_FACTORY_UNSENT_BROADCAST_NAME: " Custom Factory Broadcast ",
     };
 
-    expect(resolveInternalWatiTemplate("shopifyNewOrder", (name) => values[name])).toEqual({
-      template_name: "custom_shopify",
-      broadcast_name: "Custom Shopify Broadcast",
+    expect(resolveInternalWatiTemplate("factoryUnsentReminder", (name) => values[name])).toEqual({
+      template_name: "custom_factory_unsent",
+      broadcast_name: "Custom Factory Broadcast",
     });
   });
 

@@ -38,6 +38,28 @@ including order notifications, quote confirmations, and daily sales reports.
 
 There is deliberately no payment or outstanding-balance reminder.
 
+## Current notification matrix
+
+| Notification | Audience | Trigger | WATI | Email |
+| --- | --- | --- | --- | --- |
+| Shopify new order | Internal | Shopify import/link | **Disabled** | Not used |
+| Manual order confirmation | Customer | Order-page send action | Controlled separately | Controlled separately |
+| Same-day delivery reminder | Customer | Automatic on delivery date | Automatic control | Automatic control |
+| Same-day pickup reminder | Customer | Automatic on pickup date | Automatic control | Automatic control |
+| Factory-unsent reminder | Internal | 12 hours before delivery window | Automatic control | Automatic control |
+| Unassigned-driver reminder | Internal | 09:00–21:00 every three hours | Automatic control | Automatic control |
+| Order reconciliation | Internal | Daily and urgent reconciliation runs | Automatic control | Automatic control |
+| Manual Utility events | Customer/operational | Explicit service-role action | Inactive until verified | No shared email copy |
+
+The WATI settings page has four independent controls: automatic WATI,
+automatic email, manual order-confirmation WATI, and manual order-confirmation
+email. Turning off one channel does not turn off its paired channel. Internal
+email recipients are enabled FCCD users with notification email addresses;
+internal WATI recipients are the configured first-notification recipients.
+
+The WATI / Email send log is read-only and includes successful automatic sends.
+It intentionally excludes skipped messages and manual confirmation sends.
+
 ## Events
 
 | Event | Default WATI template name | Trigger |
