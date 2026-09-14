@@ -1,5 +1,10 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { watiTemplateByKey } from "./templates.ts";
+import { toNotificationWatiPhones } from "../_shared/notification-test-overrides.ts";
+import {
+  loadWatiNotificationControls,
+  notificationChannelEnabled,
+} from "../_shared/wati-notification-controls.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -187,6 +192,17 @@ Deno.serve(async (request) => {
   try {
     const user = await requireSender(request, admin);
     const payload = parsePayload(await request.json().catch(() => ({})));
+    const controls = await loadWatiNotificationControls(admin);
+    if (!notificationChannelEnabled(controls, "manual_wati_utility", "wati")) {
+      return jsonResponse({ error: "notification_disabled" }, 409);
+    }
+    const destinationPhone = toNotificationWatiPhones(
+      [payload.whatsappNumber],
+      controls.recipientPolicy,
+    )[0] || "";
+    if (!destinationPhone) {
+      return jsonResponse({ error: "notification_recipient_allowlist_missing" }, 409);
+    }
     const accessToken = Deno.env.get("WATI_ACCESS_TOKEN")?.trim();
     if (!accessToken) {
       return jsonResponse({ error: "wati_token_missing" }, 503);
@@ -205,7 +221,7 @@ Deno.serve(async (request) => {
       broadcast_name: broadcastName,
       receivers: [
         {
-          whatsappNumber: payload.whatsappNumber,
+          whatsappNumber: destinationPhone,
           customParams: payload.customParams,
         },
       ],
@@ -245,7 +261,7 @@ Deno.serve(async (request) => {
       template_key: payload.templateKey,
       broadcast_name: broadcastName,
       channel_number: channelNumber,
-      whatsapp_number: payload.whatsappNumber,
+      whatsapp_number: destinationPhone,
       date_param: paramMap.date ?? null,
       count_param: paramMap.count ?? null,
       params: paramMap,

@@ -16,6 +16,7 @@ import {
 } from "../_shared/notification-test-overrides.ts";
 import {
   loadWatiNotificationControls,
+  notificationChannelEnabled,
   watiEmergencySwitchAllows,
 } from "../_shared/wati-notification-controls.ts";
 
@@ -66,8 +67,10 @@ Deno.serve(async (request) => {
     const admin = createClient(supabaseUrl, serviceRoleKey());
     const controls = await loadWatiNotificationControls(admin);
     const manualWatiEnabled = controls.manualOrderConfirmationEnabled
+      && notificationChannelEnabled(controls, "manual_order_confirmation", "wati")
       && watiEmergencySwitchAllows("WATI_MANUAL_ORDER_CONFIRMATION_ENABLED");
     const manualEmailEnabled = controls.manualOrderConfirmationEmailEnabled
+      && notificationChannelEnabled(controls, "manual_order_confirmation", "email")
       && watiEmergencySwitchAllows("EMAIL_MANUAL_ORDER_CONFIRMATION_ENABLED");
     const { data: order, error: orderError } = await admin.from("orders")
       .select("id,order_number,customer_name_snapshot,company_name_snapshot,email_snapshot,contact_number_a_snapshot,contact_number_b_snapshot,delivery_at,delivery_time,shipping_address_snapshot,channels(name),shipping_methods(name,display_name,requires_address_check)")
@@ -128,7 +131,7 @@ Deno.serve(async (request) => {
       watiEnabled: manualWatiEnabled,
       emailEnabled: manualEmailEnabled,
       sendWati: () => {
-        const overridePhone = toNotificationWatiPhones([phone])[0] || "";
+        const overridePhone = toNotificationWatiPhones([phone], controls.recipientPolicy)[0] || "";
         if (!overridePhone) {
           return Promise.reject(new Error("notification_recipient_allowlist_missing"));
         }
@@ -158,7 +161,7 @@ Deno.serve(async (request) => {
         headers: { Authorization: `Bearer ${requiredEnv("RESEND_API_KEY")}`, "Content-Type": "application/json" },
         body: JSON.stringify({
           from: EMAIL_FROM,
-          to: toNotificationEmailRecipients([email]),
+          to: toNotificationEmailRecipients([email], controls.recipientPolicy),
           subject: applyDevelopNotificationMarker(notification.subject),
           html: notification.html,
         }),

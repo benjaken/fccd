@@ -276,24 +276,6 @@ export const secondaryNav: Record<string, NavItem[]> = {
       permissionKey: "orders.settings",
       children: [
         {
-          key: "orderWatiNotifications",
-          to: "/orders/settings/wati-notifications",
-          icon: MessageCircleMore,
-          permissionKey: "orders.settings.wati_notifications",
-        },
-        {
-          key: "orderEmailNotifications",
-          to: "/orders/settings/email-notifications",
-          icon: Mail,
-          permissionKey: "orders.settings.email_notifications",
-        },
-        {
-          key: "orderFirstNotificationRecipients",
-          to: "/orders/settings/first-notification-recipients",
-          icon: BellRing,
-          permissionKey: "orders.settings.first_notification_recipients",
-        },
-        {
           key: "salePartners",
           to: "/orders/settings/sale-partners",
           icon: Handshake,

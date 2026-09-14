@@ -75,12 +75,13 @@ describe("customer-service backend conversation preview", () => {
     );
   });
 
-  it("limits develop internal WATI staff alerts to the pilot phone only", () => {
+  it("limits develop staff alerts by default and applies the central recipient policy", () => {
     expect(source).toContain('const DEVELOP_INTERNAL_WATI_PHONE = "8613828747224"');
     expect(source).toContain("function resolveInternalWatiPhones");
     expect(source).toContain("return [DEVELOP_INTERNAL_WATI_PHONE]");
-    expect(source).toContain('environment === "develop" ||');
     expect(source).toContain("environment !== \"develop\"");
+    expect(source).toContain("toNotificationWatiPhones(resolveInternalWatiPhones(");
+    expect(source).toContain("controls.recipientPolicy");
   });
 
   it("keeps guest replies flowing when urgent staff notify fails", () => {

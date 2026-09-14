@@ -423,6 +423,8 @@ export function OrderSettingsPage({
   deleteFirstNotificationRecipient,
   loadWatiNotificationControls,
   setWatiNotificationControl,
+  setWatiNotificationDeliveryControl,
+  saveWatiNotificationRecipientPolicy,
 }: {
   loadTags?: TagsLoader;
   createTag?: TagCreator;
@@ -460,6 +462,8 @@ export function OrderSettingsPage({
   deleteFirstNotificationRecipient?: Parameters<typeof OrderFirstNotificationRecipientsSettings>[0]["deleteRecipient"];
   loadWatiNotificationControls?: Parameters<typeof WatiNotificationSettings>[0]["loadControls"];
   setWatiNotificationControl?: Parameters<typeof WatiNotificationSettings>[0]["setControl"];
+  setWatiNotificationDeliveryControl?: Parameters<typeof WatiNotificationSettings>[0]["setDeliveryControl"];
+  saveWatiNotificationRecipientPolicy?: Parameters<typeof WatiNotificationSettings>[0]["saveRecipientPolicy"];
 }) {
   const { t } = useTranslation();
   const pageAccess = useCurrentPageAccess();
@@ -527,7 +531,13 @@ export function OrderSettingsPage({
     activeTab === "payments";
 
   return (
-    <section className="order-settings-page">
+    <section
+      className={`order-settings-page${
+        activeTab === "wati-notifications"
+          ? " order-settings-page-notification-center"
+          : ""
+      }`}
+    >
       <header className="page-heading order-settings-heading">
         <div>
           <span className="eyebrow">{t("orderSettings.eyebrow")}</span>
@@ -562,6 +572,8 @@ export function OrderSettingsPage({
           <WatiNotificationSettings
             loadControls={loadWatiNotificationControls}
             setControl={setWatiNotificationControl}
+            setDeliveryControl={setWatiNotificationDeliveryControl}
+            saveRecipientPolicy={saveWatiNotificationRecipientPolicy}
           />
         ) : activeTab === "email-notifications" ? (
           <OrderEmailNotificationSettings

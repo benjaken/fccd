@@ -341,7 +341,6 @@ describe("menu styles", () => {
       orders?.children?.find((item) => item.key === "orderSettings")?.children?.map((item) => item.key),
     ).toEqual(
       expect.arrayContaining([
-        "orderWatiNotifications",
         "salePartners",
         "orderStatuses",
       ]),

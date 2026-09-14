@@ -5,6 +5,10 @@ import {
   applyDevelopNotificationMarker,
   toNotificationEmailRecipients,
 } from "../_shared/notification-test-overrides.ts";
+import {
+  loadWatiNotificationControls,
+  notificationChannelEnabled,
+} from "../_shared/wati-notification-controls.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -70,6 +74,10 @@ Deno.serve(async (request) => {
     }
 
     const admin = createClient(supabaseUrl, serviceRoleKey());
+    const controls = await loadWatiNotificationControls(admin);
+    if (!notificationChannelEnabled(controls, "daily_sales_report", "email")) {
+      return response({ sent: false, skipped: true, reason: "notification_disabled" });
+    }
     const { data: profile, error: profileError } = await admin
       .from("user_profiles")
       .select("email,user_name,role,shop_restro_legacy_id")
@@ -82,7 +90,7 @@ Deno.serve(async (request) => {
 
     const recipient = toNotificationEmailRecipients([
       Deno.env.get("DAILY_SALES_EMAIL_TO") || profile.email || authData.user.email || "",
-    ])[0]?.trim() || "";
+    ], controls.recipientPolicy)[0]?.trim() || "";
     if (!recipient) return response({ error: "recipient_email_missing" }, 400);
 
     const { data: restaurant, error: restaurantError } = await admin

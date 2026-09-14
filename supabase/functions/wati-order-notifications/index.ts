@@ -22,6 +22,8 @@ import {
 } from "../_shared/notification-test-overrides.ts";
 import {
   loadWatiNotificationControls,
+  notificationChannelEnabled,
+  type NotificationRecipientPolicy,
   watiEmergencySwitchAllows,
 } from "../_shared/wati-notification-controls.ts";
 import {
@@ -681,8 +683,9 @@ async function sendWati(
   phone: string,
   template: WatiSendTemplate,
   parameters: Array<{ name: string; value: string }>,
+  recipientPolicy?: NotificationRecipientPolicy,
 ) {
-  const destinationPhone = toNotificationWatiPhones([phone])[0] || "";
+  const destinationPhone = toNotificationWatiPhones([phone], recipientPolicy)[0] || "";
   if (!destinationPhone) {
     throw new Error("notification_recipient_allowlist_missing");
   }
@@ -715,8 +718,10 @@ async function sendEmail(
   to: string,
   subject: string,
   html: string,
+  recipientPolicy?: NotificationRecipientPolicy,
 ) {
-  const destination = toNotificationEmailRecipients([to])[0] || to;
+  const destination = toNotificationEmailRecipients([to], recipientPolicy)[0] || "";
+  if (!destination) throw new Error("notification_recipient_allowlist_missing");
   const providerResponse = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: {
@@ -932,7 +937,7 @@ Deno.serve(async (request) => {
       let emailSent = Boolean(job.email_sent_at);
       const errors: string[] = [];
 
-      if (!watiDone && !automaticWatiEnabled) {
+      if (!watiDone && (!automaticWatiEnabled || !notificationChannelEnabled(controls, template.event_key, "wati"))) {
         await admin.from("wati_order_notification_outbox").update({
           wati_skipped_at: new Date().toISOString(),
           wati_error: "wati_automatic_notifications_disabled",
@@ -948,7 +953,7 @@ Deno.serve(async (request) => {
         watiDone = true;
       } else if (!watiDone) {
         try {
-          const wati = await sendWati(phone, template, parameters);
+          const wati = await sendWati(phone, template, parameters, controls.recipientPolicy);
           await admin.from("wati_order_notification_outbox").update({
             wati_sent_at: new Date().toISOString(), wati_message_id: wati.messageId || null,
             wati_provider_response: wati.payload, wati_error: null,
@@ -964,7 +969,7 @@ Deno.serve(async (request) => {
       }
 
       const emailNotification = notification;
-      if (!emailDone && !automaticEmailEnabled) {
+      if (!emailDone && (!automaticEmailEnabled || !notificationChannelEnabled(controls, template.event_key, "email"))) {
         await admin.from("wati_order_notification_outbox").update({
           email_skipped_at: new Date().toISOString(), email_error: "email_automatic_notifications_disabled",
         }).eq("id", job.id);
@@ -985,6 +990,7 @@ Deno.serve(async (request) => {
             email,
             emailNotification.subject,
             emailNotification.html,
+            controls.recipientPolicy,
           );
           await admin.from("wati_order_notification_outbox").update({
             email_sent_at: new Date().toISOString(), email_provider_response: emailPayload, email_error: null,
@@ -1094,7 +1100,7 @@ Deno.serve(async (request) => {
         continue;
       }
 
-      if (job.channel === "whatsapp" && !automaticWatiEnabled) {
+      if (job.channel === "whatsapp" && (!automaticWatiEnabled || !notificationChannelEnabled(controls, "factory_unsent_reminder", "wati"))) {
         await admin.from("order_internal_notification_outbox").update({
           status: "skipped",
           last_error: "wati_automatic_notifications_disabled",
@@ -1103,7 +1109,7 @@ Deno.serve(async (request) => {
         }).eq("id", job.id);
         continue;
       }
-      if (job.channel === "email" && !automaticEmailEnabled) {
+      if (job.channel === "email" && (!automaticEmailEnabled || !notificationChannelEnabled(controls, "factory_unsent_reminder", "email"))) {
         await admin.from("order_internal_notification_outbox").update({
           status: "skipped",
           last_error: "email_automatic_notifications_disabled",
@@ -1122,6 +1128,7 @@ Deno.serve(async (request) => {
             job.recipient_address.trim(),
             notification.subject,
             notification.html,
+            controls.recipientPolicy,
           );
         } else {
           const phone = normalizeWhatsAppNumber(job.recipient_address);
@@ -1139,7 +1146,7 @@ Deno.serve(async (request) => {
              values.delivery_date,
              values.delivery_time,
              values.order_link,
-           ]));
+           ]), controls.recipientPolicy);
           providerPayload = wati.payload;
         }
 
@@ -1185,7 +1192,7 @@ Deno.serve(async (request) => {
 
     const driverOrdersByDate = new Map<string, UnassignedDriverReminderOrder[]>();
     for (const job of driverReminderJobs) {
-      if (job.channel === "whatsapp" && !automaticWatiEnabled) {
+      if (job.channel === "whatsapp" && (!automaticWatiEnabled || !notificationChannelEnabled(controls, "driver_assignment_reminder", "wati"))) {
         await admin.from("driver_assignment_internal_reminder_outbox").update({
           status: "skipped",
           last_error: "wati_automatic_notifications_disabled",
@@ -1194,7 +1201,7 @@ Deno.serve(async (request) => {
         }).eq("id", job.id);
         continue;
       }
-      if (job.channel === "email" && !automaticEmailEnabled) {
+      if (job.channel === "email" && (!automaticEmailEnabled || !notificationChannelEnabled(controls, "driver_assignment_reminder", "email"))) {
         await admin.from("driver_assignment_internal_reminder_outbox").update({
           status: "skipped",
           last_error: "email_automatic_notifications_disabled",
@@ -1247,6 +1254,7 @@ Deno.serve(async (request) => {
             job.recipient_address.trim(),
             notification.subject,
             notification.html,
+            controls.recipientPolicy,
           );
         } else {
           const phone = normalizeWhatsAppNumber(job.recipient_address);
@@ -1264,7 +1272,7 @@ Deno.serve(async (request) => {
           const wati = await sendWati(phone, template, [
             { name: "date", value: formatHongKongDate(`${job.reminder_date}T00:00:00+08:00`) },
             { name: "count", value: String(reminderOrders.length) },
-          ]);
+          ], controls.recipientPolicy);
           providerPayload = wati.payload;
         }
         await admin.from("driver_assignment_internal_reminder_outbox").update({
@@ -1368,7 +1376,7 @@ Deno.serve(async (request) => {
         continue;
       }
 
-      if (job.channel === "whatsapp" && !automaticWatiEnabled) {
+      if (job.channel === "whatsapp" && (!automaticWatiEnabled || !notificationChannelEnabled(controls, "order_reconciliation", "wati"))) {
         await admin.from("order_reconciliation_alert_outbox").update({
           status: "skipped",
           last_error: "wati_automatic_notifications_disabled",
@@ -1377,7 +1385,7 @@ Deno.serve(async (request) => {
         }).eq("id", job.id);
         continue;
       }
-      if (job.channel === "email" && !automaticEmailEnabled) {
+      if (job.channel === "email" && (!automaticEmailEnabled || !notificationChannelEnabled(controls, "order_reconciliation", "email"))) {
         await admin.from("order_reconciliation_alert_outbox").update({
           status: "skipped",
           last_error: "email_automatic_notifications_disabled",
@@ -1400,6 +1408,7 @@ Deno.serve(async (request) => {
             job.recipient_address.trim(),
             content.subject,
             content.html,
+            controls.recipientPolicy,
           );
         } else {
           const phone = normalizeWhatsAppNumber(job.recipient_address);
@@ -1439,7 +1448,7 @@ Deno.serve(async (request) => {
                   job.recipient_name,
                   issueText,
                   link,
-                ]));
+                ]), controls.recipientPolicy);
           providerPayload = wati.payload;
         }
         await admin.from("order_reconciliation_alert_outbox").update({
