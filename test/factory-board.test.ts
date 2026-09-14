@@ -102,8 +102,14 @@ describe("factory board helpers", () => {
       orderNumber: "R - 202609 - 4",
       customerName: "TKO Shop",
       shopRequestId: "request-1",
+      orderReceivedAt: base.createdAt,
     }));
     expect(hongKongDateKey(result[0]?.deliveryAt)).toBe("2026-09-07");
+    expect(isNewFactoryOrder(
+      result[0]?.orderReceivedAt,
+      new Date("2026-09-06T02:00:00Z"),
+      result[0]?.deliveryAt,
+    )).toBe(true);
   });
 
   it("uses the database product label lines for factory printing", () => {

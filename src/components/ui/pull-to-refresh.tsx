@@ -27,8 +27,12 @@ function shouldIgnorePullStart(target: EventTarget | null) {
   return target instanceof Element && Boolean(target.closest(PULL_IGNORE_SELECTOR));
 }
 
-function verticalScrollTarget(node: HTMLElement) {
-  let candidate: HTMLElement | null = node;
+function verticalScrollTarget(node: HTMLElement, eventTarget: EventTarget | null) {
+  let candidate = eventTarget instanceof HTMLElement
+    ? eventTarget
+    : eventTarget instanceof Element
+      ? eventTarget.parentElement
+      : node;
   while (candidate) {
     const { overflowY } = window.getComputedStyle(candidate);
     if (
@@ -94,7 +98,7 @@ export function PullToRefresh({
     if (!node || !enabled) return;
 
     const onStart = (event: TouchEvent) => {
-      const scrollTarget = verticalScrollTarget(node);
+      const scrollTarget = verticalScrollTarget(node, event.target);
       if (
         busy
         || event.touches.length !== 1

@@ -1,5 +1,7 @@
 import { useState } from "react";
+import { ArrowLeft } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router-dom";
 
 import { FactoryQzTrayStatus } from "@/components/FactoryQzTray";
 import { FactoryBrandLogo } from "@/components/FactoryBrandLogo";
@@ -13,8 +15,14 @@ export function FactoryProductionCalendarPage({
   qzClient?: QzTrayClient;
 }) {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const qz = useQzTray({ client: qzClient });
   const [qzPanelOpen, setQzPanelOpen] = useState(false);
+
+  const returnToFactoryBoard = () => {
+    window.close();
+    if (!window.closed) navigate("/factory");
+  };
 
   return (
     <main className="factory-board factory-production-calendar-page">
@@ -44,12 +52,11 @@ export function FactoryProductionCalendarPage({
           <Button
             type="button"
             variant="outline"
-            className="factory-board-multi-day"
-            onClick={() =>
-              window.open("/factory", "_blank", "noopener,noreferrer")
-            }
+            className="factory-board-multi-day factory-board-return"
+            onClick={returnToFactoryBoard}
           >
-            {t("factoryBoard.multiDayMenu")}
+            <ArrowLeft aria-hidden="true" />
+            {t("factoryBoard.backToFactory")}
           </Button>
         </div>
       </header>
