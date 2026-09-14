@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { FactoryProductionCalendarPage } from "@/components/FactoryProductionCalendarPage";
 import type { QzTrayClient } from "@/lib/qz-tray";
+import { readAppStyles } from "./read-app-styles";
 
 const qzClient: QzTrayClient = {
   connect: vi.fn(async () => {}),
@@ -15,6 +16,17 @@ const qzClient: QzTrayClient = {
 };
 
 describe("FactoryProductionCalendarPage", () => {
+  it("keeps the production calendar vertically scrollable when a busy month exceeds the viewport", () => {
+    const stylesheet = readAppStyles();
+    const pageRule = stylesheet.match(
+      /\.factory-board\.factory-production-calendar-page\s*\{([^}]+)\}/,
+    );
+
+    expect(pageRule?.[1]).toContain("height: 100dvh");
+    expect(pageRule?.[1]).toContain("overflow-x: hidden");
+    expect(pageRule?.[1]).toContain("overflow-y: auto");
+  });
+
   it("returns from the production calendar to the factory board", async () => {
     const user = userEvent.setup();
     const close = vi.spyOn(window, "close").mockImplementation(() => {});
