@@ -189,6 +189,45 @@ export function isMenuInformationRequest(value: string) {
   return /(?:飯盒|便當|便当|餐盒|meal\s*box|lunch\s*box|lunchbox|派對小食|派对小食|party\s*food)/i.test(text) && asksToBrowse;
 }
 
+const CUSTOMER_SERVICE_BRAND_IDENTITIES = [
+  {
+    name: "HK Lunch Box",
+    pattern: /(?:hk\s*lunch\s*box|hklunchbox)/i,
+  },
+  {
+    name: "HK Party Food",
+    pattern: /(?:hk\s*party\s*food|hkpartyfood)/i,
+  },
+  {
+    name: "Food Channels Express",
+    pattern: /(?:food\s*channels?\s*express|fc\s*express)/i,
+  },
+  {
+    name: "Food Channels Kitchen",
+    pattern:
+      /(?:food\s*channels?\s*kitchen|fc\s*kitchen|桂花[‧·・．.]?八月)/i,
+  },
+  {
+    name: "Food Channels Cuisine",
+    pattern: /(?:food\s*channels?\s*cuisine|fc\s*cuisine|福滿樓|福满楼)/i,
+  },
+  {
+    name: "Food Channels Catering",
+    pattern: /(?:food\s*channels?\s*catering|fc\s*catering|\bfcc\b)/i,
+  },
+] as const;
+
+export function customerServiceBrandIdentityName(value: string) {
+  const text = value.trim();
+  const asksForIdentity =
+    /(?:請問|请问).{0,8}(?:係咪|係唔係|是否|是不是|是)|(?:你哋|你地|你們|你们|呢度|這裡|这里|這邊|这边).{0,8}(?:係咪|係唔係|係|是否|是不是|是)|(?:係咪|係唔係|是否|是不是)|\b(?:is\s+(?:this|it)|are\s+you)\b/i
+      .test(text);
+  if (!asksForIdentity) return null;
+  return CUSTOMER_SERVICE_BRAND_IDENTITIES.find(({ pattern }) =>
+    pattern.test(text)
+  )?.name ?? null;
+}
+
 export function isDeliveryAvailabilityQuestion(text: string) {
   const body = text.trim();
   if (!body || !extractInquirySlots(body).eventDate) return false;

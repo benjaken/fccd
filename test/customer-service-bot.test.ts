@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import { handleCustomerServiceTurn } from "../supabase/functions/_shared/customer-service-bot.ts";
 import {
   classifyCustomerServiceMessage,
+  customerServiceBrandIdentityName,
   customerServiceMenuFaqQuery,
   explicitCustomerServiceOrderNumber,
   extractOrderNumber,
@@ -190,6 +191,23 @@ describe("customer-service intents", () => {
       intent: "lookup_order",
       requestedFields: ["delivery_date"],
     });
+  });
+
+  it.each([
+    ["請問是HK Party Food嗎？", "HK Party Food"],
+    ["你哋係 HK Lunch Box？", "HK Lunch Box"],
+    ["請問你們是不是 Food Channels Express？", "Food Channels Express"],
+    ["Is this Food Channels Kitchen?", "Food Channels Kitchen"],
+    ["呢度係福滿樓嗎？", "Food Channels Cuisine"],
+    ["請問是 FC Catering 嗎？", "Food Channels Catering"],
+  ])("recognizes brand identity question: %s", (text, brandName) => {
+    expect(customerServiceBrandIdentityName(text)).toBe(brandName);
+  });
+
+  it("does not treat a branded menu request as a brand identity question", () => {
+    expect(
+      customerServiceBrandIdentityName("請問 HK Party Food 有冇餐牌嗎？"),
+    ).toBeNull();
   });
 
   it("extracts inquiry slots and shipping FAQ", () => {
@@ -667,6 +685,25 @@ describe("customer-service FAQ routing priority", () => {
 });
 
 describe("customer-service bot turns", () => {
+  it("confirms an explicitly named Food Channels brand", async () => {
+    const searchFaqs = vi.fn().mockResolvedValue([]);
+    const classify = vi.fn();
+    const turn = await handleCustomerServiceTurn({
+      phone: conversation.phone_normalized,
+      text: "請問是HK Party Food嗎？",
+      conversation,
+      deps: deps({ searchFaqs }),
+      classify,
+    });
+
+    expect(turn.reply).toBe(
+      "你好，係呀，我哋係 HK Party Food，請問有咩可以幫到你？",
+    );
+    expect(turn.intentKey).toBe("brand_identity");
+    expect(searchFaqs).not.toHaveBeenCalled();
+    expect(classify).not.toHaveBeenCalled();
+  });
+
   it("does not tell a general new catering customer that no order was found", async () => {
     const turn = await handleCustomerServiceTurn({
       phone: conversation.phone_normalized,

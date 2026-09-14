@@ -1,5 +1,6 @@
 import {
   classifyCustomerServiceMessage,
+  customerServiceBrandIdentityName,
   customerServiceMenuFaqQuery,
   extractInquirySlots,
   extractRequestedOrderFields,
@@ -1370,6 +1371,20 @@ export async function handleCustomerServiceTurn({
       wroteInquiry: false,
       notified: false,
       usedModel: false,
+    };
+  }
+
+  const brandIdentityName = customerServiceBrandIdentityName(text);
+  if (brandIdentityName) {
+    return {
+      reply: `你好，係呀，我哋係 ${brandIdentityName}，請問有咩可以幫到你？`,
+      conversation,
+      wroteInquiry: false,
+      notified: false,
+      usedModel: false,
+      intentKey: "brand_identity",
+      toolKeys: [],
+      failureReason: null,
     };
   }
 

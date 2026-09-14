@@ -10,11 +10,13 @@ import {
   type CustomerServiceIntentConfig,
 } from "../_shared/customer-service-ai.ts";
 import {
-  sanitizeCustomerServiceContextText,
+  customerServiceContextMessageRow,
+  customerServiceContextSince,
   sanitizeCustomerServiceRecentMessages,
   type CustomerServiceRecentMessage,
 } from "../_shared/customer-service-context.ts";
 import {
+  customerServiceCatalogItemLinks,
   customerServiceCatalogSearchAnchor,
   mappedCustomerServiceCatalogAssets,
   rankCustomerServiceCatalog,
@@ -310,7 +312,7 @@ function createCustomerServiceClassifier({
         message: text,
         conversationState,
         pendingRequest: pendingRequest ?? "",
-        recentMessages: recentMessages.slice(-(activePolicy?.contextWindow ?? 8)),
+        recentMessages,
         workflowInstructions: activePolicy?.instructions ?? "",
         intents,
         tiers,
@@ -586,8 +588,43 @@ async function failInboundBatch(
   return data === true;
 }
 
+const CUSTOMER_SERVICE_CONTEXT_PAGE_SIZE = 1_000;
+
+async function loadCustomerServiceContextMessages(
+  admin: AdminClient,
+  phone: string,
+) {
+  const rows: Array<{
+    role: CustomerServiceRecentMessage["role"];
+    message_text: string;
+    created_at: string;
+  }> = [];
+  const since = customerServiceContextSince();
+  for (let from = 0;; from += CUSTOMER_SERVICE_CONTEXT_PAGE_SIZE) {
+    const { data, error } = await admin
+      .from("customer_service_messages")
+      .select("role,message_text,created_at")
+      .eq("phone_normalized", phone)
+      .eq("environment", deploymentEnvironment())
+      .gte("created_at", since)
+      .order("created_at", { ascending: true })
+      .range(from, from + CUSTOMER_SERVICE_CONTEXT_PAGE_SIZE - 1);
+    if (error) throw error;
+    const page = (data ?? []) as typeof rows;
+    rows.push(...page);
+    if (page.length < CUSTOMER_SERVICE_CONTEXT_PAGE_SIZE) break;
+  }
+  return sanitizeCustomerServiceRecentMessages(
+    rows.map((row) => ({
+      role: row.role,
+      text: row.message_text,
+      occurredAt: row.created_at,
+    })),
+  );
+}
+
 async function loadConversation(admin: AdminClient, phone: string) {
-  const [{ data, error }, { data: messageRows, error: messageError }] = await Promise.all([
+  const [{ data, error }, recentMessages] = await Promise.all([
     admin
       .from("customer_service_conversations")
       .select(
@@ -595,15 +632,9 @@ async function loadConversation(admin: AdminClient, phone: string) {
       )
       .eq("phone_normalized", phone)
       .maybeSingle(),
-    admin
-      .from("customer_service_messages")
-      .select("role,message_text")
-      .eq("phone_normalized", phone)
-      .order("created_at", { ascending: false })
-      .limit(8),
+    loadCustomerServiceContextMessages(admin, phone),
   ]);
   if (error) throw error;
-  if (messageError) throw messageError;
   return {
     phone_normalized: phone,
     state: (data?.state ?? "identifying") as
@@ -624,11 +655,7 @@ async function loadConversation(admin: AdminClient, phone: string) {
     workflow_slots: data?.workflow_slots ?? {},
     workflow_version: Number(data?.workflow_version ?? 1),
     suspended_goals: Array.isArray(data?.suspended_goals) ? data.suspended_goals : [],
-    recent_messages: sanitizeCustomerServiceRecentMessages(
-      ((messageRows ?? []) as Array<{ role: CustomerServiceRecentMessage["role"]; message_text: string }>)
-        .reverse()
-        .map((row) => ({ role: row.role, text: row.message_text })),
-    ),
+    recent_messages: recentMessages,
     identity_verified_at: data?.identity_verified_at ?? null,
     identity_verification_method: data?.identity_verification_method ?? null,
     identity_verification_order_id: data?.identity_verification_order_id ?? null,
@@ -828,30 +855,55 @@ async function recordCustomerServiceMessages(
     dialogAction?: string;
   },
 ) {
-  const rows = [{
-    source_message_id: input.providerMessageId,
-    phone_normalized: input.phone,
+  const rows = [customerServiceContextMessageRow({
+    sourceMessageId: input.providerMessageId,
+    phone: input.phone,
     role: "customer",
-    message_text: sanitizeCustomerServiceContextText(input.question),
-    intent_key: input.intent ?? null,
-    dialog_action: input.dialogAction ?? null,
+    text: input.question,
+    intentKey: input.intent,
+    dialogAction: input.dialogAction,
     environment: deploymentEnvironment(),
-  }];
+  })].filter((row) => row !== null);
   if (input.answer) {
-    rows.push({
-      source_message_id: `${input.providerMessageId}:reply`,
-      phone_normalized: input.phone,
+    const answerRow = customerServiceContextMessageRow({
+      sourceMessageId: `${input.providerMessageId}:reply`,
+      phone: input.phone,
       role: "assistant",
-      message_text: sanitizeCustomerServiceContextText(input.answer),
-      intent_key: input.intent ?? null,
-      dialog_action: input.dialogAction ?? null,
+      text: input.answer,
+      intentKey: input.intent,
+      dialogAction: input.dialogAction,
       environment: deploymentEnvironment(),
     });
+    if (answerRow) rows.push(answerRow);
   }
+  if (!rows.length) return;
   const { error } = await admin.from("customer_service_messages").upsert(rows, {
     onConflict: "source_message_id,role",
   });
   if (error) console.error("customer-service context audit failed", error.message.slice(0, 300));
+}
+
+async function recordHumanOperatorContextMessage(
+  admin: AdminClient,
+  event: WatiInboundEvent,
+) {
+  const row = customerServiceContextMessageRow({
+    sourceMessageId: event.id,
+    phone: event.waId,
+    role: "human",
+    text: event.text,
+    environment: deploymentEnvironment(),
+  });
+  if (!row) return;
+  const { error } = await admin.from("customer_service_messages").upsert(row, {
+    onConflict: "source_message_id,role",
+  });
+  if (error) {
+    console.error(
+      "customer-service human context audit failed",
+      error.message.slice(0, 300),
+    );
+  }
 }
 
 type ActiveCustomerServiceConfig = {
@@ -1522,7 +1574,7 @@ function createBotDeps(
       const [membersResult, mappingsResult] = await Promise.all([
         admin
           .from("package_products")
-          .select("package_id,quantity,products(name,chinese_name)")
+          .select("package_id,quantity,products(name,chinese_name,sku)")
           .in("package_id", packageIds)
           .order("bubble_created_at", { ascending: true, nullsFirst: false })
           .limit(200),
@@ -1540,16 +1592,28 @@ function createBotDeps(
       if (membersResult.error) throw membersResult.error;
       if (mappingsResult.error) throw mappingsResult.error;
 
-      const membersByPackage = new Map<string, string[]>();
+      const membersByPackage = new Map<
+        string,
+        Array<{ name: string; sku: string | null }>
+      >();
       for (const row of membersResult.data ?? []) {
         const product = row.products && !Array.isArray(row.products)
-          ? row.products as { name?: string | null; chinese_name?: string | null }
+          ? row.products as {
+            name?: string | null;
+            chinese_name?: string | null;
+            sku?: string | null;
+          }
           : null;
         const name = String(product?.chinese_name || product?.name || "").trim();
         if (!name) continue;
         const packageId = String(row.package_id);
         const current = membersByPackage.get(packageId) ?? [];
-        if (!current.includes(name)) current.push(name);
+        if (!current.some((item) => item.name === name)) {
+          current.push({
+            name,
+            sku: typeof product?.sku === "string" ? product.sku : null,
+          });
+        }
         membersByPackage.set(packageId, current);
       }
 
@@ -1621,11 +1685,17 @@ function createBotDeps(
           match.channelName,
           mappings,
           drafts,
+          match.sku,
         );
+        const members = membersByPackage.get(match.id) ?? [];
         return {
           ...match,
           ...assets,
-          items: membersByPackage.get(match.id) ?? [],
+          items: members.map((item) => item.name),
+          itemLinks: customerServiceCatalogItemLinks(
+            members,
+            match.channelName,
+          ),
         };
       });
     },
@@ -2229,6 +2299,7 @@ Deno.serve(async (request) => {
     }
     if (isHumanOperatorMessage(event)) {
       const existingConversation = await loadConversation(admin, event.waId);
+      await recordHumanOperatorContextMessage(admin, event);
       await queueInternalHandoff(admin, {
         phone: event.waId,
         quoteId: null,
@@ -2246,7 +2317,10 @@ Deno.serve(async (request) => {
         workflow_slots: {},
         workflow_version: 1,
         suspended_goals: [],
-        recent_messages: [],
+        recent_messages: sanitizeCustomerServiceRecentMessages([
+          ...(existingConversation.recent_messages ?? []),
+          { role: "human", text: event.text },
+        ]),
         identity_verified_at: null,
         identity_verification_method: null,
         identity_verification_order_id: null,

@@ -154,7 +154,7 @@ describe("customer-service grounded AI", () => {
       pendingRequest: "修改 B-1555 送貨日期",
       recentMessages: [
         { role: "customer", text: "我的電郵 test@example.com，地址：九龍某道 18 號" },
-        { role: "assistant", text: "已選擇訂單 B-1555" },
+        { role: "human", text: "同事已選擇訂單 B-1555" },
       ],
       intents: [{
         intentKey: "handoff_order",
@@ -180,6 +180,8 @@ describe("customer-service grounded AI", () => {
     });
     expect(requestBody.messages[1].content).not.toContain("test@example.com");
     expect(requestBody.messages[1].content).toContain("[電郵已隱藏]");
+    expect(requestBody.messages[1].content).toContain('"role":"human"');
+    expect(requestBody.messages[0].content).toContain("role human");
     expect(requestBody.messages[0].content).toContain("dialogAction");
   });
 

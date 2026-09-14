@@ -30,6 +30,20 @@ describe("customer service spam filter", () => {
     }
   });
 
+  it("silently filters a supplier introduction with an attached product catalog", () => {
+    const result = assessCustomerServiceAdvertisement(
+      "Hi.你好呀。先介紹一下，隆順環球海產。我姓黃, 希望有機會認識吓我哋公司產品。附上公司產品目錄，有咩適合可以隨時查詢。感謝☺️",
+    );
+
+    expect(result).toMatchObject({
+      isAdvertisement: true,
+      reasons: expect.arrayContaining([
+        "business_solicitation",
+        "supplier_self_promotion",
+      ]),
+    });
+  });
+
   it("does not classify customer catering questions or a media URL as advertising", () => {
     expect(assessCustomerServiceAdvertisement("我想訂30人到會，有冇優惠？").isAdvertisement)
       .toBe(false);
@@ -38,6 +52,9 @@ describe("customer service spam filter", () => {
     ).isAdvertisement).toBe(false);
     expect(assessCustomerServiceAdvertisement(
       "老闆，請問我需不需要提供送貨地址？",
+    ).isAdvertisement).toBe(false);
+    expect(assessCustomerServiceAdvertisement(
+      "我哋公司想訂30人到會，附上活動資料，請提供產品目錄。",
     ).isAdvertisement).toBe(false);
   });
 

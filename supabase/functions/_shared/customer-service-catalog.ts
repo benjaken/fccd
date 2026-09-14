@@ -12,6 +12,17 @@ export type CustomerServiceCatalogHit = CustomerServiceCatalogCandidate & {
   imageUrl: string | null;
   productUrl: string | null;
   items: string[];
+  itemLinks?: CustomerServiceCatalogItemLink[];
+};
+
+export type CustomerServiceCatalogItemCandidate = {
+  name: string;
+  sku: string | null;
+};
+
+export type CustomerServiceCatalogItemLink = {
+  name: string;
+  productUrl: string;
 };
 
 export type CustomerServiceCatalogShopifyMapping = {
@@ -87,15 +98,21 @@ export function customerServiceCatalogQuery(
   text: string,
   recentMessages: CustomerServiceRecentMessage[] = [],
 ) {
-  if (isCustomerServiceCatalogRequest(text)) return text.trim();
+  if (
+    isCustomerServiceCatalogRequest(text) &&
+    Boolean(customerServiceCatalogSearchAnchor(text) || peopleRange(text))
+  ) {
+    return text.trim();
+  }
   if (!/參考|参考|詳情|详情|菜式|圖片|图片|相片|照片|未有訂單|未有订单/.test(text)) {
     return "";
   }
-  const recentCustomerText = recentMessages
-    .filter((message) => message.role === "customer")
-    .slice(-3)
+  const recentConversationText = recentMessages
+    .filter((message) =>
+      message.role === "customer" || message.role === "human"
+    )
     .map((message) => message.text);
-  const contextualQuery = [...recentCustomerText, text.trim()]
+  const contextualQuery = [...recentConversationText, text.trim()]
     .filter(Boolean)
     .join(" ");
   return isCustomerServiceCatalogRequest(contextualQuery)
@@ -188,12 +205,57 @@ function normalizedChannelName(value: string | null) {
   return value?.trim().toLowerCase() ?? "";
 }
 
+const CUSTOMER_SERVICE_CATALOG_BRAND_DOMAINS = [
+  { pattern: /(?:hk\s*)?lunch\s*box|hklunchbox/, domain: "hklunchbox.com" },
+  {
+    pattern: /(?:hk\s*)?party\s*food|hkpartyfood/,
+    domain: "www.hkpartyfood.com",
+  },
+  { pattern: /express/, domain: "www.foodchannels-express.com" },
+  { pattern: /kitchen/, domain: "foodchannels-kitchen.com" },
+  { pattern: /cuisine|福滿樓|福满楼/, domain: "www.foodchannels-cuisine.com" },
+  { pattern: /catering/, domain: "foodchannels-catering.com" },
+] as const;
+
+export function customerServiceCatalogProductUrl(
+  sku: string | null,
+  channelName: string | null,
+) {
+  const normalizedSku = sku?.trim().toLowerCase() ?? "";
+  if (!normalizedSku) return null;
+  const normalizedChannel = normalizedChannelName(channelName);
+  const domain = CUSTOMER_SERVICE_CATALOG_BRAND_DOMAINS.find(({ pattern }) =>
+    pattern.test(normalizedChannel)
+  )?.domain;
+  return domain
+    ? `https://${domain}/products/${encodeURIComponent(normalizedSku)}`
+    : null;
+}
+
+export function customerServiceCatalogItemLinks(
+  items: CustomerServiceCatalogItemCandidate[],
+  channelName: string | null,
+  limit = 8,
+) {
+  if (limit <= 0) return [];
+  const seen = new Set<string>();
+  return items.slice(0, limit).flatMap((item) => {
+    const name = item.name.trim();
+    const productUrl = customerServiceCatalogProductUrl(item.sku, channelName);
+    if (!name || !productUrl || seen.has(name)) return [];
+    seen.add(name);
+    return [{ name, productUrl }];
+  });
+}
+
 export function mappedCustomerServiceCatalogAssets(
   packageId: string,
   channelName: string | null,
   mappings: CustomerServiceCatalogShopifyMapping[],
   drafts: CustomerServiceCatalogShopifyDraft[],
+  sku: string | null = null,
 ) {
+  const skuProductUrl = customerServiceCatalogProductUrl(sku, channelName);
   const packageMappings = mappings.filter(
     (mapping) => mapping.internalPackageId === packageId,
   );
@@ -203,7 +265,7 @@ export function mappedCustomerServiceCatalogAssets(
       normalizedChannel &&
       normalizedChannelName(item.channelName) === normalizedChannel,
   ) ?? (packageMappings.length === 1 ? packageMappings[0] : undefined);
-  if (!mapping) return { imageUrl: null, productUrl: null };
+  if (!mapping) return { imageUrl: null, productUrl: skuProductUrl };
 
   const draft = drafts.find(
     (item) =>
@@ -213,7 +275,7 @@ export function mappedCustomerServiceCatalogAssets(
   const shopDomain = mapping.shopDomain.trim();
   const handle = draft?.handle.trim() ?? "";
   if (!draft || !shopDomain || !handle) {
-    return { imageUrl: null, productUrl: null };
+    return { imageUrl: null, productUrl: skuProductUrl };
   }
 
   const publicDomain = shopDomain === "foodchannels-catering.myshopify.com"
@@ -231,8 +293,14 @@ export function customerServiceCatalogReply(hit: CustomerServiceCatalogHit) {
     lines.push(`參考價：HK$${hit.price.toLocaleString("en-HK")}`);
   }
   if (hit.items.length) {
+    const itemLinks = new Map(
+      (hit.itemLinks ?? []).map((item) => [item.name, item.productUrl]),
+    );
     lines.push("部分菜式／選擇包括：");
-    lines.push(...hit.items.slice(0, 8).map((item) => `• ${item}`));
+    lines.push(...hit.items.slice(0, 8).map((item) => {
+      const productUrl = itemLinks.get(item);
+      return productUrl ? `• ${item}：${productUrl}` : `• ${item}`;
+    }));
     if (hit.items.length > 8) {
       lines.push(`• 另有 ${hit.items.length - 8} 款選擇`);
     }
