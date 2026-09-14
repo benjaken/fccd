@@ -16,8 +16,11 @@ import {
 } from "../_shared/customer-service-context.ts";
 import {
   customerServiceCatalogSearchAnchor,
+  mappedCustomerServiceCatalogAssets,
   rankCustomerServiceCatalog,
   type CustomerServiceCatalogCandidate,
+  type CustomerServiceCatalogShopifyDraft,
+  type CustomerServiceCatalogShopifyMapping,
 } from "../_shared/customer-service-catalog.ts";
 import {
   assessCustomerServiceAdvertisement,
@@ -1462,28 +1465,26 @@ function createBotDeps(
       if (!matches.length) return [];
 
       const packageIds = matches.map((match) => match.id);
-      const handles = matches
-        .map((match) => match.sku?.toLowerCase())
-        .filter((handle): handle is string => Boolean(handle));
-      const [membersResult, draftsResult] = await Promise.all([
+      const [membersResult, mappingsResult] = await Promise.all([
         admin
           .from("package_products")
           .select("package_id,quantity,products(name,chinese_name)")
           .in("package_id", packageIds)
           .order("bubble_created_at", { ascending: true, nullsFirst: false })
           .limit(200),
-        handles.length
+        packageIds.length
           ? admin
-            .from("shopify_catalog_drafts")
+            .from("shopify_catalog_mappings")
             .select(
-              "handle,featured_image_url,shopify_stores(shop_domain,channels(name))",
+              "store_id,shopify_product_id,internal_package_id,shopify_stores(shop_domain,channels(name))",
             )
-            .in("handle", handles)
-            .eq("shopify_status", "active")
+            .eq("resource_type", "package")
+            .eq("is_active", true)
+            .in("internal_package_id", packageIds)
           : Promise.resolve({ data: [], error: null }),
       ]);
       if (membersResult.error) throw membersResult.error;
-      if (draftsResult.error) throw draftsResult.error;
+      if (mappingsResult.error) throw mappingsResult.error;
 
       const membersByPackage = new Map<string, string[]>();
       for (const row of membersResult.data ?? []) {
@@ -1498,31 +1499,78 @@ function createBotDeps(
         membersByPackage.set(packageId, current);
       }
 
-      const drafts = (draftsResult.data ?? []) as Array<{
-        handle?: string | null;
-        featured_image_url?: string | null;
-        shopify_stores?: {
-          shop_domain?: string | null;
-          channels?: { name?: string | null } | null;
-        } | null;
-      }>;
+      const mappings: CustomerServiceCatalogShopifyMapping[] =
+        ((mappingsResult.data ?? []) as Array<{
+          store_id?: string | null;
+          shopify_product_id?: number | string | null;
+          internal_package_id?: string | null;
+          shopify_stores?: {
+            shop_domain?: string | null;
+            channels?: { name?: string | null } | null;
+          } | null;
+        }>).flatMap((row) => {
+          const storeId = row.store_id?.trim() ?? "";
+          const internalPackageId = row.internal_package_id?.trim() ?? "";
+          const shopifyProductId = row.shopify_product_id === null ||
+              row.shopify_product_id === undefined
+            ? ""
+            : String(row.shopify_product_id);
+          const shopDomain = row.shopify_stores?.shop_domain?.trim() ?? "";
+          if (!storeId || !internalPackageId || !shopifyProductId || !shopDomain) {
+            return [];
+          }
+          return [{
+            storeId,
+            internalPackageId,
+            shopifyProductId,
+            shopDomain,
+            channelName: row.shopify_stores?.channels?.name ?? null,
+          }];
+        });
+      const shopifyProductIds = [...new Set(
+        mappings.map((mapping) => mapping.shopifyProductId),
+      )];
+      const { data: draftRows, error: draftsError } = shopifyProductIds.length
+        ? await admin
+          .from("shopify_catalog_drafts")
+          .select("store_id,shopify_product_id,handle,featured_image_url")
+          .in("shopify_product_id", shopifyProductIds)
+          .eq("shopify_status", "active")
+        : { data: [], error: null };
+      if (draftsError) throw draftsError;
+
+      const drafts: CustomerServiceCatalogShopifyDraft[] =
+        ((draftRows ?? []) as Array<{
+          store_id?: string | null;
+          shopify_product_id?: number | string | null;
+          handle?: string | null;
+          featured_image_url?: string | null;
+        }>).flatMap((row) => {
+          const storeId = row.store_id?.trim() ?? "";
+          const shopifyProductId = row.shopify_product_id === null ||
+              row.shopify_product_id === undefined
+            ? ""
+            : String(row.shopify_product_id);
+          const handle = row.handle?.trim() ?? "";
+          if (!storeId || !shopifyProductId || !handle) return [];
+          return [{
+            storeId,
+            shopifyProductId,
+            handle,
+            imageUrl: row.featured_image_url ?? null,
+          }];
+        });
+
       return matches.map((match) => {
-        const handle = match.sku?.toLowerCase() ?? "";
-        const matchingDrafts = drafts.filter((draft) => draft.handle === handle);
-        const draft = matchingDrafts.find(
-          (item) =>
-            item.shopify_stores?.channels?.name === match.channelName,
-        ) ?? matchingDrafts[0];
-        const shopDomain = draft?.shopify_stores?.shop_domain?.trim() ?? "";
-        const publicDomain = shopDomain === "foodchannels-catering.myshopify.com"
-          ? "foodchannels-catering.com"
-          : shopDomain;
+        const assets = mappedCustomerServiceCatalogAssets(
+          match.id,
+          match.channelName,
+          mappings,
+          drafts,
+        );
         return {
           ...match,
-          imageUrl: draft?.featured_image_url?.trim() || null,
-          productUrl: publicDomain && handle
-            ? `https://${publicDomain}/products/${encodeURIComponent(handle)}`
-            : null,
+          ...assets,
           items: membersByPackage.get(match.id) ?? [],
         };
       });

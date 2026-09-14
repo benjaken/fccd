@@ -14,6 +14,21 @@ export type CustomerServiceCatalogHit = CustomerServiceCatalogCandidate & {
   items: string[];
 };
 
+export type CustomerServiceCatalogShopifyMapping = {
+  internalPackageId: string;
+  storeId: string;
+  shopifyProductId: string;
+  shopDomain: string;
+  channelName: string | null;
+};
+
+export type CustomerServiceCatalogShopifyDraft = {
+  storeId: string;
+  shopifyProductId: string;
+  handle: string;
+  imageUrl: string | null;
+};
+
 const CHINESE_DIGITS: Record<string, number> = {
   零: 0,
   一: 1,
@@ -167,6 +182,47 @@ export function rankCustomerServiceCatalog(
     .filter(({ score }) => score >= 12)
     .sort((left, right) => right.score - left.score)
     .map(({ candidate }) => candidate);
+}
+
+function normalizedChannelName(value: string | null) {
+  return value?.trim().toLowerCase() ?? "";
+}
+
+export function mappedCustomerServiceCatalogAssets(
+  packageId: string,
+  channelName: string | null,
+  mappings: CustomerServiceCatalogShopifyMapping[],
+  drafts: CustomerServiceCatalogShopifyDraft[],
+) {
+  const packageMappings = mappings.filter(
+    (mapping) => mapping.internalPackageId === packageId,
+  );
+  const normalizedChannel = normalizedChannelName(channelName);
+  const mapping = packageMappings.find(
+    (item) =>
+      normalizedChannel &&
+      normalizedChannelName(item.channelName) === normalizedChannel,
+  ) ?? (packageMappings.length === 1 ? packageMappings[0] : undefined);
+  if (!mapping) return { imageUrl: null, productUrl: null };
+
+  const draft = drafts.find(
+    (item) =>
+      item.storeId === mapping.storeId &&
+      item.shopifyProductId === mapping.shopifyProductId,
+  );
+  const shopDomain = mapping.shopDomain.trim();
+  const handle = draft?.handle.trim() ?? "";
+  if (!draft || !shopDomain || !handle) {
+    return { imageUrl: null, productUrl: null };
+  }
+
+  const publicDomain = shopDomain === "foodchannels-catering.myshopify.com"
+    ? "foodchannels-catering.com"
+    : shopDomain;
+  return {
+    imageUrl: draft.imageUrl?.trim() || null,
+    productUrl: `https://${publicDomain}/products/${encodeURIComponent(handle)}`,
+  };
 }
 
 export function customerServiceCatalogReply(hit: CustomerServiceCatalogHit) {
