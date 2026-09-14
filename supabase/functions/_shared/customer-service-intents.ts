@@ -117,6 +117,9 @@ export function emptyInquirySlots(): InquirySlots {
 export function extractInquirySlots(text: string): InquirySlots {
   const iso = text.match(/\b(20\d{2})[-/.](\d{1,2})[-/.](\d{1,2})\b/);
   const md = text.match(/\b(\d{1,2})\s*月\s*(\d{1,2})\s*日/);
+  const dmy = text.match(
+    /(?:^|\D)(\d{1,2})\s*[/.]\s*(\d{1,2})(?:\s*[/.]\s*(20\d{2}))?(?!\d)/,
+  );
   const headcount = text.match(/(\d{1,4})\s*(人|位|頭)/);
   const budget = text.match(/(?:預算|budget)\s*[為是:：]?\s*\$?\s*(\d{2,6})/i)
     || text.match(/\$\s*(\d{2,6})/);
@@ -125,7 +128,9 @@ export function extractInquirySlots(text: string): InquirySlots {
       ? `${iso[1]}-${iso[2].padStart(2, "0")}-${iso[3].padStart(2, "0")}`
       : md
         ? `${new Date().getFullYear()}-${md[1].padStart(2, "0")}-${md[2].padStart(2, "0")}`
-        : "",
+        : dmy
+          ? `${dmy[3] || new Date().getFullYear()}-${dmy[2].padStart(2, "0")}-${dmy[1].padStart(2, "0")}`
+          : "",
     headcount: headcount?.[1] ?? "",
     budget: budget?.[1] ? `HK$${budget[1]}` : "",
     dietary: /素|走蒜|走蔥|忌口/.test(text) ? text.match(/[^\n。.]{0,20}(素|走蒜|走蔥|忌口)[^\n。.]{0,20}/)?.[0] ?? "" : "",
@@ -182,6 +187,16 @@ export function isMenuInformationRequest(value: string) {
     asksToBrowse
   ) return true;
   return /(?:飯盒|便當|便当|餐盒|meal\s*box|lunch\s*box|lunchbox|派對小食|派对小食|party\s*food)/i.test(text) && asksToBrowse;
+}
+
+export function isDeliveryAvailabilityQuestion(text: string) {
+  const body = text.trim();
+  if (!body || !extractInquirySlots(body).eventDate) return false;
+  const delivery = /送貨|送餐|配送|交收/i.test(body);
+  const availability =
+    /可唔可以|可以(?:送)?(?:嗎|吗|呀|啊)?|能否|能不能|得唔得|送唔送|有冇得送|有沒有得送|是否(?:可以)?|會唔會送|会不会送/i
+      .test(body);
+  return delivery && availability;
 }
 
 export function customerServiceMenuFaqQuery(value: string) {
@@ -297,6 +312,17 @@ export function classifyCustomerServiceMessage(text: string): ClassifiedMessage 
   }
   if (orderNumber || LOOKUP.test(body)) {
     return { intent: "lookup_order", slots, orderNumber, requestedFields: requestedFields.length ? requestedFields : ["summary"], usedModel: false };
+  }
+  if (isDeliveryAvailabilityQuestion(body)) {
+    return {
+      intent: "search_faq",
+      slots,
+      orderNumber,
+      requestedFields,
+      usedModel: false,
+      configuredIntentKey: "delivery_availability",
+      toolKey: "check_delivery_date",
+    };
   }
   if (isMenuInformationRequest(body)) {
     return {

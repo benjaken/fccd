@@ -6,6 +6,7 @@ import {
   hasCollectableSlots,
   hongKongCalendarDate,
   isCustomerServiceGreeting,
+  isDeliveryAvailabilityQuestion,
   isHongKongCalendarDateToday,
   isMenuInformationRequest,
   isOrderConfirmationAcknowledgement,
@@ -131,6 +132,11 @@ export type CustomerServiceInquiryWrite = {
   created: boolean;
 };
 
+export type CustomerServiceDeliveryAvailability =
+  | "not_blocked"
+  | "blocked"
+  | "unknown";
+
 export type CustomerServiceBotDeps = {
   workflowAutoResume?: Partial<Record<CustomerServicePilotGoal, boolean>>;
   replyTemplates?: Partial<
@@ -163,6 +169,9 @@ export type CustomerServiceBotDeps = {
   ) => Promise<CustomerServiceInquiryWrite>;
   searchFaqs: (query: string) => Promise<CustomerServiceFaqHit[]>;
   searchCatalog?: (query: string) => Promise<CustomerServiceCatalogHit[]>;
+  checkDeliveryDateAvailability?: (
+    date: string,
+  ) => Promise<CustomerServiceDeliveryAvailability>;
   answerFaqWithModel?: (
     query: string,
     candidates: CustomerServiceFaqHit[],
@@ -211,6 +220,35 @@ function configuredReply(
   fallback: string,
 ) {
   return sanitizeOutboundReply(deps.replyTemplates?.[key]?.trim() || fallback);
+}
+
+function deliveryDateLabel(date: string) {
+  const [year, month, day] = date.split("-").map(Number);
+  const value = new Date(Date.UTC(year, month - 1, day));
+  const weekdays = [
+    "星期日",
+    "星期一",
+    "星期二",
+    "星期三",
+    "星期四",
+    "星期五",
+    "星期六",
+  ];
+  return `${day}/${month}（${weekdays[value.getUTCDay()]}）`;
+}
+
+function deliveryAvailabilityReply(
+  date: string,
+  availability: CustomerServiceDeliveryAvailability,
+) {
+  const label = deliveryDateLabel(date);
+  if (availability === "blocked") {
+    return `${label} 暫停接受送貨預訂。你可以選擇其他日期，或者提供送貨地區俾我哋再跟進。`;
+  }
+  const opening = availability === "not_blocked"
+    ? `${label}可以安排送貨，目前未有停單記錄。`
+    : `${label}一般可以安排送貨。`;
+  return `${opening}實際可選時段及當日配額以網站結帳頁顯示為準，建議盡快落單。如果你提供送貨地區，我可以再幫你查運費同交收方式。`;
 }
 
 function nextConversation(
@@ -1131,6 +1169,35 @@ export async function handleCustomerServiceTurn({
       dialogAction: classified.dialogAction,
     };
   };
+
+  if (isDeliveryAvailabilityQuestion(text)) {
+    const requestedDate = extractInquirySlots(text).eventDate;
+    let availability: CustomerServiceDeliveryAvailability = "unknown";
+    if (deps.checkDeliveryDateAvailability) {
+      try {
+        availability = await deps.checkDeliveryDateAvailability(requestedDate);
+      } catch (error) {
+        console.error(
+          "customer-service delivery availability check failed",
+          error instanceof Error ? error.message.slice(0, 200) : String(error),
+        );
+      }
+    }
+    return annotate({
+      reply: deliveryAvailabilityReply(requestedDate, availability),
+      conversation,
+      wroteInquiry: false,
+      notified: false,
+      usedModel: classified.usedModel,
+      intentKey: "delivery_availability",
+      toolKeys: deps.checkDeliveryDateAvailability
+        ? ["check_delivery_date"]
+        : [],
+      failureReason: availability === "unknown"
+        ? "delivery_availability_unknown"
+        : null,
+    });
+  }
 
   // For normal customer messages, intent analysis always happens before any
   // FAQ or catalog tool. A strong knowledge hit may still override a mistaken

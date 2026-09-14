@@ -1425,6 +1425,17 @@ function createBotDeps(
         answer: string;
       }>;
     },
+    async checkDeliveryDateAvailability(date: string) {
+      const start = new Date(`${date}T00:00:00+08:00`);
+      const end = new Date(start.getTime() + 24 * 60 * 60 * 1_000);
+      const { count, error } = await admin
+        .from("order_block_dates")
+        .select("id", { count: "exact", head: true })
+        .gte("blocked_at", start.toISOString())
+        .lt("blocked_at", end.toISOString());
+      if (error) throw error;
+      return count && count > 0 ? "blocked" as const : "not_blocked" as const;
+    },
     async searchCatalog(query: string) {
       const searchAnchor = customerServiceCatalogSearchAnchor(query);
       if (!searchAnchor) return [];
