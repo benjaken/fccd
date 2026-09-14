@@ -69,3 +69,15 @@ export function resolveInternalWatiTemplate(
     broadcast_name: readEnv(definition.broadcastEnv)?.trim() || definition.broadcastName,
   };
 }
+
+export function numberedInternalWatiParameters(
+  values: Array<string | null | undefined>,
+) {
+  return values.map((value, index) => ({
+    name: String(index + 1),
+    value: (value || "")
+      .replace(/[\r\n\t]+/g, " ")
+      .replace(/\s{2,}/g, " ")
+      .trim() || "-",
+  }));
+}

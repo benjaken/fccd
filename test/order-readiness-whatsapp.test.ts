@@ -59,7 +59,9 @@ describe("daily order readiness WhatsApp", () => {
     expect(migration).toContain("one message per order/recipient/day");
     expect(worker).toContain('"refresh_order_readiness_issues"');
     expect(worker).toContain("readinessOrderWatiParameters(directOrder, issues)");
-    expect(worker).toContain('{ name: "issue_summary"');
+    expect(worker).toContain("function readinessOrderWatiParameters");
+    expect(worker).toContain("numberedInternalWatiParameters([");
+    expect(worker).toContain("reconciliationIssueSummary(issues)");
     expect(worker).toContain('? "orderReadinessIssue"');
     expect(templateConfig).toContain("WATI_ORDER_READINESS_ISSUE_TEMPLATE_NAME");
     expect(templateConfig).toContain("WATI_ORDER_READINESS_ISSUE_BROADCAST_NAME");
