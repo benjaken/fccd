@@ -787,16 +787,6 @@ export async function saveSalesDocumentBatch(input: {
   if (remarksError) throw remarksError;
 }
 
-export async function sendQuoteConfirmation(orderId: string) {
-  const { data, error } = await supabase.functions.invoke("send-quote-confirmation", {
-    body: { orderId },
-  });
-  if (error) throw error;
-  if ((!data?.watiSent && !data?.watiSkipped) || (!data?.emailSent && !data?.emailSkipped)) {
-    throw new Error(data?.error || "quote_confirmation_failed");
-  }
-}
-
 export async function updateQuote(
   orderId: string,
   input: QuoteDraft,

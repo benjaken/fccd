@@ -77,8 +77,6 @@ export function WatiNotificationSettings({
       automatic_email_notifications: "automaticEmailNotificationsEnabled",
       manual_order_confirmation: "manualOrderConfirmationEnabled",
       manual_order_confirmation_email: "manualOrderConfirmationEmailEnabled",
-      manual_quote_confirmation: "manualQuoteConfirmationEnabled",
-      manual_quote_confirmation_email: "manualQuoteConfirmationEmailEnabled",
     };
     setControls({
       ...controls,
@@ -130,30 +128,6 @@ export function WatiNotificationSettings({
             disabled={loading || !canManage || Boolean(updating)}
             aria-label={t("orderSettings.watiNotifications.automatic.toggle")}
             onCheckedChange={(enabled) => void toggle("automatic_notifications", enabled)}
-          />
-        </div>
-        <div className="wati-notification-setting-row">
-          <div>
-            <strong>{t("orderSettings.watiNotifications.manualQuoteConfirmation.title")}</strong>
-            <span>{t("orderSettings.watiNotifications.manualQuoteConfirmation.description")}</span>
-          </div>
-          <Switch
-            checked={controls?.manualQuoteConfirmationEnabled ?? false}
-            disabled={loading || !canManage || Boolean(updating)}
-            aria-label={t("orderSettings.watiNotifications.manualQuoteConfirmation.toggle")}
-            onCheckedChange={(enabled) => void toggle("manual_quote_confirmation", enabled)}
-          />
-        </div>
-        <div className="wati-notification-setting-row">
-          <div>
-            <strong>{t("orderSettings.watiNotifications.manualQuoteConfirmationEmail.title")}</strong>
-            <span>{t("orderSettings.watiNotifications.manualQuoteConfirmationEmail.description")}</span>
-          </div>
-          <Switch
-            checked={controls?.manualQuoteConfirmationEmailEnabled ?? false}
-            disabled={loading || !canManage || Boolean(updating)}
-            aria-label={t("orderSettings.watiNotifications.manualQuoteConfirmationEmail.toggle")}
-            onCheckedChange={(enabled) => void toggle("manual_quote_confirmation_email", enabled)}
           />
         </div>
         <div className="wati-notification-setting-row">

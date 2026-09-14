@@ -5,8 +5,6 @@ export type WatiNotificationControls = {
   automaticEmailNotificationsEnabled: boolean;
   manualOrderConfirmationEnabled: boolean;
   manualOrderConfirmationEmailEnabled: boolean;
-  manualQuoteConfirmationEnabled: boolean;
-  manualQuoteConfirmationEmailEnabled: boolean;
 };
 
 export async function loadWatiNotificationControls(
@@ -14,7 +12,7 @@ export async function loadWatiNotificationControls(
 ): Promise<WatiNotificationControls> {
   const { data, error } = await admin
     .from("wati_notification_controls")
-    .select("automatic_notifications_enabled,automatic_email_notifications_enabled,manual_order_confirmation_enabled,manual_order_confirmation_email_enabled,manual_quote_confirmation_enabled,manual_quote_confirmation_email_enabled")
+    .select("automatic_notifications_enabled,automatic_email_notifications_enabled,manual_order_confirmation_enabled,manual_order_confirmation_email_enabled")
     .eq("id", "global")
     .maybeSingle();
   if (error || !data) {
@@ -27,8 +25,6 @@ export async function loadWatiNotificationControls(
       automaticEmailNotificationsEnabled: false,
       manualOrderConfirmationEnabled: false,
       manualOrderConfirmationEmailEnabled: false,
-      manualQuoteConfirmationEnabled: false,
-      manualQuoteConfirmationEmailEnabled: false,
     };
   }
   return {
@@ -36,8 +32,6 @@ export async function loadWatiNotificationControls(
     automaticEmailNotificationsEnabled: data.automatic_email_notifications_enabled === true,
     manualOrderConfirmationEnabled: data.manual_order_confirmation_enabled === true,
     manualOrderConfirmationEmailEnabled: data.manual_order_confirmation_email_enabled === true,
-    manualQuoteConfirmationEnabled: data.manual_quote_confirmation_enabled === true,
-    manualQuoteConfirmationEmailEnabled: data.manual_quote_confirmation_email_enabled === true,
   };
 }
 
