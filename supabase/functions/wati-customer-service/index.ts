@@ -56,6 +56,7 @@ import {
   parseAllowedCustomerServicePhones,
   parseWatiInboundEvent,
   type WatiInboundEvent,
+  deliverWatiSessionImage,
   deliverWatiSessionMessage,
   verifyWatiWebhook,
 } from "../_shared/wati-customer-service-adapter.ts";
@@ -1898,6 +1899,25 @@ async function persistCustomerServiceTurn(
           sent_at: new Date().toISOString(),
           last_error: null,
         });
+      }
+      if (turn.imageUrl) {
+        try {
+          await deliverWatiSessionImage({
+            creds: watiCredentials(),
+            phone: input.phone,
+            imageUrl: turn.imageUrl,
+            caption: "套餐參考圖片",
+            channelNumber: env("WATI_CHANNEL_NUMBER") ||
+              BRAND_WHATSAPP_CHANNEL,
+          });
+        } catch (imageError) {
+          console.error(
+            "customer-service image send failed",
+            imageError instanceof Error
+              ? imageError.message.slice(0, 300)
+              : String(imageError),
+          );
+        }
       }
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error);

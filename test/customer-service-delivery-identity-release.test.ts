@@ -41,6 +41,20 @@ describe("customer service delivery, identity, and release controls", () => {
     expect(retryScheduleSql).toContain("customer_service_handoff_digest_url");
   });
 
+  it("sends mapped Shopify media only after the text reply succeeds", () => {
+    const completion = webhook.slice(
+      webhook.indexOf("async function persistCustomerServiceTurn"),
+      webhook.indexOf("function mediaTypeLabel"),
+    );
+    const textSend = completion.indexOf("await deliverWatiSessionMessage");
+    const imageSend = completion.indexOf("await deliverWatiSessionImage");
+
+    expect(textSend).toBeGreaterThanOrEqual(0);
+    expect(imageSend).toBeGreaterThan(textSend);
+    expect(completion).toContain('caption: "套餐參考圖片"');
+    expect(completion).toContain("customer-service image send failed");
+  });
+
   it("verifies both the WhatsApp phone and order email server-side", () => {
     expect(sql).toContain("customer_service_verify_order_identity");
     expect(sql).toContain("lower(btrim(coalesce(orders.email_snapshot, ''))) = v_email");

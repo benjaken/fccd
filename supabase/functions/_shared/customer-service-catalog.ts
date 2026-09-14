@@ -237,7 +237,6 @@ export function customerServiceCatalogReply(hit: CustomerServiceCatalogHit) {
       lines.push(`• 另有 ${hit.items.length - 8} 款選擇`);
     }
   }
-  if (hit.imageUrl) lines.push(`參考圖片：${hit.imageUrl}`);
   if (hit.productUrl) lines.push(`套餐詳情：${hit.productUrl}`);
   return lines.join("\n");
 }
