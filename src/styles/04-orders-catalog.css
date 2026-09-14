@@ -1807,7 +1807,7 @@ button.product-tag[aria-pressed="true"] {
   overflow: visible;
 }
 
-.factory-production-calendar-page {
+.factory-board.factory-production-calendar-page {
   height: 100dvh;
   overflow-x: hidden;
   overflow-y: auto;
