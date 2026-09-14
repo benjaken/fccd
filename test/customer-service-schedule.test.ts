@@ -6,11 +6,13 @@ const schedule = {
   timeZone: "Asia/Hong_Kong",
   weekdayStart: "19:00",
   weekdayEnd: "09:00",
-  weekendStart: "10:00",
-  weekendEnd: "18:00",
+  saturdayStart: "10:00",
+  saturdayEnd: "18:00",
+  sundayStart: "18:00",
+  sundayEnd: "22:00",
 };
 
-describe("customer-service weekday and weekend schedule", () => {
+describe("customer-service weekday, Saturday, and Sunday schedule", () => {
   it("uses the weekday window from Monday through Friday", () => {
     expect(
       isWithinCustomerServiceSchedule({
@@ -26,27 +28,33 @@ describe("customer-service weekday and weekend schedule", () => {
     ).toBe(false);
   });
 
-  it("uses the weekend window on Saturday and Sunday", () => {
+  it("uses independent Saturday and Sunday windows", () => {
     expect(
       isWithinCustomerServiceSchedule({
         ...schedule,
-        now: new Date("2026-09-13T04:00:00.000Z"), // Sunday 12:00 HKT
+        now: new Date("2026-09-12T04:00:00.000Z"), // Saturday 12:00 HKT
       }),
     ).toBe(true);
     expect(
       isWithinCustomerServiceSchedule({
         ...schedule,
-        now: new Date("2026-09-13T12:00:00.000Z"), // Sunday 20:00 HKT
+        now: new Date("2026-09-13T04:00:00.000Z"), // Sunday 12:00 HKT
       }),
     ).toBe(false);
+    expect(
+      isWithinCustomerServiceSchedule({
+        ...schedule,
+        now: new Date("2026-09-13T12:00:00.000Z"), // Sunday 20:00 HKT
+      }),
+    ).toBe(true);
   });
 
   it("keeps equal start and end as an all-day window", () => {
     expect(
       isWithinCustomerServiceSchedule({
         ...schedule,
-        weekendStart: "00:00",
-        weekendEnd: "00:00",
+        sundayStart: "00:00",
+        sundayEnd: "00:00",
         now: new Date("2026-09-13T12:00:00.000Z"),
       }),
     ).toBe(true);

@@ -3,8 +3,10 @@ type CustomerServiceScheduleInput = {
   timeZone: string;
   weekdayStart: string;
   weekdayEnd: string;
-  weekendStart: string;
-  weekendEnd: string;
+  saturdayStart: string;
+  saturdayEnd: string;
+  sundayStart: string;
+  sundayEnd: string;
 };
 
 function timeToMinutes(value: string) {
@@ -26,8 +28,10 @@ export function isWithinCustomerServiceSchedule({
   timeZone,
   weekdayStart,
   weekdayEnd,
-  weekendStart,
-  weekendEnd,
+  saturdayStart,
+  saturdayEnd,
+  sundayStart,
+  sundayEnd,
 }: CustomerServiceScheduleInput) {
   const parts = new Intl.DateTimeFormat("en-GB", {
     timeZone,
@@ -41,11 +45,12 @@ export function isWithinCustomerServiceSchedule({
   const minute = Number(
     parts.find((part) => part.type === "minute")?.value ?? 0,
   );
-  const weekend = weekday === "Sat" || weekday === "Sun";
+  const [start, end] =
+    weekday === "Sat"
+      ? [saturdayStart, saturdayEnd]
+      : weekday === "Sun"
+        ? [sundayStart, sundayEnd]
+        : [weekdayStart, weekdayEnd];
 
-  return isWithinWindow(
-    hour * 60 + minute,
-    weekend ? weekendStart : weekdayStart,
-    weekend ? weekendEnd : weekdayEnd,
-  );
+  return isWithinWindow(hour * 60 + minute, start, end);
 }
