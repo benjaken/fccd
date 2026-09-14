@@ -2034,6 +2034,13 @@
   line-height: 1.45;
 }
 
+.side-panel-header-controls {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 10px;
+}
+
 .side-panel-body,
 .settings-side-panel-body {
   min-height: 0;

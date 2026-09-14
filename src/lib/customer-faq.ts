@@ -51,8 +51,10 @@ export type CustomerServiceControls = {
   allowedPhones: string[];
   weekdayAutoReplyStart: string;
   weekdayAutoReplyEnd: string;
-  weekendAutoReplyStart: string;
-  weekendAutoReplyEnd: string;
+  saturdayAutoReplyStart: string;
+  saturdayAutoReplyEnd: string;
+  sundayAutoReplyStart: string;
+  sundayAutoReplyEnd: string;
   autoReplyTimezone: string;
   updatedAt: string;
 };
@@ -294,6 +296,10 @@ type ControlsRow = {
   weekday_auto_reply_end?: string | null;
   weekend_auto_reply_start?: string | null;
   weekend_auto_reply_end?: string | null;
+  saturday_auto_reply_start?: string | null;
+  saturday_auto_reply_end?: string | null;
+  sunday_auto_reply_start?: string | null;
+  sunday_auto_reply_end?: string | null;
   auto_reply_timezone?: string | null;
   updated_at: string;
 };
@@ -319,12 +325,28 @@ function mapControls(row: ControlsRow): CustomerServiceControls {
       row.weekday_auto_reply_end ?? row.auto_reply_end,
       "09:00",
     ),
-    weekendAutoReplyStart: normalizeControlTime(
-      row.weekend_auto_reply_start ?? row.auto_reply_start,
+    saturdayAutoReplyStart: normalizeControlTime(
+      row.saturday_auto_reply_start ??
+        row.weekend_auto_reply_start ??
+        row.auto_reply_start,
       "19:00",
     ),
-    weekendAutoReplyEnd: normalizeControlTime(
-      row.weekend_auto_reply_end ?? row.auto_reply_end,
+    saturdayAutoReplyEnd: normalizeControlTime(
+      row.saturday_auto_reply_end ??
+        row.weekend_auto_reply_end ??
+        row.auto_reply_end,
+      "09:00",
+    ),
+    sundayAutoReplyStart: normalizeControlTime(
+      row.sunday_auto_reply_start ??
+        row.weekend_auto_reply_start ??
+        row.auto_reply_start,
+      "19:00",
+    ),
+    sundayAutoReplyEnd: normalizeControlTime(
+      row.sunday_auto_reply_end ??
+        row.weekend_auto_reply_end ??
+        row.auto_reply_end,
       "09:00",
     ),
     autoReplyTimezone: row.auto_reply_timezone || "Asia/Hong_Kong",
@@ -471,15 +493,19 @@ export async function setCustomerServiceBotEnabled(
   enabled: boolean,
   weekdayAutoReplyStart = "19:00",
   weekdayAutoReplyEnd = "09:00",
-  weekendAutoReplyStart = weekdayAutoReplyStart,
-  weekendAutoReplyEnd = weekdayAutoReplyEnd,
+  saturdayAutoReplyStart = weekdayAutoReplyStart,
+  saturdayAutoReplyEnd = weekdayAutoReplyEnd,
+  sundayAutoReplyStart = saturdayAutoReplyStart,
+  sundayAutoReplyEnd = saturdayAutoReplyEnd,
 ) {
   const { data, error } = await supabase.rpc("customer_service_controls_set", {
     p_bot_enabled: enabled,
     p_weekday_auto_reply_start: weekdayAutoReplyStart,
     p_weekday_auto_reply_end: weekdayAutoReplyEnd,
-    p_weekend_auto_reply_start: weekendAutoReplyStart,
-    p_weekend_auto_reply_end: weekendAutoReplyEnd,
+    p_saturday_auto_reply_start: saturdayAutoReplyStart,
+    p_saturday_auto_reply_end: saturdayAutoReplyEnd,
+    p_sunday_auto_reply_start: sundayAutoReplyStart,
+    p_sunday_auto_reply_end: sundayAutoReplyEnd,
   });
   if (error) throw error;
   const row = (data as ControlsRow[] | null)?.[0];

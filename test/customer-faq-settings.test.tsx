@@ -293,26 +293,32 @@ describe("CustomerFaqPage", () => {
         "09:00",
         "19:00",
         "09:00",
+        "19:00",
+        "09:00",
       ),
     );
   });
 
-  it("edits weekday and weekend auto-reply windows independently", async () => {
+  it("edits weekday, Saturday, and Sunday auto-reply windows independently", async () => {
     const user = userEvent.setup();
     const setBotEnabled = vi.fn().mockImplementation(
       async (
         botEnabled: boolean,
         weekdayAutoReplyStart: string,
         weekdayAutoReplyEnd: string,
-        weekendAutoReplyStart: string,
-        weekendAutoReplyEnd: string,
+        saturdayAutoReplyStart: string,
+        saturdayAutoReplyEnd: string,
+        sundayAutoReplyStart: string,
+        sundayAutoReplyEnd: string,
       ) => ({
         botEnabled,
         allowedPhones: [],
         weekdayAutoReplyStart,
         weekdayAutoReplyEnd,
-        weekendAutoReplyStart,
-        weekendAutoReplyEnd,
+        saturdayAutoReplyStart,
+        saturdayAutoReplyEnd,
+        sundayAutoReplyStart,
+        sundayAutoReplyEnd,
         autoReplyTimezone: "Asia/Hong_Kong",
         updatedAt: faq.updatedAt,
       }),
@@ -326,8 +332,10 @@ describe("CustomerFaqPage", () => {
           allowedPhones: [],
           weekdayAutoReplyStart: "19:00",
           weekdayAutoReplyEnd: "09:00",
-          weekendAutoReplyStart: "10:00",
-          weekendAutoReplyEnd: "18:00",
+          saturdayAutoReplyStart: "10:00",
+          saturdayAutoReplyEnd: "18:00",
+          sundayAutoReplyStart: "08:00",
+          sundayAutoReplyEnd: "16:00",
           autoReplyTimezone: "Asia/Hong_Kong",
           updatedAt: faq.updatedAt,
         })}
@@ -335,13 +343,22 @@ describe("CustomerFaqPage", () => {
       />,
     );
 
-    const weekdayStart = await screen.findByLabelText("星期一至五開始時間");
-    const weekendStart = screen.getByLabelText("星期六、日開始時間");
-    expect(weekdayStart).toHaveValue("19:00");
-    expect(weekendStart).toHaveValue("10:00");
+    expect(
+      await screen.findByRole("button", { name: "編輯週一至五自動回覆時間" }),
+    ).toBeInTheDocument();
+    const saturdayEditor = screen.getByRole("button", {
+      name: "編輯週六自動回覆時間",
+    });
+    expect(
+      screen.getByRole("button", { name: "編輯週日自動回覆時間" }),
+    ).toBeInTheDocument();
 
-    await user.clear(weekendStart);
-    await user.type(weekendStart, "12:30");
+    await user.click(saturdayEditor);
+    const saturdayStart = await screen.findByLabelText("星期六開始時間");
+    expect(saturdayStart).toHaveValue("10:00");
+
+    await user.clear(saturdayStart);
+    await user.type(saturdayStart, "12:30");
     await user.tab();
 
     await waitFor(() =>
@@ -351,6 +368,8 @@ describe("CustomerFaqPage", () => {
         "09:00",
         "12:30",
         "18:00",
+        "08:00",
+        "16:00",
       ),
     );
   });

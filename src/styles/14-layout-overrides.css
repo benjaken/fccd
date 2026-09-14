@@ -499,6 +499,123 @@
   }
 }
 
+/* AI performance report: compact operations workspace with progressive disclosure. */
+.customer-service-insights-panel{width:min(86vw,1280px);}
+.customer-service-insights-panel>.side-panel-header{position:relative;display:grid;grid-template-columns:minmax(0,1fr) auto;min-height:88px;padding:16px 24px;align-items:center;background:#ffffff;}
+.customer-service-insights-panel>.side-panel-header>div:first-child{flex:0 1 420px;min-width:230px;max-width:520px;}
+.customer-service-insights-panel>.side-panel-header h2{color:#102b20;font-size:1.35rem;}
+.customer-service-insights-panel>.side-panel-header p{margin-top:5px;color:#607068;}
+.customer-service-insights-panel .side-panel-header-actions{flex:0 0 auto;}
+.customer-service-insights-panel .side-panel-header-controls{margin-left:0;padding-right:0;}
+.customer-service-insights-panel .side-panel-header-controls>button:last-child{position:static;transform:none;}
+.customer-service-report-header-actions{display:flex;align-items:stretch;gap:10px;}
+.customer-service-report-header-actions label{display:flex;min-height:42px;align-items:center;overflow:hidden;border:1px solid #d7e2db;border-radius:10px;background:#ffffff;}
+.customer-service-report-header-actions label>span{display:flex;height:100%;align-items:center;gap:7px;padding:0 12px;border-right:1px solid #e2e9e5;color:#43544c;font-size:0.82rem;font-weight:700;white-space:nowrap;}
+.customer-service-report-header-actions label svg{width:16px;height:16px;}
+.customer-service-report-header-actions input{width:150px;min-height:40px;padding:0 11px;border:0;outline:0;background:transparent;color:#18382b;font-variant-numeric:tabular-nums;}
+.customer-service-report-header-actions input:focus-visible{box-shadow:inset 0 0 0 2px rgb(18 130 76 / 28%);}
+.customer-service-report-header-actions .ui-button{min-height:42px;padding-inline:18px;white-space:nowrap;}
+.customer-service-insights-panel>.side-panel-body{padding:18px 22px 28px;background:#f4f7f5;}
+.customer-service-insights-panel .customer-service-insights{display:grid;grid-template-columns:minmax(0,1fr);gap:16px;}
+.customer-service-insights-panel .customer-service-health-summary{display:grid;grid-template-columns:minmax(225px,1.05fr) minmax(390px,1.9fr) minmax(250px,1.1fr);gap:0;overflow:hidden;border:1px solid #d9e9df;border-radius:14px;background:#eef8f2;}
+.customer-service-health-status,.customer-service-ai-summary{display:flex;min-width:0;align-items:flex-start;gap:12px;padding:20px;}
+.customer-service-health-status{align-items:center;}
+.customer-service-health-icon{display:grid;width:44px;height:44px;flex:0 0 44px;place-items:center;border-radius:50%;background:#0b8f4d;color:#ffffff;}
+.customer-service-health-icon svg{width:23px;height:23px;}
+.customer-service-health-summary.needs-attention{border-color:#ead8b4;background:#fffaf0;}
+.customer-service-health-summary.needs-attention .customer-service-health-icon{background:#b67512;}
+.customer-service-health-status>div,.customer-service-ai-summary>div{display:grid;min-width:0;gap:5px;}
+.customer-service-health-status h3{font-size:1.1rem;}
+.customer-service-health-status p,.customer-service-ai-summary p{margin:0;color:#54665d;font-size:0.88rem;line-height:1.45;overflow-wrap:anywhere;}
+.customer-service-health-status small{color:#6b7b73;font-size:0.75rem;}
+.customer-service-headline-metrics{display:grid;min-width:0;grid-template-columns:repeat(4,minmax(0,1fr));align-items:stretch;border-left:1px solid rgb(18 130 76 / 14%);}
+.customer-service-headline-metrics>div{display:flex;min-width:0;align-items:center;gap:9px;padding:18px 13px;border-right:1px solid rgb(18 130 76 / 14%);}
+.customer-service-headline-metrics svg{width:20px;height:20px;flex:0 0 20px;color:#08743f;}
+.customer-service-headline-metrics>div>span{display:grid;min-width:0;gap:6px;}
+.customer-service-headline-metrics span span{overflow:hidden;color:#56675f;font-size:0.76rem;text-overflow:ellipsis;white-space:nowrap;}
+.customer-service-headline-metrics strong{color:#0d6f41;font-size:1.7rem;font-variant-numeric:tabular-nums;line-height:1;}
+.customer-service-ai-summary{align-items:center;background:rgb(255 255 255 / 52%);}
+.customer-service-ai-summary>svg{width:22px;height:22px;flex:0 0 22px;color:#08743f;}
+.customer-service-ai-summary strong{color:#18382b;}
+.customer-service-insights-panel .customer-service-insights-primary-grid{display:grid;grid-template-columns:minmax(0,1.08fr) minmax(0,0.92fr);gap:14px;}
+.customer-service-insights-panel .customer-service-delivery-queue,.customer-service-insights-panel .customer-service-suggestions{grid-column:auto;min-width:0;min-height:350px;align-content:start;padding:18px;border:1px solid #dbe5df;border-radius:14px;background:#ffffff;box-shadow:none;}
+.customer-service-insights-panel .customer-service-delivery-queue{border-left:1px solid #dbe5df;}
+.customer-service-insights-panel .customer-service-delivery-queue>header,.customer-service-insights-panel .customer-service-suggestions>header{margin:0;padding:0 0 14px;border-bottom:1px solid #e4ebe7;}
+.customer-service-delivery-counts{display:flex;gap:18px;overflow-x:auto;padding:12px 2px 10px;color:#64746c;font-size:0.78rem;white-space:nowrap;scrollbar-width:none;}
+.customer-service-delivery-counts::-webkit-scrollbar{display:none;}
+.customer-service-delivery-counts span:first-child{color:#08743f;font-weight:750;}
+.customer-service-delivery-list{display:grid;gap:10px;}
+.customer-service-insights-panel .customer-service-delivery-list>article{border-radius:10px;box-shadow:none;}
+.customer-service-empty-state{display:grid;min-height:230px;place-items:center;align-content:center;gap:7px;padding:24px;color:#607068;text-align:center;}
+.customer-service-empty-state>span{display:grid;width:58px;height:58px;margin-bottom:6px;place-items:center;border-radius:50%;background:#edf5f0;color:#168653;}
+.customer-service-empty-state>span svg{width:27px;height:27px;}
+.customer-service-empty-state strong{color:#1a3026;font-size:1rem;}
+.customer-service-empty-state p{max-width:330px;margin:0 0 8px;font-size:0.84rem;}
+.customer-service-insights-panel .customer-service-metrics-details,.customer-service-insights-panel .customer-service-model-lab{grid-column:1 / -1;display:block;overflow:hidden;padding:0;border:1px solid #dbe5df;border-radius:13px;background:#ffffff;box-shadow:none;}
+.customer-service-insights-panel details>summary{display:flex;min-height:68px;align-items:center;justify-content:space-between;gap:16px;padding:13px 18px;cursor:pointer;list-style:none;}
+.customer-service-insights-panel details>summary::-webkit-details-marker{display:none;}
+.customer-service-insights-panel details>summary>div{display:grid;gap:3px;}
+.customer-service-insights-panel details>summary p{margin:0 0 0 44px;color:#607068;font-size:0.8rem;}
+.customer-service-insights-panel details>summary>svg{width:18px;height:18px;transition:transform 180ms ease;}
+.customer-service-insights-panel details[open]>summary>svg{transform:rotate(180deg);}
+.customer-service-secondary-metrics{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));border-top:1px solid #e4ebe7;}
+.customer-service-secondary-metrics>div{display:grid;min-width:0;gap:7px;padding:15px 18px;border-right:1px solid #e4ebe7;}
+.customer-service-secondary-metrics>div:last-child{border-right:0;}
+.customer-service-secondary-metrics span{overflow:hidden;color:#607068;font-size:0.76rem;text-overflow:ellipsis;white-space:nowrap;}
+.customer-service-secondary-metrics strong{color:#0d6f41;font-size:1.3rem;font-variant-numeric:tabular-nums;}
+.customer-service-model-lab-content{display:grid;gap:14px;padding:0 18px 18px;border-top:1px solid #e4ebe7;}
+.customer-service-insights-panel .customer-service-config-form{margin-top:16px;}
+@media (max-width:1280px){.customer-service-insights-panel>.side-panel-header>div:first-child{flex-basis:auto;min-width:190px;max-width:none;}
+.customer-service-insights-panel>.side-panel-header p{display:none;}
+}
+@media (max-width:1440px){.customer-service-report-header-actions label>span{padding-inline:10px;font-size:0;}
+.customer-service-report-header-actions label>span svg{width:18px;height:18px;}
+.customer-service-report-header-actions input{width:132px;}
+.customer-service-report-header-actions .ui-button{padding-inline:14px;}
+}
+@media (max-width:1100px){.customer-service-insights-panel .customer-service-health-summary{grid-template-columns:minmax(220px,0.9fr) minmax(410px,1.7fr);}
+.customer-service-insights-panel .customer-service-ai-summary{grid-column:1 / -1;border-top:1px solid rgb(18 130 76 / 14%);}
+.customer-service-insights-panel .customer-service-insights-primary-grid{grid-template-columns:1fr;}
+.customer-service-insights-panel .customer-service-delivery-queue,.customer-service-insights-panel .customer-service-suggestions{min-height:0;}
+}
+@media (max-width:900px){.customer-service-insights-panel .customer-service-health-summary{grid-template-columns:minmax(0,1fr);}
+.customer-service-insights-panel .customer-service-headline-metrics{border-top:1px solid rgb(18 130 76 / 14%);border-left:0;}
+}
+@media (max-width:760px){.customer-service-insights-panel{width:100%;}
+.customer-service-insights-panel>.side-panel-header{min-height:0;grid-template-columns:minmax(0,1fr) auto;gap:10px;padding:12px 14px;}
+.customer-service-insights-panel>.side-panel-header>div:first-child{min-width:0;flex:1;padding-right:48px;}
+.customer-service-insights-panel>.side-panel-header p{display:none;}
+.customer-service-insights-panel .side-panel-header-actions{width:100%;order:3;margin-left:0;}
+.customer-service-insights-panel .side-panel-header-controls{grid-column:1 / -1;width:100%;flex-wrap:wrap-reverse;justify-content:flex-end;padding-right:0;}
+.customer-service-insights-panel .side-panel-header-controls>button:last-child{position:absolute;top:12px;right:12px;transform:none;}
+.customer-service-report-header-actions{width:100%;}
+.customer-service-report-header-actions label{min-width:0;flex:1;}
+.customer-service-report-header-actions label>span{padding-inline:9px;font-size:0;}
+.customer-service-report-header-actions label>span svg{width:18px;height:18px;}
+.customer-service-report-header-actions input{width:100%;min-width:0;}
+.customer-service-report-header-actions .ui-button{padding-inline:13px;}
+.customer-service-insights-panel>.side-panel-body{padding:12px 11px 22px;}
+.customer-service-insights-panel .customer-service-insights{gap:11px;}
+.customer-service-insights-panel .customer-service-health-summary{grid-template-columns:minmax(0,1fr);}
+.customer-service-health-status,.customer-service-ai-summary{padding:15px;}
+.customer-service-headline-metrics{grid-template-columns:repeat(2,minmax(0,1fr));border-top:1px solid rgb(18 130 76 / 14%);border-left:0;}
+.customer-service-headline-metrics>div{min-height:76px;padding:12px 14px;border-bottom:1px solid rgb(18 130 76 / 14%);}
+.customer-service-headline-metrics>div:nth-child(2n){border-right:0;}
+.customer-service-headline-metrics strong{font-size:1.45rem;}
+.customer-service-insights-panel .customer-service-delivery-queue,.customer-service-insights-panel .customer-service-suggestions{padding:14px;}
+.customer-service-empty-state{min-height:190px;padding:18px;}
+.customer-service-insights-panel details>summary{min-height:62px;padding:11px 14px;}
+.customer-service-insights-panel details>summary p{display:none;}
+.customer-service-secondary-metrics{grid-template-columns:repeat(2,minmax(0,1fr));}
+.customer-service-secondary-metrics>div{border-bottom:1px solid #e4ebe7;}
+.customer-service-secondary-metrics>div:nth-child(2n){border-right:0;}
+.customer-service-secondary-metrics>div:last-child{grid-column:1 / -1;border-bottom:0;}
+.customer-service-model-lab-content{padding:0 14px 14px;}
+}
+@media (prefers-reduced-motion:reduce){.customer-service-insights-panel details>summary>svg{transition:none;}
+}
+
+
 /* Human review is a separate, table-first workspace beside the AI report. */
 .customer-service-review-panel {
   width: 80%;

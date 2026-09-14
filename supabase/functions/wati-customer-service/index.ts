@@ -390,6 +390,10 @@ async function loadBotControls(admin: AdminClient) {
       weekday_auto_reply_end?: string | null;
       weekend_auto_reply_start?: string | null;
       weekend_auto_reply_end?: string | null;
+      saturday_auto_reply_start?: string | null;
+      saturday_auto_reply_end?: string | null;
+      sunday_auto_reply_start?: string | null;
+      sunday_auto_reply_end?: string | null;
       auto_reply_timezone?: string | null;
     }> | null
   )?.[0];
@@ -407,12 +411,28 @@ async function loadBotControls(admin: AdminClient) {
       row?.weekday_auto_reply_end ?? row?.auto_reply_end,
       "09:00",
     ),
-    weekendAutoReplyStart: normalizeScheduleTime(
-      row?.weekend_auto_reply_start ?? row?.auto_reply_start,
+    saturdayAutoReplyStart: normalizeScheduleTime(
+      row?.saturday_auto_reply_start ??
+        row?.weekend_auto_reply_start ??
+        row?.auto_reply_start,
       "19:00",
     ),
-    weekendAutoReplyEnd: normalizeScheduleTime(
-      row?.weekend_auto_reply_end ?? row?.auto_reply_end,
+    saturdayAutoReplyEnd: normalizeScheduleTime(
+      row?.saturday_auto_reply_end ??
+        row?.weekend_auto_reply_end ??
+        row?.auto_reply_end,
+      "09:00",
+    ),
+    sundayAutoReplyStart: normalizeScheduleTime(
+      row?.sunday_auto_reply_start ??
+        row?.weekend_auto_reply_start ??
+        row?.auto_reply_start,
+      "19:00",
+    ),
+    sundayAutoReplyEnd: normalizeScheduleTime(
+      row?.sunday_auto_reply_end ??
+        row?.weekend_auto_reply_end ??
+        row?.auto_reply_end,
       "09:00",
     ),
     autoReplyTimezone: row?.auto_reply_timezone || "Asia/Hong_Kong",
@@ -2244,8 +2264,10 @@ Deno.serve(async (request) => {
       !isWithinCustomerServiceSchedule({
         weekdayStart: controls.weekdayAutoReplyStart,
         weekdayEnd: controls.weekdayAutoReplyEnd,
-        weekendStart: controls.weekendAutoReplyStart,
-        weekendEnd: controls.weekendAutoReplyEnd,
+        saturdayStart: controls.saturdayAutoReplyStart,
+        saturdayEnd: controls.saturdayAutoReplyEnd,
+        sundayStart: controls.sundayAutoReplyStart,
+        sundayEnd: controls.sundayAutoReplyEnd,
         timeZone: controls.autoReplyTimezone,
       })
     ) {

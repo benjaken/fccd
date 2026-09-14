@@ -8,8 +8,10 @@ import {
 import { useTranslation } from "react-i18next";
 import {
   BarChart3,
+  CalendarDays,
   Check,
   CheckCheck,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   MessageCircleMore,
@@ -21,6 +23,7 @@ import {
   Settings2,
   Smile,
   Sparkles,
+  UserRound,
   X,
 } from "lucide-react";
 
@@ -29,6 +32,11 @@ import { Button } from "@/components/ui/button";
 import { FilterableSelect } from "@/components/ui/filterable-select";
 import { ListSearchBar } from "@/components/ui/list-search-bar";
 import { ListTable } from "@/components/ui/list-table";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { SidePanel } from "@/components/ui/side-panel";
 import { Switch } from "@/components/ui/switch";
 import { useMediaQuery } from "@/lib/use-media-query";
@@ -97,6 +105,104 @@ const EMPTY_DRAFT: CustomerFaqWriteInput = {
   isPublished: false,
   sortOrder: 0,
 };
+
+function AutoReplyScheduleEditor({
+  id,
+  dayLabel,
+  start,
+  end,
+  startLabel,
+  endLabel,
+  disabled,
+  onStartChange,
+  onEndChange,
+  onStartCommit,
+  onEndCommit,
+}: {
+  id: string;
+  dayLabel: string;
+  start: string;
+  end: string;
+  startLabel: string;
+  endLabel: string;
+  disabled: boolean;
+  onStartChange: (value: string) => void;
+  onEndChange: (value: string) => void;
+  onStartCommit: (value: string) => void;
+  onEndCommit: (value: string) => void;
+}) {
+  const { t } = useTranslation();
+  const summary =
+    start === end
+      ? t("settings.customerFaq.autoReplyAllDayShort")
+      : `${start} – ${
+          start > end
+            ? `${t("settings.customerFaq.autoReplyNextDayShort")} `
+            : ""
+        }${end}`;
+
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          className="customer-faq-auto-reply-schedule-cell"
+          disabled={disabled}
+          aria-label={t("settings.customerFaq.editAutoReplyWindow", {
+            day: dayLabel,
+          })}
+        >
+          <strong>{dayLabel}</strong>
+          <span>{summary}</span>
+          <Pencil aria-hidden="true" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent
+        align="center"
+        sideOffset={8}
+        collisionPadding={12}
+        className="customer-faq-auto-reply-popover"
+      >
+        <header>
+          <strong>{dayLabel}</strong>
+          <small>{t("settings.customerFaq.autoReplyHongKongTime")}</small>
+        </header>
+        <div>
+          <label htmlFor={`${id}-start`}>
+            <span>{t("settings.customerFaq.autoReplyStartShort")}</span>
+            <input
+              id={`${id}-start`}
+              type="time"
+              value={start}
+              aria-label={startLabel}
+              onChange={(event) => onStartChange(event.target.value)}
+              onBlur={(event) => onStartCommit(event.target.value)}
+            />
+          </label>
+          <span aria-hidden="true">–</span>
+          <label htmlFor={`${id}-end`}>
+            <span>{t("settings.customerFaq.autoReplyEndShort")}</span>
+            <input
+              id={`${id}-end`}
+              type="time"
+              value={end}
+              aria-label={endLabel}
+              onChange={(event) => onEndChange(event.target.value)}
+              onBlur={(event) => onEndCommit(event.target.value)}
+            />
+          </label>
+        </div>
+        <small>{
+          start === end
+            ? t("settings.customerFaq.autoReplyAllDay")
+            : start > end
+              ? t("settings.customerFaq.autoReplyNextDay")
+              : t("settings.customerFaq.autoReplySameDay")
+        }</small>
+      </PopoverContent>
+    </Popover>
+  );
+}
 
 type PreviewMessage = {
   id: number;
@@ -352,14 +458,18 @@ export function CustomerFaqPage({
     enabled = controls?.botEnabled ?? false,
     weekdayStart = controls?.weekdayAutoReplyStart ?? "19:00",
     weekdayEnd = controls?.weekdayAutoReplyEnd ?? "09:00",
-    weekendStart = controls?.weekendAutoReplyStart ?? "19:00",
-    weekendEnd = controls?.weekendAutoReplyEnd ?? "09:00",
+    saturdayStart = controls?.saturdayAutoReplyStart ?? "19:00",
+    saturdayEnd = controls?.saturdayAutoReplyEnd ?? "09:00",
+    sundayStart = controls?.sundayAutoReplyStart ?? "19:00",
+    sundayEnd = controls?.sundayAutoReplyEnd ?? "09:00",
   }: {
     enabled?: boolean;
     weekdayStart?: string;
     weekdayEnd?: string;
-    weekendStart?: string;
-    weekendEnd?: string;
+    saturdayStart?: string;
+    saturdayEnd?: string;
+    sundayStart?: string;
+    sundayEnd?: string;
   }) => {
     if (!canEdit || savingControls) return;
     setSavingControls(true);
@@ -370,8 +480,10 @@ export function CustomerFaqPage({
           enabled,
           weekdayStart,
           weekdayEnd,
-          weekendStart,
-          weekendEnd,
+          saturdayStart,
+          saturdayEnd,
+          sundayStart,
+          sundayEnd,
         ),
       );
     } catch {
@@ -714,15 +826,18 @@ export function CustomerFaqPage({
   };
 
   const latestReport = reports[0];
+  const actionableOutboundMessages = outboundMessages.filter((item) =>
+    ["queued", "sending", "failed", "dead"].includes(item.status),
+  );
+  const failedOutboundCount = actionableOutboundMessages.filter((item) =>
+    ["failed", "dead"].includes(item.status),
+  ).length;
+  const reportNeedsAttention =
+    failedOutboundCount > 0 ||
+    Number(latestReport?.metrics.failed ?? 0) > 0 ||
+    Number(latestReport?.metrics.wrong_handoff_count ?? 0) > 0;
   const formatRate = (value: number | null | undefined) =>
     typeof value === "number" ? `${Math.round(value * 100)}%` : "—";
-  const autoReplyWindowHint = (start: string, end: string) =>
-    start === end
-      ? t("settings.customerFaq.autoReplyAllDay")
-      : start > end
-        ? t("settings.customerFaq.autoReplyNextDay")
-        : t("settings.customerFaq.autoReplySameDay");
-
   const intentDraft = logic?.intents.find(
     (item) => item.intentKey === selectedIntent,
   );
@@ -747,156 +862,131 @@ export function CustomerFaqPage({
         </div>
       </header>
       <div className="customer-faq-auto-reply-controls">
-        <label className="customer-faq-auto-reply-switch">
-          <span>{t("settings.customerFaq.botEnabled")}</span>
-          <Switch
-            checked={Boolean(controls?.botEnabled)}
-            disabled={!canEdit || savingControls || !controls}
-            aria-label={t("settings.customerFaq.botEnabled")}
-            onCheckedChange={(checked) =>
-              void saveControls({ enabled: checked })
-            }
-          />
-        </label>
-        <div className="customer-faq-auto-reply-windows">
-          <span>{t("settings.customerFaq.autoReplyWindow")}</span>
-          <div className="customer-faq-auto-reply-window">
-            <strong>{t("settings.customerFaq.weekdayAutoReplyWindow")}</strong>
-            <label>
-              <span className="sr-only">
-                {t("settings.customerFaq.weekdayAutoReplyStart")}
-              </span>
-              <input
-                type="time"
-                value={controls?.weekdayAutoReplyStart ?? "19:00"}
-                disabled={!canEdit || savingControls || !controls}
-                aria-label={t("settings.customerFaq.weekdayAutoReplyStart")}
-                onChange={(event) => {
-                  const weekdayStart = event.target.value;
-                  setControls((current) =>
-                    current
-                      ? { ...current, weekdayAutoReplyStart: weekdayStart }
-                      : current,
-                  );
-                }}
-                onBlur={(event) =>
-                  void saveControls({ weekdayStart: event.target.value })
-                }
-              />
-            </label>
-            <span aria-hidden="true">–</span>
-            <label>
-              <span className="sr-only">
-                {t("settings.customerFaq.weekdayAutoReplyEnd")}
-              </span>
-              <input
-                type="time"
-                value={controls?.weekdayAutoReplyEnd ?? "09:00"}
-                disabled={!canEdit || savingControls || !controls}
-                aria-label={t("settings.customerFaq.weekdayAutoReplyEnd")}
-                onChange={(event) => {
-                  const weekdayEnd = event.target.value;
-                  setControls((current) =>
-                    current
-                      ? { ...current, weekdayAutoReplyEnd: weekdayEnd }
-                      : current,
-                  );
-                }}
-                onBlur={(event) =>
-                  void saveControls({ weekdayEnd: event.target.value })
-                }
-              />
-            </label>
-            <small>
-              {autoReplyWindowHint(
-                controls?.weekdayAutoReplyStart ?? "19:00",
-                controls?.weekdayAutoReplyEnd ?? "09:00",
-              )}
+        <div className="customer-faq-auto-reply-topbar">
+          <label className="customer-faq-auto-reply-switch">
+            <span>{t("settings.customerFaq.botControlTitle")}</span>
+            <Switch
+              checked={Boolean(controls?.botEnabled)}
+              disabled={!canEdit || savingControls || !controls}
+              aria-label={t("settings.customerFaq.botEnabled")}
+              onCheckedChange={(checked) =>
+                void saveControls({ enabled: checked })
+              }
+            />
+            <small data-enabled={Boolean(controls?.botEnabled)}>
+              {controls?.botEnabled
+                ? t("settings.customerFaq.botRunning")
+                : t("settings.customerFaq.botPaused")}
             </small>
+          </label>
+          <div className="customer-faq-auto-reply-actions">
+            {canEdit ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => void openLogic()}
+              >
+                <Settings2 />
+                <span>{t("settings.customerFaq.logicButton")}</span>
+              </Button>
+            ) : null}
+            <Button type="button" variant="outline" size="sm" onClick={openInsights}>
+              <BarChart3 />
+              <span>AI 成效報告</span>
+            </Button>
+            <Button type="button" variant="outline" size="sm" onClick={openReviewQueue}>
+              <CheckCheck />
+              <span>人工覆核學習</span>
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="customer-faq-mobile-chat-trigger"
+              onClick={() => setMobileChatOpen(true)}
+            >
+              <MessageCircleMore />
+              <span>{t("settings.customerFaq.previewTitle")}</span>
+            </Button>
           </div>
-          <div className="customer-faq-auto-reply-window">
-            <strong>{t("settings.customerFaq.weekendAutoReplyWindow")}</strong>
-            <label>
-              <span className="sr-only">
-                {t("settings.customerFaq.weekendAutoReplyStart")}
-              </span>
-              <input
-                type="time"
-                value={controls?.weekendAutoReplyStart ?? "19:00"}
-                disabled={!canEdit || savingControls || !controls}
-                aria-label={t("settings.customerFaq.weekendAutoReplyStart")}
-                onChange={(event) => {
-                  const weekendStart = event.target.value;
-                  setControls((current) =>
-                    current
-                      ? { ...current, weekendAutoReplyStart: weekendStart }
-                      : current,
-                  );
-                }}
-                onBlur={(event) =>
-                  void saveControls({ weekendStart: event.target.value })
-                }
-              />
-            </label>
-            <span aria-hidden="true">–</span>
-            <label>
-              <span className="sr-only">
-                {t("settings.customerFaq.weekendAutoReplyEnd")}
-              </span>
-              <input
-                type="time"
-                value={controls?.weekendAutoReplyEnd ?? "09:00"}
-                disabled={!canEdit || savingControls || !controls}
-                aria-label={t("settings.customerFaq.weekendAutoReplyEnd")}
-                onChange={(event) => {
-                  const weekendEnd = event.target.value;
-                  setControls((current) =>
-                    current
-                      ? { ...current, weekendAutoReplyEnd: weekendEnd }
-                      : current,
-                  );
-                }}
-                onBlur={(event) =>
-                  void saveControls({ weekendEnd: event.target.value })
-                }
-              />
-            </label>
-            <small>
-              {autoReplyWindowHint(
-                controls?.weekendAutoReplyStart ?? "19:00",
-                controls?.weekendAutoReplyEnd ?? "09:00",
-              )}
-            </small>
-          </div>
-          <small>{t("settings.customerFaq.autoReplyTimezoneHint")}</small>
         </div>
-        {canEdit ? (
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => void openLogic()}
-          >
-            <Settings2 />
-            {t("settings.customerFaq.logicButton")}
-          </Button>
-        ) : null}
-        <Button type="button" variant="outline" onClick={openInsights}>
-          <BarChart3 />
-          AI 成效報告
-        </Button>
-        <Button type="button" variant="outline" onClick={openReviewQueue}>
-          <CheckCheck />
-          人工覆核學習
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          className="customer-faq-mobile-chat-trigger"
-          onClick={() => setMobileChatOpen(true)}
-        >
-          <MessageCircleMore />
-          {t("settings.customerFaq.previewTitle")}
-        </Button>
+        <div className="customer-faq-auto-reply-schedule">
+          <span>{t("settings.customerFaq.autoReplyWindow")}</span>
+          <div className="customer-faq-auto-reply-schedule-grid">
+            <AutoReplyScheduleEditor
+              id="weekday-auto-reply"
+              dayLabel={t("settings.customerFaq.weekdayAutoReplyWindow")}
+              start={controls?.weekdayAutoReplyStart ?? "19:00"}
+              end={controls?.weekdayAutoReplyEnd ?? "09:00"}
+              startLabel={t("settings.customerFaq.weekdayAutoReplyStart")}
+              endLabel={t("settings.customerFaq.weekdayAutoReplyEnd")}
+              disabled={!canEdit || savingControls || !controls}
+              onStartChange={(weekdayAutoReplyStart) =>
+                setControls((current) =>
+                  current ? { ...current, weekdayAutoReplyStart } : current,
+                )
+              }
+              onEndChange={(weekdayAutoReplyEnd) =>
+                setControls((current) =>
+                  current ? { ...current, weekdayAutoReplyEnd } : current,
+                )
+              }
+              onStartCommit={(weekdayStart) =>
+                void saveControls({ weekdayStart })
+              }
+              onEndCommit={(weekdayEnd) => void saveControls({ weekdayEnd })}
+            />
+            <AutoReplyScheduleEditor
+              id="saturday-auto-reply"
+              dayLabel={t("settings.customerFaq.saturdayAutoReplyWindow")}
+              start={controls?.saturdayAutoReplyStart ?? "19:00"}
+              end={controls?.saturdayAutoReplyEnd ?? "09:00"}
+              startLabel={t("settings.customerFaq.saturdayAutoReplyStart")}
+              endLabel={t("settings.customerFaq.saturdayAutoReplyEnd")}
+              disabled={!canEdit || savingControls || !controls}
+              onStartChange={(saturdayAutoReplyStart) =>
+                setControls((current) =>
+                  current ? { ...current, saturdayAutoReplyStart } : current,
+                )
+              }
+              onEndChange={(saturdayAutoReplyEnd) =>
+                setControls((current) =>
+                  current ? { ...current, saturdayAutoReplyEnd } : current,
+                )
+              }
+              onStartCommit={(saturdayStart) =>
+                void saveControls({ saturdayStart })
+              }
+              onEndCommit={(saturdayEnd) =>
+                void saveControls({ saturdayEnd })
+              }
+            />
+            <AutoReplyScheduleEditor
+              id="sunday-auto-reply"
+              dayLabel={t("settings.customerFaq.sundayAutoReplyWindow")}
+              start={controls?.sundayAutoReplyStart ?? "19:00"}
+              end={controls?.sundayAutoReplyEnd ?? "09:00"}
+              startLabel={t("settings.customerFaq.sundayAutoReplyStart")}
+              endLabel={t("settings.customerFaq.sundayAutoReplyEnd")}
+              disabled={!canEdit || savingControls || !controls}
+              onStartChange={(sundayAutoReplyStart) =>
+                setControls((current) =>
+                  current ? { ...current, sundayAutoReplyStart } : current,
+                )
+              }
+              onEndChange={(sundayAutoReplyEnd) =>
+                setControls((current) =>
+                  current ? { ...current, sundayAutoReplyEnd } : current,
+                )
+              }
+              onStartCommit={(sundayStart) =>
+                void saveControls({ sundayStart })
+              }
+              onEndCommit={(sundayEnd) => void saveControls({ sundayEnd })}
+            />
+          </div>
+        </div>
         {controlsError ? (
           <p className="orders-state-error" role="alert">
             {controlsError}
@@ -1359,60 +1449,17 @@ export function CustomerFaqPage({
       <SidePanel
         open={insightsOpen}
         title="AI 成效報告"
+        description="掌握 WhatsApp 客服的即時狀況，快速判斷是否需要採取行動。"
         onClose={() => setInsightsOpen(false)}
         closeLabel={t("common.close")}
         className="customer-service-insights-panel"
-      >
-        <div className="customer-service-insights">
-          <section className="customer-service-review-queue customer-service-delivery-queue">
-            <header>
-              <div>
-                <h3 className="customer-service-section-title">
-                  <span><Send /></span>
-                  WhatsApp 發送追蹤
-                </h3>
-                <p>集中查看排隊、發送失敗及已停止重試的客服回覆。</p>
-              </div>
-              <span className="status-badge neutral">
-                {outboundMessages.filter((item) =>
-                  ["queued", "sending", "failed", "dead"].includes(item.status)
-                ).length}
+        headerActions={
+          <div className="customer-service-report-header-actions">
+            <label>
+              <span>
+                <CalendarDays aria-hidden="true" />
+                報告日期
               </span>
-            </header>
-            {outboundMessages
-              .filter((item) => ["queued", "sending", "failed", "dead"].includes(item.status))
-              .map((message) => (
-                <article key={message.id}>
-                  <small>
-                    {message.phone} · {new Date(message.createdAt).toLocaleString("zh-HK")}
-                  </small>
-                  <strong>{message.body}</strong>
-                  <p>
-                    狀態：{message.status} · 嘗試 {message.attemptCount}/{message.maxAttempts}
-                  </p>
-                  {message.lastError ? <code>{message.lastError}</code> : null}
-                  {canEdit && ["failed", "dead"].includes(message.status) ? (
-                    <footer>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        disabled={outboundBusy === message.id}
-                        onClick={() => void retryOutbound(message.id)}
-                      >
-                        <RefreshCw />
-                        立即重試
-                      </Button>
-                    </footer>
-                  ) : null}
-                </article>
-              ))}
-            {!outboundMessages.some((item) =>
-              ["queued", "sending", "failed", "dead"].includes(item.status)
-            ) ? <p>目前沒有待處理或失敗的 WhatsApp 回覆。</p> : null}
-          </section>
-          <div className="customer-service-report-generator">
-            <label className="ingredients-field">
-              <span>報告日期</span>
               <input
                 type="date"
                 value={reportDate}
@@ -1428,72 +1475,148 @@ export function CustomerFaqPage({
               {generatingReport ? "分析中…" : "產生報告"}
             </Button>
           </div>
+        }
+      >
+        <div className="customer-service-insights">
           {insightsError ? (
             <p className="orders-state-error" role="alert">
               {insightsError}
             </p>
           ) : null}
-          {insightsLoading ? (
-            <p>載入中…</p>
-          ) : latestReport ? (
-            <section className="customer-service-report-card customer-service-report-overview">
+
+          <section
+            className={`customer-service-health-summary${
+              reportNeedsAttention ? " needs-attention" : ""
+            }`}
+          >
+            <div className="customer-service-health-status">
+              <span className="customer-service-health-icon">
+                {reportNeedsAttention ? <X /> : <CheckCheck />}
+              </span>
+              <div>
+                <h3>
+                  {insightsLoading
+                    ? "正在整理報告"
+                    : reportNeedsAttention
+                      ? "有項目需要關注"
+                      : "系統運作正常"}
+                </h3>
+                <p>
+                  {insightsLoading
+                    ? "正在載入最新客服成效與發送狀態。"
+                    : reportNeedsAttention
+                      ? "請查看下方的發送異常或疑似錯誤轉人工。"
+                      : "目前沒有待處理或發送失敗的 WhatsApp 回覆。"}
+                </p>
+                <small>
+                  {latestReport
+                    ? `報告 ${latestReport.reportDate} · ${latestReport.environment} · ${latestReport.status}`
+                    : "尚未產生每日報告"}
+                </small>
+              </div>
+            </div>
+
+            <div className="customer-service-headline-metrics">
+              <div>
+                <MessageCircleMore aria-hidden="true" />
+                <span>
+                  <span>收到問題</span>
+                  <strong>{latestReport?.metrics.received ?? 0}</strong>
+                </span>
+              </div>
+              <div>
+                <CheckCheck aria-hidden="true" />
+                <span>
+                  <span>成功率</span>
+                  <strong>{formatRate(latestReport?.metrics.success_rate)}</strong>
+                </span>
+              </div>
+              <div>
+                <X aria-hidden="true" />
+                <span>
+                  <span>失敗</span>
+                  <strong>{latestReport?.metrics.failed ?? 0}</strong>
+                </span>
+              </div>
+              <div>
+                <UserRound aria-hidden="true" />
+                <span>
+                  <span>真人接手</span>
+                  <strong>{latestReport?.metrics.handoff ?? 0}</strong>
+                </span>
+              </div>
+            </div>
+
+            <aside className="customer-service-ai-summary">
+              <Sparkles aria-hidden="true" />
+              <div>
+                <strong>AI 摘要</strong>
+                <p>
+                  {latestReport?.aiSummary ||
+                    "產生報告後，這裡會總結當日表現與需要留意的項目。"}
+                </p>
+              </div>
+            </aside>
+          </section>
+
+          <div className="customer-service-insights-primary-grid">
+            <section className="customer-service-review-queue customer-service-delivery-queue">
               <header>
                 <div>
-                  <strong>{latestReport.reportDate}</strong>
-                  <small>
-                    {latestReport.environment} · {latestReport.status}
-                  </small>
+                  <h3 className="customer-service-section-title">
+                    <span><Send /></span>
+                    WhatsApp 發送追蹤
+                  </h3>
+                  <p>查看排隊、發送失敗及已停止重試的客服回覆。</p>
                 </div>
+                <span className="status-badge neutral">
+                  {actionableOutboundMessages.length}
+                </span>
               </header>
-              <div className="customer-service-report-metrics">
-                <div>
-                  <span>收到問題</span>
-                  <strong>{latestReport.metrics.received ?? 0}</strong>
-                </div>
-                <div>
-                  <span>成功率</span>
-                  <strong>
-                    {formatRate(latestReport.metrics.success_rate)}
-                  </strong>
-                </div>
-                <div>
-                  <span>失敗</span>
-                  <strong>{latestReport.metrics.failed ?? 0}</strong>
-                </div>
-                <div>
-                  <span>真人接手</span>
-                  <strong>{latestReport.metrics.handoff ?? 0}</strong>
-                </div>
-                <div>
-                  <span>未能回答</span>
-                  <strong>{latestReport.metrics.unanswered ?? 0}</strong>
-                </div>
-                <div>
-                  <span>發送成功率</span>
-                  <strong>
-                    {formatRate(latestReport.metrics.send_success_rate)}
-                  </strong>
-                </div>
-                <div>
-                  <span>自動檢查通過率</span>
-                  <strong>
-                    {formatRate(latestReport.metrics.automatic_success_rate)}
-                  </strong>
-                </div>
-                <div>
-                  <span>有資料依據</span>
-                  <strong>{formatRate(latestReport.metrics.grounded_rate)}</strong>
-                </div>
-                <div>
-                  <span>疑似錯誤轉人工</span>
-                  <strong>{latestReport.metrics.wrong_handoff_count ?? 0}</strong>
-                </div>
+              <div className="customer-service-delivery-counts" aria-label="發送狀態摘要">
+                <span>待發送 {actionableOutboundMessages.filter((item) => ["queued", "sending"].includes(item.status)).length}</span>
+                <span>發送失敗 {outboundMessages.filter((item) => item.status === "failed").length}</span>
+                <span>已停止重試 {outboundMessages.filter((item) => item.status === "dead").length}</span>
               </div>
-              <p>{latestReport.aiSummary}</p>
+              <div className="customer-service-delivery-list">
+                {actionableOutboundMessages.map((message) => (
+                  <article key={message.id}>
+                    <small>
+                      {message.phone} · {new Date(message.createdAt).toLocaleString("zh-HK")}
+                    </small>
+                    <strong>{message.body}</strong>
+                    <p>
+                      狀態：{message.status} · 嘗試 {message.attemptCount}/{message.maxAttempts}
+                    </p>
+                    {message.lastError ? <code>{message.lastError}</code> : null}
+                    {canEdit && ["failed", "dead"].includes(message.status) ? (
+                      <footer>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={outboundBusy === message.id}
+                          onClick={() => void retryOutbound(message.id)}
+                        >
+                          <RefreshCw />
+                          立即重試
+                        </Button>
+                      </footer>
+                    ) : null}
+                  </article>
+                ))}
+                {actionableOutboundMessages.length === 0 ? (
+                  <div className="customer-service-empty-state">
+                    <span><Send aria-hidden="true" /></span>
+                    <strong>目前沒有待處理的訊息</strong>
+                    <p>所有 WhatsApp 回覆已順利發送。</p>
+                    <Button type="button" size="sm" variant="outline" onClick={() => void loadInsights()}>
+                      <RefreshCw />
+                      重新整理
+                    </Button>
+                  </div>
+                ) : null}
+              </div>
             </section>
-          ) : (
-            <p>尚未有每日報告。</p>
-          )}
 
           <section className="customer-service-suggestions">
             <header>
@@ -1545,10 +1668,53 @@ export function CustomerFaqPage({
                 </footer>
               </article>
             ))}
+            {suggestions.length === 0 ? (
+              <div className="customer-service-empty-state">
+                <span><Sparkles aria-hidden="true" /></span>
+                <strong>目前沒有新的學習建議</strong>
+                <p>系統會持續分析對話，有可優化內容時會顯示在這裡。</p>
+              </div>
+            ) : null}
           </section>
+          </div>
 
-          <section className="customer-service-model-lab">
-            <header>
+          <details className="customer-service-metrics-details" open>
+            <summary>
+              <div>
+                <h3 className="customer-service-section-title">
+                  <span><BarChart3 /></span>
+                  詳細成效指標
+                </h3>
+                <p>查看完整的營運與回覆品質數據。</p>
+              </div>
+              <ChevronDown aria-hidden="true" />
+            </summary>
+            <div className="customer-service-secondary-metrics">
+              <div>
+                <span>未能回答</span>
+                <strong>{latestReport?.metrics.unanswered ?? 0}</strong>
+              </div>
+              <div>
+                <span>發送成功率</span>
+                <strong>{formatRate(latestReport?.metrics.send_success_rate)}</strong>
+              </div>
+              <div>
+                <span>自動檢查通過率</span>
+                <strong>{formatRate(latestReport?.metrics.automatic_success_rate)}</strong>
+              </div>
+              <div>
+                <span>有資料依據</span>
+                <strong>{formatRate(latestReport?.metrics.grounded_rate)}</strong>
+              </div>
+              <div>
+                <span>疑似錯誤轉人工</span>
+                <strong>{latestReport?.metrics.wrong_handoff_count ?? 0}</strong>
+              </div>
+            </div>
+          </details>
+
+          <details className="customer-service-model-lab">
+            <summary>
               <div>
                 <h3 className="customer-service-section-title">
                   <span><Settings2 /></span>
@@ -1556,7 +1722,9 @@ export function CustomerFaqPage({
                 </h3>
                 <p>候選配置完成歷史評測後才能發布到 develop。</p>
               </div>
-            </header>
+              <ChevronDown aria-hidden="true" />
+            </summary>
+            <div className="customer-service-model-lab-content">
             {canEdit ? (
               <div className="customer-service-config-form">
                 <input
@@ -1751,7 +1919,8 @@ export function CustomerFaqPage({
                 );
               })}
             </div>
-          </section>
+            </div>
+          </details>
         </div>
       </SidePanel>
 

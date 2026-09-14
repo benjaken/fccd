@@ -19,6 +19,7 @@ export function SidePanel({
   description,
   onClose,
   children,
+  headerActions,
   footer,
   closeLabel,
   wide = false,
@@ -31,6 +32,7 @@ export function SidePanel({
   description?: string;
   onClose: () => void;
   children: ReactNode;
+  headerActions?: ReactNode;
   footer?: ReactNode;
   closeLabel: string;
   wide?: boolean;
@@ -93,16 +95,21 @@ export function SidePanel({
               <SheetDescription asChild><p>{description}</p></SheetDescription>
             ) : null}
           </div>
-          <SheetClose asChild>
-            <Button
-              type="button"
-              variant="outline"
-              size="icon"
-              aria-label={closeLabel}
-            >
-              <X />
-            </Button>
-          </SheetClose>
+          <div className="side-panel-header-controls">
+            {headerActions ? (
+              <div className="side-panel-header-actions">{headerActions}</div>
+            ) : null}
+            <SheetClose asChild>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                aria-label={closeLabel}
+              >
+                <X />
+              </Button>
+            </SheetClose>
+          </div>
         </SheetHeader>
         <div className="side-panel-body">{children}</div>
         {footer ? <SheetFooter>{footer}</SheetFooter> : null}
