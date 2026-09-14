@@ -329,25 +329,25 @@ function mapControls(row: ControlsRow): CustomerServiceControls {
       row.saturday_auto_reply_start ??
         row.weekend_auto_reply_start ??
         row.auto_reply_start,
-      "19:00",
+      "00:00",
     ),
     saturdayAutoReplyEnd: normalizeControlTime(
       row.saturday_auto_reply_end ??
         row.weekend_auto_reply_end ??
         row.auto_reply_end,
-      "09:00",
+      "00:00",
     ),
     sundayAutoReplyStart: normalizeControlTime(
       row.sunday_auto_reply_start ??
         row.weekend_auto_reply_start ??
         row.auto_reply_start,
-      "19:00",
+      "00:00",
     ),
     sundayAutoReplyEnd: normalizeControlTime(
       row.sunday_auto_reply_end ??
         row.weekend_auto_reply_end ??
         row.auto_reply_end,
-      "09:00",
+      "00:00",
     ),
     autoReplyTimezone: row.auto_reply_timezone || "Asia/Hong_Kong",
     updatedAt: row.updated_at,
@@ -493,10 +493,10 @@ export async function setCustomerServiceBotEnabled(
   enabled: boolean,
   weekdayAutoReplyStart = "19:00",
   weekdayAutoReplyEnd = "09:00",
-  saturdayAutoReplyStart = weekdayAutoReplyStart,
-  saturdayAutoReplyEnd = weekdayAutoReplyEnd,
-  sundayAutoReplyStart = saturdayAutoReplyStart,
-  sundayAutoReplyEnd = saturdayAutoReplyEnd,
+  saturdayAutoReplyStart = "00:00",
+  saturdayAutoReplyEnd = "00:00",
+  sundayAutoReplyStart = "00:00",
+  sundayAutoReplyEnd = "00:00",
 ) {
   const { data, error } = await supabase.rpc("customer_service_controls_set", {
     p_bot_enabled: enabled,

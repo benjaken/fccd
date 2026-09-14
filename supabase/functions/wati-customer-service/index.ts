@@ -423,25 +423,25 @@ async function loadBotControls(admin: AdminClient) {
       row?.saturday_auto_reply_start ??
         row?.weekend_auto_reply_start ??
         row?.auto_reply_start,
-      "19:00",
+      "00:00",
     ),
     saturdayAutoReplyEnd: normalizeScheduleTime(
       row?.saturday_auto_reply_end ??
         row?.weekend_auto_reply_end ??
         row?.auto_reply_end,
-      "09:00",
+      "00:00",
     ),
     sundayAutoReplyStart: normalizeScheduleTime(
       row?.sunday_auto_reply_start ??
         row?.weekend_auto_reply_start ??
         row?.auto_reply_start,
-      "19:00",
+      "00:00",
     ),
     sundayAutoReplyEnd: normalizeScheduleTime(
       row?.sunday_auto_reply_end ??
         row?.weekend_auto_reply_end ??
         row?.auto_reply_end,
-      "09:00",
+      "00:00",
     ),
     autoReplyTimezone: row?.auto_reply_timezone || "Asia/Hong_Kong",
   };
@@ -591,7 +591,7 @@ async function loadConversation(admin: AdminClient, phone: string) {
     admin
       .from("customer_service_conversations")
       .select(
-        "phone_normalized,state,selected_order_id,handoff_at,pending_request,active_goal,workflow_slots,workflow_version,suspended_goals,identity_verified_at,identity_verification_method,identity_verification_order_id,identity_verification_attempts",
+        "phone_normalized,state,selected_order_id,handoff_at,pending_request,active_goal,handoff_kind,handoff_urgent,handoff_quote_id,workflow_slots,workflow_version,suspended_goals,identity_verified_at,identity_verification_method,identity_verification_order_id,identity_verification_attempts",
       )
       .eq("phone_normalized", phone)
       .maybeSingle(),
@@ -618,6 +618,9 @@ async function loadConversation(admin: AdminClient, phone: string) {
     handoff_at: data?.handoff_at ?? null,
     pending_request: data?.pending_request ?? null,
     active_goal: data?.active_goal ?? null,
+    handoff_kind: data?.handoff_kind ?? null,
+    handoff_urgent: Boolean(data?.handoff_urgent),
+    handoff_quote_id: data?.handoff_quote_id ?? null,
     workflow_slots: data?.workflow_slots ?? {},
     workflow_version: Number(data?.workflow_version ?? 1),
     suspended_goals: Array.isArray(data?.suspended_goals) ? data.suspended_goals : [],
@@ -644,6 +647,9 @@ async function saveConversation(
     handoff_at: conversation.handoff_at,
     pending_request: conversation.pending_request ?? null,
     active_goal: conversation.active_goal ?? null,
+    handoff_kind: conversation.handoff_kind ?? null,
+    handoff_urgent: Boolean(conversation.handoff_urgent),
+    handoff_quote_id: conversation.handoff_quote_id ?? null,
     workflow_slots: conversation.workflow_slots ?? {},
     workflow_version: conversation.workflow_version ?? 1,
     suspended_goals: conversation.suspended_goals ?? [],
@@ -1738,6 +1744,17 @@ function previewConversation(
       input.active_goal === "order_change" || input.active_goal === "catering_inquiry"
         ? input.active_goal
         : null,
+    handoff_kind: [
+      "same_day_catering",
+      "future_catering",
+      "order_change",
+      "general",
+    ].includes(String(input.handoff_kind || ""))
+      ? input.handoff_kind as CustomerServiceConversation["handoff_kind"]
+      : null,
+    handoff_urgent: input.handoff_urgent === true,
+    handoff_quote_id:
+      typeof input.handoff_quote_id === "string" ? input.handoff_quote_id : null,
     workflow_slots:
       input.workflow_slots && typeof input.workflow_slots === "object"
         ? input.workflow_slots as Record<string, unknown>
@@ -2033,6 +2050,10 @@ async function handleInboundMedia(admin: AdminClient, event: WatiInboundEvent) {
     state: "awaiting_human",
     handoff_at: new Date().toISOString(),
     pending_request: `查看客人${label}`,
+    active_goal: null,
+    handoff_kind: "general",
+    handoff_urgent: false,
+    handoff_quote_id: null,
   };
   const reply = `已收到你嘅${label}，呢類訊息會交由客服同事查看，稍後回覆你。`;
   await persistCustomerServiceTurn(admin, {

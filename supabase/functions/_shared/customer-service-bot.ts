@@ -46,7 +46,16 @@ export type CustomerServiceTaskSnapshot = {
   handoffAt: string | null;
   pendingRequest: string | null;
   workflowSlots: Record<string, unknown>;
+  handoffKind?: CustomerServiceHandoffKind | null;
+  handoffUrgent?: boolean;
+  handoffQuoteId?: string | null;
 };
+
+export type CustomerServiceHandoffKind =
+  | "same_day_catering"
+  | "future_catering"
+  | "order_change"
+  | "general";
 
 export type CustomerServiceOrder = {
   order_id: string;
@@ -84,6 +93,9 @@ export type CustomerServiceConversation = {
   handoff_at: string | null;
   pending_request: string | null;
   active_goal?: CustomerServicePilotGoal | null;
+  handoff_kind?: CustomerServiceHandoffKind | null;
+  handoff_urgent?: boolean;
+  handoff_quote_id?: string | null;
   workflow_slots?: Record<string, unknown>;
   workflow_version?: number;
   suspended_goals?: CustomerServiceTaskSnapshot[];
@@ -273,6 +285,248 @@ function normalizedFaqText(value: string) {
     .replace(/^(請問|想問|我想問|可唔可以問)/, "");
 }
 
+const FAQ_DIRECT_MATCH_RULES: Array<{
+  question: string;
+  aliases: RegExp[];
+  excluded?: RegExp;
+}> = [
+  {
+    question: "運費幾多",
+    aliases: [/運費(?:幾多|點計|收費)/, /送貨費(?:幾多|點計|收費)/, /免運(?:門檻|條件)/, /deliveryfee/],
+    excluded: /(?:我|張|訂單|order).{0,8}(?:幾時送|送貨狀態|付款狀態)/,
+  },
+  {
+    question: "接受咩付款方式",
+    aliases: [/付款方式/, /付款有咩(?:選擇|方法)/, /點(?:樣)?俾錢/, /支付方式/, /paymentmethod/, /接受(?:咩|什麼|哪些)(?:付款|支付)/],
+    excluded: /已付款|未入帳|沒入帳|扣款|付款失敗|重複付款/,
+  },
+  {
+    question: "網上付款支援咩方式",
+    aliases: [/網上付款(?:方式|支援)/, /(?:visa|mastercard|alipay|wechatpay).{0,8}(?:支援|接受|可以)/],
+    excluded: /已付款|未入帳|沒入帳|扣款|付款失敗|重複付款/,
+  },
+  {
+    question: "可唔可以貨到付款",
+    aliases: [/貨到付款/, /收貨(?:先|時)?付款/, /cashondelivery/, /^cod$/],
+  },
+  {
+    question: "點攞收據或者發票",
+    aliases: [/(?:收據|發票|invoice|receipt).{0,8}(?:點攞|下載|索取|邊度|哪裏)/, /(?:下載|索取).{0,8}(?:收據|發票|invoice|receipt)/],
+  },
+  {
+    question: "點樣喺網站落單",
+    aliases: [/(?:網站|網上).{0,8}(?:點樣|如何|點|怎樣)?(?:落單|訂購|下單)/, /(?:點樣|如何|howto)(?:喺|在)?(?:網站|網上)?(?:落單|訂購|order)/],
+    excluded: /即日|今日|今天|急單/,
+  },
+  {
+    question: "可唔可以經whatsapp落單",
+    aliases: [/whatsapp.{0,8}(?:落單|訂餐|訂購)/, /(?:落單|訂餐|訂購).{0,8}whatsapp/],
+    excluded: /即日|今日|今天|急單/,
+  },
+  {
+    question: "可唔可以提早預訂",
+    aliases: [/(?:提早|幾早|預早|提前).{0,8}(?:預訂|落單|訂餐)/],
+    excluded: /截單|最後落單|deadline/,
+  },
+  {
+    question: "網站落單同foodpanda有咩分別",
+    aliases: [/foodpanda.{0,12}(?:網站|官網|分別|款式)/, /(?:網站|官網).{0,12}foodpanda/],
+  },
+  {
+    question: "可唔可以度身訂造餐單",
+    aliases: [/(?:度身訂造|客製|訂製|自訂).{0,8}(?:餐單|餐牌|套餐)/],
+    excluded: /即日|今日|今天|急單|廚房確認/,
+  },
+  {
+    question: "想要報價要提供咩資料",
+    aliases: [/(?:報價|詢價|quotation).{0,8}(?:資料|提供|需要什麼|要咩)/],
+  },
+  {
+    question: "可以喺訂單加備註嗎",
+    aliases: [/(?:備註|補充資料).{0,8}(?:訂單|落單)/, /(?:訂單|落單).{0,8}(?:備註|補充資料)/],
+    excluded: /已落單|落咗單|完成落單|改(?:單|內容)/,
+  },
+  {
+    question: "可唔可以荃灣自取",
+    aliases: [/(?:荃灣.{0,6}自取|自取.{0,6}荃灣)/, /自取(?:地址|地點|邊度|哪裏)/],
+    excluded: /(?:改|轉|更改).{0,8}自取|(?:我|張|訂單).{0,8}自取/,
+  },
+  {
+    question: "地面交收係咩意思",
+    aliases: [/地面交收(?:係咩|意思|點樣|是什麼)/, /groundcollection/],
+  },
+  {
+    question: "有冇送貨上門服務",
+    aliases: [/(?:有冇|可以|可否).{0,8}(?:送貨上門|送上樓|homedelivery)/, /(?:送貨上門|送上樓).{0,8}(?:服務|得唔得|可以)/],
+    excluded: /(?:改|轉|更改).{0,8}(?:送貨|上門)|(?:我|張|訂單).{0,8}(?:送貨|上門)/,
+  },
+  {
+    question: "有冇餐牌可以睇",
+    aliases: [/(?:有冇|想睇|提供|send).{0,8}(?:餐牌|菜單|menu)/, /(?:餐牌|菜單|menu).{0,8}(?:有冇|睇|看|提供|send)/],
+    excluded: /即日|今日|今天|急單/,
+  },
+  {
+    question: "foodchannels有邊啲到會品牌",
+    aliases: [/(?:foodchannels|你哋|公司|旗下).{0,8}(?:品牌|邊幾間)/, /到會品牌/],
+  },
+  {
+    question: "幾個到會品牌有咩分別",
+    aliases: [/(?:品牌|fcc|express|kitchen|cuisine|lunchbox|partyfood).{0,12}(?:分別|主打|適合|比較)/],
+  },
+  {
+    question: "你哋餐牌有咩種類",
+    aliases: [/(?:餐牌|菜式|食物).{0,8}(?:種類|類型|有咩)/],
+  },
+  {
+    question: "有冇食物相片參考",
+    aliases: [/(?:食物|菜式|餐點).{0,8}(?:相片|圖片|photo)/, /(?:相片|圖片|photo).{0,8}(?:食物|菜式|餐點)/],
+  },
+  {
+    question: "有冇早餐",
+    aliases: [/早餐|breakfast/],
+  },
+  {
+    question: "食物係即食定要加熱",
+    aliases: [/(?:食物|菜式|到會).{0,8}(?:即食|加熱|翻熱)/, /(?:即食|加熱|翻熱).{0,8}(?:食物|菜式|到會)/],
+  },
+  {
+    question: "餐具有啲咩",
+    aliases: [/(?:餐具|刀叉|筷子).{0,8}(?:有啲咩|包括|包唔包|有冇|提供)/, /(?:包括|包唔包|有冇).{0,8}(?:餐具|刀叉|筷子)/],
+  },
+  {
+    question: "餐具份量點樣計",
+    aliases: [/(?:餐具|餐具包).{0,8}(?:幾人|幾位|數量|份量|夠)/],
+  },
+  {
+    question: "素食或者走蔥蒜得唔得",
+    aliases: [/素食|走蔥|走蒜|vegetarian/],
+    excluded: /敏感|過敏|保證|即日|今日|今天|急單/,
+  },
+  {
+    question: "植物肉係用咩整",
+    aliases: [/(?:植物肉|omni|素肉).{0,8}(?:成分|材料|用咩整|大豆)/],
+    excluded: /敏感|過敏|保證/,
+  },
+  {
+    question: "高級飯盒便當可以做素食嗎",
+    aliases: [/(?:飯盒|便當).{0,8}(?:素食|走肉|vegetarian)/, /(?:素食|vegetarian).{0,8}(?:飯盒|便當)/],
+    excluded: /敏感|過敏|即日|今日|今天|急單/,
+  },
+  {
+    question: "有冇廚師上門",
+    aliases: [/廚師上門|上門煮|chef(?:service)?/],
+  },
+  {
+    question: "有冇侍應或者擺盤",
+    aliases: [/侍應|擺盤|waiter|plating/],
+  },
+  {
+    question: "食物係咪由你哋工場製作",
+    aliases: [/(?:工場|廚房|食物來源).{0,8}(?:自家|你哋|製作|邊度)/, /(?:自家|你哋).{0,8}(?:工場|廚房).{0,8}(?:製作|整)/],
+  },
+  {
+    question: "餐盒會唔會標示菜式名稱",
+    aliases: [/(?:餐盒|盒蓋|包裝).{0,8}(?:菜名|標籤|貼紙|核對)/],
+  },
+  {
+    question: "食物用咩包裝送到",
+    aliases: [/(?:食物|到會).{0,8}(?:包裝|鋁盒|保溫)/, /(?:包裝|鋁盒|保溫).{0,8}(?:食物|到會)/],
+  },
+  {
+    question: "食物大約幾多盒一箱",
+    aliases: [/(?:箱|紙箱).{0,8}(?:幾多盒|多少盒|箱數)/, /一箱.{0,6}(?:幾多|多少)盒/],
+    excluded: /(?:我|張|訂單|order)/,
+  },
+  {
+    question: "有冇軟餐或者碎餐",
+    aliases: [/軟餐|碎餐|院舍餐|切細件/],
+  },
+  {
+    question: "乳豬係原隻送到嗎",
+    aliases: [/乳豬.{0,8}(?:原隻|切|膠刀|手套)/],
+  },
+  {
+    question: "甜薯絲網卷係用咩整",
+    aliases: [/甜薯絲網卷.{0,8}(?:成分|材料|用咩整|米網)/],
+    excluded: /敏感|過敏|保證/,
+  },
+  {
+    question: "因宗教原因唔食牛套餐可以更換嗎",
+    aliases: [/(?:牛|牛肉).{0,8}(?:宗教|唔食|更換|轉菜)/, /(?:宗教|唔食).{0,8}(?:牛|牛肉)/],
+  },
+  {
+    question: "一斤叉燒大約有幾多片",
+    aliases: [/叉燒.{0,8}(?:一斤|幾多片|份量)/, /一斤.{0,6}叉燒/],
+  },
+  {
+    question: "啫喱糖兩磅大約夠幾多人",
+    aliases: [/啫喱糖.{0,10}(?:兩磅|2磅|幾多人|份量)/],
+  },
+  {
+    question: "泰式菠蘿炒飯辣唔辣",
+    aliases: [/(?:泰式菠蘿炒飯|菠蘿炒飯).{0,8}(?:辣|唔辣)/],
+  },
+  {
+    question: "豬手同牛肋骨會切開嗎",
+    aliases: [/(?:豬手|牛肋骨).{0,8}(?:切開|幾人|份量)/],
+  },
+  {
+    question: "壽桃包有幾大",
+    aliases: [/壽桃包.{0,8}(?:幾大|尺寸|拳頭)/],
+  },
+  {
+    question: "壽桃包可以點樣保存",
+    aliases: [/壽桃包.{0,8}(?:保存|急凍|蒸熱)/],
+  },
+  {
+    question: "pizza會切幾多件",
+    aliases: [/(?:pizza|薄餅).{0,8}(?:幾件|切法|方形|長條)/],
+  },
+  {
+    question: "地面交收同送貨上門有咩分別",
+    aliases: [/地面交收.{0,12}(?:送貨上門|上樓).{0,8}(?:分別|不同)/, /(?:分別|不同).{0,12}地面交收.{0,12}(?:送貨上門|上樓)/],
+  },
+  {
+    question: "地面交收會唔會送入屋或者課室",
+    aliases: [/地面交收.{0,10}(?:入屋|上樓|課室|搬運)/],
+  },
+  {
+    question: "收貨時仲使唔使畀運費司機",
+    aliases: [/(?:司機|收貨).{0,8}(?:運費|再畀|再付款)/, /(?:運費|再畀).{0,8}(?:司機|收貨)/],
+    excluded: /未入帳|沒入帳|扣款|付款失敗|重複付款/,
+  },
+  {
+    question: "打風落雨會唔會送",
+    aliases: [/(?:打風|8號|八號|黑雨|惡劣天氣).{0,10}(?:送貨|安排|改期)/],
+  },
+  {
+    question: "cashdollar有效期幾耐",
+    aliases: [/(?:cashdollar|積分).{0,8}(?:有效期|到期|幾耐)/],
+  },
+  {
+    question: "冇登記會員有冇生日甜品",
+    aliases: [/(?:非會員|冇登記|未註冊).{0,8}(?:生日甜品|生日禮遇)/],
+  },
+  {
+    question: "會員註冊網址係咩",
+    aliases: [/(?:註冊|登記|register).{0,8}(?:會員|帳戶|網址|連結)/, /(?:會員|帳戶).{0,8}(?:註冊|登記|register)/],
+  },
+  {
+    question: "忘記會員密碼點算",
+    aliases: [/忘記密碼|重設密碼|resetpassword/],
+  },
+  {
+    question: "點樣修改會員個人資料",
+    aliases: [/(?:會員|帳戶).{0,8}(?:修改資料|改資料|個人資料)/, /(?:修改|更改).{0,8}(?:會員|帳戶).{0,8}資料/],
+    excluded: /(?:訂單|落單).{0,8}(?:地址|資料)|(?:改|更改).{0,8}(?:送貨地址|訂單)/,
+  },
+  {
+    question: "最新優惠可以喺邊度睇",
+    aliases: [/最新優惠|promotion|優惠頁/],
+    excluded: /優惠碼.{0,8}(?:有效|用唔用得|失效)/,
+  },
+];
+
 function strongPublishedFaqMatch(query: string, hit: CustomerServiceFaqHit) {
   const left = normalizedFaqText(query);
   const right = normalizedFaqText(hit.question);
@@ -281,14 +535,12 @@ function strongPublishedFaqMatch(query: string, hit: CustomerServiceFaqHit) {
   if (Math.min(left.length, right.length) >= 5 &&
     Math.abs(left.length - right.length) <= 5 &&
     (left.includes(right) || right.includes(left))) return true;
-  return [
-    "運費", "送貨費", "付款", "餐牌", "菜單", "飯盒", "便當",
-    "自取", "餐具", "廚師上門", "收據", "發票", "最低消費",
-  ].some((keyword) => left.includes(keyword) && right.includes(keyword));
-}
-
-function isMenuFaq(hit: CustomerServiceFaqHit) {
-  return hit.category === "menu" && /(?:餐牌|菜單|菜单|menu)/i.test(hit.question);
+  const rule = FAQ_DIRECT_MATCH_RULES.find(
+    (candidate) => normalizedFaqText(candidate.question) === right ||
+      candidate.aliases.some((alias) => alias.test(right)),
+  );
+  if (!rule || rule.excluded?.test(left)) return false;
+  return rule.aliases.some((alias) => alias.test(left));
 }
 
 function resetPilotConversation(conversation: CustomerServiceConversation) {
@@ -298,6 +550,9 @@ function resetPilotConversation(conversation: CustomerServiceConversation) {
     handoff_at: null,
     pending_request: null,
     active_goal: null,
+    handoff_kind: null,
+    handoff_urgent: false,
+    handoff_quote_id: null,
     workflow_slots: {},
     workflow_version: 1,
     suspended_goals: [],
@@ -315,6 +570,9 @@ function suspendPilotConversation(
     handoffAt: conversation.handoff_at,
     pendingRequest: conversation.pending_request,
     workflowSlots: conversation.workflow_slots ?? {},
+    handoffKind: conversation.handoff_kind ?? null,
+    handoffUrgent: Boolean(conversation.handoff_urgent),
+    handoffQuoteId: conversation.handoff_quote_id ?? null,
   };
   return nextConversation(resetPilotConversation(conversation), {
     suspended_goals: [...(conversation.suspended_goals ?? []), snapshot].slice(-3),
@@ -332,6 +590,9 @@ function restoreSuspendedConversation(conversation: CustomerServiceConversation)
     pending_request: snapshot.pendingRequest,
     active_goal: snapshot.goal,
     workflow_slots: snapshot.workflowSlots,
+    handoff_kind: snapshot.handoffKind,
+    handoff_urgent: snapshot.handoffUrgent,
+    handoff_quote_id: snapshot.handoffQuoteId,
     suspended_goals: stack,
   });
 }
@@ -475,6 +736,9 @@ async function finishOrderHandoff(
       handoff_at: new Date().toISOString(),
       pending_request: null,
       active_goal: "order_change",
+      handoff_kind: "order_change",
+      handoff_urgent: false,
+      handoff_quote_id: null,
     }),
     wroteInquiry: false,
     notified: false,
@@ -545,6 +809,9 @@ async function replyOrderHandoff(
       handoff_at: new Date().toISOString(),
       pending_request: null,
       active_goal: "order_change",
+      handoff_kind: "order_change",
+      handoff_urgent: false,
+      handoff_quote_id: null,
     }),
     wroteInquiry: false,
     notified: false,
@@ -785,13 +1052,18 @@ async function replyCollect(
   text: string,
 ): Promise<BotTurn> {
   const saved = conversation.workflow_slots ?? {};
+  const previousNote = String(saved.note ?? "").trim();
+  const incomingNote = (classified.slots.note || text).trim();
   const slots: InquirySlots = {
     eventDate: classified.slots.eventDate || String(saved.eventDate ?? ""),
     headcount: classified.slots.headcount || String(saved.headcount ?? ""),
     budget: classified.slots.budget || String(saved.budget ?? ""),
     dietary: classified.slots.dietary || String(saved.dietary ?? ""),
     cuisine: classified.slots.cuisine || String(saved.cuisine ?? ""),
-    note: classified.slots.note || String(saved.note ?? ""),
+    note: [previousNote, incomingNote]
+      .filter((value, index, values) => value && values.indexOf(value) === index)
+      .join("\n")
+      .slice(0, 2_000),
     anotherEvent: classified.slots.anotherEvent || Boolean(saved.anotherEvent),
   };
   if (!hasCollectableSlots(slots)) {
@@ -840,15 +1112,32 @@ async function replyCollect(
   const restored = deps.workflowAutoResume?.catering_inquiry === false
     ? null
     : restoreSuspendedConversation(conversation);
+  const next = urgent
+    ? nextConversation(conversation, {
+        state: "awaiting_human",
+        selected_order_id: null,
+        handoff_at: conversation.handoff_at ?? new Date().toISOString(),
+        pending_request: null,
+        active_goal: "catering_inquiry",
+        workflow_slots: slots,
+        handoff_kind: "same_day_catering",
+        handoff_urgent: true,
+        handoff_quote_id: written.quote_id,
+      })
+    : restored ?? resetPilotConversation(conversation);
+  const isSameDaySupplement = conversation.state === "awaiting_human" &&
+    conversation.handoff_kind === "same_day_catering";
   return {
     reply: `${
       urgent
-        ? configuredReply(deps, "same_day_urgent", REPLIES.sameDayUrgent)
+        ? isSameDaySupplement
+          ? REPLIES.handoffQueuedUrgent
+          : configuredReply(deps, "same_day_urgent", REPLIES.sameDayUrgent)
         : configuredReply(deps, "collect_done", REPLIES.collectDone)
     }${
       restored ? " 已返回上一個未完成事項。" : ""
     }`,
-    conversation: restored ?? resetPilotConversation(conversation),
+    conversation: next,
     wroteInquiry: true,
     notified: urgent,
     queuedHandoff: true,
@@ -863,9 +1152,10 @@ async function replyFaq(
   query: string,
 ): Promise<BotTurn> {
   const hits = await deps.searchFaqs(query);
-  if (deps.answerFaqWithModel) {
+  const approvedHits = hits.filter((hit) => strongPublishedFaqMatch(query, hit));
+  if (deps.answerFaqWithModel && approvedHits.length) {
     try {
-      const modelAnswer = await deps.answerFaqWithModel(query, hits);
+      const modelAnswer = await deps.answerFaqWithModel(query, approvedHits);
       const answer =
         typeof modelAnswer === "string" ? modelAnswer : modelAnswer?.answer;
       if (answer) {
@@ -875,8 +1165,8 @@ async function replyFaq(
             : (modelAnswer?.sourceIds ?? []);
         const excludeIds = faqSourceIds.length
           ? faqSourceIds
-          : hits[0]?.id
-            ? [hits[0].id]
+            : approvedHits[0]?.id
+            ? [approvedHits[0].id]
             : [];
         return {
           reply: faqReply(answer),
@@ -885,7 +1175,7 @@ async function replyFaq(
           notified: false,
           usedModel: true,
           faqSourceIds,
-          relatedFaqs: selectRelatedFaqs(hits, excludeIds),
+          relatedFaqs: selectRelatedFaqs(approvedHits, excludeIds),
           model:
             typeof modelAnswer === "string"
               ? null
@@ -899,7 +1189,7 @@ async function replyFaq(
       );
     }
   }
-  const deterministicHit = hits.find((hit) => strongPublishedFaqMatch(query, hit));
+  const deterministicHit = approvedHits[0];
   if (deterministicHit?.answer) {
     return {
       reply: faqReply(deterministicHit.answer),
@@ -908,38 +1198,8 @@ async function replyFaq(
       notified: false,
       usedModel: classified.usedModel,
       faqSourceIds: [deterministicHit.id],
-      relatedFaqs: selectRelatedFaqs(hits, [deterministicHit.id]),
+      relatedFaqs: selectRelatedFaqs(approvedHits, [deterministicHit.id]),
     };
-  }
-  if (deps.answerWithoutFaqWithModel) {
-    try {
-      const modelAnswer = await deps.answerWithoutFaqWithModel({
-        query,
-        intentKey: classified.configuredIntentKey || classified.intent,
-        confidence: classified.confidence,
-        missingFields: classified.missingFields ?? [],
-        recentMessages: conversation.recent_messages ?? [],
-      });
-      const answer = typeof modelAnswer === "string"
-        ? modelAnswer
-        : modelAnswer?.answer;
-      if (answer) {
-        return {
-          reply: sanitizeOutboundReply(answer),
-          conversation,
-          wroteInquiry: false,
-          notified: false,
-          usedModel: true,
-          model: typeof modelAnswer === "string" ? null : modelAnswer?.model,
-          failureReason: null,
-        };
-      }
-    } catch (error) {
-      console.error(
-        "customer-service AI fallback answer failed",
-        error instanceof Error ? error.message.slice(0, 200) : String(error),
-      );
-    }
   }
   return {
     reply: configuredReply(deps, "no_faq", REPLIES.noFaq),
@@ -1082,6 +1342,22 @@ export async function handleCustomerServiceTurn({
     };
   }
 
+  if (
+    conversation.state === "awaiting_human" &&
+    (conversation.handoff_kind === "general" ||
+      (!conversation.handoff_kind && !conversation.active_goal &&
+        !conversation.selected_order_id))
+  ) {
+    return {
+      reply: null,
+      conversation,
+      wroteInquiry: false,
+      notified: false,
+      queuedHandoff: true,
+      usedModel: false,
+    };
+  }
+
   if (isCustomerServiceGreeting(text)) {
     return {
       reply: configuredReply(deps, "help", REPLIES.help),
@@ -1112,6 +1388,15 @@ export async function handleCustomerServiceTurn({
       conversation: nextConversation(conversation, {
         state: "awaiting_human",
         handoff_at: new Date().toISOString(),
+        active_goal: "catering_inquiry",
+        workflow_slots: {
+          ...(conversation.workflow_slots ?? {}),
+          eventDate: hongKongCalendarDate(),
+          note: text.trim().slice(0, 2_000),
+        },
+        handoff_kind: "same_day_catering",
+        handoff_urgent: true,
+        handoff_quote_id: null,
       }),
       wroteInquiry: false,
       notified: true,
@@ -1200,70 +1485,6 @@ export async function handleCustomerServiceTurn({
     });
   }
 
-  // For normal customer messages, intent analysis always happens before any
-  // FAQ or catalog tool. A strong knowledge hit may still override a mistaken
-  // business route, but it is now selected after the AI has understood the
-  // request and its conversation context.
-  const catalogQuery = deps.searchCatalog
-    ? customerServiceCatalogQuery(text, conversation.recent_messages)
-    : "";
-  if (catalogQuery && !isSameDayOrderDemand(text)) {
-    try {
-      const catalogHits = await deps.searchCatalog?.(catalogQuery);
-      if (catalogHits?.[0]) {
-        return annotate({
-          reply: sanitizeOutboundReply(
-            customerServiceCatalogReply(catalogHits[0]),
-          ),
-          imageUrl: catalogHits[0].imageUrl,
-          conversation,
-          wroteInquiry: false,
-          notified: false,
-          usedModel: classified.usedModel,
-          intentKey: "browse_menu",
-          toolKeys: ["search_catalog"],
-          failureReason: null,
-        });
-      }
-    } catch (error) {
-      console.error(
-        "customer-service catalog search failed",
-        error instanceof Error ? error.message.slice(0, 200) : String(error),
-      );
-    }
-  }
-
-  if (!isSameDayOrderDemand(text)) {
-    try {
-      const asksForMenu = isMenuInformationRequest(text);
-      const menuQuery = asksForMenu ? customerServiceMenuFaqQuery(text) : "";
-      const faqHits = await searchFaqsOnce(asksForMenu ? menuQuery : text);
-      const preferredFaq = asksForMenu
-        ? faqHits.find((hit) => strongPublishedFaqMatch(menuQuery, hit)) ??
-          faqHits.find(isMenuFaq)
-        : faqHits.find((hit) => strongPublishedFaqMatch(text, hit));
-      if (preferredFaq) {
-        return annotate({
-          reply: faqReply(preferredFaq.answer),
-          conversation,
-          wroteInquiry: false,
-          notified: false,
-          usedModel: classified.usedModel,
-          intentKey: asksForMenu ? "browse_menu" : "search_faq",
-          toolKeys: ["search_faqs"],
-          faqSourceIds: [preferredFaq.id],
-          relatedFaqs: selectRelatedFaqs(faqHits, [preferredFaq.id]),
-          failureReason: null,
-        });
-      }
-    } catch (error) {
-      console.error(
-        "customer-service FAQ lookup failed",
-        error instanceof Error ? error.message.slice(0, 200) : String(error),
-      );
-    }
-  }
-
   if (classified.needsClarification) {
     return annotate({
       reply: sanitizeOutboundReply(
@@ -1316,6 +1537,15 @@ export async function handleCustomerServiceTurn({
   }
   if (
     conversation.state === "awaiting_human" &&
+    conversation.handoff_kind === "same_day_catering" &&
+    pilotAction === "continue_catering"
+  ) {
+    return annotate(
+      await replyCollect(deps, phone, classified, conversation, text),
+    );
+  }
+  if (
+    conversation.state === "awaiting_human" &&
     pilotAction === "continue_order_change"
   ) {
     await deps.queueHandoff({
@@ -1351,6 +1581,71 @@ export async function handleCustomerServiceTurn({
   if (conversation.state === "picking_order" && classified.orderNumber) {
     return annotate(await replyLookup(deps, phone, classified, conversation));
   }
+  const highRiskIntent = classified.intent === "lookup_order" ||
+    classified.intent === "handoff_order" ||
+    classified.intent === "out_of_scope" ||
+    classified.intent === "prompt_injection";
+  if (!highRiskIntent && !isSameDayOrderDemand(text)) {
+    const catalogQuery = deps.searchCatalog &&
+        (classified.intent === "search_faq" ||
+          classified.intent === "collect_inquiry")
+      ? customerServiceCatalogQuery(text, conversation.recent_messages)
+      : "";
+    if (catalogQuery) {
+      try {
+        const catalogHits = await deps.searchCatalog?.(catalogQuery);
+        if (catalogHits?.[0]) {
+          return annotate({
+            reply: sanitizeOutboundReply(
+              customerServiceCatalogReply(catalogHits[0]),
+            ),
+            imageUrl: catalogHits[0].imageUrl,
+            conversation: routedConversation,
+            wroteInquiry: false,
+            notified: false,
+            usedModel: classified.usedModel,
+            intentKey: "browse_menu",
+            toolKeys: ["search_catalog"],
+            failureReason: null,
+          });
+        }
+      } catch (error) {
+        console.error(
+          "customer-service catalog search failed",
+          error instanceof Error ? error.message.slice(0, 200) : String(error),
+        );
+      }
+    }
+
+    try {
+      const asksForMenu = isMenuInformationRequest(text);
+      const menuQuery = asksForMenu ? customerServiceMenuFaqQuery(text) : "";
+      const faqQuery = asksForMenu ? menuQuery : text;
+      const faqHits = await searchFaqsOnce(faqQuery);
+      const preferredFaq = faqHits.find((hit) =>
+        strongPublishedFaqMatch(faqQuery, hit)
+      );
+      if (preferredFaq) {
+        return annotate({
+          reply: faqReply(preferredFaq.answer),
+          conversation: routedConversation,
+          wroteInquiry: false,
+          notified: false,
+          usedModel: classified.usedModel,
+          intentKey: asksForMenu ? "browse_menu" : "search_faq",
+          toolKeys: ["search_faqs"],
+          faqSourceIds: [preferredFaq.id],
+          relatedFaqs: selectRelatedFaqs(faqHits, [preferredFaq.id]),
+          failureReason: null,
+        });
+      }
+    } catch (error) {
+      console.error(
+        "customer-service FAQ lookup failed",
+        error instanceof Error ? error.message.slice(0, 200) : String(error),
+      );
+    }
+  }
   if (
     classified.intent === "prompt_injection" ||
     classified.intent === "out_of_scope"
@@ -1382,6 +1677,10 @@ export async function handleCustomerServiceTurn({
       conversation: nextConversation(routedConversation, {
         state: "awaiting_human",
         handoff_at: new Date().toISOString(),
+        active_goal: urgent ? "catering_inquiry" : null,
+        handoff_kind: urgent ? "same_day_catering" : "general",
+        handoff_urgent: urgent,
+        handoff_quote_id: null,
       }),
       wroteInquiry: false,
       notified: urgent,

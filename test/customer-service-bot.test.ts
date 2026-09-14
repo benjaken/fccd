@@ -398,7 +398,7 @@ describe("customer-service FAQ routing priority", () => {
     expect(classify).toHaveBeenCalledOnce();
   });
 
-  it("uses a safe AI reply when the classified FAQ intent has no match", async () => {
+  it("does not let the model invent an answer when no approved FAQ matches", async () => {
     const answerWithoutFaqWithModel = vi.fn().mockResolvedValue({
       answer: "可以先講活動日期同大概人數，我會按你嘅需要再提供合適方向。",
       model: "grok-4.5",
@@ -420,16 +420,49 @@ describe("customer-service FAQ routing priority", () => {
       classify,
     });
 
-    expect(answerWithoutFaqWithModel).toHaveBeenCalledWith(
-      expect.objectContaining({
-        query: "想搵適合公司聚會嘅到會，有咩建議？",
-        intentKey: "catering_inquiry",
+    expect(answerWithoutFaqWithModel).not.toHaveBeenCalled();
+    expect(turn.reply).toBe(REPLIES.noFaq);
+    expect(turn.failureReason).toBe("faq_not_found");
+  });
+
+  it("routes an order payment-status question before a generic payment FAQ", async () => {
+    const lookupOrders = vi.fn().mockResolvedValue([order]);
+    const searchFaqs = vi.fn().mockResolvedValue([{
+      id: "payment-faq",
+      question: "接受咩付款方式？",
+      answer: "網站接受信用卡。",
+    }]);
+    const turn = await handleCustomerServiceTurn({
+      phone: conversation.phone_normalized,
+      text: "我張訂單付款狀態係點？",
+      conversation,
+      deps: deps({ lookupOrders, searchFaqs }),
+    });
+
+    expect(turn.reply).toContain(order.order_number);
+    expect(turn.reply).not.toContain("網站接受信用卡");
+    expect(lookupOrders).toHaveBeenCalledOnce();
+    expect(searchFaqs).not.toHaveBeenCalled();
+  });
+
+  it("asks for clarification instead of choosing a FAQ from the generic word 付款", async () => {
+    const answerWithoutFaqWithModel = vi.fn();
+    const turn = await handleCustomerServiceTurn({
+      phone: conversation.phone_normalized,
+      text: "付款",
+      conversation,
+      deps: deps({
+        searchFaqs: vi.fn().mockResolvedValue([{
+          id: "payment-faq",
+          question: "接受咩付款方式？",
+          answer: "網站接受信用卡。",
+        }]),
+        answerWithoutFaqWithModel,
       }),
-    );
-    expect(turn.reply).toContain("活動日期");
-    expect(turn.usedModel).toBe(true);
-    expect(turn.model).toBe("grok-4.5");
-    expect(turn.failureReason).toBeNull();
+    });
+
+    expect(turn.reply).toBe(REPLIES.noFaq);
+    expect(answerWithoutFaqWithModel).not.toHaveBeenCalled();
   });
 
   it("urgently notifies staff for same-day order demand before Express FAQ", async () => {
@@ -493,6 +526,60 @@ describe("customer-service FAQ routing priority", () => {
     expect(turn.conversation.state).toBe("identifying");
     expect(classify).toHaveBeenCalledOnce();
     expect(queueHandoff).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["叉燒一斤有幾多片？", "一斤叉燒大約有幾多片？", "大約 50 片"],
+    ["一套餐具夠幾多人？", "餐具份量點樣計？", "約供 6 人"],
+    ["非會員有生日甜品嗎？", "冇登記會員有冇生日甜品？", "只適用於會員"],
+  ])("maps a specific FAQ alias: %s", async (text, question, answer) => {
+    const turn = await handleCustomerServiceTurn({
+      phone: conversation.phone_normalized,
+      text,
+      conversation,
+      deps: deps({
+        searchFaqs: vi.fn().mockResolvedValue([{
+          id: `faq-${question}`,
+          question,
+          answer,
+        }]),
+      }),
+      classify: vi.fn().mockResolvedValue({
+        intent: "search_faq",
+        slots: classifyCustomerServiceMessage("").slots,
+        orderNumber: "",
+        usedModel: true,
+        configuredIntentKey: "search_faq",
+      }),
+    });
+
+    expect(turn.reply).toContain(answer);
+    expect(turn.faqSourceIds).toEqual([`faq-${question}`]);
+  });
+
+  it("does not match a dish portion FAQ without the dish name", async () => {
+    const turn = await handleCustomerServiceTurn({
+      phone: conversation.phone_normalized,
+      text: "一斤有幾多片？",
+      conversation,
+      deps: deps({
+        searchFaqs: vi.fn().mockResolvedValue([{
+          id: "char-siu-portions",
+          question: "一斤叉燒大約有幾多片？",
+          answer: "大約 50 片。",
+        }]),
+      }),
+      classify: vi.fn().mockResolvedValue({
+        intent: "search_faq",
+        slots: classifyCustomerServiceMessage("").slots,
+        orderNumber: "",
+        usedModel: true,
+        configuredIntentKey: "search_faq",
+      }),
+    });
+
+    expect(turn.reply).toBe(REPLIES.noFaq);
+    expect(turn.faqSourceIds).toBeUndefined();
   });
 
   it("provides the published menu after classifying a catering inquiry", async () => {
@@ -807,24 +894,27 @@ describe("customer-service bot turns", () => {
     });
 
     expect(turn.reply).toContain("P-9999");
-    expect(turn.reply).toContain("落單時嘅電話號碼");
+    expect(turn.reply).toContain("確認訂單號碼");
+    expect(turn.reply).not.toContain("電話號碼");
     expect(turn.reply).not.toContain("FCL2026090101");
   });
 
-  it("uses a grounded model answer before the keyword-search fallback", async () => {
+  it("does not ask the model to answer when no published FAQ source matches", async () => {
+    const answerFaqWithModel = vi
+      .fn()
+      .mockResolvedValue("沙田屬新界，請按已公布嘅新界運費安排。");
     const turn = await handleCustomerServiceTurn({
       phone: conversation.phone_normalized,
       text: "我住沙田，送餐過嚟點計？",
       conversation,
       deps: deps({
         searchFaqs: vi.fn().mockResolvedValue([]),
-        answerFaqWithModel: vi
-          .fn()
-          .mockResolvedValue("沙田屬新界，請按已公布嘅新界運費安排。"),
+        answerFaqWithModel,
       }),
     });
-    expect(turn.reply).toContain("沙田屬新界");
-    expect(turn.usedModel).toBe(true);
+    expect(turn.reply).toBe(REPLIES.noFaq);
+    expect(turn.usedModel).toBe(false);
+    expect(answerFaqWithModel).not.toHaveBeenCalled();
   });
 
   it("answers a soak-test greeting without handing the chat to a human", async () => {
@@ -835,6 +925,7 @@ describe("customer-service bot turns", () => {
       deps: deps(),
     });
     expect(turn.reply).toBe(REPLIES.help);
+    expect(turn.reply).toBe("你好，請問是查詢現有訂單，還是需要到會訂餐協助？");
     expect(turn.conversation.state).toBe("identifying");
   });
 
@@ -1166,12 +1257,82 @@ describe("customer-service bot turns", () => {
     expect(turn.reply).toBe(REPLIES.sameDayUrgent);
     expect(turn.wroteInquiry).toBe(true);
     expect(turn.notified).toBe(true);
+    expect(turn.conversation).toMatchObject({
+      state: "awaiting_human",
+      active_goal: "catering_inquiry",
+      handoff_kind: "same_day_catering",
+      handoff_urgent: true,
+      handoff_quote_id: "quote-1",
+    });
     expect(queueHandoff).toHaveBeenCalledWith(
       expect.objectContaining({
         urgent: true,
         kind: "inquiry",
         summary: expect.stringContaining("【緊急即日】"),
       }),
+    );
+  });
+
+  it("writes a quote when a same-day guest supplies the missing headcount", async () => {
+    const writeInquiry = vi.fn().mockResolvedValue({
+      quote_id: "quote-urgent",
+      order_number: "FCLQ-URGENT",
+      created: true,
+    });
+    const queueHandoff = vi.fn().mockResolvedValue(undefined);
+    const first = await handleCustomerServiceTurn({
+      phone: conversation.phone_normalized,
+      text: "今日想訂餐",
+      conversation,
+      deps: deps({ writeInquiry, queueHandoff }),
+    });
+    const second = await handleCustomerServiceTurn({
+      phone: conversation.phone_normalized,
+      text: "8 人，想訂 Express",
+      conversation: first.conversation,
+      deps: deps({ writeInquiry, queueHandoff }),
+      classify: vi.fn().mockResolvedValue({
+        intent: "collect_inquiry",
+        dialogAction: "add_information",
+        slots: {
+          ...classifyCustomerServiceMessage("").slots,
+          headcount: "8",
+          cuisine: "Express",
+        },
+        orderNumber: "",
+        usedModel: true,
+      }),
+    });
+
+    expect(writeInquiry).toHaveBeenCalledOnce();
+    expect(second.wroteInquiry).toBe(true);
+    expect(second.conversation).toMatchObject({
+      state: "awaiting_human",
+      handoff_kind: "same_day_catering",
+      handoff_quote_id: "quote-urgent",
+    });
+  });
+
+  it("does not promote a complaint supplement to urgent catering", async () => {
+    const queueHandoff = vi.fn().mockResolvedValue(undefined);
+    const first = await handleCustomerServiceTurn({
+      phone: conversation.phone_normalized,
+      text: "我要投訴服務差",
+      conversation,
+      deps: deps({ queueHandoff }),
+    });
+    const second = await handleCustomerServiceTurn({
+      phone: conversation.phone_normalized,
+      text: "另外食物質素都有問題",
+      conversation: first.conversation,
+      deps: deps({ queueHandoff }),
+    });
+
+    expect(first.conversation.handoff_kind).toBe("general");
+    expect(second.reply).toBeNull();
+    expect(queueHandoff).toHaveBeenCalledTimes(1);
+    expect(queueHandoff).not.toHaveBeenCalledWith(
+      expect.objectContaining({ urgent: true }),
     );
   });
 
@@ -1278,7 +1439,8 @@ describe("precise order lookup replies", () => {
       deps: deps({ writeInquiry }),
     });
 
-    expect(turn.reply).toContain("搵唔到正式訂單");
+    expect(turn.reply).toContain("暫時未能定位相關訂單");
+    expect(turn.reply).not.toContain("WhatsApp 號碼");
     expect(turn.conversation.state).toBe("identifying");
     expect(turn.conversation.active_goal).toBeNull();
     expect(writeInquiry).not.toHaveBeenCalled();

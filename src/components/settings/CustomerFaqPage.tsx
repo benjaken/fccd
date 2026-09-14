@@ -458,10 +458,10 @@ export function CustomerFaqPage({
     enabled = controls?.botEnabled ?? false,
     weekdayStart = controls?.weekdayAutoReplyStart ?? "19:00",
     weekdayEnd = controls?.weekdayAutoReplyEnd ?? "09:00",
-    saturdayStart = controls?.saturdayAutoReplyStart ?? "19:00",
-    saturdayEnd = controls?.saturdayAutoReplyEnd ?? "09:00",
-    sundayStart = controls?.sundayAutoReplyStart ?? "19:00",
-    sundayEnd = controls?.sundayAutoReplyEnd ?? "09:00",
+    saturdayStart = controls?.saturdayAutoReplyStart ?? "00:00",
+    saturdayEnd = controls?.saturdayAutoReplyEnd ?? "00:00",
+    sundayStart = controls?.sundayAutoReplyStart ?? "00:00",
+    sundayEnd = controls?.sundayAutoReplyEnd ?? "00:00",
   }: {
     enabled?: boolean;
     weekdayStart?: string;
@@ -940,8 +940,8 @@ export function CustomerFaqPage({
             <AutoReplyScheduleEditor
               id="saturday-auto-reply"
               dayLabel={t("settings.customerFaq.saturdayAutoReplyWindow")}
-              start={controls?.saturdayAutoReplyStart ?? "19:00"}
-              end={controls?.saturdayAutoReplyEnd ?? "09:00"}
+              start={controls?.saturdayAutoReplyStart ?? "00:00"}
+              end={controls?.saturdayAutoReplyEnd ?? "00:00"}
               startLabel={t("settings.customerFaq.saturdayAutoReplyStart")}
               endLabel={t("settings.customerFaq.saturdayAutoReplyEnd")}
               disabled={!canEdit || savingControls || !controls}
@@ -965,8 +965,8 @@ export function CustomerFaqPage({
             <AutoReplyScheduleEditor
               id="sunday-auto-reply"
               dayLabel={t("settings.customerFaq.sundayAutoReplyWindow")}
-              start={controls?.sundayAutoReplyStart ?? "19:00"}
-              end={controls?.sundayAutoReplyEnd ?? "09:00"}
+              start={controls?.sundayAutoReplyStart ?? "00:00"}
+              end={controls?.sundayAutoReplyEnd ?? "00:00"}
               startLabel={t("settings.customerFaq.sundayAutoReplyStart")}
               endLabel={t("settings.customerFaq.sundayAutoReplyEnd")}
               disabled={!canEdit || savingControls || !controls}

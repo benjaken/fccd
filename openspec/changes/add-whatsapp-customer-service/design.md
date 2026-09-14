@@ -72,7 +72,7 @@
 
 ### 5. FAQ 用獨立表 + trigram，不用字典、不用向量
 
-新表（名稱實作時定）至少含：`question`、`answer`、`keywords`、`category`、`locale`、`is_published`、`sort_order`、審計欄。啟用 `pg_trgm`，以 question／keywords／answer 做 `%` 相似度搜尋，取最高且超過門檻的已發布列。字典 `dict_items` 只適合短選項，不拿來存政策長文。
+新表（名稱實作時定）至少含：`question`、`answer`、`keywords`、`category`、`locale`、`is_published`、`sort_order`、審計欄。啟用 `pg_trgm`，以 question／keywords／answer 做 `%` 相似度搜尋候選；候選必須再通過程式內的結構化配對表（canonical question、完整短語／同義說法、排除詞）才可直接作答。單一泛詞只給低檢索分，且不可繞過最終配對。字典 `dict_items` 只適合短選項，不拿來存政策長文。
 
 維護頁走既有設定權限模式（新 page key，例如 `settings.customer_faq`），類似字典配置。Bot 搜尋用 SECURITY DEFINER RPC，只讀 `is_published = true`。
 
@@ -82,7 +82,7 @@
 
 新增 `customer_service_bot_enabled`（或同等）控制列／環境開關，預設關閉。與 `wati_notification_controls` 並列，互不推導。
 
-同一 `provider_message_id` 入站事件冪等。客人回覆通知模板時，只產生一則 bot 回覆，不另發「已讀」模板。偵測到同事 session 訊息或內部標記 `handoff` 後，該電話對話進入 `human_owned`，直到逾時或同事結束接管。
+同一 `provider_message_id` 入站事件冪等。客人回覆通知模板時，只產生一則 bot 回覆，不另發「已讀」模板。`awaiting_human` 表示已排隊但尚未由同事接管，並以 `handoff_kind`、`handoff_urgent`、`handoff_quote_id` 保存原因、緊急程度及相關報價；不得從是否有 `selected_order_id` 推斷緊急到會。即日到會在此階段可接收補充資料並短確認，一般投訴／改單交接則保持靜默。偵測到同事 session 訊息或內部標記 `handoff` 後，該電話對話才進入 `human_owned`，直到逾時或同事結束接管，期間完全不自動回覆。
 
 ### 7. 香港繁體禮貌口吻，固定模板包裝
 

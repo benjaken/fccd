@@ -11,6 +11,8 @@ export const REPLIES = {
     "你好。已收到你嘅即日／急單訂餐需求，我已經即時通知同事跟進。你亦可先喺對應品牌網站查看供應同落單：\n• FC Express（即日到會）：https://www.foodchannels-express.com/\n• Food Channels Catering（中西式到會）：https://foodchannels-catering.com/\n• HK Lunch Box（飯盒及便當）：https://hklunchbox.com/\n• HK Party Food（派對套餐及一口小食）：https://www.hkpartyfood.com/\n未收到同事回覆前，系統唔可以保證當日一定做到；你可以繼續補充人數、時間、地址或想訂邊個品牌。",
   handoffQueued:
     "收到，我已經將補充資料加入同一個跟進事項，客服會喺上午 9 點後回覆你。",
+  handoffQueuedUrgent:
+    "收到，我已經將補充資料加入同一個即日訂餐跟進事項，同事會盡快處理。",
   handoffCancelled:
     "收到，已取消今次修改申請，客服唔需要再跟進。原訂單唔會因為今次申請而更改；你可以繼續問其他問題。",
   noPendingHandoff:
@@ -24,7 +26,7 @@ export const REPLIES = {
   collectDone: "已經幫你記低，客服會喺下一個工作日上午 9 點後跟進。",
   noFaq:
     "唔好意思，呢條我未搵到已公布嘅答案。你可以問運費、查訂單，或者話我知到會日期／人數。",
-  help: "你好，我可以幫你查訂單、記低到會查詢，或者答公司已公布嘅問題（例如運費）。直接講你想問咩就得。",
+  help: "你好，請問是查詢現有訂單，還是需要到會訂餐協助？",
   fallback: "唔好意思，系統暫時未能完成呢則回覆。同事會跟進。",
   pickOrder:
     "已經幫你查到多過一張訂單。請回覆其中一個訂單號，我再同你講嗰單嘅狀況。",
@@ -222,8 +224,8 @@ function normalizedReplyItemName(value: string) {
 
 export function lookupNoOrdersReply(orderNumber = "") {
   return sanitizeOutboundReply(orderNumber.trim()
-    ? `唔好意思，用呢個 WhatsApp 號碼搵唔到訂單 ${orderNumber.trim()}。請確認訂單號碼，或者使用落單時的電話號碼再查詢。`
-    : "唔好意思，用呢個 WhatsApp 號碼暫時搵唔到正式訂單。請提供訂單號碼，或者使用落單時的電話號碼再查詢。");
+    ? `我暫時未能定位訂單 ${orderNumber.trim()}。請確認訂單號碼；如果是需要到會訂餐協助，也可以直接告訴我。`
+    : "我暫時未能定位相關訂單。你可以傳送訂單號碼；如果是需要到會訂餐協助，也可以直接告訴我。");
 }
 
 export function lookupListReply(
@@ -242,7 +244,7 @@ export function lookupListReply(
 
 export function lookupNotFoundReply(orderNumber: string) {
   return sanitizeOutboundReply(
-    `唔好意思，用呢個 WhatsApp 號碼搵唔到訂單 ${orderNumber}。請確認訂單號碼，或者用落單時嘅電話號碼再試。`,
+    `我暫時未能定位訂單 ${orderNumber}。請確認訂單號碼；如果是需要到會訂餐協助，也可以直接告訴我。`,
   );
 }
 
@@ -279,7 +281,7 @@ export function handoffOrderSelectedReply(orderNumber: string) {
 
 export function handoffNoOpenOrderReply() {
   return sanitizeOutboundReply(
-    "用呢個 WhatsApp 號碼暫時搵唔到未送貨訂單。我已經記錄呢個情況，客服會喺上午 9 點後跟進。",
+    "我暫時未能定位相關未送貨訂單，但已經記錄你嘅要求，客服同事會再跟進。",
   );
 }
 
