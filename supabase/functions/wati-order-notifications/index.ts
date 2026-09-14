@@ -16,10 +16,16 @@ import {
 } from "../_shared/delivery-address.ts";
 import { EMAIL_FROM } from "../_shared/email-sender.ts";
 import {
+  applyDevelopNotificationMarker,
+  toNotificationEmailRecipients,
+  toNotificationWatiPhones,
+} from "../_shared/notification-test-overrides.ts";
+import {
   loadWatiNotificationControls,
   watiEmergencySwitchAllows,
 } from "../_shared/wati-notification-controls.ts";
 import {
+  numberedInternalWatiParameters,
   resolveInternalWatiTemplate,
   type InternalWatiTemplateKind,
 } from "../_shared/wati-internal-template-config.ts";
@@ -385,25 +391,17 @@ function internalOrderBrandName(order: OrderRow) {
   );
 }
 
-function internalWatiParameterValue(value: string) {
-  return value.replace(/[\r\n\t]+/g, " ").replace(/\s{2,}/g, " ").trim() || "-";
-}
-
 function internalOrderWatiParameters(order: OrderRow) {
   const values = internalValues(order, "同事");
-  const parameters = [
-    { name: "brand_name", value: internalOrderBrandName(order) },
-    { name: "order_number", value: values.order_number.replace(/^#+\s*/, "") },
-    { name: "customer_name", value: values.customer_name },
-    { name: "delivery_date", value: values.delivery_date },
-    { name: "delivery_time", value: values.delivery_time },
-    { name: "delivery_address", value: values.address },
-    { name: "order_link", value: values.order_link },
-  ];
-  return parameters.map((parameter) => ({
-    ...parameter,
-    value: internalWatiParameterValue(parameter.value),
-  }));
+  return numberedInternalWatiParameters([
+    internalOrderBrandName(order),
+    values.order_number.replace(/^#+\s*/, ""),
+    values.customer_name,
+    values.delivery_date,
+    values.delivery_time,
+    values.address,
+    values.order_link,
+  ]);
 }
 
 function escapeHtml(value: unknown) {
@@ -457,18 +455,15 @@ function readinessOrderWatiParameters(
   issues: ReconciliationIssueRow[],
 ) {
   const values = internalValues(order, "同事");
-  return [
-    { name: "brand_name", value: internalOrderBrandName(order) },
-    { name: "order_number", value: values.order_number.replace(/^#+\s*/, "") },
-    { name: "customer_name", value: values.customer_name },
-    { name: "delivery_date", value: values.delivery_date },
-    { name: "delivery_time", value: values.delivery_time },
-    { name: "issue_summary", value: reconciliationIssueSummary(issues) },
-    { name: "order_link", value: values.order_link },
-  ].map((parameter) => ({
-    ...parameter,
-    value: internalWatiParameterValue(parameter.value),
-  }));
+  return numberedInternalWatiParameters([
+    internalOrderBrandName(order),
+    values.order_number.replace(/^#+\s*/, ""),
+    values.customer_name,
+    values.delivery_date,
+    values.delivery_time,
+    reconciliationIssueSummary(issues),
+    values.order_link,
+  ]);
 }
 
 function reconciliationOrder(issue: ReconciliationIssueRow) {
@@ -687,9 +682,13 @@ async function sendWati(
   template: WatiSendTemplate,
   parameters: Array<{ name: string; value: string }>,
 ) {
+  const destinationPhone = toNotificationWatiPhones([phone])[0] || "";
+  if (!destinationPhone) {
+    throw new Error("notification_recipient_allowlist_missing");
+  }
   const endpoint = requiredEnv("WATI_API_ENDPOINT").replace(/\/$/, "");
   const providerResponse = await fetch(
-    `${endpoint}/api/v2/sendTemplateMessage?whatsappNumber=${encodeURIComponent(phone)}`,
+    `${endpoint}/api/v2/sendTemplateMessage?whatsappNumber=${encodeURIComponent(destinationPhone)}`,
     {
       method: "POST",
       headers: {
@@ -698,7 +697,7 @@ async function sendWati(
       },
       body: JSON.stringify({
         template_name: template.template_name,
-        broadcast_name: template.broadcast_name,
+        broadcast_name: applyDevelopNotificationMarker(template.broadcast_name),
         channel_number: requiredEnv("WATI_CHANNEL_NUMBER"),
         parameters,
       }),
@@ -717,6 +716,7 @@ async function sendEmail(
   subject: string,
   html: string,
 ) {
+  const destination = toNotificationEmailRecipients([to])[0] || to;
   const providerResponse = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: {
@@ -725,8 +725,8 @@ async function sendEmail(
     },
     body: JSON.stringify({
       from: EMAIL_FROM,
-      to: [to],
-      subject,
+      to: [destination],
+      subject: applyDevelopNotificationMarker(subject),
       html,
     }),
   });
@@ -1132,14 +1132,14 @@ Deno.serve(async (request) => {
             ...configuredTemplate,
             parameters: [],
           };
-          const wati = await sendWati(phone, template, [
-            { name: "recipient_name", value: values.recipient_name },
-            { name: "order_number", value: values.order_number },
-            { name: "customer_name", value: values.customer_name },
-            { name: "delivery_date", value: values.delivery_date },
-            { name: "delivery_time", value: values.delivery_time },
-            { name: "order_link", value: values.order_link },
-          ]);
+           const wati = await sendWati(phone, template, numberedInternalWatiParameters([
+             values.recipient_name,
+             values.order_number,
+             values.customer_name,
+             values.delivery_date,
+             values.delivery_time,
+             values.order_link,
+           ]));
           providerPayload = wati.payload;
         }
 
@@ -1435,19 +1435,19 @@ Deno.serve(async (request) => {
           const issueText = issues.map(reconciliationIssueLine).join("；");
           const link = issues.length === 1 ? reconciliationOrderLink(issues[0]) :
             `${Deno.env.get("ORDER_ADMIN_BASE_URL")?.trim().replace(/\/$/, "") || ""}/orders/shopify-pending`;
-          const wati = await sendWati(phone, template, clear
-            ? [
-              { name: "recipient_name", value: job.recipient_name },
-              { name: "date", value: dailyRun?.run_date || "-" },
-            ]
+           const wati = await sendWati(phone, template, clear
+             ? numberedInternalWatiParameters([
+               job.recipient_name,
+               dailyRun?.run_date || "-",
+             ])
             : daily && readiness && directOrder
               ? readinessOrderWatiParameters(directOrder, issues)
             : daily && issue ? internalOrderWatiParameters(reconciliationOrder(issue)!)
-            : [
-              { name: "recipient_name", value: job.recipient_name },
-              { name: "issue", value: issueText },
-              { name: "order_link", value: link },
-            ]);
+             : numberedInternalWatiParameters([
+               job.recipient_name,
+               issueText,
+               link,
+             ]));
           providerPayload = wati.payload;
           }
         }

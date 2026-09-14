@@ -434,18 +434,28 @@ describe("WATI order notifications", () => {
     expect(implementation).not.toContain("notification_recipient_not_allowlisted");
   });
 
-  it("starts quote WATI and Resend confirmation sends together", () => {
+  it("keeps the removed manual quote confirmation endpoint inert", () => {
     const implementation = readFileSync(
       resolve(process.cwd(), "supabase/functions/send-quote-confirmation/index.ts"),
       "utf8",
     );
+    const migration = readFileSync(
+      resolve(
+        process.cwd(),
+        "supabase/migrations/20260914102000_remove_manual_quote_confirmation.sql",
+      ),
+      "utf8",
+    );
 
-    expect(implementation).toContain("settleEnabledNotificationRequests");
-    expect(implementation).toContain("wati_and_email_send_failed");
-    expect(implementation).toContain("manualQuoteConfirmationEmailEnabled");
-    expect(implementation).toContain("emailSkipped");
-    expect(implementation).not.toContain("notificationRecipientAllowlist");
-    expect(implementation).not.toContain("notification_recipient_not_allowlisted");
+    expect(implementation).toContain('error: "manual_quote_confirmation_removed"');
+    expect(implementation).not.toContain("sendTemplateMessage");
+    expect(implementation).not.toContain("api.resend.com");
+    expect(implementation).not.toContain("manualQuoteConfirmationEnabled");
+    expect(implementation).not.toContain("manualQuoteConfirmationEmailEnabled");
+    expect(migration).toContain("manual_quote_confirmation_enabled = false");
+    expect(migration).toContain("manual_quote_confirmation_email_enabled = false");
+    expect(migration).not.toContain("'manual_quote_confirmation',");
+    expect(migration).not.toContain("'manual_quote_confirmation_email'");
   });
 
   it("registers existing Utility events without activating unverified mappings", () => {
@@ -603,7 +613,6 @@ describe("WATI order notifications", () => {
     const senders = [
       "supabase/functions/wati-order-notifications/index.ts",
       "supabase/functions/send-order-wati-confirmation/index.ts",
-      "supabase/functions/send-quote-confirmation/index.ts",
       "supabase/functions/send-daily-sales-report/index.ts",
       "supabase/functions/send-enquiry-notifications/index.ts",
     ].map((file) => readFileSync(resolve(process.cwd(), file), "utf8"));

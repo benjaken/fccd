@@ -106,6 +106,7 @@ type PreviewMessage = {
   humanHandoff?: boolean;
   simulatedWrite?: boolean;
   simulatedNotify?: boolean;
+  relatedFaqs?: Array<{ id: string; question: string }>;
 };
 
 export function CustomerFaqPage({
@@ -380,9 +381,8 @@ export function CustomerFaqPage({
     }
   };
 
-  const runPreview = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const text = previewQuery.trim();
+  const sendPreviewText = async (rawText: string) => {
+    const text = rawText.trim();
     if (!text || previewing) return;
     const messageId = Date.now();
     setPreviewMessages((current) => [
@@ -409,6 +409,7 @@ export function CustomerFaqPage({
           humanHandoff: result.humanHandoff,
           simulatedWrite: result.simulatedWrite,
           simulatedNotify: result.simulatedNotify,
+          relatedFaqs: result.relatedFaqs ?? [],
         },
       ]);
     } catch {
@@ -416,6 +417,11 @@ export function CustomerFaqPage({
     } finally {
       setPreviewing(false);
     }
+  };
+
+  const runPreview = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    await sendPreviewText(previewQuery);
   };
 
   const resetPreview = () => {
@@ -1155,6 +1161,32 @@ export function CustomerFaqPage({
                           ) : null}
                         </footer>
                       </div>
+                      {message.role === "assistant" &&
+                      message.relatedFaqs?.length ? (
+                        <div
+                          className="customer-faq-related-suggestions"
+                          aria-label={t(
+                            "settings.customerFaq.previewRelatedLabel",
+                          )}
+                        >
+                          <span className="customer-faq-related-heading">
+                            {t("settings.customerFaq.previewRelatedLabel")}
+                          </span>
+                          {message.relatedFaqs.map((faq) => (
+                            <button
+                              key={faq.id}
+                              type="button"
+                              className="customer-faq-related-chip"
+                              disabled={previewing}
+                              onClick={() => {
+                                void sendPreviewText(faq.question);
+                              }}
+                            >
+                              {faq.question}
+                            </button>
+                          ))}
+                        </div>
+                      ) : null}
                     </article>
                   ))
                 ) : (

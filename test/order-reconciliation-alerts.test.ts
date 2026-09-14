@@ -109,10 +109,11 @@ describe("Shopify/FCCD order reconciliation alerts", () => {
     expect(internalTemplateConfig).toContain("WATI_ORDER_RECONCILIATION_MISSING_TEMPLATE_NAME");
     expect(internalTemplateConfig).toContain("WATI_ORDER_RECONCILIATION_FACTORY_UNSENT_TEMPLATE_NAME");
     expect(notificationWorker).toContain('internalOrderWatiParameters(reconciliationOrder(issue)!)');
-    expect(notificationWorker).toContain('{ name: "brand_name"');
-    expect(notificationWorker).toContain('{ name: "delivery_address"');
+    expect(notificationWorker).toContain("numberedInternalWatiParameters([");
+    expect(notificationWorker).not.toContain('{ name: "brand_name"');
+    expect(notificationWorker).not.toContain('{ name: "delivery_address"');
     expect(notificationWorker).toContain('replace(/^#+\\s*/, "")');
-    expect(notificationWorker).toContain('replace(/[\\r\\n\\t]+/g, " ")');
+    expect(internalTemplateConfig).toContain('replace(/[\\r\\n\\t]+/g, " ")');
   });
 
   it("sends matching all-clear WhatsApp and email copy when the daily count is zero", () => {

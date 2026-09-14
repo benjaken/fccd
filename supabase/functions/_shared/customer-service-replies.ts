@@ -289,3 +289,32 @@ export function faqReply(answer: string) {
     /^(?:你好[。！!，,\s]|hello\b)/i.test(text) ? text : `你好。${text}`,
   );
 }
+
+export function formatRelatedFaqsAppendix(
+  relatedFaqs: Array<{ question: string }>,
+  maxQuestionLength = 40,
+): string {
+  const lines = relatedFaqs
+    .map((faq) => faq.question.trim())
+    .filter(Boolean)
+    .slice(0, 3)
+    .map((question, index) => {
+      const truncated =
+        question.length > maxQuestionLength
+          ? `${question.slice(0, maxQuestionLength)}…`
+          : question;
+      return `${index + 1}. ${truncated}`;
+    });
+  if (!lines.length) return "";
+  return `你可能仲想問：\n${lines.join("\n")}`;
+}
+
+export function appendRelatedFaqsToReply(
+  reply: string,
+  relatedFaqs: Array<{ question: string }>,
+): string {
+  const appendix = formatRelatedFaqsAppendix(relatedFaqs);
+  if (!appendix) return sanitizeOutboundReply(reply);
+  return sanitizeOutboundReply(`${reply.trim()}\n\n${appendix}`);
+}
+

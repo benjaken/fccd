@@ -29,6 +29,14 @@ const brandSitesSql = readFileSync(
   "utf8",
 );
 
+const handoffCronRepairSql = readFileSync(
+  resolve(
+    process.cwd(),
+    "supabase/migrations/20260914110000_repair_customer_service_handoff_notifications.sql",
+  ),
+  "utf8",
+);
+
 describe("deferred customer-service handoffs", () => {
   it("stores customer, order, questions, and notification lifecycle", () => {
     expect(deferredSql).toContain(
@@ -51,6 +59,19 @@ describe("deferred customer-service handoffs", () => {
     expect(deferredSql).toContain(
       "private.next_customer_service_handoff_notification_at(now())",
     );
+  });
+
+  it("repairs the production handoff digest with the shared WATI cron credentials", () => {
+    expect(handoffCronRepairSql).toContain("fccd-customer-service-handoff-digest");
+    expect(handoffCronRepairSql).toContain("'0 1 * * *'");
+    expect(handoffCronRepairSql).toContain("customer_service_handoff_digest_url");
+    expect(handoffCronRepairSql).toContain("wati_order_cron_secret");
+    expect(handoffCronRepairSql).toContain("customer_service_handoff_cron_secret");
+    expect(handoffCronRepairSql).toContain("customer_service_outbound_retry_url");
+    expect(handoffCronRepairSql).toContain("fccd-customer-service-outbound-retry");
+    expect(handoffCronRepairSql).toContain("'*/5 * * * *'");
+    expect(handoffCronRepairSql).toContain('body := \'{"mode":"handoff_digest"}\'::jsonb');
+    expect(handoffCronRepairSql).toContain('body := \'{"mode":"retry_outbound"}\'::jsonb');
   });
 
   it("supports explicit human claim and return-to-bot actions", () => {

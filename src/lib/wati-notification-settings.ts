@@ -4,17 +4,13 @@ export type WatiNotificationControlKey =
   | "automatic_notifications"
   | "automatic_email_notifications"
   | "manual_order_confirmation"
-  | "manual_order_confirmation_email"
-  | "manual_quote_confirmation"
-  | "manual_quote_confirmation_email";
+  | "manual_order_confirmation_email";
 
 export type WatiNotificationControls = {
   automaticNotificationsEnabled: boolean;
   automaticEmailNotificationsEnabled: boolean;
   manualOrderConfirmationEnabled: boolean;
   manualOrderConfirmationEmailEnabled: boolean;
-  manualQuoteConfirmationEnabled: boolean;
-  manualQuoteConfirmationEmailEnabled: boolean;
   updatedAt: string;
 };
 
@@ -23,8 +19,6 @@ type ControlsRow = {
   automatic_email_notifications_enabled: boolean;
   manual_order_confirmation_enabled: boolean;
   manual_order_confirmation_email_enabled: boolean;
-  manual_quote_confirmation_enabled: boolean;
-  manual_quote_confirmation_email_enabled: boolean;
   updated_at: string;
 };
 
@@ -34,8 +28,6 @@ function mapControls(row: ControlsRow): WatiNotificationControls {
     automaticEmailNotificationsEnabled: Boolean(row.automatic_email_notifications_enabled),
     manualOrderConfirmationEnabled: Boolean(row.manual_order_confirmation_enabled),
     manualOrderConfirmationEmailEnabled: Boolean(row.manual_order_confirmation_email_enabled),
-    manualQuoteConfirmationEnabled: Boolean(row.manual_quote_confirmation_enabled),
-    manualQuoteConfirmationEmailEnabled: Boolean(row.manual_quote_confirmation_email_enabled),
     updatedAt: row.updated_at,
   };
 }

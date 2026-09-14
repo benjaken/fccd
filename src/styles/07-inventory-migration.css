@@ -2031,6 +2031,40 @@
 .customer-faq-chat-message.system { align-self: center; max-width: 92%; }
 .customer-faq-chat-message.system > div { border: 1px solid rgb(203 198 189 / 72%); background: rgb(255 255 255 / 84%); color: #54656f; }
 .customer-faq-chat-message.pending > div { display: flex; align-items: center; min-height: 34px; color: #54656f; }
+
+.customer-faq-related-suggestions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  max-width: 100%;
+  margin: 2px 0 0 4px;
+}
+.customer-faq-related-heading {
+  color: #667781;
+  font-size: 12px;
+  line-height: 1.3;
+}
+.customer-faq-related-chip {
+  max-width: 100%;
+  padding: 6px 10px;
+  border: 1px solid #cfe9ba;
+  border-radius: 18px;
+  background: #fff;
+  color: #128c7e;
+  font-size: 13px;
+  line-height: 1.35;
+  text-align: left;
+  cursor: pointer;
+}
+.customer-faq-related-chip:hover:not(:disabled) {
+  background: #f0faf4;
+}
+.customer-faq-related-chip:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 .customer-faq-chat-message p { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 14px; line-height: 1.45; }
 .customer-faq-chat-message footer { display: flex; min-height: 15px; align-items: end; justify-content: flex-end; gap: 3px; margin-top: 2px; }
 .customer-faq-chat-message small { margin-right: auto; color: #667781; font-size: 12px; line-height: 1.3; }

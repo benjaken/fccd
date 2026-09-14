@@ -136,6 +136,10 @@ describe("order notification settings", () => {
       .toBeInTheDocument();
     expect(screen.getByRole("switch", { name: "切換自動 WATI 通知" }))
       .toBeChecked();
+    expect(screen.queryByRole("switch", { name: "切換手動報價確認 WATI" }))
+      .not.toBeInTheDocument();
+    expect(screen.queryByRole("switch", { name: "切換手動報價確認電郵" }))
+      .not.toBeInTheDocument();
     await userEvent.click(
       screen.getByRole("switch", { name: "切換手動訂單確認 WATI" }),
     );

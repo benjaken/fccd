@@ -192,6 +192,68 @@ describe("CustomerFaqPage", () => {
     expect(screen.getByText("輸入客人問題開始多輪測試。")).toBeInTheDocument();
   });
 
+
+  it("clicks a related FAQ suggestion to send the next preview turn", async () => {
+    const user = userEvent.setup();
+    const previewTurn = vi
+      .fn()
+      .mockResolvedValueOnce({
+        reply: "新界地面交收運費係 HK$50。",
+        conversation: {
+          phone_normalized: "8613828747224",
+          state: "identifying",
+          selected_order_id: null,
+          handoff_at: null,
+        },
+        usedModel: true,
+        simulatedWrite: false,
+        simulatedNotify: false,
+        humanHandoff: false,
+        relatedFaqs: [
+          { id: "2", question: "可唔可以自取？" },
+          { id: "3", question: "送貨需時幾耐？" },
+        ],
+      })
+      .mockResolvedValueOnce({
+        reply: "可以喺工場自取。",
+        conversation: {
+          phone_normalized: "8613828747224",
+          state: "identifying",
+          selected_order_id: null,
+          handoff_at: null,
+        },
+        usedModel: false,
+        simulatedWrite: false,
+        simulatedNotify: false,
+        humanHandoff: false,
+        relatedFaqs: [],
+      });
+
+    render(
+      <CustomerFaqPage
+        loadFaqs={vi.fn().mockResolvedValue({ items: [faq], total: 1 })}
+        loadControls={vi.fn().mockResolvedValue({
+          botEnabled: true,
+          allowedPhones: ["8613828747224"],
+          updatedAt: faq.updatedAt,
+        })}
+        previewTurn={previewTurn}
+      />,
+    );
+
+    expect(await screen.findByText("運費幾多？")).toBeInTheDocument();
+    await user.type(screen.getByLabelText("客人會點問"), "運費");
+    await user.click(screen.getByRole("button", { name: "傳送測試訊息" }));
+    expect(await screen.findByRole("button", { name: "可唔可以自取？" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "可唔可以自取？" }));
+    await waitFor(() =>
+      expect(previewTurn).toHaveBeenLastCalledWith(
+        expect.objectContaining({ text: "可唔可以自取？" }),
+      ),
+    );
+    expect(await screen.findByText("可以喺工場自取。")).toBeInTheDocument();
+  });
+
   it("hides write actions without edit permission", async () => {
     accessState.canAccess = (key: string) => key === "settings.customer_faq";
 

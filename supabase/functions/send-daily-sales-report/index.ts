@@ -1,6 +1,10 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { buildDailySalesEmail, type DailySalesEmailLine } from "../_shared/daily-sales-email.ts";
 import { EMAIL_FROM } from "../_shared/email-sender.ts";
+import {
+  applyDevelopNotificationMarker,
+  toNotificationEmailRecipients,
+} from "../_shared/notification-test-overrides.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -76,9 +80,9 @@ Deno.serve(async (request) => {
       return response({ sent: false, skipped: true });
     }
 
-    const recipient = (
-      Deno.env.get("DAILY_SALES_EMAIL_TO") || profile.email || authData.user.email || ""
-    ).trim();
+    const recipient = toNotificationEmailRecipients([
+      Deno.env.get("DAILY_SALES_EMAIL_TO") || profile.email || authData.user.email || "",
+    ])[0]?.trim() || "";
     if (!recipient) return response({ error: "recipient_email_missing" }, 400);
 
     const { data: restaurant, error: restaurantError } = await admin
@@ -123,16 +127,16 @@ Deno.serve(async (request) => {
 
     const emailResponse = await fetch("https://api.resend.com/emails", {
       method: "POST",
-      headers: {
-        Authorization: `Bearer ${requiredEnv("RESEND_API_KEY")}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        from: EMAIL_FROM,
-        to: [recipient],
-        subject: email.subject,
-        html: email.html,
-      }),
+        headers: {
+          Authorization: `Bearer ${requiredEnv("RESEND_API_KEY")}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          from: EMAIL_FROM,
+          to: [recipient],
+          subject: applyDevelopNotificationMarker(email.subject),
+          html: email.html,
+        }),
     });
     if (!emailResponse.ok) return response({ error: "email_send_failed" }, 502);
     return response({ sent: true });

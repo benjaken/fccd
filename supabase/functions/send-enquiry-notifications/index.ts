@@ -11,6 +11,11 @@ import {
 import {
   normalizeNotificationPhone,
 } from "../_shared/notification-phone.ts";
+import {
+  applyDevelopNotificationMarker,
+  toNotificationEmailRecipients,
+  toNotificationWatiPhones,
+} from "../_shared/notification-test-overrides.ts";
 import { watiEmergencySwitchAllows } from "../_shared/wati-notification-controls.ts";
 
 const corsHeaders = {
@@ -104,7 +109,7 @@ async function sendResendEmail(to: string[], subject: string, html: string) {
     body: JSON.stringify({
       from: EMAIL_FROM,
       to,
-      subject,
+      subject: applyDevelopNotificationMarker(subject),
       html,
     }),
   });
@@ -120,8 +125,9 @@ async function sendEnquiryInternalWati(
 ) {
   const templateName = Deno.env.get("WATI_ENQUIRY_INTERNAL_TEMPLATE_NAME")?.trim()
     || ENQUIRY_INTERNAL_WATI_TEMPLATE;
-  const broadcastName = Deno.env.get("WATI_ENQUIRY_INTERNAL_BROADCAST_NAME")?.trim()
-    || ENQUIRY_INTERNAL_WATI_TEMPLATE;
+  const broadcastName = applyDevelopNotificationMarker(
+    Deno.env.get("WATI_ENQUIRY_INTERNAL_BROADCAST_NAME")?.trim() || ENQUIRY_INTERNAL_WATI_TEMPLATE,
+  );
   const token = requiredEnv("WATI_API_TOKEN").replace(/^Bearer\s+/i, "");
   const endpoint = requiredEnv("WATI_API_ENDPOINT").replace(/\/$/, "");
   const providerResponse = await fetch(
@@ -247,7 +253,11 @@ Deno.serve(async (request) => {
               quoteDescription: row.quote_description || "",
               detailUrl,
             });
-            await sendResendEmail(addresses, mail.subject, mail.html);
+            await sendResendEmail(
+              toNotificationEmailRecipients(addresses),
+              mail.subject,
+              mail.html,
+            );
             internalStatus = "sent";
           }
         } catch (emailError) {
@@ -296,8 +306,9 @@ Deno.serve(async (request) => {
               quoteDescription: row.quote_description || "",
               detailUrl,
             });
+            const targetPhones = toNotificationWatiPhones(phones);
             const results = await Promise.allSettled(
-              phones.map((phone) => sendEnquiryInternalWati(phone, parameters)),
+              targetPhones.map((phone) => sendEnquiryInternalWati(phone, parameters)),
             );
             const anySent = results.some((result) => result.status === "fulfilled");
             for (const result of results) {
@@ -338,7 +349,11 @@ Deno.serve(async (request) => {
               subject: formRow?.ack_email_subject || "",
               body: formRow?.ack_email_body || "",
             });
-            await sendResendEmail([row.email!.trim()], mail.subject, mail.html);
+            await sendResendEmail(
+              toNotificationEmailRecipients([row.email!.trim()]),
+              mail.subject,
+              mail.html,
+            );
             ackStatus = "sent";
           } catch {
             ackStatus = "failed";

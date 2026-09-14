@@ -100,6 +100,31 @@ export type CustomerServiceFaqHit = {
   answer: string;
 };
 
+export type RelatedFaqSuggestion = {
+  id: string;
+  question: string;
+};
+
+export function selectRelatedFaqs(
+  hits: CustomerServiceFaqHit[],
+  excludeIds: Iterable<string>,
+  limit = 3,
+): RelatedFaqSuggestion[] {
+  const excluded = new Set(
+    [...excludeIds].map((id) => id.trim()).filter(Boolean),
+  );
+  const selected: RelatedFaqSuggestion[] = [];
+  for (const hit of hits) {
+    if (!hit.id || excluded.has(hit.id)) continue;
+    const question = hit.question?.trim();
+    if (!question) continue;
+    selected.push({ id: hit.id, question });
+    excluded.add(hit.id);
+    if (selected.length >= limit) break;
+  }
+  return selected;
+}
+
 export type CustomerServiceInquiryWrite = {
   quote_id: string;
   order_number: string | null;
@@ -175,6 +200,7 @@ export type BotTurn = {
   toolKeys?: string[];
   failureReason?: string | null;
   faqSourceIds?: string[];
+  relatedFaqs?: RelatedFaqSuggestion[];
   model?: string | null;
   dialogAction?: ClassifiedMessage["dialogAction"];
 };
@@ -804,16 +830,23 @@ async function replyFaq(
       const answer =
         typeof modelAnswer === "string" ? modelAnswer : modelAnswer?.answer;
       if (answer) {
+        const faqSourceIds =
+          typeof modelAnswer === "string"
+            ? []
+            : (modelAnswer?.sourceIds ?? []);
+        const excludeIds = faqSourceIds.length
+          ? faqSourceIds
+          : hits[0]?.id
+            ? [hits[0].id]
+            : [];
         return {
           reply: faqReply(answer),
           conversation,
           wroteInquiry: false,
           notified: false,
           usedModel: true,
-          faqSourceIds:
-            typeof modelAnswer === "string"
-              ? []
-              : (modelAnswer?.sourceIds ?? []),
+          faqSourceIds,
+          relatedFaqs: selectRelatedFaqs(hits, excludeIds),
           model:
             typeof modelAnswer === "string"
               ? null
@@ -836,6 +869,7 @@ async function replyFaq(
       notified: false,
       usedModel: classified.usedModel,
       faqSourceIds: [deterministicHit.id],
+      relatedFaqs: selectRelatedFaqs(hits, [deterministicHit.id]),
     };
   }
   if (deps.answerWithoutFaqWithModel) {
@@ -1149,6 +1183,7 @@ export async function handleCustomerServiceTurn({
           intentKey: asksForMenu ? "browse_menu" : "search_faq",
           toolKeys: ["search_faqs"],
           faqSourceIds: [preferredFaq.id],
+          relatedFaqs: selectRelatedFaqs(faqHits, [preferredFaq.id]),
           failureReason: null,
         });
       }

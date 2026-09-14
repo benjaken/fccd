@@ -10,6 +10,11 @@ import {
 import { EMAIL_FROM } from "../_shared/email-sender.ts";
 import { settleEnabledNotificationRequests } from "../_shared/notification-channel-requests.ts";
 import {
+  applyDevelopNotificationMarker,
+  toNotificationEmailRecipients,
+  toNotificationWatiPhones,
+} from "../_shared/notification-test-overrides.ts";
+import {
   loadWatiNotificationControls,
   watiEmergencySwitchAllows,
 } from "../_shared/wati-notification-controls.ts";
@@ -122,14 +127,41 @@ Deno.serve(async (request) => {
     const [watiResult, emailResult] = await settleEnabledNotificationRequests({
       watiEnabled: manualWatiEnabled,
       emailEnabled: manualEmailEnabled,
-      sendWati: () => fetch(`${requiredEnv("WATI_API_ENDPOINT").replace(/\/$/, "")}/api/v2/sendTemplateMessage?whatsappNumber=${encodeURIComponent(phone)}`, {
-        method: "POST", headers: { Authorization: `Bearer ${requiredEnv("WATI_API_TOKEN")}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ template_name: templateName, broadcast_name: includesAddonLink ? "Confirmed Delivery message with AO" : "Confirmed Delivery message", channel_number: requiredEnv("WATI_CHANNEL_NUMBER"), parameters }),
-      }),
+      sendWati: () => {
+        const overridePhone = toNotificationWatiPhones([phone])[0] || "";
+        if (!overridePhone) {
+          return Promise.reject(new Error("notification_recipient_allowlist_missing"));
+        }
+        return fetch(
+          `${requiredEnv("WATI_API_ENDPOINT").replace(/\/$/, "")}/api/v2/sendTemplateMessage?whatsappNumber=${encodeURIComponent(overridePhone)}`,
+          {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${requiredEnv("WATI_API_TOKEN")}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              template_name: templateName,
+              broadcast_name: applyDevelopNotificationMarker(
+                includesAddonLink
+                  ? "Confirmed Delivery message with AO"
+                  : "Confirmed Delivery message",
+              ),
+              channel_number: requiredEnv("WATI_CHANNEL_NUMBER"),
+              parameters,
+            }),
+          },
+        );
+      },
       sendEmail: () => fetch("https://api.resend.com/emails", {
         method: "POST",
         headers: { Authorization: `Bearer ${requiredEnv("RESEND_API_KEY")}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ from: EMAIL_FROM, to: [email], subject: notification.subject, html: notification.html }),
+        body: JSON.stringify({
+          from: EMAIL_FROM,
+          to: toNotificationEmailRecipients([email]),
+          subject: applyDevelopNotificationMarker(notification.subject),
+          html: notification.html,
+        }),
       }),
     });
     const providerResponse = watiResult.status === "fulfilled" ? watiResult.value : null;
