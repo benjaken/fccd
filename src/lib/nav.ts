@@ -112,6 +112,7 @@ export const primaryNav: NavItem[] = [
   { key: "delivery", to: "/delivery", icon: Truck },
   { key: "restaurant", to: "/restaurant/daily-sales", icon: Store },
   { key: "reports", to: "/reports", icon: ChartNoAxesCombined },
+  { key: "promotion", to: "/promotion", icon: Tags, permissionKey: "promotion" },
   {
     key: "settings",
     to: "/settings",
@@ -132,6 +133,7 @@ export const businessPrimaryNav: NavItem[] = [
   { key: "restaurant", to: "/restaurant/daily-sales?nav=restaurant", icon: Store, permissionKey: "restaurant.daily_sales" },
   { key: "accountingFollowUp", to: "/reports/kitchen?nav=accounting.cateringData", icon: Calculator },
   { key: "reports", to: "/reports?nav=reports", icon: ChartNoAxesCombined, permissionKey: "reports" },
+  { key: "promotion", to: "/promotion?nav=promotion", icon: Tags, permissionKey: "promotion" },
   { key: "settings", to: "/settings?nav=settings", icon: Settings, permissionKey: "settings" },
 ];
 
@@ -718,6 +720,8 @@ export const secondaryNav: Record<string, NavItem[]> = {
       icon: History,
       permissionKey: "settings.login_logs",
     },
+  ],
+  promotion: [
     {
       key: "watiEmailLogs",
       to: "/settings/wati-email-logs",
@@ -767,6 +771,7 @@ function appendNavContext(item: NavItem, context: string): NavItem {
 }
 
 export function businessSectionFromLocation(pathname: string, search: string) {
+  if (sectionFromPath(pathname) === "promotion") return "promotion";
   const context = new URLSearchParams(search).get("nav") || "";
   if (context.startsWith("follow-up.")) return "followUp";
   if (context.startsWith("accounting.")) return "accountingFollowUp";
@@ -1040,8 +1045,8 @@ export function businessSidebarNav(
       );
     });
   }
-  if (section === "settings") {
-    return secondaryNav.settings.map((item) => appendNavContext(item, "settings"));
+  if (section === "settings" || section === "promotion") {
+    return secondaryNav[section].map((item) => appendNavContext(item, section));
   }
   return [];
 }
@@ -1133,6 +1138,8 @@ export const SECTION_CHILD_KEYS: Record<string, string[]> = {
     "settings.users.change_password",
     "settings.roles",
     "settings.login_logs",
+  ],
+  promotion: [
     "settings.wati_email_logs",
     "settings.notifications",
     "settings.dictionaries",
@@ -1238,6 +1245,9 @@ export function accessiblePrimaryNavigationPath(
 }
 
 export function sectionFromPath(pathname: string) {
+  if (secondaryNav.promotion.some((item) => pathname === item.to || pathname.startsWith(`${item.to}/`))) {
+    return "promotion";
+  }
   if (
     pathname === "/quotes/customers" ||
     pathname.startsWith("/quotes/customers/")

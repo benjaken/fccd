@@ -856,7 +856,7 @@ export function CustomerFaqPage({
     >
       <header className="page-heading orders-heading">
         <div>
-          <span className="eyebrow">{t("settings.eyebrow")}</span>
+          <span className="eyebrow">{t("navigation.promotion")}</span>
           <h1>{t("settings.customerFaq.title")}</h1>
           <p>{t("settings.customerFaq.description")}</p>
         </div>

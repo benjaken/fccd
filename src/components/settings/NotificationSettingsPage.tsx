@@ -98,7 +98,7 @@ export function NotificationSettingsPage({
     <section className="content-page notification-settings-page">
       <header className="page-heading">
         <div>
-          <span className="eyebrow">{t("notificationSettings.eyebrow")}</span>
+          <span className="eyebrow">{t("navigation.promotion")}</span>
           <h1>{t("notificationSettings.title")}</h1>
           <p>{t("notificationSettings.description")}</p>
         </div>

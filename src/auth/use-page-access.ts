@@ -441,6 +441,7 @@ function tabPermissionKeys(tabs: readonly ReportTabKey[]) {
 }
 
 const PAGE_ACCESS_CHILD_KEYS: Record<string, string[]> = {
+  promotion: ["settings.wati_email_logs", "settings.customer_faq", "settings.dictionaries", "settings.notifications", "settings.districts", "settings.attachments"],
   restaurant: ["restaurant.daily_sales", "restaurant.daily_purchases", "restaurant.inventory"],
   kitchen: [
     "kitchen.ingredients",

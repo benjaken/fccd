@@ -123,7 +123,7 @@ export function DeliveryDistrictsPage({
     <section className="orders-page settings-list-page">
       <header className="page-heading orders-heading">
         <div>
-          <span className="eyebrow">{t("settings.eyebrow")}</span>
+          <span className="eyebrow">{t("navigation.promotion")}</span>
           <h1>{t("settings.districts.title")}</h1>
           <p>{t("settings.districts.description")}</p>
         </div>

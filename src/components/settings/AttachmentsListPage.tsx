@@ -191,7 +191,7 @@ export function AttachmentsListPage({
     <section className="orders-page settings-list-page">
       <header className="page-heading orders-heading">
         <div>
-          <span className="eyebrow">{t("settings.eyebrow")}</span>
+          <span className="eyebrow">{t("navigation.promotion")}</span>
           <h1>{t("settings.attachments.title")}</h1>
         </div>
       </header>

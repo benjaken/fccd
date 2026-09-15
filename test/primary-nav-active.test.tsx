@@ -4,6 +4,8 @@ import path from "node:path";
 
 import {
   businessSidebarNav,
+  businessSectionFromLocation,
+  secondaryNav,
   flattenVisibleNavItems,
   isBusinessSecondaryNavItemActive,
   isPrimaryNavActive,
@@ -19,6 +21,16 @@ import {
 } from "@/auth/use-page-access";
 
 describe("Primary navigation section matching", () => {
+  it("keeps promotion pages in their new section even with old settings bookmarks", () => {
+    expect(secondaryNav.promotion).toHaveLength(6);
+    for (const item of secondaryNav.promotion) {
+      expect(sectionFromPath(item.to)).toBe("promotion");
+      expect(businessSectionFromLocation(item.to, "?nav=settings")).toBe("promotion");
+      expect(secondaryNav.settings.some((setting) => setting.to === item.to)).toBe(false);
+    }
+    expect(businessSidebarNav("promotion", "").map((item) => item.key))
+      .toEqual(secondaryNav.promotion.map((item) => item.key));
+  });
   it("keeps only one sidebar group expanded at each level", () => {
     expect(
       sidebarAccordionExpansion(
@@ -198,11 +210,11 @@ describe("Primary navigation section matching", () => {
     ["/settings/users", "settings"],
     ["/settings/roles", "settings"],
     ["/settings/login-logs", "settings"],
-    ["/settings/dictionaries", "settings"],
-    ["/settings/districts", "settings"],
-    ["/settings/customer-faq", "settings"],
+    ["/settings/dictionaries", "promotion"],
+    ["/settings/districts", "promotion"],
+    ["/settings/customer-faq", "promotion"],
     ["/settings/order-lists", "settings"],
-    ["/settings/attachments", "settings"],
+    ["/settings/attachments", "promotion"],
     ["/orders/settings/order-list-tips", "orders"],
   ] as const)("maps %s to section %s", (pathname, section) => {
     expect(sectionFromPath(pathname)).toBe(section);

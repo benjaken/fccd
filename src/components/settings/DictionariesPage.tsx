@@ -248,7 +248,7 @@ export function DictionariesPage() {
     <section className="dictionary-page">
       <header className="page-heading">
         <div>
-          <span className="eyebrow">{t("navigation.settings")}</span>
+          <span className="eyebrow">{t("navigation.promotion")}</span>
           <h1>{t("settings.dictionaries.title")}</h1>
           <p>{t("settings.dictionaries.description")}</p>
         </div>

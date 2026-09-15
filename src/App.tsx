@@ -1522,6 +1522,10 @@ function OperationsShell() {
                 element={<Navigate to={firstSettingsHref} replace />}
               />
               <Route
+                path="/promotion"
+                element={<Navigate to={secondaryNav.promotion.find((item) => pageAccess.canAccess(item.permissionKey!))?.to ?? "/settings/wati-email-logs"} replace />}
+              />
+              <Route
                 path="/settings/employees"
                 element={
                   pageAccess.canAccess("settings.employees") ? (
@@ -2270,6 +2274,7 @@ const BUSINESS_MENU_LABELS: Record<string, [string, string]> = {
   factoryData: ["工場數據", "Factory Data"],
   reports: ["報表", "Reports"],
   settings: ["系統設定", "System Settings"],
+  promotion: ["推廣設定", "Promotion Settings"],
   orders: ["訂單", "Orders"],
   allQuotes: ["報價單", "Quotes"],
   cateringQuotes: ["所有報價", "All Quotes"],

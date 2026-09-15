@@ -22,6 +22,7 @@ describe("buildMobileDrawerNav", () => {
     { key: "delivery", to: "/delivery", icon: () => null },
     { key: "restaurant", to: "/restaurant", icon: () => null },
     { key: "settings", to: "/settings", icon: () => null, permissionKey: "settings" },
+    { key: "promotion", to: "/promotion", icon: () => null, permissionKey: "promotion" },
     { key: "reports", to: "/reports", icon: () => null },
   ];
 
@@ -95,6 +96,8 @@ describe("buildMobileDrawerNav", () => {
       "users",
       "rolePermissions",
       "loginLogs",
+    ]);
+    expect(groups.find((group) => group.groupKey === "promotion")?.items.map((item) => item.key)).toEqual([
       "watiEmailLogs",
       "customerFaq",
       "dictionaries",
