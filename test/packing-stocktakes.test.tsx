@@ -82,6 +82,35 @@ describe("Packaging stocktake records page", () => {
     await waitFor(() => expect(loadRows).toHaveBeenLastCalledWith({ page: 2, search: "", stocktakeDate: "2026-08-10" }));
   });
 
+  it("keeps packaging-set components and sizes together in the requested order", async () => {
+    const user = userEvent.setup();
+    const groupedRecords: PackingStocktakeItem[] = [
+      { ...records[0], id: "bag-small", sku: "BAG-S", name: "銀色保温袋 細" },
+      { ...records[0], id: "box-base", sku: "BOX-B", name: "金色長方形鋁盒 盒" },
+      { ...records[0], id: "bag-large", sku: "BAG-L", name: "銀色保溫袋 大" },
+      { ...records[0], id: "box-lid", sku: "BOX-L", name: "金色長方形鋁盒 蓋" },
+      { ...records[0], id: "bag-medium", sku: "BAG-M", name: "銀色保溫袋 中" },
+    ];
+    const { container } = render(<MemoryRouter><PackingStocktakesPage canEdit
+      loadDates={vi.fn().mockResolvedValue([{ date: "2026-08-10" }])}
+      loadRows={vi.fn().mockResolvedValue({ items: groupedRecords, total: groupedRecords.length })}
+    /></MemoryRouter>);
+
+    const dateList = await screen.findByRole("complementary", { name: "盤點日期列表" });
+    await user.click(dateButton(dateList, "2026-08-10"));
+    await screen.findByText("金色長方形鋁盒 蓋");
+
+    const names = [...container.querySelectorAll("tbody tr td:nth-child(4) strong")]
+      .map((node) => node.textContent);
+    expect(names).toEqual([
+      "金色長方形鋁盒 蓋",
+      "金色長方形鋁盒 盒",
+      "銀色保溫袋 大",
+      "銀色保溫袋 中",
+      "銀色保温袋 細",
+    ]);
+  });
+
   it("loads the latest balance per material for the current-stock column", () => {
     const migration = readFileSync(
       "supabase/migrations/20260908140000_material_current_stock.sql",

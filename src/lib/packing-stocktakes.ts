@@ -24,6 +24,48 @@ export type PackingStocktakeItem = {
 
 export type StocktakeDateItem = { date: string; updatedAt: string };
 
+const PACKING_VARIANT_SUFFIXES = [
+  { pattern: /(?:[\s\-–—_/（(]+)(?:蓋|盒蓋|lid)[）)]?$/iu, rank: 10 },
+  { pattern: /(?:盒蓋|蓋)$/u, rank: 10 },
+  { pattern: /(?:[\s\-–—_/（(]+)(?:盒|盒身|box|base)[）)]?$/iu, rank: 20 },
+  { pattern: /(?:盒身)$/u, rank: 20 },
+  { pattern: /盒盒$/u, rank: 20 },
+  { pattern: /(?:[\s\-–—_/（(]*)(?:大碼|大號|大型|大|large|lg)[）)]?$/iu, rank: 30 },
+  { pattern: /(?:[\s\-–—_/（(]*)(?:中碼|中號|中型|中|medium|md)[）)]?$/iu, rank: 40 },
+  { pattern: /(?:[\s\-–—_/（(]*)(?:細碼|小碼|細號|小號|細型|小型|細|小|small|sm)[）)]?$/iu, rank: 50 },
+] as const;
+
+function normalizePackingName(value: string | null | undefined) {
+  return (value ?? "")
+    .normalize("NFKC")
+    .replaceAll("温", "溫")
+    .replace(/\s+/gu, " ")
+    .trim();
+}
+
+function packingSortParts(item: PackingStocktakeItem) {
+  const name = normalizePackingName(item.name ?? item.sku);
+  for (const suffix of PACKING_VARIANT_SUFFIXES) {
+    if (!suffix.pattern.test(name)) continue;
+    const group = name.replace(suffix.pattern, "").replace(/[\s\-–—_/（(]+$/gu, "").trim();
+    if (group) return { group, rank: suffix.rank, name };
+  }
+  return { group: name, rank: 0, name };
+}
+
+/** Keeps components and sizes of the same packaging set beside each other. */
+export function sortPackingStocktakeItems(items: PackingStocktakeItem[]) {
+  const collator = new Intl.Collator("zh-HK", { numeric: true, sensitivity: "base" });
+  return [...items].sort((left, right) => {
+    const leftParts = packingSortParts(left);
+    const rightParts = packingSortParts(right);
+    return collator.compare(leftParts.group, rightParts.group)
+      || leftParts.rank - rightParts.rank
+      || collator.compare(leftParts.name, rightParts.name)
+      || collator.compare(left.sku ?? "", right.sku ?? "");
+  });
+}
+
 type PackingStocktakeRow = {
   id: string;
   ingredient_id: string | null;
@@ -107,8 +149,7 @@ export async function fetchPackingStocktakes({
       "id,ingredient_id,stocktake_at,sku_snapshot,quantity,ingredients(sku,name,ingredient_type,stocktake_unit,suppliers(company_name,phone_number))",
       { count: "exact" },
     )
-    .order("stocktake_at", { ascending: false, nullsFirst: false })
-    .range(start, end);
+    .order("stocktake_at", { ascending: false, nullsFirst: false });
 
   if (normalizedSearch) {
     const ingredientFilter = ingredientNameIds.length > 0
@@ -126,9 +167,16 @@ export async function fetchPackingStocktakes({
       .lt("stocktake_at", `${nextDate(stocktakeDate)}T00:00:00+08:00`);
   }
 
+  // Packaging sets must be sorted before pagination or a lid/base/size family
+  // can be split across pages. Ingredient stocktakes keep server pagination.
+  query = kind === "packing" ? query.range(0, 4999) : query.range(start, end);
+
   const { data, count, error } = await query;
   if (error) throw error;
-  const items = ((data ?? []) as PackingStocktakeRow[]).map(mapRow);
+  const mappedItems = ((data ?? []) as PackingStocktakeRow[]).map(mapRow);
+  const items = kind === "packing"
+    ? sortPackingStocktakeItems(mappedItems).slice(start, end + 1)
+    : mappedItems;
   const ingredientIds = [...new Set(items.flatMap((item) => item.ingredientId ? [item.ingredientId] : []))];
   if (ingredientIds.length > 0) {
     const { data: currentData, error: currentError } = await supabase.rpc(
