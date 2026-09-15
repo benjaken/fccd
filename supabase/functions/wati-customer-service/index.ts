@@ -82,7 +82,8 @@ import {
 } from "../_shared/wati-notification-controls.ts";
 import { isWithinCustomerServiceSchedule } from "../_shared/customer-service-schedule.ts";
 import {
-  evaluateOrderIntakeRules,
+  evaluateOrderIntakeWithCatalog,
+  findUnavailableRequestedChannel,
   type OrderIntakeRule,
 } from "../_shared/customer-service-order-intake.ts";
 import {
@@ -1547,19 +1548,20 @@ function createBotDeps(
       if (error) throw error;
       return count && count > 0 ? "blocked" as const : "not_blocked" as const;
     },
-    async checkOrderIntakeAvailability(date: string, text: string) {
+    async checkOrderIntakeAvailability(date: string, text: string, context?: { deliveryTime?: string | null }) {
       const { data, error } = await admin.from("order_intake_rules")
-        .select("id,name,starts_on,ends_on,start_time,end_time,handling,customer_message,order_intake_rule_channels(brand_terms,product_terms,recommendation_url,channels(name))")
+        .select("id,name,starts_on,ends_on,start_time,end_time,handling,customer_message,order_intake_rule_channels(channel_id,brand_terms,product_terms,channels(name))")
         .eq("is_active", true).is("archived_at", null)
         .lte("starts_on", date).gte("ends_on", date);
       if (error) throw error;
-      const requestedTime = extractCustomerServiceClockTime(text) || null;
+      const requestedTime = context?.deliveryTime ?? (extractCustomerServiceClockTime(text) || null);
       const rules: OrderIntakeRule[] = ((data ?? []) as Array<{
         id: string; name: string; starts_on: string; ends_on: string;
         start_time: string | null; end_time: string | null;
         handling: OrderIntakeRule["handling"]; customer_message: string | null;
         order_intake_rule_channels?: Array<{
-          brand_terms?: string[] | null; product_terms?: string[] | null; recommendation_url?: string | null;
+          channel_id?: string | null;
+          brand_terms?: string[] | null; product_terms?: string[] | null;
           channels?: { name?: string | null } | Array<{ name?: string | null }> | null;
         }>;
       }>).map((row) => ({
@@ -1567,14 +1569,42 @@ function createBotDeps(
         startTime: row.start_time?.slice(0, 5) ?? null, endTime: row.end_time?.slice(0, 5) ?? null,
         handling: row.handling, customerMessage: row.customer_message,
         channels: (row.order_intake_rule_channels ?? []).map((item: {
-          brand_terms?: string[] | null; product_terms?: string[] | null; recommendation_url?: string | null;
+          channel_id?: string | null;
+          brand_terms?: string[] | null; product_terms?: string[] | null;
           channels?: { name?: string | null } | Array<{ name?: string | null }> | null;
         }) => ({
+          channelId: item.channel_id || undefined,
           name: (Array.isArray(item.channels) ? item.channels[0]?.name : item.channels?.name) || "",
-          aliases: item.brand_terms ?? [], terms: item.product_terms ?? [], url: item.recommendation_url || null,
+          aliases: item.brand_terms ?? [], terms: item.product_terms ?? [],
         })),
       }));
-      return evaluateOrderIntakeRules({ date, time: requestedTime, text }, rules);
+      const evaluation = await evaluateOrderIntakeWithCatalog(
+        { date, time: requestedTime, text }, rules,
+        async (channelId, terms) => {
+          const { data: catalogRows, error: catalogError } = await admin.rpc(
+            "search_order_intake_catalog",
+            { p_channel_ids: [channelId], p_terms: terms, p_limit: 8 },
+          );
+          if (catalogError) throw catalogError;
+          return ((catalogRows ?? []) as Array<{ name?: string | null; product_url?: string | null }>)
+            .flatMap((row) => {
+              const name = row.name?.trim();
+              const url = row.product_url?.trim();
+              return name && url ? [{ name, url }] : [];
+            });
+        },
+      );
+      const allowRules = rules.filter((rule) => rule.handling === "allow_only" && evaluation.matchedRuleIds.includes(rule.id));
+      if (!allowRules.length) return evaluation;
+      const channelIds = allowRules[0].channels.map((channel) => channel.channelId)
+        .filter((id): id is string => Boolean(id) && allowRules.every((rule) => rule.channels.some((channel) => channel.channelId === id)));
+      const { data: knownChannels, error: channelError } = await admin.from("channels")
+        .select("id,name").eq("is_active", true).is("archived_at", null);
+      if (channelError) throw channelError;
+      const unavailable = findUnavailableRequestedChannel(text, knownChannels ?? [], channelIds);
+      return unavailable
+        ? { ...evaluation, status: "manual_review" as const, unavailableChannelName: unavailable.name }
+        : evaluation;
     },
     async searchCatalog(query: string) {
       const searchAnchor = customerServiceCatalogSearchAnchor(query);

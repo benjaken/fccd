@@ -34,6 +34,7 @@ import {
   REPLIES,
   sanitizeOutboundReply,
 } from "./customer-service-replies.ts";
+import { findOrderIntakeRecommendation } from "./customer-service-order-intake.ts";
 import {
   decideCustomerServicePilotAction,
   inferCustomerServicePilotGoal,
@@ -160,6 +161,9 @@ export type CustomerServiceOrderIntakeAvailability = {
   status: "available" | "manual_review" | "unknown";
   message?: string | null;
   recommendations?: Array<{ name: string; url: string | null }>;
+  unavailableChannelName?: string | null;
+  requiresTime?: boolean;
+  selectedRecommendation?: { name: string; url: string | null } | null;
 };
 
 export type CustomerServiceBotDeps = {
@@ -204,6 +208,7 @@ export type CustomerServiceBotDeps = {
   checkOrderIntakeAvailability?: (
     date: string,
     text: string,
+    context?: { deliveryTime?: string | null },
   ) => Promise<CustomerServiceOrderIntakeAvailability>;
   answerFaqWithModel?: (
     query: string,
@@ -315,15 +320,17 @@ function orderIntakeAvailabilityReply(
     .map((item) => item.url ? `${item.name}：${item.url}` : item.name)
     .join("\n");
   if (availability.status === "manual_review") {
+    const unavailableChannel = availability.unavailableChannelName?.trim();
     return [
+      unavailableChannel ? `${unavailableChannel} 喺 ${label} 暫不接單。` : null,
       availability.message || `${label}有特別接單安排。`,
       recommendations ? `你亦可以考慮以下可接選擇：\n${recommendations}` : null,
-      "如你想查詢其他品牌或產品，請留下希望送達時間、活動／用餐時間、地區、人數及預算；同事會按訂單金額及實際情況再確認。",
+      "如你想查詢其他品牌或產品，請留下希望送達時間、地區、人數及預算；同事會按訂單金額及實際情況再確認。",
     ].filter(Boolean).join("\n");
   }
   if (availability.status === "available") {
     return [
-      `${label}目前可以落單。`,
+      availability.requiresTime ? `${label}有指定時段限制，需要先核對送達時間。` : `${label}目前可以落單。`,
       availability.message,
       recommendations || null,
       "請問希望幾點送到？我可以再按你提供嘅時間核對接單安排。",
@@ -333,7 +340,14 @@ function orderIntakeAvailabilityReply(
 }
 
 const AVAILABILITY_DELIVERY_TIME_PENDING = "availability:delivery_time";
-const AVAILABILITY_EVENT_TIME_PENDING = "availability:event_time";
+
+function isStandaloneDeliveryTime(text: string) {
+  const remainder = text
+    .replace(/(?:(?:上午|早上|中午|下午|晚上|夜晚)\s*)?(?:[01]?\d|2[0-3])\s*[:：點点時时]\s*(?:\d{1,2}\s*分?|半)?/, "")
+    .replace(/希望|我想|想|大約|大概|差不多|左右|送到|送達|時間|改為|改到|收到|可以嗎|可以|得唔得|唔該|謝謝|多謝|約|點|時/g, "")
+    .replace(/[\s，。！？,.!?:：]/g, "");
+  return remainder.length === 0;
+}
 
 async function replyAvailabilityTimeFollowUp(
   deps: CustomerServiceBotDeps,
@@ -341,10 +355,7 @@ async function replyAvailabilityTimeFollowUp(
   text: string,
 ): Promise<BotTurn | null> {
   const pending = conversation.pending_request;
-  if (
-    pending !== AVAILABILITY_DELIVERY_TIME_PENDING &&
-    pending !== AVAILABILITY_EVENT_TIME_PENDING
-  ) return null;
+  if (pending !== AVAILABILITY_DELIVERY_TIME_PENDING) return null;
 
   const time = extractCustomerServiceClockTime(text);
   if (!time) {
@@ -364,7 +375,7 @@ async function replyAvailabilityTimeFollowUp(
   }
 
   const saved = conversation.workflow_slots ?? {};
-  const eventDate = String(saved.eventDate ?? "");
+  const eventDate = extractInquirySlots(text).eventDate || String(saved.eventDate ?? "");
   if (!/^\d{4}-\d{2}-\d{2}$/.test(eventDate)) {
     return {
       reply: "我搵唔返頭先查詢嘅日期，請再提供一次日期，我會重新幫你查接單安排。",
@@ -382,55 +393,57 @@ async function replyAvailabilityTimeFollowUp(
   }
 
   const label = deliveryDateLabel(eventDate);
-  if (pending === AVAILABILITY_DELIVERY_TIME_PENDING) {
-    let intake: CustomerServiceOrderIntakeAvailability = { status: "unknown" };
-    if (deps.checkOrderIntakeAvailability) {
-      try {
-        intake = await deps.checkOrderIntakeAvailability(
-          eventDate,
-          `${String(saved.availabilityQuestion ?? "")} 送達時間 ${time}`.trim(),
-        );
-      } catch (error) {
-        console.error(
-          "customer-service follow-up intake check failed",
-          error instanceof Error ? error.message.slice(0, 200) : String(error),
-        );
-      }
+  let intake: CustomerServiceOrderIntakeAvailability = { status: "unknown" };
+  if (deps.checkOrderIntakeAvailability) {
+    try {
+      intake = await deps.checkOrderIntakeAvailability(
+        eventDate,
+        `${String(saved.availabilityQuestion ?? "")} 送達時間 ${time}`.trim(),
+        { deliveryTime: time },
+      );
+    } catch (error) {
+      console.error(
+        "customer-service follow-up intake check failed",
+        error instanceof Error ? error.message.slice(0, 200) : String(error),
+      );
     }
-    if (intake.status === "manual_review") {
-      return {
-        reply: `${intake.message || `${label} ${time}嘅接單安排需要人工確認。`}如果你想客服跟進，請明確回覆「請客服跟進」，並提供地區、人數及預算。`,
-        conversation: nextConversation(conversation, {
-          pending_request: null,
-          workflow_slots: {},
-        }),
-        wroteInquiry: false,
-        notified: false,
-        usedModel: false,
-        intentKey: "delivery_availability",
-        toolKeys: ["check_order_intake"],
-      };
-    }
+  }
+  if (intake.status === "manual_review") {
     return {
-      reply: `收到，你希望 ${label} 約 ${time}送到。請問活動／用餐幾點開始？`,
+      reply: orderIntakeAvailabilityReply(eventDate, intake),
       conversation: nextConversation(conversation, {
-        pending_request: AVAILABILITY_EVENT_TIME_PENDING,
-        workflow_slots: { ...saved, deliveryTime: time },
+        state: "collecting",
+        active_goal: "catering_inquiry",
+        pending_request: "特別接單安排人工覆核",
+        workflow_slots: {
+          ...saved,
+          eventDate,
+          deliveryTime: time,
+          availabilityQuestion: String(saved.availabilityQuestion ?? ""),
+          orderIntakeRecommendations: intake.recommendations ?? [],
+          note: `送達時間 ${time}；接單規則需人工覆核`.slice(0, 2_000),
+        },
       }),
       wroteInquiry: false,
       notified: false,
       usedModel: false,
       intentKey: "delivery_availability",
-      toolKeys: deps.checkOrderIntakeAvailability ? ["check_order_intake"] : [],
-      failureReason: intake.status === "unknown"
-        ? "order_intake_unknown"
-        : null,
+      toolKeys: ["check_order_intake"],
     };
   }
-
-  const deliveryTime = String(saved.deliveryTime ?? "");
+  if (intake.status === "unknown") {
+    return {
+      reply: `${label} ${time}嘅接單安排暫時未能確認，請稍後再試，或回覆「請客服跟進」。`,
+      conversation: nextConversation(conversation, {
+        workflow_slots: { ...saved, eventDate, deliveryTime: time },
+      }),
+      wroteInquiry: false, notified: false, usedModel: false,
+      intentKey: "delivery_availability", toolKeys: ["check_order_intake"],
+      failureReason: "order_intake_unknown",
+    };
+  }
   return {
-    reply: `收到：${label} 約 ${deliveryTime || "未指定時間"}送到，活動／用餐約 ${time}開始。該日目前可以落單；實際可選時段及配額以網站結帳頁顯示為準。`,
+    reply: `收到，你希望 ${label} 約 ${time}送到。該日目前可以落單；實際可選時段及配額以網站結帳頁顯示為準。`,
     conversation: nextConversation(conversation, {
       pending_request: null,
       workflow_slots: {},
@@ -439,7 +452,8 @@ async function replyAvailabilityTimeFollowUp(
     notified: false,
     usedModel: false,
     intentKey: "delivery_availability",
-    toolKeys: [],
+    toolKeys: deps.checkOrderIntakeAvailability ? ["check_order_intake"] : [],
+    failureReason: null,
   };
 }
 
@@ -1524,13 +1538,6 @@ export async function handleCustomerServiceTurn({
     };
   }
 
-  const availabilityFollowUp = await replyAvailabilityTimeFollowUp(
-    deps,
-    conversation,
-    text,
-  );
-  if (availabilityFollowUp) return availabilityFollowUp;
-
   if (
     conversation.state !== "awaiting_human" &&
     deps.replyTemplates?.thanks &&
@@ -1808,6 +1815,132 @@ export async function handleCustomerServiceTurn({
     };
   };
 
+  // Interpret the whole message before consuming a time or a product selection.
+  // Complaints, order changes and unrelated tasks must keep their normal routing.
+  const canContinueAvailability =
+    (classified.intent === "search_faq" || classified.intent === "collect_inquiry") &&
+    !classified.requiresHuman && !classified.needsClarification &&
+    classified.dialogAction !== "switch_task" && classified.dialogAction !== "resume_previous" &&
+    (!classified.configuredIntentKey || ["delivery_availability", "collect_inquiry"].includes(classified.configuredIntentKey));
+  const isTimeFollowUp = isStandaloneDeliveryTime(text) ||
+    classified.configuredIntentKey === "delivery_availability" ||
+    Boolean(extractInquirySlots(text).eventDate) ||
+    ["add_information", "continue_current", "correct_previous"].includes(classified.dialogAction ?? "");
+  if (canContinueAvailability && isTimeFollowUp) {
+    const availabilityFollowUp = await replyAvailabilityTimeFollowUp(deps, conversation, text);
+    if (availabilityFollowUp) return annotate({ ...availabilityFollowUp, usedModel: classified.usedModel });
+  }
+
+  const activeGoal = inferCustomerServicePilotGoal({
+    activeGoal: conversation.active_goal,
+    state: conversation.state,
+    pendingRequest: conversation.pending_request,
+    selectedOrderId: conversation.selected_order_id,
+  });
+  const pilotAction = await decideCustomerServicePilotAction({
+    activeGoal,
+    conversationState: conversation.state,
+    classified,
+  });
+  const storedRecommendations = Array.isArray(
+      conversation.workflow_slots?.orderIntakeRecommendations,
+    )
+    ? conversation.workflow_slots.orderIntakeRecommendations.flatMap((item) => {
+      if (!item || typeof item !== "object") return [];
+      const record = item as Record<string, unknown>;
+      return typeof record.name === "string"
+        ? [{
+          name: record.name,
+          url: typeof record.url === "string" ? record.url : null,
+        }]
+        : [];
+    })
+    : [];
+  const storedSelection = findOrderIntakeRecommendation(text, storedRecommendations);
+  const restrictedDate = extractInquirySlots(text).eventDate || String(conversation.workflow_slots?.eventDate ?? "");
+  if (
+    canContinueAvailability && conversation.state === "collecting" &&
+    conversation.pending_request === "特別接單安排人工覆核" &&
+    storedSelection && restrictedDate && deps.checkOrderIntakeAvailability
+  ) {
+    let intake: CustomerServiceOrderIntakeAvailability = { status: "unknown" };
+    try {
+      intake = await deps.checkOrderIntakeAvailability(
+        restrictedDate,
+        text,
+        { deliveryTime: extractCustomerServiceClockTime(text) || String(conversation.workflow_slots?.deliveryTime ?? "") || null },
+      );
+    } catch (error) {
+      console.error(
+        "customer-service restricted catalog selection check failed",
+        error instanceof Error ? error.message.slice(0, 200) : String(error),
+      );
+    }
+    const selected = intake.selectedRecommendation ?? findOrderIntakeRecommendation(
+      text,
+      intake.recommendations ?? [],
+    );
+    if (intake.status === "available" && selected) {
+      if (intake.requiresTime) {
+        return annotate({
+          reply: `${selected.name}符合產品條件，但當日有時段限制。請問希望幾點送到？`,
+          conversation: nextConversation(conversation, {
+            pending_request: AVAILABILITY_DELIVERY_TIME_PENDING,
+            workflow_slots: { ...conversation.workflow_slots, eventDate: restrictedDate,
+              availabilityQuestion: text, deliveryTime: null, orderIntakeRecommendations: intake.recommendations ?? [] },
+          }),
+          wroteInquiry: false, notified: false, usedModel: classified.usedModel,
+          intentKey: "delivery_availability", toolKeys: ["check_order_intake"],
+        });
+      }
+      return annotate({
+        reply: [
+          `${selected.name} 可以落單。`,
+          selected.url ? `訂購連結：${selected.url}` : null,
+          intake.message,
+        ].filter(Boolean).join("\n"),
+        conversation: resetPilotConversation(conversation),
+        wroteInquiry: false,
+        notified: false,
+        queuedHandoff: false,
+        usedModel: classified.usedModel,
+        intentKey: "delivery_availability",
+        toolKeys: ["check_order_intake"],
+      });
+    }
+    if (intake.status === "manual_review") {
+      return annotate({
+        reply: orderIntakeAvailabilityReply(restrictedDate, intake),
+        conversation: nextConversation(conversation, {
+          workflow_slots: { ...conversation.workflow_slots, eventDate: restrictedDate,
+            deliveryTime: extractCustomerServiceClockTime(text) || conversation.workflow_slots?.deliveryTime,
+            orderIntakeRecommendations: intake.recommendations ?? [] },
+        }),
+        wroteInquiry: false,
+        notified: false,
+        queuedHandoff: false,
+        usedModel: classified.usedModel,
+        intentKey: "delivery_availability",
+        toolKeys: ["check_order_intake"],
+      });
+    }
+    return annotate({
+      reply: `${deliveryDateLabel(restrictedDate)}嘅產品及接單安排暫時未能確認，請稍後再試，或回覆「請客服跟進」。`,
+      conversation, wroteInquiry: false, notified: false, usedModel: classified.usedModel,
+      intentKey: "delivery_availability", toolKeys: ["check_order_intake"], failureReason: "order_intake_unknown",
+    });
+  }
+  const continuesRestrictedDateInquiry =
+    conversation.state === "collecting" &&
+    activeGoal === "catering_inquiry" &&
+    pilotAction === "continue_catering" &&
+    classified.configuredIntentKey === "delivery_availability";
+  if (continuesRestrictedDateInquiry) {
+    return annotate(
+      await replyCollect(deps, phone, classified, conversation, text),
+    );
+  }
+
   if (
     classified.configuredIntentKey === "delivery_availability" ||
     (!classified.usedModel && isDeliveryAvailabilityQuestion(text))
@@ -1816,7 +1949,10 @@ export async function handleCustomerServiceTurn({
     if (deps.checkOrderIntakeAvailability) {
       let intake: CustomerServiceOrderIntakeAvailability = { status: "unknown" };
       try {
-        intake = await deps.checkOrderIntakeAvailability(requestedDate, text);
+        const deliveryTime = extractCustomerServiceClockTime(text);
+        intake = deliveryTime
+          ? await deps.checkOrderIntakeAvailability(requestedDate, text, { deliveryTime })
+          : await deps.checkOrderIntakeAvailability(requestedDate, text);
       } catch (error) {
         console.error("customer-service order intake check failed", error instanceof Error ? error.message.slice(0, 200) : String(error));
       }
@@ -1828,6 +1964,9 @@ export async function handleCustomerServiceTurn({
             workflow_slots: {
               ...(conversation.workflow_slots ?? {}),
               eventDate: requestedDate,
+              deliveryTime: extractCustomerServiceClockTime(text) || null,
+              availabilityQuestion: text.trim().slice(0, 1_000),
+              orderIntakeRecommendations: intake.recommendations ?? [],
               note: `接單規則需人工覆核：${text}`.slice(0, 1_000),
             },
           })
@@ -1836,6 +1975,7 @@ export async function handleCustomerServiceTurn({
             workflow_slots: {
               ...(conversation.workflow_slots ?? {}),
               eventDate: requestedDate,
+              deliveryTime: extractCustomerServiceClockTime(text) || null,
               availabilityQuestion: text.trim().slice(0, 1_000),
             },
           });
@@ -1885,17 +2025,6 @@ export async function handleCustomerServiceTurn({
       usedModel: classified.usedModel,
     });
   }
-  const activeGoal = inferCustomerServicePilotGoal({
-    activeGoal: conversation.active_goal,
-    state: conversation.state,
-    pendingRequest: conversation.pending_request,
-    selectedOrderId: conversation.selected_order_id,
-  });
-  const pilotAction = await decideCustomerServicePilotAction({
-    activeGoal,
-    conversationState: conversation.state,
-    classified,
-  });
   if (pilotAction === "resume_previous") {
     const restored = restoreSuspendedConversation(conversation);
     return annotate({

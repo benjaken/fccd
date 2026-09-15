@@ -123,6 +123,29 @@ function parseChineseCalendarNumber(value: string) {
   return digits[value] ?? Number.NaN;
 }
 
+function validatedCalendarDate(year: number, month: number, day: number) {
+  if (![year, month, day].every(Number.isInteger)) return "";
+  const value = new Date(Date.UTC(year, month - 1, day));
+  if (
+    value.getUTCFullYear() !== year ||
+    value.getUTCMonth() + 1 !== month ||
+    value.getUTCDate() !== day
+  ) return "";
+  return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+}
+
+function parseSlashCalendarDate(match: RegExpMatchArray) {
+  const first = Number(match[1]);
+  const second = Number(match[2]);
+  const year = Number(match[3] || hongKongCalendarDate().slice(0, 4));
+  // Hong Kong commonly uses D/M. When only the second value can be a day,
+  // accept the equally common M/D input (for example 9/26).
+  const [month, day] = second > 12 && first <= 12
+    ? [first, second]
+    : [second, first];
+  return validatedCalendarDate(year, month, day);
+}
+
 export function extractInquirySlots(text: string): InquirySlots {
   const iso = text.match(/\b(20\d{2})[-/.](\d{1,2})[-/.](\d{1,2})\b/);
   const md = text.match(/\b(\d{1,2})\s*月\s*(\d{1,2})\s*(?:日|號|号)/);
@@ -133,15 +156,21 @@ export function extractInquirySlots(text: string): InquirySlots {
   const headcount = text.match(/(\d{1,4})\s*(人|位|頭)/);
   const budget = text.match(/(?:預算|budget)\s*[為是:：]?\s*\$?\s*(\d{2,6})/i)
     || text.match(/\$\s*(\d{2,6})/);
+  const currentYear = Number(hongKongCalendarDate().slice(0, 4));
+  const requestedYear = Number(text.match(/\b(20\d{2})\s*年/)?.[1] ?? currentYear);
   return {
     eventDate: iso
-      ? `${iso[1]}-${iso[2].padStart(2, "0")}-${iso[3].padStart(2, "0")}`
+      ? validatedCalendarDate(Number(iso[1]), Number(iso[2]), Number(iso[3]))
       : md
-        ? `${new Date().getFullYear()}-${md[1].padStart(2, "0")}-${md[2].padStart(2, "0")}`
+        ? validatedCalendarDate(requestedYear, Number(md[1]), Number(md[2]))
         : chineseMd
-          ? `${new Date().getFullYear()}-${String(parseChineseCalendarNumber(chineseMd[1])).padStart(2, "0")}-${String(parseChineseCalendarNumber(chineseMd[2])).padStart(2, "0")}`
+          ? validatedCalendarDate(
+            requestedYear,
+            parseChineseCalendarNumber(chineseMd[1]),
+            parseChineseCalendarNumber(chineseMd[2]),
+          )
         : dmy
-          ? `${dmy[3] || new Date().getFullYear()}-${dmy[2].padStart(2, "0")}-${dmy[1].padStart(2, "0")}`
+          ? parseSlashCalendarDate(dmy)
           : "",
     headcount: headcount?.[1] ?? "",
     budget: budget?.[1] ? `HK$${budget[1]}` : "",

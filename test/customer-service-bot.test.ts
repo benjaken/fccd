@@ -6,6 +6,7 @@ import {
   customerServiceBrandIdentityName,
   customerServiceMenuFaqQuery,
   explicitCustomerServiceOrderNumber,
+  extractInquirySlots,
   extractOrderNumber,
   isCustomerServiceEmojiAcknowledgement,
   isCustomerServiceThanks,
@@ -128,6 +129,11 @@ describe("customer-service intents", () => {
     expect(classified.slots.eventDate).toMatch(/-09-26$/);
   });
 
+  it("parses an unambiguous month/day slash date without rolling the month", () => {
+    expect(extractInquirySlots("你好 請問9/26可以訂到會嗎").eventDate)
+      .toMatch(/-09-26$/);
+  });
+
   it("answers a dated 訂貨 question immediately instead of handing off", async () => {
     const checkOrderIntakeAvailability = vi.fn().mockResolvedValue({
       status: "available",
@@ -181,7 +187,7 @@ describe("customer-service intents", () => {
     );
   });
 
-  it("keeps delivery and event time replies in the availability workflow", async () => {
+  it("finishes availability after delivery time without asking for the event time", async () => {
     const checkOrderIntakeAvailability = vi.fn().mockResolvedValue({
       status: "available",
       message: null,
@@ -208,25 +214,16 @@ describe("customer-service intents", () => {
     });
     expect(deliveryTime.intentKey).toBe("delivery_availability");
     expect(deliveryTime.reply).toContain("19:00送到");
-    expect(deliveryTime.reply).toContain("活動／用餐幾點開始");
+    expect(deliveryTime.reply).toContain("目前可以落單");
+    expect(deliveryTime.reply).not.toContain("活動／用餐");
     expect(deliveryTime.reply).not.toContain("搵唔到已公布嘅答案");
-    expect(deliveryTime.conversation.pending_request).toBe(
-      "availability:event_time",
+    expect(deliveryTime.conversation.pending_request).toBeNull();
+    expect(deliveryTime.conversation.workflow_slots).toEqual({});
+    expect(checkOrderIntakeAvailability).toHaveBeenLastCalledWith(
+      expect.stringMatching(/-09-26$/),
+      expect.stringContaining("送達時間 19:00"),
+      { deliveryTime: "19:00" },
     );
-    expect(deliveryTime.conversation.workflow_slots?.deliveryTime).toBe(
-      "19:00",
-    );
-
-    const eventTime = await handleCustomerServiceTurn({
-      phone: conversation.phone_normalized,
-      text: "20點開始",
-      conversation: deliveryTime.conversation,
-      deps: runtimeDeps,
-    });
-    expect(eventTime.intentKey).toBe("delivery_availability");
-    expect(eventTime.reply).toContain("19:00送到");
-    expect(eventTime.reply).toContain("20:00開始");
-    expect(eventTime.conversation.pending_request).toBeNull();
     expect(runtimeDeps.searchFaqs).not.toHaveBeenCalled();
     expect(runtimeDeps.writeInquiry).not.toHaveBeenCalled();
     expect(runtimeDeps.queueHandoff).not.toHaveBeenCalled();
@@ -911,6 +908,137 @@ describe("customer-service bot turns", () => {
     expect(turn.reply).not.toContain("拒絕");
     expect(turn.conversation.state).toBe("collecting");
     expect(turn.conversation.workflow_slots?.eventDate).toBe("2026-09-26");
+  });
+
+  it("continues collecting a restricted-date inquiry instead of repeating the catalog", async () => {
+    const checkOrderIntakeAvailability = vi.fn().mockResolvedValue({
+      status: "manual_review",
+      message: "中秋送貨繁忙，指定日期只提供中秋套餐及中秋單點。",
+      recommendations: [{ name: "中秋套餐", url: "https://example.com/mid-autumn" }],
+    });
+    const first = await handleCustomerServiceTurn({
+      phone: conversation.phone_normalized,
+      text: "你好 請問九月26號可以訂到會嗎",
+      conversation,
+      deps: deps({ checkOrderIntakeAvailability }),
+      classify: vi.fn().mockResolvedValue({
+        intent: "collect_inquiry",
+        slots: { ...classifyCustomerServiceMessage("").slots, eventDate: "2026-09-26" },
+        orderNumber: "",
+        usedModel: true,
+        configuredIntentKey: "delivery_availability",
+        dialogAction: "new_request",
+      }),
+    });
+
+    const second = await handleCustomerServiceTurn({
+      phone: conversation.phone_normalized,
+      text: "九月26號 19點 8人 1500左右",
+      conversation: first.conversation,
+      deps: deps({ checkOrderIntakeAvailability }),
+      classify: vi.fn().mockResolvedValue({
+        intent: "search_faq",
+        slots: {
+          ...classifyCustomerServiceMessage("").slots,
+          eventDate: "2026-09-26",
+          headcount: "8",
+          budget: "HK$1500",
+        },
+        orderNumber: "",
+        usedModel: true,
+        configuredIntentKey: "delivery_availability",
+        dialogAction: "add_information",
+      }),
+    });
+
+    expect(checkOrderIntakeAvailability).toHaveBeenCalledOnce();
+    expect(second.reply).toContain("我已整理以下到會資料");
+    expect(second.reply).toContain("人數：8人");
+    expect(second.reply).not.toContain("https://example.com/mid-autumn");
+  });
+
+  it("lets a customer order a recommended allowed product without creating an inquiry", async () => {
+    const recommendation = {
+      name: "【2026中秋節到會】中式中秋盛宴 (15-20人)",
+      url: "https://foodchannels-catering.com/products/ccma1520",
+    };
+    const checkOrderIntakeAvailability = vi.fn()
+      .mockResolvedValueOnce({
+        status: "manual_review",
+        message: "指定日期只提供 FCC／FCK 中秋產品。",
+        recommendations: [recommendation],
+      })
+      .mockResolvedValueOnce({
+        status: "available",
+        message: "17:00至19:00除外，其餘時段可直接落單。",
+        recommendations: [recommendation],
+      });
+    const runtimeDeps = deps({ checkOrderIntakeAvailability });
+    const first = await handleCustomerServiceTurn({
+      phone: conversation.phone_normalized,
+      text: "你好 請問九月26號可以預定Catering嗎",
+      conversation,
+      deps: runtimeDeps,
+      classify: vi.fn().mockResolvedValue({
+        intent: "collect_inquiry",
+        slots: { ...classifyCustomerServiceMessage("").slots, eventDate: "2026-09-26" },
+        orderNumber: "",
+        usedModel: true,
+        configuredIntentKey: "delivery_availability",
+        dialogAction: "new_request",
+      }),
+    });
+
+    const second = await handleCustomerServiceTurn({
+      phone: conversation.phone_normalized,
+      text: "我想訂中式中秋盛宴 (15-20人)",
+      conversation: first.conversation,
+      deps: runtimeDeps,
+      classify: vi.fn().mockResolvedValue({
+        intent: "collect_inquiry",
+        slots: { ...classifyCustomerServiceMessage("").slots, headcount: "20" },
+        orderNumber: "",
+        usedModel: true,
+        dialogAction: "add_information",
+      }),
+    });
+
+    expect(second.reply).toContain("可以落單");
+    expect(second.reply).toContain(recommendation.url);
+    expect(second.reply).not.toContain("建立查詢");
+    expect(second.wroteInquiry).toBe(false);
+    expect(second.notified).toBe(false);
+    expect(runtimeDeps.writeInquiry).not.toHaveBeenCalled();
+    expect(runtimeDeps.queueHandoff).not.toHaveBeenCalled();
+  });
+
+  it("recommends allowed products and keeps manual follow-up for a named unavailable brand", async () => {
+    const checkOrderIntakeAvailability = vi.fn().mockResolvedValue({
+      status: "manual_review",
+      unavailableChannelName: "HK Party Food",
+      message: "當日只有 FCC 及 FCK 的中秋套餐或中秋單點可以訂購。",
+      recommendations: [{ name: "中秋套餐", url: "https://example.com/mid-autumn" }],
+    });
+    const turn = await handleCustomerServiceTurn({
+      phone: conversation.phone_normalized,
+      text: "我想問9/26 Partyfood",
+      conversation,
+      deps: deps({ checkOrderIntakeAvailability }),
+      classify: vi.fn().mockResolvedValue({
+        intent: "collect_inquiry", slots: classifyCustomerServiceMessage("").slots,
+        orderNumber: "", usedModel: true, configuredIntentKey: "delivery_availability",
+      }),
+    });
+
+    expect(turn.reply).toContain("HK Party Food");
+    expect(turn.reply).toContain("26/9（星期六）");
+    expect(turn.reply).not.toContain("星期三");
+    expect(turn.reply).toContain("當日只有 FCC 及 FCK");
+    expect(turn.reply).toContain("https://example.com/mid-autumn");
+    expect(turn.reply).toContain("請留下希望送達時間、地區、人數及預算");
+    expect(turn.reply).not.toContain("請選擇其他日期訂購");
+    expect(turn.reply).not.toContain("中秋三味乳鴿皇");
+    expect(turn.conversation.state).toBe("collecting");
   });
 
   it("does not tell a general new catering customer that no order was found", async () => {
