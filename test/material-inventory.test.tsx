@@ -111,6 +111,18 @@ describe("material inventory ledger", () => {
     }));
   });
 
+  it("keeps inventory pagination mounted after an invalid correction", async () => {
+    const user = userEvent.setup();
+    const { container } = render(<MemoryRouter><MaterialInventoryPage /></MemoryRouter>);
+    await user.click(await screen.findByRole("button", { name: /查看流水/ }));
+    await user.click(screen.getByRole("button", { name: "修正庫存" }));
+    await user.clear(screen.getByRole("spinbutton", { name: "實際數量" }));
+    await user.click(screen.getByRole("button", { name: "保存修正" }));
+    expect(await screen.findByRole("alert")).toBeInTheDocument();
+    expect(correctMaterialCurrentStock).not.toHaveBeenCalled();
+    expect(container.querySelector(".operational-list-pagination")).toBeInTheDocument();
+  });
+
   it("filters inventory rows by stock status", async () => {
     const user = userEvent.setup();
     vi.mocked(fetchMaterialInventory).mockResolvedValue([

@@ -66,6 +66,22 @@ describe("Packaging stocktake records page", () => {
     expect(await screen.findByRole("button", { name: "修改「芝士汁粉」的盤點數量" })).toHaveTextContent("18");
   });
 
+  it.each(["packing", "ingredient"] as const)("keeps %s pagination usable after invalid quantity input", async (kind) => {
+    const user = userEvent.setup();
+    const loadRows = vi.fn().mockResolvedValue({ items: records, total: 101 });
+    const saveQuantity = vi.fn();
+    render(<MemoryRouter><PackingStocktakesPage kind={kind} canEdit loadDates={vi.fn().mockResolvedValue([{ date: "2026-08-10" }])} loadRows={loadRows} saveQuantity={saveQuantity} /></MemoryRouter>);
+    const dateList = await screen.findByRole("complementary", { name: "盤點日期列表" });
+    await user.click(dateButton(dateList, "2026-08-10"));
+    await user.click(await screen.findByRole("button", { name: "修改「芝士汁粉」的盤點數量" }));
+    await user.clear(screen.getByRole("spinbutton", { name: "修改「芝士汁粉」的盤點數量" }));
+    await user.keyboard("{Enter}");
+    expect(await screen.findByText("請輸入零或以上的有效盤點數量。")).toBeInTheDocument();
+    expect(saveQuantity).not.toHaveBeenCalled();
+    await user.click(screen.getByRole("button", { name: "下一頁" }));
+    await waitFor(() => expect(loadRows).toHaveBeenLastCalledWith({ page: 2, search: "", stocktakeDate: "2026-08-10" }));
+  });
+
   it("loads the latest balance per material for the current-stock column", () => {
     const migration = readFileSync(
       "supabase/migrations/20260908140000_material_current_stock.sql",

@@ -473,7 +473,7 @@ export function DeliveryFleetsPage() {
               </tr>})}
             </ListTable>
           )}
-          {!feesLoading && !feesError && filteredFeeRows.length > 0 ? <footer className="orders-pagination">
+          {!feesLoading && filteredFeeRows.length > 0 ? <footer className="orders-pagination">
             <span>{t("deliveryFleets.feeManagement.pagination", { from: feeFrom, to: feeTo, total: filteredFeeRows.length })}</span>
             <div>
               <Button type="button" variant="outline" size="icon" disabled={feePage <= 1} onClick={() => setFeePage((page) => Math.max(1, page - 1))} aria-label={t("deliveryFleets.feeManagement.previous")}><ChevronLeft /></Button>

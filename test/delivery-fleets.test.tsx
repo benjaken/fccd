@@ -163,6 +163,24 @@ describe("Delivery fleet management", () => {
     await waitFor(() => expect(api.updateFee).toHaveBeenCalledWith("fleet-1", "district-1", 135));
   });
 
+  it("keeps fee pagination after an invalid fee", async () => {
+    const user = userEvent.setup();
+    api.fetchFees.mockResolvedValue(Array.from({ length: 16 }, (_, index) => ({
+      feeId: `fee-${index}`, districtId: `district-${index}`, fleetId: fleet.id,
+      fleetName: fleet.name, districtName: `地區 ${index + 1}`, fee: 120,
+    })));
+    render(<MemoryRouter><DeliveryFleetsPage /></MemoryRouter>);
+    await user.click(await screen.findByRole("button", { name: "運費管理" }));
+    const input = await screen.findByRole("spinbutton", { name: "地區 1 運費" });
+    await user.clear(input);
+    await user.type(input, "-1");
+    await user.tab();
+    expect(api.updateFee).not.toHaveBeenCalled();
+    expect(input).toHaveValue(120);
+    await user.click(screen.getByRole("button", { name: "下一頁運費" }));
+    expect(screen.getByRole("cell", { name: "地區 16" })).toBeInTheDocument();
+  });
+
   it("paginates and searches fleet fees", async () => {
     const user = userEvent.setup();
     api.fetchFees.mockResolvedValue(Array.from({ length: 16 }, (_, index) => ({
