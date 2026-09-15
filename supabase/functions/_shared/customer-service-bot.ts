@@ -19,6 +19,7 @@ import {
   isSameDayOrderDemand,
   isTakeawayPackagingRequest,
   normalizeCustomerServiceOrderNumber,
+  resolveCustomerServiceDeliveryDate,
   type ClassifiedMessage,
   type InquirySlots,
 } from "./customer-service-intents.ts";
@@ -262,8 +263,10 @@ function configuredReply(
 }
 
 function deliveryDateLabel(date: string) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return "該日";
   const [year, month, day] = date.split("-").map(Number);
   const value = new Date(Date.UTC(year, month - 1, day));
+  if (!Number.isFinite(value.getTime()) || value.toISOString().slice(0, 10) !== date) return "該日";
   const weekdays = [
     "星期日",
     "星期一",
@@ -375,7 +378,7 @@ async function replyAvailabilityTimeFollowUp(
   }
 
   const saved = conversation.workflow_slots ?? {};
-  const eventDate = extractInquirySlots(text).eventDate || String(saved.eventDate ?? "");
+  const eventDate = resolveCustomerServiceDeliveryDate(text) || String(saved.eventDate ?? "");
   if (!/^\d{4}-\d{2}-\d{2}$/.test(eventDate)) {
     return {
       reply: "我搵唔返頭先查詢嘅日期，請再提供一次日期，我會重新幫你查接單安排。",
@@ -1792,7 +1795,7 @@ export async function handleCustomerServiceTurn({
       ? { ...modelClassified, requestedFields: explicitRequestedFields }
       : modelClassified;
   const annotate = (turn: BotTurn): BotTurn => {
-    const defaultTool = classified.configuredIntentKey === "delivery_availability"
+    const defaultTool = turn.failureReason === "availability_date_missing" ? null : classified.configuredIntentKey === "delivery_availability"
       ? "check_order_intake"
       : classified.intent === "lookup_order" ||
         classified.intent === "handoff_order"
@@ -1824,7 +1827,7 @@ export async function handleCustomerServiceTurn({
     (!classified.configuredIntentKey || ["delivery_availability", "collect_inquiry"].includes(classified.configuredIntentKey));
   const isTimeFollowUp = isStandaloneDeliveryTime(text) ||
     classified.configuredIntentKey === "delivery_availability" ||
-    Boolean(extractInquirySlots(text).eventDate) ||
+    Boolean(resolveCustomerServiceDeliveryDate(text)) ||
     ["add_information", "continue_current", "correct_previous"].includes(classified.dialogAction ?? "");
   if (canContinueAvailability && isTimeFollowUp) {
     const availabilityFollowUp = await replyAvailabilityTimeFollowUp(deps, conversation, text);
@@ -1857,7 +1860,7 @@ export async function handleCustomerServiceTurn({
     })
     : [];
   const storedSelection = findOrderIntakeRecommendation(text, storedRecommendations);
-  const restrictedDate = extractInquirySlots(text).eventDate || String(conversation.workflow_slots?.eventDate ?? "");
+  const restrictedDate = resolveCustomerServiceDeliveryDate(text) || String(conversation.workflow_slots?.eventDate ?? "");
   if (
     canContinueAvailability && conversation.state === "collecting" &&
     conversation.pending_request === "特別接單安排人工覆核" &&
@@ -1943,9 +1946,18 @@ export async function handleCustomerServiceTurn({
 
   if (
     classified.configuredIntentKey === "delivery_availability" ||
-    (!classified.usedModel && isDeliveryAvailabilityQuestion(text))
+    (!classified.usedModel && isDeliveryAvailabilityQuestion(text)) ||
+    (conversation.pending_request === "availability:date" && canContinueAvailability && Boolean(resolveCustomerServiceDeliveryDate(text)))
   ) {
-    const requestedDate = extractInquirySlots(text).eventDate;
+    const requestedDate = resolveCustomerServiceDeliveryDate(text);
+    if (!requestedDate) {
+      return annotate({
+        reply: "請問想查詢邊一日送貨？你可以提供日期，或者講「星期日」、「下星期日」。",
+        conversation: nextConversation(conversation, { pending_request: "availability:date" }),
+        wroteInquiry: false, notified: false, usedModel: classified.usedModel,
+        intentKey: "delivery_availability", toolKeys: [], failureReason: "availability_date_missing",
+      });
+    }
     if (deps.checkOrderIntakeAvailability) {
       let intake: CustomerServiceOrderIntakeAvailability = { status: "unknown" };
       try {

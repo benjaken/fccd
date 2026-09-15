@@ -230,6 +230,39 @@ export function isMenuInformationRequest(value: string) {
   return /(?:飯盒|便當|便当|餐盒|meal\s*box|lunch\s*box|lunchbox|派對小食|派对小食|party\s*food)/i.test(text) && asksToBrowse;
 }
 
+/** Resolve delivery-day wording against Hong Kong's calendar, not the server timezone. */
+export function resolveCustomerServiceDeliveryDate(text: string, now = new Date()) {
+  const explicit = extractInquirySlots(text).eventDate;
+  if (explicit) return explicit;
+  // A malformed explicit date or recurring schedule is not a single relative day.
+  if (/(?:\d{1,2}\s*月\s*\d|20\d{2}[-/.]\d|\d{1,2}\s*[/.]\s*\d)|(?:每|逢)(?:個|个)?(?:星期|禮拜|礼拜|週|周)|\bevery\b/i.test(text)) return "";
+  const today = new Date(`${hongKongCalendarDate(now)}T00:00:00Z`);
+  const relativeDays = [...text.matchAll(/今日|今天|聽日|听日|明天|明日|後天|后天|後日|后日|\btoday\b|\btomorrow\b/gi)];
+  const weekdays = [...text.matchAll(/(?:(下下|上上|下|上|今|本|這|这|呢)(?:個|个)?)?(?:星期|禮拜|礼拜|週|周)\s*([一二三四五六日天1-7])/g)];
+  const englishDays = [...text.matchAll(/\b(?:(this|next|last)\s+)?(sunday|monday|tuesday|wednesday|thursday|friday|saturday)\b/gi)];
+  if (relativeDays.length + weekdays.length + englishDays.length !== 1) return "";
+  let offset: number;
+  if (relativeDays.length) {
+    const word = relativeDays[0][0].toLowerCase();
+    offset = /今日|今天|today/.test(word) ? 0 : /後|后/.test(word) ? 2 : 1;
+  } else {
+    const match = weekdays[0] ?? englishDays[0];
+    const prefix = (match[1] ?? "").toLowerCase();
+    const day = weekdays.length
+      ? ({ 一: 1, 二: 2, 三: 3, 四: 4, 五: 5, 六: 6, 日: 0, 天: 0, "1": 1, "2": 2, "3": 3, "4": 4, "5": 5, "6": 6, "7": 0 } as Record<string, number>)[match[2]]
+      : ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"].indexOf(match[2].toLowerCase());
+    const currentDay = today.getUTCDay();
+    if (!prefix) offset = (day - currentDay + 7) % 7;
+    else {
+      const weekOffset = ["下", "next"].includes(prefix) ? 7 : prefix === "下下" ? 14
+        : ["上", "last"].includes(prefix) ? -7 : prefix === "上上" ? -14 : 0;
+      offset = (day + 6) % 7 - (currentDay + 6) % 7 + weekOffset;
+    }
+  }
+  today.setUTCDate(today.getUTCDate() + offset);
+  return today.toISOString().slice(0, 10);
+}
+
 /** Extract a customer-supplied wall-clock time without assigning business intent. */
 export function extractCustomerServiceClockTime(text: string) {
   const match = text.trim().match(
@@ -291,13 +324,13 @@ export function customerServiceBrandIdentityName(value: string) {
 
 export function isDeliveryAvailabilityQuestion(text: string) {
   const body = text.trim();
-  if (!body || !extractInquirySlots(body).eventDate) return false;
+  if (!body || !resolveCustomerServiceDeliveryDate(body)) return false;
   const delivery = /送貨|送餐|配送|交收|訂餐|订餐|訂貨|订货|訂購|订购|預訂|预订|到會|到会|落單|落单/i.test(body);
   const availability =
     /可唔可以|可以(?:送)?(?:嗎|吗|呀|啊)?|能否|能不能|得唔得|送唔送|有冇得送|有沒有得送|是否(?:可以)?|會唔會送|会不会送/i
       .test(body);
   const datedBooking = /(?:預訂|预订|訂|订|落單|落单).{0,8}(?:到會|到会|餐)|(?:到會|到会).{0,8}(?:預訂|预订|訂|订)/i.test(body);
-  return delivery && (availability || datedBooking);
+  return delivery && (availability || datedBooking || /係咪|系咪|是不是/.test(body));
 }
 
 export function customerServiceMenuFaqQuery(value: string) {
@@ -436,7 +469,7 @@ export function classifyCustomerServiceMessage(text: string): ClassifiedMessage 
   if (isDeliveryAvailabilityQuestion(body)) {
     return {
       intent: "search_faq",
-      slots,
+      slots: { ...slots, eventDate: resolveCustomerServiceDeliveryDate(body) },
       orderNumber,
       requestedFields,
       usedModel: false,

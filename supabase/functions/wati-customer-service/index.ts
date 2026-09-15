@@ -1549,6 +1549,7 @@ function createBotDeps(
       return count && count > 0 ? "blocked" as const : "not_blocked" as const;
     },
     async checkOrderIntakeAvailability(date: string, text: string, context?: { deliveryTime?: string | null }) {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return { status: "unknown" as const };
       const { data, error } = await admin.from("order_intake_rules")
         .select("id,name,starts_on,ends_on,start_time,end_time,handling,customer_message,order_intake_rule_channels(channel_id,brand_terms,product_terms,channels(name))")
         .eq("is_active", true).is("archived_at", null)
