@@ -29,7 +29,9 @@
     "test:changed": "node scripts/test-changed.mjs",
     "test:inventory-sql": "node scripts/test-inventory-sql.mjs",
     "test:inventory-concurrency": "node scripts/test-inventory-concurrency.mjs",
-    "check:edge-functions": "tsc -p supabase/functions/tsconfig.check.json --pretty false"
+    "check:edge-functions": "tsc -p supabase/functions/tsconfig.check.json --pretty false",
+    "test:customer-service-regression": "vitest run --dir test test/customer-service-regression.test.ts test/customer-service-regression-tools.test.ts",
+    "regression:import": "node scripts/customer-service-regression-import.mjs"
   },
   "repository": {
     "type": "git",

@@ -81,6 +81,13 @@ function pageStem(file) {
 export function selectRelatedTests(changedFiles, testFiles, readText = () => "") {
   const tests = testFiles.map((file) => file.replaceAll("\\", "/"));
   const selected = new Set();
+  // Keep the conversation corpus in every changed-code/build run, including
+  // indirect dependencies whose filenames do not mention customer service.
+  if (changedFiles.some((file) => /^(src|test|supabase|scripts)\//.test(file.replaceAll("\\", "/")) || /^(package(-lock)?\.json|vite.*config.*)$/.test(file))) {
+    for (const file of tests) {
+      if (/\/customer-service-regression(?:-tools)?\.test\.ts$/.test(file)) selected.add(file);
+    }
+  }
 
   for (const raw of changedFiles) {
     const file = raw.replaceAll("\\", "/");
@@ -210,12 +217,13 @@ async function main() {
   console.log(`Running ${related.length} test file(s):\n${related.map((file) => `  ${file}`).join("\n")}`);
   if (options.dryRun) return 0;
 
-  const child = spawn("npx", ["vitest", "run", ...related, ...rest], {
+  const child = spawn(process.execPath, [path.join(root, "node_modules/vitest/vitest.mjs"), "run", "--dir", "test", ...related, ...rest], {
     cwd: root,
     stdio: "inherit",
     shell: false,
   });
   const code = await new Promise((resolve) => {
+    child.on("error", (error) => { console.error(error.message); resolve(1); });
     child.on("close", (value) => resolve(value ?? 1));
   });
   return code;

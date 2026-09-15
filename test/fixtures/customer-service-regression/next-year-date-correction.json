@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "id": "next-year-date-correction",
+  "title": "更改至下年春節日期與時間",
+  "status": "approved",
+  "clock": "2026-09-15T07:00:00.000Z",
+  "source": {
+    "kind": "legacy_test",
+    "reference": "test/customer-service-seasonal-rules.test.ts / next-year Lunar New Year"
+  },
+  "world": {},
+  "turns": [
+    {
+      "customer": "2026-12-25可以訂到會嗎？",
+      "expect": {
+        "effects": {
+          "writeInquiry": 0,
+          "queueHandoff": 0
+        },
+        "pendingRequest": "availability:delivery_time",
+        "replyContains": [
+          "幾點送到"
+        ]
+      }
+    },
+    {
+      "customer": "改為2027年2月6日晚上6點可以嗎",
+      "expect": {
+        "effects": {
+          "writeInquiry": 0,
+          "queueHandoff": 0
+        },
+        "replyContains": [
+          "6/2（星期六）",
+          "18:00"
+        ],
+        "intakeDate": "2027-02-06",
+        "intakeTime": "18:00",
+        "pendingRequest": null
+      }
+    }
+  ]
+}

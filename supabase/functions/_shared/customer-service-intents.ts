@@ -123,6 +123,29 @@ function parseChineseCalendarNumber(value: string) {
   return digits[value] ?? Number.NaN;
 }
 
+function validatedCalendarDate(year: number, month: number, day: number) {
+  if (![year, month, day].every(Number.isInteger)) return "";
+  const value = new Date(Date.UTC(year, month - 1, day));
+  if (
+    value.getUTCFullYear() !== year ||
+    value.getUTCMonth() + 1 !== month ||
+    value.getUTCDate() !== day
+  ) return "";
+  return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+}
+
+function parseSlashCalendarDate(match: RegExpMatchArray) {
+  const first = Number(match[1]);
+  const second = Number(match[2]);
+  const year = Number(match[3] || hongKongCalendarDate().slice(0, 4));
+  // Hong Kong commonly uses D/M. When only the second value can be a day,
+  // accept the equally common M/D input (for example 9/26).
+  const [month, day] = second > 12 && first <= 12
+    ? [first, second]
+    : [second, first];
+  return validatedCalendarDate(year, month, day);
+}
+
 export function extractInquirySlots(text: string): InquirySlots {
   const iso = text.match(/\b(20\d{2})[-/.](\d{1,2})[-/.](\d{1,2})\b/);
   const md = text.match(/\b(\d{1,2})\s*月\s*(\d{1,2})\s*(?:日|號|号)/);
@@ -133,15 +156,21 @@ export function extractInquirySlots(text: string): InquirySlots {
   const headcount = text.match(/(\d{1,4})\s*(人|位|頭)/);
   const budget = text.match(/(?:預算|budget)\s*[為是:：]?\s*\$?\s*(\d{2,6})/i)
     || text.match(/\$\s*(\d{2,6})/);
+  const currentYear = Number(hongKongCalendarDate().slice(0, 4));
+  const requestedYear = Number(text.match(/\b(20\d{2})\s*年/)?.[1] ?? currentYear);
   return {
     eventDate: iso
-      ? `${iso[1]}-${iso[2].padStart(2, "0")}-${iso[3].padStart(2, "0")}`
+      ? validatedCalendarDate(Number(iso[1]), Number(iso[2]), Number(iso[3]))
       : md
-        ? `${new Date().getFullYear()}-${md[1].padStart(2, "0")}-${md[2].padStart(2, "0")}`
+        ? validatedCalendarDate(requestedYear, Number(md[1]), Number(md[2]))
         : chineseMd
-          ? `${new Date().getFullYear()}-${String(parseChineseCalendarNumber(chineseMd[1])).padStart(2, "0")}-${String(parseChineseCalendarNumber(chineseMd[2])).padStart(2, "0")}`
+          ? validatedCalendarDate(
+            requestedYear,
+            parseChineseCalendarNumber(chineseMd[1]),
+            parseChineseCalendarNumber(chineseMd[2]),
+          )
         : dmy
-          ? `${dmy[3] || new Date().getFullYear()}-${dmy[2].padStart(2, "0")}-${dmy[1].padStart(2, "0")}`
+          ? parseSlashCalendarDate(dmy)
           : "",
     headcount: headcount?.[1] ?? "",
     budget: budget?.[1] ? `HK$${budget[1]}` : "",
@@ -190,6 +219,22 @@ export function explicitCustomerServiceOrderNumber(
   return normalizedText.includes(candidate) ? modelOrderNumber.trim() : "";
 }
 
+/** A general brand greeting can arrive as search_faq from the model. */
+export function isBrandIntroductionRequest(value: string) {
+  const text = value.trim();
+  if (!/(?:hk\s*lunch\s*box|lunch\s*box|飯盒|便當|hk\s*party\s*food|food\s*channels?\s*(?:catering|express|kitchen|cuisine)|fc\s*(?:catering|express|kitchen|cuisine))/i.test(text)) return false;
+  // Specific policy/order questions must keep their own retrieval intent.
+  if (/幾多|多少|幾點|何時|幾時|運費|最低|最少|提前|取消|退款|投訴|訂單|訂單號|素食|過敏|遲到|遲咗|送唔送|可以|可唔可以|\d/.test(text)) return false;
+  return /(?:想問|想了解|查詢|詢問|介紹|了解).{0,60}(?:問題|服務|飯盒|餐牌|餐飲)|(?:品牌|飯盒|送餐).{0,20}(?:介紹|問題|服務)/i.test(text);
+}
+
+/** Only standalone ordering instructions; mixed complaints and booking requests retain their intent. */
+export function isOrderingInstructionsRequest(value: string) {
+  const text = value.trim().replace(/[\s，。！？,.!?]/g, "");
+  return /^(?:(?:你好|請問|想問|我想問|咁|甘|唔該))*(?:點(?:樣)?|如何|怎樣|怎么|怎麼)(?:喺|在)?(?:網站|網上)?(?:落單|下單|下单|訂購|订购|訂餐|订餐)(?:呢|呀|啊|嗎|吗|㗎|架)?$/i.test(text) ||
+    /^(?:howtoorder|howdoiorder|howcan(?:i|we)(?:placeanorder|order))\??$/i.test(text);
+}
+
 export function isMenuInformationRequest(value: string) {
   const text = value.trim();
   const asksToBrowse = /(?:有冇|有無|有沒有|有吗|有嗎|睇|看|看看|提供|發|发|send|想問|想问|詢問|询问|索取|想訂|想订|訂購|订购|落單|下单)/i.test(text);
@@ -199,6 +244,39 @@ export function isMenuInformationRequest(value: string) {
     asksToBrowse
   ) return true;
   return /(?:飯盒|便當|便当|餐盒|meal\s*box|lunch\s*box|lunchbox|派對小食|派对小食|party\s*food)/i.test(text) && asksToBrowse;
+}
+
+/** Resolve delivery-day wording against Hong Kong's calendar, not the server timezone. */
+export function resolveCustomerServiceDeliveryDate(text: string, now = new Date()) {
+  const explicit = extractInquirySlots(text).eventDate;
+  if (explicit) return explicit;
+  // A malformed explicit date or recurring schedule is not a single relative day.
+  if (/(?:\d{1,2}\s*月\s*\d|20\d{2}[-/.]\d|\d{1,2}\s*[/.]\s*\d)|(?:每|逢)(?:個|个)?(?:星期|禮拜|礼拜|週|周)|\bevery\b/i.test(text)) return "";
+  const today = new Date(`${hongKongCalendarDate(now)}T00:00:00Z`);
+  const relativeDays = [...text.matchAll(/今日|今天|聽日|听日|明天|明日|後天|后天|後日|后日|\btoday\b|\btomorrow\b/gi)];
+  const weekdays = [...text.matchAll(/(?:(下下|上上|下|上|今|本|這|这|呢)(?:個|个)?)?(?:星期|禮拜|礼拜|週|周)\s*([一二三四五六日天1-7])/g)];
+  const englishDays = [...text.matchAll(/\b(?:(this|next|last)\s+)?(sunday|monday|tuesday|wednesday|thursday|friday|saturday)\b/gi)];
+  if (relativeDays.length + weekdays.length + englishDays.length !== 1) return "";
+  let offset: number;
+  if (relativeDays.length) {
+    const word = relativeDays[0][0].toLowerCase();
+    offset = /今日|今天|today/.test(word) ? 0 : /後|后/.test(word) ? 2 : 1;
+  } else {
+    const match = weekdays[0] ?? englishDays[0];
+    const prefix = (match[1] ?? "").toLowerCase();
+    const day = weekdays.length
+      ? ({ 一: 1, 二: 2, 三: 3, 四: 4, 五: 5, 六: 6, 日: 0, 天: 0, "1": 1, "2": 2, "3": 3, "4": 4, "5": 5, "6": 6, "7": 0 } as Record<string, number>)[match[2]]
+      : ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"].indexOf(match[2].toLowerCase());
+    const currentDay = today.getUTCDay();
+    if (!prefix) offset = (day - currentDay + 7) % 7;
+    else {
+      const weekOffset = ["下", "next"].includes(prefix) ? 7 : prefix === "下下" ? 14
+        : ["上", "last"].includes(prefix) ? -7 : prefix === "上上" ? -14 : 0;
+      offset = (day + 6) % 7 - (currentDay + 6) % 7 + weekOffset;
+    }
+  }
+  today.setUTCDate(today.getUTCDate() + offset);
+  return today.toISOString().slice(0, 10);
 }
 
 /** Extract a customer-supplied wall-clock time without assigning business intent. */
@@ -262,13 +340,13 @@ export function customerServiceBrandIdentityName(value: string) {
 
 export function isDeliveryAvailabilityQuestion(text: string) {
   const body = text.trim();
-  if (!body || !extractInquirySlots(body).eventDate) return false;
+  if (!body || !resolveCustomerServiceDeliveryDate(body)) return false;
   const delivery = /送貨|送餐|配送|交收|訂餐|订餐|訂貨|订货|訂購|订购|預訂|预订|到會|到会|落單|落单/i.test(body);
   const availability =
     /可唔可以|可以(?:送)?(?:嗎|吗|呀|啊)?|能否|能不能|得唔得|送唔送|有冇得送|有沒有得送|是否(?:可以)?|會唔會送|会不会送/i
       .test(body);
   const datedBooking = /(?:預訂|预订|訂|订|落單|落单).{0,8}(?:到會|到会|餐)|(?:到會|到会).{0,8}(?:預訂|预订|訂|订)/i.test(body);
-  return delivery && (availability || datedBooking);
+  return delivery && (availability || datedBooking || /係咪|系咪|是不是/.test(body));
 }
 
 export function customerServiceMenuFaqQuery(value: string) {
@@ -407,7 +485,7 @@ export function classifyCustomerServiceMessage(text: string): ClassifiedMessage 
   if (isDeliveryAvailabilityQuestion(body)) {
     return {
       intent: "search_faq",
-      slots,
+      slots: { ...slots, eventDate: resolveCustomerServiceDeliveryDate(body) },
       orderNumber,
       requestedFields,
       usedModel: false,

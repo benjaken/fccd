@@ -489,6 +489,7 @@ export function OrderSettingsPage({
     activeTab === "shipping-fees" ||
     activeTab === "first-notification-recipients" ||
     activeTab === "add-ons" ||
+    activeTab === "add-on-block-dates" ||
     activeTab === "payments";
   const canCreate = activeTab === "shipping-fees"
     ? pageAccess.canManage("orders.settings.shipping_fees")
@@ -496,11 +497,15 @@ export function OrderSettingsPage({
       ? pageAccess.canManage("orders.settings.first_notification_recipients")
       : activeTab === "add-ons"
         ? pageAccess.canManage("orders.settings.addons")
+      : activeTab === "add-on-block-dates"
+        ? pageAccess.canManage("orders.settings.addon_block_dates")
         : canManage;
   const createLabel = activeTab === "payments"
     ? t("orderSettings.payments.add")
-    : activeTab === "add-ons"
-      ? "加入產品"
+      : activeTab === "add-ons"
+        ? "加入產品"
+      : activeTab === "add-on-block-dates"
+        ? "新增接單安排"
       : activeTab === "customer-tags"
         ? t("orderSettings.customerTags.add")
         : activeTab === "cost-options"
@@ -562,7 +567,7 @@ export function OrderSettingsPage({
       </header>
 
       <article className="panel order-settings-panel">
-        {createAction && !hasListSearch ? (
+        {createAction && !hasListSearch && activeTab !== "add-on-block-dates" ? (
           <header className="order-settings-toolbar order-settings-actions-only">
             <div className="list-search-actions">{createAction}</div>
           </header>
@@ -667,6 +672,9 @@ export function OrderSettingsPage({
         ) : activeTab === "add-on-block-dates" ? (
           <OrderAddonBlockDatesSettings
             canManage={pageAccess.canManage("orders.settings.addon_block_dates")}
+            createOpen={createOpen}
+            onCreateOpenChange={setCreateOpen}
+            action={createAction}
           />
         ) : (
           <div className="orders-state">

@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "id": "time-followup-complaint",
+  "title": "追問時間期間投訴必須轉真人",
+  "status": "approved",
+  "clock": "2026-09-15T07:00:00.000Z",
+  "source": {
+    "kind": "legacy_test",
+    "reference": "test/customer-service-seasonal-rules.test.ts / routes a complaint"
+  },
+  "world": {},
+  "turns": [
+    {
+      "customer": "2026-12-25可以訂到會嗎？",
+      "expect": {
+        "effects": {
+          "writeInquiry": 0,
+          "queueHandoff": 0
+        },
+        "replyContains": [
+          "幾點送到"
+        ],
+        "pendingRequest": "availability:delivery_time"
+      }
+    },
+    {
+      "customer": "我想投訴，昨天晚上7點送到的食物壞了",
+      "expect": {
+        "effects": {
+          "writeInquiry": 0,
+          "queueHandoff": 1
+        },
+        "state": "awaiting_human",
+        "replyExcludes": [
+          "目前可以落單"
+        ]
+      }
+    }
+  ]
+}

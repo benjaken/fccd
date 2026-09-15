@@ -1,6 +1,16 @@
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { CalendarOff, PackagePlus, Trash2 } from "lucide-react";
+import {
+  CalendarDays,
+  CalendarOff,
+  Clock3,
+  Info,
+  MessageSquareText,
+  PackagePlus,
+  Pencil,
+  Store,
+  Trash2,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { ListTable } from "@/components/ui/list-table";
@@ -8,20 +18,24 @@ import { SearchSelect } from "@/components/ui/search-select";
 import { SidePanel } from "@/components/ui/side-panel";
 import { Switch } from "@/components/ui/switch";
 import {
-  addAddonBlockDate,
   addAddonProduct,
-  archiveAddonBlockDate,
   archiveAddonProduct,
-  fetchAddonBlockDates,
   fetchAddonChannels,
   fetchAddonProductSettings,
   searchAddonProducts,
   setAddonProductActive,
-  type AddonBlockDate,
   type AddonChannel,
   type AddonProductSearchItem,
   type AddonProductSetting,
 } from "@/lib/self-service-addons";
+import {
+  archiveOrderIntakeRule,
+  createOrderIntakeRule,
+  fetchOrderIntakeRules,
+  type OrderIntakeRuleInput,
+  type OrderIntakeRuleSetting,
+  updateOrderIntakeRule,
+} from "@/lib/order-intake-rules";
 
 function money(value: number | null) {
   if (value === null) return "—";
@@ -193,45 +207,178 @@ function displayDate(value: string) {
   return year && month && day ? `${day}/${month}/${year}` : value;
 }
 
-export function OrderAddonBlockDatesSettings({ canManage }: { canManage: boolean }) {
-  const [rows, setRows] = useState<AddonBlockDate[]>([]);
-  const [blockDate, setBlockDate] = useState("");
-  const [reason, setReason] = useState("");
+export function OrderAddonBlockDatesSettings({ canManage, createOpen, onCreateOpenChange, action }: {
+  canManage: boolean;
+  createOpen: boolean;
+  onCreateOpenChange: (open: boolean) => void;
+  action?: ReactNode;
+}) {
+  const { t } = useTranslation();
+  const [rows, setRows] = useState<OrderIntakeRuleSetting[]>([]);
+  const [channels, setChannels] = useState<AddonChannel[]>([]);
+  const [name, setName] = useState("");
+  const [startsOn, setStartsOn] = useState("");
+  const [endsOn, setEndsOn] = useState("");
+  const [startTime, setStartTime] = useState("");
+  const [endTime, setEndTime] = useState("");
+  const [timeMode, setTimeMode] = useState<"all_day" | "time_range">("all_day");
+  const [handling, setHandling] = useState<"allow_only" | "manual_review">("manual_review");
+  const [selectedChannels, setSelectedChannels] = useState<string[]>([]);
+  const [productTerms, setProductTerms] = useState<Record<string, string>>({});
+  const [addonHandling, setAddonHandling] = useState<"allow" | "manual_review">("manual_review");
+  const [brandTerms, setBrandTerms] = useState<Record<string, string>>({});
+  const [customerMessage, setCustomerMessage] = useState("");
+  const [internalNote, setInternalNote] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [editingRule, setEditingRule] = useState<OrderIntakeRuleSetting | null>(null);
 
   useEffect(() => {
-    void fetchAddonBlockDates().then(setRows).catch(() => setError("暫時無法載入 Block Date。"))
+    void Promise.all([fetchOrderIntakeRules(), fetchAddonChannels()]).then(([rules, brands]) => {
+      setRows(rules); setChannels(brands);
+    }).catch(() => setError("暫時無法載入全局接單安排。"))
       .finally(() => setLoading(false));
   }, []);
 
+  const resetForm = () => {
+    setName(""); setStartsOn(""); setEndsOn(""); setStartTime(""); setEndTime("");
+    setTimeMode("all_day"); setHandling("manual_review"); setSelectedChannels([]);
+    setProductTerms({}); setAddonHandling("manual_review");
+    setBrandTerms({}); setCustomerMessage(""); setInternalNote(""); setError("");
+    setEditingRule(null);
+  };
+
+  const closeCreatePanel = () => {
+    if (saving) return;
+    resetForm();
+    onCreateOpenChange(false);
+  };
+
+  const openEditPanel = (rule: OrderIntakeRuleSetting) => {
+    onCreateOpenChange(false);
+    setEditingRule(rule);
+    setName(rule.name);
+    setStartsOn(rule.startsOn);
+    setEndsOn(rule.endsOn);
+    setStartTime(rule.startTime ?? "");
+    setEndTime(rule.endTime ?? "");
+    setTimeMode(rule.startTime && rule.endTime ? "time_range" : "all_day");
+    setHandling(rule.handling);
+    setAddonHandling(rule.addonHandling);
+    setSelectedChannels(rule.channels.map((channel) => channel.channelId));
+    setProductTerms(Object.fromEntries(rule.channels.map((channel) => [channel.channelId, channel.productTerms.join(", ")])));
+    setBrandTerms(Object.fromEntries(rule.channels.map((channel) => [channel.channelId, channel.brandTerms.join(", ")])));
+    setCustomerMessage(rule.customerMessage ?? "");
+    setInternalNote(rule.internalNote ?? "");
+    setError("");
+  };
+
+  const timeRangeInvalid = timeMode === "time_range" && (
+    !startTime || !endTime || endTime <= startTime
+  );
+  const brandSelectionInvalid = handling === "allow_only" && selectedChannels.length === 0;
+  const productSelectionInvalid = handling === "allow_only" && selectedChannels.some((id) =>
+    !(productTerms[id] || "").split(/[,，\n]/).some((term) => term.trim()),
+  );
+  const canSubmit = Boolean(
+    name.trim() && startsOn && endsOn && endsOn >= startsOn && !timeRangeInvalid && !brandSelectionInvalid && !productSelectionInvalid,
+  );
+
   async function submit(event: FormEvent) {
     event.preventDefault();
-    if (!blockDate || saving) return;
+    if (!canSubmit || saving) return;
     setSaving(true); setError("");
     try {
-      await addAddonBlockDate(blockDate, reason);
-      setRows(await fetchAddonBlockDates()); setBlockDate(""); setReason("");
-    } catch { setError("無法加入日期；請確認日期沒有重複。"); }
+      const input: OrderIntakeRuleInput = { name, startsOn, endsOn,
+        startTime: timeMode === "time_range" ? startTime : "",
+        endTime: timeMode === "time_range" ? endTime : "", handling,
+        addonHandling, customerMessage, internalNote,
+        channels: selectedChannels.map((channelId) => ({ channelId,
+          brandTerms: (brandTerms[channelId] || "").split(/[,，\n]/).map((item) => item.trim()).filter(Boolean),
+          productTerms: (productTerms[channelId] || "").split(/[,，\n]/).map((item) => item.trim()).filter(Boolean) })) };
+      if (editingRule) await updateOrderIntakeRule(editingRule.id, input);
+      else await createOrderIntakeRule(input);
+      setRows(await fetchOrderIntakeRules());
+      resetForm();
+      onCreateOpenChange(false);
+    } catch { setError(`無法${editingRule ? "儲存" : "建立"}接單安排，請檢查日期、時間及品牌資料。`); }
     finally { setSaving(false); }
   }
 
   return <>
-    {canManage ? <form className="addon-settings-toolbar addon-block-toolbar" onSubmit={(event) => void submit(event)}>
-      <label><span>加入 Block Date</span><input type="date" value={blockDate} onChange={(event) => setBlockDate(event.target.value)} /></label>
-      <label><span>原因（選填）</span><input value={reason} aria-label="Block Date 原因" onChange={(event) => setReason(event.target.value)} /></label>
-      <Button type="submit" disabled={!blockDate || saving}><CalendarOff />{saving ? "加入中…" : "加入"}</Button>
-    </form> : null}
-    {error ? <p className="list-inline-error" role="alert">{error}</p> : null}
-    <ListTable loading={loading} loadingLabel="正在載入 Block Date…" skeletonColumns={canManage ? 3 : 2}
-      header={<tr><th>日期</th><th>原因</th>{canManage ? <th aria-label="操作" /> : null}</tr>}>
-      {rows.length ? rows.map((row) => <tr key={row.id}><td><strong>{displayDate(row.blockDate)}</strong></td><td>{row.reason || "—"}</td>
-        {canManage ? <td className="table-actions-cell"><Button type="button" variant="outline" size="icon" aria-label={`刪除 ${displayDate(row.blockDate)}`} onClick={() => {
-          if (!window.confirm(`確定刪除 ${displayDate(row.blockDate)}？`)) return;
-          void archiveAddonBlockDate(row.id).then(() => setRows((current) => current.filter((item) => item.id !== row.id))).catch(() => setError("無法刪除日期。"));
-        }}><Trash2 /></Button></td> : null}
-      </tr>) : !loading ? <tr><td colSpan={canManage ? 3 : 2} className="table-empty-cell">尚未設定 Block Date。</td></tr> : null}
+    {error && !createOpen && !editingRule ? <p className="list-inline-error" role="alert">{error}</p> : null}
+    <div className="order-intake-toolbar">
+      <div className="order-intake-guidance" role="note">
+        <Info aria-hidden="true" />
+        <p><strong>同一廚房的全局接單例外：</strong>可設定節日或特別日子的安排。多項安排重疊時須同時符合；人工覆核優先，時段包含開始時間、不包含結束時間。</p>
+      </div>
+      {action ? <div className="order-intake-toolbar-action">{action}</div> : null}
+    </div>
+    <ListTable className="order-intake-table-wrap" tableClassName="order-intake-table" loading={loading} loadingLabel="正在載入全局接單安排…" skeletonColumns={canManage ? 5 : 4}
+      header={<tr><th>安排</th><th>日期／時段</th><th>處理方式</th><th>可推薦品牌</th>{canManage ? <th aria-label="操作" /> : null}</tr>}>
+      {rows.length ? rows.map((row) => <tr key={row.id}>
+        <td><div className="order-intake-name-cell"><strong>{row.name}</strong><small>{row.internalNote || row.customerMessage || "未有備註"}</small></div></td>
+        <td><div className="order-intake-schedule-cell"><span><CalendarDays aria-hidden="true" />{displayDate(row.startsOn)}{row.endsOn !== row.startsOn ? ` – ${displayDate(row.endsOn)}` : ""}</span><small><Clock3 aria-hidden="true" />{row.startTime && row.endTime ? `${row.startTime}–${row.endTime}` : "全日"}</small></div></td>
+        <td><span className={`status-badge ${row.handling === "allow_only" ? "blue" : "amber"}`}>{row.handling === "allow_only" ? "只接受指定品牌／產品" : "人工覆核"}</span></td>
+        <td>{row.channels.length ? <div className="order-intake-brand-list">{row.channels.map((item) => <span key={item.id}>{item.channelName}</span>)}</div> : <span className="order-intake-empty-value">不適用</span>}</td>
+        {canManage ? <td className="table-actions-cell"><div className="table-row-actions"><Button type="button" variant="outline" size="icon" aria-label={`編輯 ${row.name}`} onClick={() => openEditPanel(row)}><Pencil /></Button><Button type="button" variant="outline" size="icon" aria-label={`刪除 ${row.name}`} onClick={() => {
+          if (!window.confirm(`確定刪除「${row.name}」？`)) return;
+          void archiveOrderIntakeRule(row.id).then(() => setRows((current) => current.filter((item) => item.id !== row.id))).catch(() => setError("無法刪除接單安排。"));
+        }}><Trash2 /></Button></div></td> : null}
+      </tr>) : !loading ? <tr><td colSpan={canManage ? 5 : 4} className="table-empty-cell">尚未設定特別接單安排；一般時段可正常落單。</td></tr> : null}
     </ListTable>
+    <SidePanel open={canManage && (createOpen || Boolean(editingRule))} title={editingRule ? "編輯接單安排" : "新增接單安排"} description="設定適用日期、時段，以及命中安排後的處理方式。" onClose={closeCreatePanel} closeLabel={`關閉${editingRule ? "編輯" : "新增"}接單安排側邊欄`} wide className="order-intake-create-panel"
+      footer={<><Button type="button" variant="outline" disabled={saving} onClick={closeCreatePanel}>取消</Button><Button type="submit" form="order-intake-rule-form" disabled={saving || !canSubmit}>{editingRule ? <Pencil /> : <CalendarOff />}{saving ? "儲存中…" : editingRule ? "儲存變更" : "建立安排"}</Button></>}>
+      <form id="order-intake-rule-form" className="order-intake-form" onSubmit={(event) => void submit(event)}>
+        <section className="order-intake-form-section" aria-labelledby="order-intake-basics-title">
+          <div className="order-intake-form-section-heading"><CalendarDays aria-hidden="true" /><div><h3 id="order-intake-basics-title">日期與時段</h3><p>同一天請選相同開始及結束日期。</p></div></div>
+          <label className="order-settings-field"><span>安排名稱</span><input autoFocus value={name} onChange={(event) => setName(event.target.value)} placeholder={t("orderSettings.orderIntakeNamePlaceholder")} /></label>
+          <div className="order-intake-field-grid">
+            <label className="order-settings-field"><span>開始日期</span><input type="date" value={startsOn} onChange={(event) => { setStartsOn(event.target.value); if (!endsOn || endsOn < event.target.value) setEndsOn(event.target.value); }} /></label>
+            <label className="order-settings-field"><span>結束日期</span><input type="date" min={startsOn} value={endsOn} onChange={(event) => setEndsOn(event.target.value)} /></label>
+          </div>
+          <fieldset className="order-intake-time-fieldset">
+            <legend>時段</legend>
+            <div className="order-intake-segmented" aria-label="選擇接單安排時段">
+              <button type="button" className={timeMode === "all_day" ? "is-active" : undefined} aria-pressed={timeMode === "all_day"} onClick={() => { setTimeMode("all_day"); setStartTime(""); setEndTime(""); }}><CalendarDays aria-hidden="true" />全日</button>
+              <button type="button" className={timeMode === "time_range" ? "is-active" : undefined} aria-pressed={timeMode === "time_range"} onClick={() => setTimeMode("time_range")}><Clock3 aria-hidden="true" />指定時段</button>
+            </div>
+          </fieldset>
+          {timeMode === "time_range" ? <div className="order-intake-field-grid order-intake-time-grid">
+            <label className="order-settings-field"><span>開始時間</span><input type="time" value={startTime} onChange={(event) => setStartTime(event.target.value)} /></label>
+            <label className="order-settings-field"><span>結束時間</span><input type="time" value={endTime} onChange={(event) => setEndTime(event.target.value)} /></label>
+            {timeRangeInvalid && (startTime || endTime) ? <small className="order-intake-field-error">請同時填寫開始及結束時間，結束時間須晚於開始時間。</small> : null}
+          </div> : null}
+        </section>
+
+        <section className="order-intake-form-section" aria-labelledby="order-intake-handling-title">
+          <div className="order-intake-form-section-heading"><Store aria-hidden="true" /><div><h3 id="order-intake-handling-title">命中後如何處理</h3><p>選擇保留需求給同事，或只推薦仍可接單的品牌。</p></div></div>
+          <label className="order-settings-field"><span>處理方式</span><select value={handling} onChange={(event) => setHandling(event.target.value as typeof handling)}><option value="manual_review">先留需求，人工覆核</option><option value="allow_only">只接受指定品牌及產品</option></select></label>
+          <label className="order-settings-field"><span>自助加購</span><select value={addonHandling} onChange={(event) => setAddonHandling(event.target.value as typeof addonHandling)}><option value="manual_review">轉人工覆核</option><option value="allow">沿用一般加購安排</option></select><small>獨立於新單政策；沿用一般安排仍須符合原有截止時間及可加購產品限制。</small></label>
+          <div className={`order-intake-outcome ${handling === "allow_only" ? "is-allow-only" : "is-manual-review"}`}>
+            <strong>{handling === "allow_only" ? "系統只會推薦下方選取的品牌" : "系統會收集需求，再交由同事確認"}</strong>
+            <span>{handling === "allow_only" ? "未選取的品牌不會被承諾可接單。" : "客人不會因為命中安排而被直接拒絕。"}</span>
+          </div>
+          {handling === "allow_only" ? <div className="order-intake-brand-settings">
+            <fieldset className="order-intake-brand-fieldset"><legend>可接品牌</legend><div className="order-intake-brand-options">{channels.map((channel) => <label key={channel.id}><input type="checkbox" checked={selectedChannels.includes(channel.id)} onChange={(event) => setSelectedChannels((current) => event.target.checked ? [...current, channel.id] : current.filter((id) => id !== channel.id))} /><span>{channel.name}</span></label>)}</div>{brandSelectionInvalid ? <small className="order-intake-field-error">請至少選擇一個可接品牌。</small> : null}</fieldset>
+            <small>每個品牌分別設定允許產品，以逗號分隔。實際產品及訂購連結會由產品資料庫自動取得。</small>
+            {selectedChannels.map((id) => <div className="order-intake-channel-card" key={id}>
+              <strong>{channels.find((item) => item.id === id)?.name}</strong>
+              <label className="order-settings-field"><span>允許產品關鍵字</span><input value={productTerms[id] || ""} onChange={(event) => setProductTerms((current) => ({ ...current, [id]: event.target.value }))} aria-label={`${channels.find((item) => item.id === id)?.name} 允許產品關鍵字`} placeholder={t("orderSettings.orderIntakeProductPlaceholder")} /></label>
+              <label className="order-settings-field"><span>品牌別名</span><input value={brandTerms[id] || ""} onChange={(event) => setBrandTerms((current) => ({ ...current, [id]: event.target.value }))} aria-label={`${channels.find((item) => item.id === id)?.name} 品牌別名`} /><small>選填；只用於識別客人常用的品牌稱呼。</small></label>
+            </div>)}
+            {productSelectionInvalid ? <small className="order-intake-field-error">請為每個可接品牌填寫至少一個允許產品關鍵字。</small> : null}
+          </div> : null}
+        </section>
+
+        <section className="order-intake-form-section" aria-labelledby="order-intake-copy-title">
+          <div className="order-intake-form-section-heading"><MessageSquareText aria-hidden="true" /><div><h3 id="order-intake-copy-title">訊息與備註</h3><p>客人訊息會用於回覆；內部備註只供同事查看。</p></div></div>
+          <label className="order-settings-field"><span>客人訊息</span><textarea rows={3} value={customerMessage} onChange={(event) => setCustomerMessage(event.target.value)} placeholder={t("orderSettings.orderIntakeMessagePlaceholder")} /></label>
+          <label className="order-settings-field"><span>內部備註</span><textarea rows={2} value={internalNote} onChange={(event) => setInternalNote(event.target.value)} placeholder={t("orderSettings.orderIntakeInternalNotePlaceholder")} /></label>
+        </section>
+        {error ? <p className="list-inline-error" role="alert">{error}</p> : null}
+      </form>
+    </SidePanel>
   </>;
 }
