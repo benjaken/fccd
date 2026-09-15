@@ -1,0 +1,65 @@
+{
+  "schemaVersion": 1,
+  "id": "human-mid-autumn-availability",
+  "title": "真人對話：中秋日期只提供指定產品",
+  "status": "approved",
+  "clock": "2026-09-15T07:00:00.000Z",
+  "source": {
+    "kind": "human_conversation",
+    "reference": "production/customer_service_messages/source-md5:9dae9f1e5e203303a155dbfbc1b7a39f"
+  },
+  "world": {
+    "rules": [
+      {
+        "id": "festival",
+        "name": "節日指定產品",
+        "startsOn": "2026-09-25",
+        "endsOn": "2026-09-27",
+        "startTime": null,
+        "endTime": null,
+        "handling": "allow_only",
+        "customerMessage": "9月19-20 及 25-27日只提供中秋套餐及中秋單點。",
+        "channels": [
+          {
+            "channelId": "catering",
+            "name": "Catering",
+            "aliases": [
+              "FCC"
+            ],
+            "terms": [
+              "中秋套餐",
+              "中秋單點"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "turns": [
+    {
+      "customer": "你好，請問九月26號預訂到會可以嗎？",
+      "expect": {
+        "effects": {
+          "writeInquiry": 0,
+          "queueHandoff": 0
+        },
+        "replyContains": [
+          "只提供中秋套餐及中秋單點"
+        ],
+        "replyExcludes": [
+          "暫停接受送貨預訂",
+          "undefined"
+        ],
+        "intakeDate": "2026-09-26",
+        "state": "collecting",
+        "pendingRequest": "特別接單安排人工覆核"
+      },
+      "referenceReplies": [
+        {
+          "role": "human",
+          "text": "9月19-20 及 25-27日 只提供中秋套餐及中秋單點🙏"
+        }
+      ]
+    }
+  ]
+}

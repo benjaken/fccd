@@ -219,6 +219,15 @@ export function explicitCustomerServiceOrderNumber(
   return normalizedText.includes(candidate) ? modelOrderNumber.trim() : "";
 }
 
+/** A general brand greeting can arrive as search_faq from the model. */
+export function isBrandIntroductionRequest(value: string) {
+  const text = value.trim();
+  if (!/(?:hk\s*lunch\s*box|lunch\s*box|飯盒|便當|hk\s*party\s*food|food\s*channels?\s*(?:catering|express|kitchen|cuisine)|fc\s*(?:catering|express|kitchen|cuisine))/i.test(text)) return false;
+  // Specific policy/order questions must keep their own retrieval intent.
+  if (/幾多|多少|幾點|何時|幾時|運費|最低|最少|提前|取消|退款|投訴|訂單|訂單號|素食|過敏|遲到|遲咗|送唔送|可以|可唔可以|\d/.test(text)) return false;
+  return /(?:想問|想了解|查詢|詢問|介紹|了解).{0,60}(?:問題|服務|飯盒|餐牌|餐飲)|(?:品牌|飯盒|送餐).{0,20}(?:介紹|問題|服務)/i.test(text);
+}
+
 export function isMenuInformationRequest(value: string) {
   const text = value.trim();
   const asksToBrowse = /(?:有冇|有無|有沒有|有吗|有嗎|睇|看|看看|提供|發|发|send|想問|想问|詢問|询问|索取|想訂|想订|訂購|订购|落單|下单)/i.test(text);

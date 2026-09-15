@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "id": "human-owned-silence",
+  "title": "真人接手後不搶答",
+  "status": "approved",
+  "clock": "2026-09-15T07:00:00.000Z",
+  "source": {
+    "kind": "legacy_test",
+    "reference": "test/customer-service-bot.test.ts / human_owned"
+  },
+  "world": {},
+  "turns": [
+    {
+      "customer": "星期日送唔送貨？",
+      "expect": {
+        "effects": {
+          "writeInquiry": 0,
+          "queueHandoff": 0
+        },
+        "replyEquals": null,
+        "state": "human_owned"
+      }
+    }
+  ],
+  "initialConversation": {
+    "state": "human_owned"
+  }
+}

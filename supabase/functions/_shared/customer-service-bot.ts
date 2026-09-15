@@ -2,6 +2,7 @@ import {
   classifyCustomerServiceMessage,
   customerServiceBrandIdentityName,
   customerServiceMenuFaqQuery,
+  isBrandIntroductionRequest,
   extractCustomerServiceClockTime,
   extractInquirySlots,
   extractOrderNumber,
@@ -317,6 +318,7 @@ function normalizedFaqText(value: string) {
 function orderIntakeAvailabilityReply(
   date: string,
   availability: CustomerServiceOrderIntakeAvailability,
+  deliveryTime?: string | null,
 ) {
   const label = deliveryDateLabel(date);
   const recommendations = (availability.recommendations ?? [])
@@ -328,7 +330,9 @@ function orderIntakeAvailabilityReply(
       unavailableChannel ? `${unavailableChannel} 喺 ${label} 暫不接單。` : null,
       availability.message || `${label}有特別接單安排。`,
       recommendations ? `你亦可以考慮以下可接選擇：\n${recommendations}` : null,
-      "如你想查詢其他品牌或產品，請留下希望送達時間、地區、人數及預算；同事會按訂單金額及實際情況再確認。",
+      deliveryTime
+        ? `已收到希望 ${deliveryTime}送達。如你想查詢其他品牌或產品，請留下地區、人數及預算；同事會按訂單金額及實際情況再確認。`
+        : "如你想查詢其他品牌或產品，請留下希望送達時間、地區、人數及預算；同事會按訂單金額及實際情況再確認。",
     ].filter(Boolean).join("\n");
   }
   if (availability.status === "available") {
@@ -336,10 +340,14 @@ function orderIntakeAvailabilityReply(
       availability.requiresTime ? `${label}有指定時段限制，需要先核對送達時間。` : `${label}目前可以落單。`,
       availability.message,
       recommendations || null,
-      "請問希望幾點送到？我可以再按你提供嘅時間核對接單安排。",
+      deliveryTime && !availability.requiresTime
+        ? `已收到希望 ${deliveryTime}送達；實際可選時段及配額以網站結帳頁顯示為準。`
+        : "請問希望幾點送到？我可以再按你提供嘅時間核對接單安排。",
     ].filter(Boolean).join("\n");
   }
-  return `${label}嘅接單安排暫時未能自動確認。請先提供希望送達時間，我再幫你核對下一步。`;
+  return deliveryTime
+    ? `${label} ${deliveryTime}嘅接單安排暫時未能確認，請稍後再試，或回覆「請客服跟進」。`
+    : `${label}嘅接單安排暫時未能自動確認。請先提供希望送達時間，我再幫你核對下一步。`;
 }
 
 const AVAILABILITY_DELIVERY_TIME_PENDING = "availability:delivery_time";
@@ -413,7 +421,7 @@ async function replyAvailabilityTimeFollowUp(
   }
   if (intake.status === "manual_review") {
     return {
-      reply: orderIntakeAvailabilityReply(eventDate, intake),
+      reply: orderIntakeAvailabilityReply(eventDate, intake, time),
       conversation: nextConversation(conversation, {
         state: "collecting",
         active_goal: "catering_inquiry",
@@ -1983,7 +1991,7 @@ export async function handleCustomerServiceTurn({
             },
           })
         : nextConversation(conversation, {
-            pending_request: AVAILABILITY_DELIVERY_TIME_PENDING,
+            pending_request: extractCustomerServiceClockTime(text) && !intake.requiresTime ? null : AVAILABILITY_DELIVERY_TIME_PENDING,
             workflow_slots: {
               ...(conversation.workflow_slots ?? {}),
               eventDate: requestedDate,
@@ -1992,7 +2000,7 @@ export async function handleCustomerServiceTurn({
             },
           });
       return annotate({
-        reply: orderIntakeAvailabilityReply(requestedDate, intake), conversation: intakeConversation,
+        reply: orderIntakeAvailabilityReply(requestedDate, intake, extractCustomerServiceClockTime(text)), conversation: intakeConversation,
         wroteInquiry: false, notified: false, usedModel: classified.usedModel,
         intentKey: "delivery_availability", toolKeys: ["check_order_intake"],
         failureReason: intake.status === "unknown" ? "order_intake_unknown" : null,
@@ -2115,6 +2123,7 @@ export async function handleCustomerServiceTurn({
     classified.intent === "out_of_scope" ||
     classified.intent === "prompt_injection";
   const asksForMenu = classified.configuredIntentKey === "browse_menu" ||
+    (classified.intent === "search_faq" && isBrandIntroductionRequest(text)) ||
     (!classified.usedModel && isMenuInformationRequest(text));
   if (
     !highRiskIntent &&

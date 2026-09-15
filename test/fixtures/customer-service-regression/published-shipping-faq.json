@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "id": "published-shipping-faq",
+  "title": "只回覆固定已發布運費資料",
+  "status": "approved",
+  "clock": "2026-09-15T07:00:00.000Z",
+  "source": {
+    "kind": "legacy_test",
+    "reference": "test/customer-service-bot.test.ts / answers FAQ text unchanged"
+  },
+  "world": {
+    "faqs": [
+      {
+        "id": "fixture-shipping",
+        "question": "運費幾多？",
+        "answer": "測試地區運費 HK$50。"
+      }
+    ]
+  },
+  "turns": [
+    {
+      "customer": "運費幾多",
+      "expect": {
+        "effects": {
+          "writeInquiry": 0,
+          "queueHandoff": 0
+        },
+        "replyContains": [
+          "HK$50"
+        ],
+        "replyExcludes": [
+          "HK$100"
+        ],
+        "state": "identifying"
+      }
+    }
+  ]
+}

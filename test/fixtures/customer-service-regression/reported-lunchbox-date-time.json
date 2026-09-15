@@ -1,0 +1,66 @@
+{
+  "schemaVersion": 1,
+  "id": "reported-lunchbox-date-time",
+  "title": "真人截圖：飯盒介紹及日期時間一次提供",
+  "status": "approved",
+  "clock": "2026-09-15T08:10:00Z",
+  "source": {
+    "kind": "reported_conversation",
+    "reference": "2026-09-15 user screenshot 16:10"
+  },
+  "world": {
+    "faqs": [
+      {
+        "id": "lunchbox-menu",
+        "question": "HK Lunch Box 有冇餐牌可以睇？",
+        "answer": "HK Lunch Box 提供飯盒及便當，餐牌：https://hklunchbox.com/"
+      }
+    ]
+  },
+  "turns": [
+    {
+      "customer": "你好，我想問有關 HKLunchbox 飯盒送餐的問題。",
+      "recordedClassification": {
+        "intent": "search_faq",
+        "configuredIntentKey": "search_faq"
+      },
+      "expect": {
+        "replyContains": [
+          "HK Lunch Box",
+          "https://hklunchbox.com/"
+        ],
+        "replyExcludes": [
+          "未搵到"
+        ],
+        "effects": {
+          "writeInquiry": 0,
+          "queueHandoff": 0
+        }
+      }
+    },
+    {
+      "customer": "14/10，11:45 想訂餐 九龍公園游泳池",
+      "recordedClassification": {
+        "intent": "search_faq",
+        "configuredIntentKey": "delivery_availability"
+      },
+      "expect": {
+        "replyContains": [
+          "14/10",
+          "11:45"
+        ],
+        "replyExcludes": [
+          "幾點",
+          "提供希望送達時間"
+        ],
+        "pendingRequest": null,
+        "intakeDate": "2026-10-14",
+        "intakeTime": "11:45",
+        "effects": {
+          "writeInquiry": 0,
+          "queueHandoff": 0
+        }
+      }
+    }
+  ]
+}

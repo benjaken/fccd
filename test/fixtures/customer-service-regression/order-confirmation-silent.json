@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "id": "order-confirmation-silent",
+  "title": "確認訂單按鈕不重複通知",
+  "status": "approved",
+  "clock": "2026-09-15T07:00:00.000Z",
+  "source": {
+    "kind": "legacy_test",
+    "reference": "test/customer-service-bot.test.ts / order confirmation acknowledgement"
+  },
+  "world": {},
+  "turns": [
+    {
+      "customer": "確定訂單",
+      "expect": {
+        "effects": {
+          "writeInquiry": 0,
+          "queueHandoff": 0
+        },
+        "replyEquals": null,
+        "state": "identifying"
+      }
+    }
+  ]
+}

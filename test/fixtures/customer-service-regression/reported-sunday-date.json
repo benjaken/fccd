@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "id": "reported-sunday-date",
+  "title": "星期日先換算香港日期",
+  "status": "approved",
+  "clock": "2026-09-15T07:00:00.000Z",
+  "source": {
+    "kind": "reported_conversation",
+    "reference": "2026-09-15 user-reported Sunday preview failure"
+  },
+  "world": {},
+  "turns": [
+    {
+      "customer": "請問星期日係咪唔送貨？",
+      "expect": {
+        "effects": {
+          "writeInquiry": 0,
+          "queueHandoff": 0
+        },
+        "replyContains": [
+          "20/9（星期日）"
+        ],
+        "replyExcludes": [
+          "undefined",
+          "NaN"
+        ],
+        "intakeDate": "2026-09-20",
+        "state": "identifying",
+        "pendingRequest": "availability:delivery_time"
+      },
+      "referenceReplies": [
+        {
+          "role": "assistant",
+          "text": "undefined/undefined（undefined）嘅接單安排暫時未能自動確認。"
+        }
+      ],
+      "recordedClassification": {
+        "intent": "search_faq",
+        "configuredIntentKey": "delivery_availability"
+      }
+    }
+  ]
+}

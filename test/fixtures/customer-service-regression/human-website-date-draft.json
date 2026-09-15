@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "id": "human-website-date-draft",
+  "title": "真人對話：網站不能選擇送貨日期（待核對規則）",
+  "status": "draft",
+  "clock": "2026-09-15T07:00:00.000Z",
+  "source": {
+    "kind": "human_conversation",
+    "reference": "production/customer_service_messages/source-md5:dba0f8544e6b4bf24479cb671be0c826"
+  },
+  "world": {},
+  "turns": [
+    {
+      "customer": "我見網上唔俾我揀送貨日期係19/9",
+      "referenceReplies": [
+        {
+          "role": "human",
+          "text": "9月19-20 及 25-27日 只提供中秋套餐及中秋單點🙏"
+        }
+      ],
+      "expect": null
+    }
+  ]
+}

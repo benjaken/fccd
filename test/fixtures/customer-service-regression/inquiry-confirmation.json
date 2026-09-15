@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 1,
+  "id": "inquiry-confirmation",
+  "title": "收集資料後必須確認才建單通知",
+  "status": "approved",
+  "clock": "2026-09-15T07:00:00.000Z",
+  "source": {
+    "kind": "legacy_test",
+    "reference": "test/customer-service-bot.test.ts / inquiry confirmation gate"
+  },
+  "world": {},
+  "turns": [
+    {
+      "customer": "公司活動，2026-10-01，20人，預算2000",
+      "expect": {
+        "effects": {
+          "writeInquiry": 0,
+          "queueHandoff": 0
+        },
+        "replyContains": [
+          "確認"
+        ],
+        "pendingRequest": "confirm:catering_inquiry",
+        "state": "collecting"
+      }
+    },
+    {
+      "customer": "確認",
+      "expect": {
+        "effects": {
+          "writeInquiry": 1,
+          "queueHandoff": 1
+        },
+        "state": "identifying",
+        "pendingRequest": null
+      }
+    }
+  ]
+}

@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "id": "missing-date-clarification",
+  "title": "模型判為查接單但無日期時先追問",
+  "status": "approved",
+  "clock": "2026-09-15T07:00:00.000Z",
+  "source": {
+    "kind": "legacy_test",
+    "reference": "test/customer-service-relative-delivery-date.test.ts / missing date"
+  },
+  "world": {},
+  "turns": [
+    {
+      "customer": "係咪唔送貨？",
+      "expect": {
+        "effects": {
+          "writeInquiry": 0,
+          "queueHandoff": 0
+        },
+        "replyContains": [
+          "日期"
+        ],
+        "pendingRequest": "availability:date",
+        "failureReason": "availability_date_missing"
+      },
+      "recordedClassification": {
+        "intent": "search_faq",
+        "configuredIntentKey": "delivery_availability"
+      }
+    },
+    {
+      "customer": "2026-09-20",
+      "expect": {
+        "effects": {
+          "writeInquiry": 0,
+          "queueHandoff": 0
+        },
+        "replyContains": [
+          "20/9（星期日）"
+        ],
+        "intakeDate": "2026-09-20",
+        "pendingRequest": "availability:delivery_time"
+      }
+    }
+  ]
+}

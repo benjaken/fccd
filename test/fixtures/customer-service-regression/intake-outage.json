@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "id": "intake-outage",
+  "title": "接單資料未知時不得承諾可落單",
+  "status": "approved",
+  "clock": "2026-09-15T07:00:00.000Z",
+  "source": {
+    "kind": "legacy_test",
+    "reference": "test/customer-service-seasonal-rules.test.ts / unknown lookup"
+  },
+  "world": {
+    "intakeFailure": "unknown"
+  },
+  "turns": [
+    {
+      "customer": "2026-12-25可以訂到會嗎？",
+      "expect": {
+        "effects": {
+          "writeInquiry": 0,
+          "queueHandoff": 0
+        },
+        "replyContains": [
+          "未能"
+        ],
+        "failureReason": "order_intake_unknown",
+        "pendingRequest": "availability:delivery_time"
+      }
+    },
+    {
+      "customer": "下午6點",
+      "expect": {
+        "effects": {
+          "writeInquiry": 0,
+          "queueHandoff": 0
+        },
+        "replyContains": [
+          "未能確認"
+        ],
+        "replyExcludes": [
+          "可以落單"
+        ],
+        "failureReason": "order_intake_unknown",
+        "slots": {
+          "eventDate": "2026-12-25",
+          "deliveryTime": "18:00"
+        }
+      }
+    }
+  ]
+}

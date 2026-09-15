@@ -1,0 +1,103 @@
+{
+  "schemaVersion": 1,
+  "id": "seasonal-peak-selection",
+  "title": "補充繁忙時間後選產品仍須人工覆核",
+  "status": "approved",
+  "clock": "2026-09-15T07:00:00.000Z",
+  "source": {
+    "kind": "legacy_test",
+    "reference": "test/customer-service-seasonal-rules.test.ts / keeps the requested peak time"
+  },
+  "world": {
+    "rules": [
+      {
+        "id": "christmas",
+        "name": "聖誕指定產品",
+        "startsOn": "2026-12-25",
+        "endsOn": "2026-12-25",
+        "startTime": null,
+        "endTime": null,
+        "handling": "allow_only",
+        "customerMessage": "聖誕期間只提供指定套餐。",
+        "channels": [
+          {
+            "channelId": "catering",
+            "name": "Catering",
+            "terms": [
+              "聖誕套餐"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "peak",
+        "name": "聖誕指定產品",
+        "startsOn": "2026-12-25",
+        "endsOn": "2026-12-25",
+        "startTime": "17:00",
+        "endTime": "19:00",
+        "handling": "manual_review",
+        "customerMessage": "17:00至19:00需要人工覆核。",
+        "channels": []
+      }
+    ],
+    "products": [
+      {
+        "channelId": "catering",
+        "name": "聖誕套餐火雞盛宴",
+        "url": "https://example.com/turkey"
+      }
+    ]
+  },
+  "turns": [
+    {
+      "customer": "2026-12-25可以訂Catering聖誕套餐到會嗎？",
+      "expect": {
+        "effects": {
+          "writeInquiry": 0,
+          "queueHandoff": 0
+        },
+        "replyContains": [
+          "幾點送到"
+        ],
+        "pendingRequest": "availability:delivery_time"
+      }
+    },
+    {
+      "customer": "下午6點",
+      "expect": {
+        "effects": {
+          "writeInquiry": 0,
+          "queueHandoff": 0
+        },
+        "replyContains": [
+          "人工覆核"
+        ],
+        "state": "collecting",
+        "slots": {
+          "deliveryTime": "18:00"
+        },
+        "intakeDate": "2026-12-25",
+        "intakeTime": "18:00"
+      }
+    },
+    {
+      "customer": "我想訂聖誕套餐火雞盛宴",
+      "expect": {
+        "effects": {
+          "writeInquiry": 0,
+          "queueHandoff": 0
+        },
+        "replyContains": [
+          "人工覆核"
+        ],
+        "replyExcludes": [
+          "可以落單"
+        ],
+        "state": "collecting",
+        "intakeDate": "2026-12-25",
+        "intakeTime": "18:00"
+      }
+    }
+  ]
+}
