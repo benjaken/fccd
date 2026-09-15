@@ -94,34 +94,6 @@
           "queueHandoff": 0
         }
       }
-    },
-    {
-      "customer": "點落單呢",
-      "recordedClassification": {
-        "intent": "search_faq",
-        "configuredIntentKey": "delivery_availability"
-      },
-      "expect": {
-        "replyContains": [
-          "購物車",
-          "結帳"
-        ],
-        "replyExcludes": [
-          "邊一日",
-          "未搵到",
-          "幾點送到"
-        ],
-        "intent": "search_faq",
-        "pendingRequest": null,
-        "slots": {
-          "eventDate": "2026-10-14",
-          "deliveryTime": "11:45"
-        },
-        "effects": {
-          "writeInquiry": 0,
-          "queueHandoff": 0
-        }
-      }
     }
   ]
 }

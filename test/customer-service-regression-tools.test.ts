@@ -68,6 +68,11 @@ describe("conversation regression tools", () => {
     for (const privateText of ["9123", "example.com", "FCC12345678", "某街", "陳先生"]) expect(safe).not.toContain(privateText);
   });
 
+  it("preserves ISO dates while redacting phone numbers", () => {
+    expect(redactRegressionText("活動日期：2026-09-15，電話：9123 4567"))
+      .toBe("活動日期：2026-09-15，電話：[電話或編號已隱藏]");
+  });
+
   it.each(["src/lib/anything.ts", "supabase/functions/_shared/customer-service-ai.ts", "test/fixtures/customer-service-regression/new.json", "scripts/lib/customer-service-regression.mjs", "package.json"])("automatically selects corpus for %s", (file) => {
     const suite = "test/customer-service-regression.test.ts";
     expect(selectRelatedTests([file], [suite])).toContain(suite);

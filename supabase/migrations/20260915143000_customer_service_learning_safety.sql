@@ -3,6 +3,19 @@ begin;
 alter table public.customer_service_learning_suggestions
   add column if not exists evidence_message_ids uuid[] not null default '{}';
 
+-- These templates are intentionally dormant until the mapped suggestions are
+-- approved. Seeding the keys preserves the review function's allow-list while
+-- allowing the four queued changes to be applied atomically.
+insert into public.customer_service_reply_templates (
+  template_key, display_name, content, locale, enabled
+)
+values
+  ('acknowledgement', '簡短確認訊息', '收到，多謝你。', 'zh-HK', false),
+  ('complaint_handoff', '產品投訴收集資料', '唔好意思出現呢個情況。請提供照片及訂單編號，客服同事會跟進。', 'zh-HK', false),
+  ('packaging_request', '外賣包裝用品請求', '請提供需要嘅外賣盒／餐具種類、數量及相關訂單編號。', 'zh-HK', false),
+  ('thanks', '感謝訊息', '唔使客氣，多謝你。', 'zh-HK', false)
+on conflict (template_key) do nothing;
+
 drop function if exists public.customer_service_learning_suggestions_list(text, integer);
 create function public.customer_service_learning_suggestions_list(
   p_status text default 'draft', p_limit integer default 50

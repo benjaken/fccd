@@ -107,7 +107,7 @@ describe("CustomerFaqPage", () => {
     const createFaq = vi.fn().mockResolvedValue(undefined);
     const previewTurn = vi.fn()
       .mockResolvedValueOnce({
-        reply: "你好，新界地面交收運費係 HK$50。",
+        reply: "你好，新界地面交收運費係 HK$50。詳情：https://foodchannels-catering.com/products/ccma1520，請查收",
         conversation: {
           phone_normalized: "8613828747224",
           state: "identifying",
@@ -149,9 +149,11 @@ describe("CustomerFaqPage", () => {
     expect(layout).toBeTruthy();
     expect(layout?.querySelector(".orders-panel")).toBeTruthy();
     expect(layout?.querySelector(".customer-faq-preview")).toBeTruthy();
-    expect(screen.queryByText("模擬客人 WhatsApp 號碼")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("模擬客人 WhatsApp 號碼")).toHaveValue("86 138 2874 7224");
     expect(document.querySelector(".customer-faq-chat-contact > img")).toHaveAttribute("width", "42");
     expect(await screen.findByText("運費幾多？")).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "回覆內容" })).toBeInTheDocument();
+    expect(screen.getByText("地面交收：新界 HK$50。")).toBeInTheDocument();
     expect(screen.getByText("已發布")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "新增 FAQ" }));
@@ -178,8 +180,16 @@ describe("CustomerFaqPage", () => {
       phone: "8613828747224",
       conversation: null,
     })));
-    expect(await screen.findByText(/HK\$50/)).toBeInTheDocument();
-    expect(screen.getByText("大模型根據已發布 FAQ 回覆")).toBeInTheDocument();
+    expect(
+      await screen.findByText(/你好，新界地面交收運費係 HK\$50/),
+    ).toBeInTheDocument();
+    const productLink = screen.getByRole("link", {
+      name: "https://foodchannels-catering.com/products/ccma1520",
+    });
+    expect(productLink).toHaveAttribute("href", "https://foodchannels-catering.com/products/ccma1520");
+    expect(productLink).toHaveAttribute("target", "_blank");
+    expect(screen.getByText(/請查收/)).toBeInTheDocument();
+    expect(screen.getByText("大模型理解完整語意後回覆")).toBeInTheDocument();
 
     await user.type(screen.getByLabelText("客人會點問"), "我要退款");
     await user.click(screen.getByRole("button", { name: "傳送測試訊息" }));
@@ -248,6 +258,46 @@ describe("CustomerFaqPage", () => {
     } finally {
       spies.forEach((spy) => spy.mockRestore());
     }
+  });
+
+  it("switches the simulated phone and clears the previous customer's conversation", async () => {
+    const user = userEvent.setup();
+    const previewTurn = vi.fn().mockResolvedValue({
+      reply: "已查到相關訂單。",
+      conversation: {
+        phone_normalized: "8613828747224",
+        state: "identifying",
+        selected_order_id: "order-1",
+        handoff_at: null,
+      },
+      usedModel: false,
+      simulatedWrite: false,
+      humanHandoff: false,
+    });
+    render(
+      <CustomerFaqPage
+        loadFaqs={vi.fn().mockResolvedValue({ items: [faq], total: 1 })}
+        loadControls={vi.fn().mockResolvedValue({ botEnabled: true, allowedPhones: [], updatedAt: faq.updatedAt })}
+        previewTurn={previewTurn}
+      />,
+    );
+
+    await user.type(screen.getByLabelText("客人會點問"), "查單");
+    await user.click(screen.getByRole("button", { name: "傳送測試訊息" }));
+    expect(await screen.findByText("已查到相關訂單。")).toBeInTheDocument();
+
+    const phone = screen.getByLabelText("模擬客人 WhatsApp 號碼");
+    await user.clear(phone);
+    await user.type(phone, "852 9123 4567");
+    expect(screen.getByText("輸入客人問題開始多輪測試。")).toBeInTheDocument();
+
+    await user.type(screen.getByLabelText("客人會點問"), "查新號碼訂單");
+    await user.click(screen.getByRole("button", { name: "傳送測試訊息" }));
+    await waitFor(() => expect(previewTurn).toHaveBeenLastCalledWith({
+      text: "查新號碼訂單",
+      phone: "85291234567",
+      conversation: null,
+    }));
   });
 
 

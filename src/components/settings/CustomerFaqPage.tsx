@@ -4,6 +4,7 @@ import {
   useRef,
   useState,
   type FormEvent,
+  type ReactNode,
 } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -84,6 +85,32 @@ import {
   type CustomerServiceWorkflowPolicy,
 } from "@/lib/customer-faq";
 
+// Chat copy is mostly Chinese prose. Stop before adjacent Han/full-width text so
+// punctuation-free prose cannot accidentally become part of the clickable URL.
+const CUSTOMER_FAQ_CHAT_URL = /https?:\/\/[^\s<>"'\p{Script=Han}\u3000-\u303f\uff00-\uffef]+/giu;
+const CUSTOMER_FAQ_CHAT_URL_TRAILING_PUNCTUATION = /[),.;!?，。；！？：）]+$/u;
+
+function renderCustomerFaqChatText(text: string): ReactNode[] {
+  const content: ReactNode[] = [];
+  let cursor = 0;
+  for (const match of text.matchAll(CUSTOMER_FAQ_CHAT_URL)) {
+    const start = match.index;
+    const rawUrl = match[0];
+    const trailing = rawUrl.match(CUSTOMER_FAQ_CHAT_URL_TRAILING_PUNCTUATION)?.[0] ?? "";
+    const url = trailing ? rawUrl.slice(0, -trailing.length) : rawUrl;
+    if (start > cursor) content.push(text.slice(cursor, start));
+    content.push(
+      <a key={`${start}-${url}`} href={url} target="_blank" rel="noreferrer noopener">
+        {url}
+      </a>,
+    );
+    if (trailing) content.push(trailing);
+    cursor = start + rawUrl.length;
+  }
+  if (cursor < text.length) content.push(text.slice(cursor));
+  return content;
+}
+
 const LEARNING_FIELD_LABELS: Record<string, string> = {
   description_append: "補充辨識說明", examples_append: "新增問法",
   display_name: "名稱", content: "回覆內容", enabled: "啟用",
@@ -118,7 +145,8 @@ function previousHongKongDate() {
 
 const SKELETON_COLUMNS = [
   { width: "7rem" },
-  { width: "52%" },
+  { width: "24%" },
+  { width: "38%" },
   { width: "5rem" },
   { width: "4.5rem", variant: "action" as const },
 ];
@@ -131,6 +159,8 @@ const EMPTY_DRAFT: CustomerFaqWriteInput = {
   isPublished: false,
   sortOrder: 0,
 };
+
+const DEFAULT_PREVIEW_PHONE = "86 138 2874 7224";
 
 function AutoReplyScheduleEditor({
   id,
@@ -296,7 +326,7 @@ export function CustomerFaqPage({
   const [controlsError, setControlsError] = useState("");
   const [savingControls, setSavingControls] = useState(false);
   const [previewQuery, setPreviewQuery] = useState("");
-  const [previewPhone, setPreviewPhone] = useState("");
+  const [previewPhone, setPreviewPhone] = useState(DEFAULT_PREVIEW_PHONE);
   const [previewMessages, setPreviewMessages] = useState<PreviewMessage[]>([]);
   const [previewConversation, setPreviewConversation] =
     useState<CustomerServicePreviewConversation | null>(null);
@@ -387,9 +417,6 @@ export function CustomerFaqPage({
       .then((next) => {
         if (!cancelled) {
           setControls(next);
-          setPreviewPhone(
-            (current) => current || next.allowedPhones?.[0] || "",
-          );
           setControlsError("");
         }
       })
@@ -533,7 +560,7 @@ export function CustomerFaqPage({
     try {
       const result = await previewTurn({
         text,
-        phone: previewPhone,
+        phone: previewPhone.replace(/\D/g, "") || undefined,
         conversation: previewConversation,
       });
       setPreviewConversation(result.conversation);
@@ -563,6 +590,15 @@ export function CustomerFaqPage({
   };
 
   const resetPreview = () => {
+    setPreviewMessages([]);
+    setPreviewConversation(null);
+    setPreviewError("");
+    setPreviewQuery("");
+  };
+
+  const changePreviewPhone = (value: string) => {
+    if (value === previewPhone) return;
+    setPreviewPhone(value);
     setPreviewMessages([]);
     setPreviewConversation(null);
     setPreviewError("");
@@ -1112,6 +1148,7 @@ export function CustomerFaqPage({
                 <tr>
                   <th>{t("settings.customerFaq.columns.category")}</th>
                   <th>{t("settings.customerFaq.columns.question")}</th>
+                  <th>{t("settings.customerFaq.columns.answer")}</th>
                   <th>{t("settings.customerFaq.columns.published")}</th>
                   {canEdit ? (
                     <th
@@ -1131,6 +1168,7 @@ export function CustomerFaqPage({
                   <td>
                     <strong>{faq.question}</strong>
                   </td>
+                  <td className="customer-faq-answer-cell">{faq.answer}</td>
                   <td>
                     <span
                       className={`status-badge ${faq.isPublished ? "green" : "neutral"}`}
@@ -1242,6 +1280,20 @@ export function CustomerFaqPage({
               </Button>
             </div>
           </header>
+          <label className="customer-faq-preview-phone">
+            <span>{t("settings.customerFaq.previewPhone")}</span>
+            <input
+              type="tel"
+              inputMode="tel"
+              value={previewPhone}
+              disabled={previewing}
+              aria-label={t("settings.customerFaq.previewPhone")}
+              onChange={(event) => changePreviewPhone(event.target.value)}
+              placeholder={t("settings.customerFaq.previewPhonePlaceholder")}
+              autoComplete="off"
+            />
+            <small>{t("settings.customerFaq.previewPhoneHint")}</small>
+          </label>
           <div className="customer-faq-preview-body">
             <div className="customer-faq-chat-shell">
               <div
@@ -1256,7 +1308,7 @@ export function CustomerFaqPage({
                       className={`customer-faq-chat-message ${message.role}`}
                     >
                       <div>
-                        <p>{message.text}</p>
+                        <p>{renderCustomerFaqChatText(message.text)}</p>
                         <footer>
                           {message.role !== "user" ? (
                             <small>

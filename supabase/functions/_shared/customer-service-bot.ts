@@ -2,6 +2,7 @@ import {
   classifyCustomerServiceMessage,
   customerServiceBrandIdentityName,
   customerServiceMenuFaqQuery,
+  customerServiceSeasonalMenuFaqQuery,
   isBrandIntroductionRequest,
   isOrderingInstructionsRequest,
   extractCustomerServiceClockTime,
@@ -167,6 +168,10 @@ export type CustomerServiceOrderIntakeAvailability = {
   unavailableChannelName?: string | null;
   requiresTime?: boolean;
   selectedRecommendation?: { name: string; url: string | null } | null;
+  recognizedChannelName?: string | null;
+  allowedProductTerms?: string[];
+  allowedProductTermGroups?: string[][];
+  needsProductSelection?: boolean;
 };
 
 export type CustomerServiceBotDeps = {
@@ -325,11 +330,41 @@ function orderIntakeAvailabilityReply(
   const recommendations = (availability.recommendations ?? [])
     .map((item) => item.url ? `${item.name}：${item.url}` : item.name)
     .join("\n");
+  const generalAvailabilityMessage = availability.message?.includes("XXX")
+    ? null
+    : availability.message;
   if (availability.status === "manual_review") {
     const unavailableChannel = availability.unavailableChannelName?.trim();
+    const availabilityMessage = unavailableChannel
+      ? availability.message?.replaceAll("XXX", unavailableChannel)
+      : generalAvailabilityMessage;
+    const recognizedChannel = availability.recognizedChannelName?.trim();
+    const allowedTerms = [...new Set((availability.allowedProductTerms ?? [])
+      .map((term) => term.trim()).filter(Boolean))];
+    const termGroups = (availability.allowedProductTermGroups ?? [])
+      .map((terms) => [...new Set(terms.map((term) => term.trim()).filter(Boolean))])
+      .filter((terms) => terms.length > 0);
+    if (unavailableChannel && availabilityMessage) return availabilityMessage;
+    if (availabilityMessage?.includes("https://www.emailmeform.com/builder/form/")) {
+      return availabilityMessage;
+    }
+    if (!unavailableChannel && availability.needsProductSelection && recognizedChannel && (allowedTerms.length || termGroups.length)) {
+      const formatChoices = (terms: string[]) => terms.length === 1
+        ? terms[0]
+        : `${terms.slice(0, -1).join("、")}或${terms.at(-1)}`;
+      const productPrompt = allowedTerms.length
+        ? `${label}只提供${formatChoices(allowedTerms)}，請問想選哪一類？`
+        : `${label}產品需要同時符合以下條件：${termGroups.map(formatChoices).join("；")}。請問想選哪一類？`;
+      return [
+        `已了解你想預訂 ${customerFacingOrderIntakeChannelName(recognizedChannel)}。`,
+        productPrompt,
+        availability.requiresTime && !deliveryTime
+          ? "另外請提供希望送達時間，我會一併核對接單安排。"
+          : null,
+      ].filter(Boolean).join("\n");
+    }
     return [
-      unavailableChannel ? `${unavailableChannel} 喺 ${label} 暫不接單。` : null,
-      availability.message || `${label}有特別接單安排。`,
+      availabilityMessage || `${label}有特別接單安排。`,
       recommendations ? `你亦可以考慮以下可接選擇：\n${recommendations}` : null,
       deliveryTime
         ? `已收到希望 ${deliveryTime}送達。如你想查詢其他品牌或產品，請留下地區、人數及預算；同事會按訂單金額及實際情況再確認。`
@@ -339,7 +374,7 @@ function orderIntakeAvailabilityReply(
   if (availability.status === "available") {
     return [
       availability.requiresTime ? `${label}有指定時段限制，需要先核對送達時間。` : `${label}目前可以落單。`,
-      availability.message,
+      generalAvailabilityMessage,
       recommendations || null,
       deliveryTime && !availability.requiresTime
         ? `已收到希望 ${deliveryTime}送達；實際可選時段及配額以網站結帳頁顯示為準。`
@@ -351,11 +386,22 @@ function orderIntakeAvailabilityReply(
     : `${label}嘅接單安排暫時未能自動確認。請先提供希望送達時間，我再幫你核對下一步。`;
 }
 
+function customerFacingOrderIntakeChannelName(value: string) {
+  const key = value.toLowerCase().replace(/[\s_-]+/g, "");
+  if (key === "catering") return "Food Channels Catering";
+  if (key === "kitchen") return "桂花‧八月（Food Channels Kitchen）";
+  if (key === "express") return "Food Channels Express";
+  if (key === "cuisine") return "Food Channels Cuisine";
+  if (key === "lunchbox" || key === "hklunchbox") return "HK Lunch Box";
+  if (key === "partyfood" || key === "hkpartyfood") return "HK Party Food";
+  return value;
+}
+
 const AVAILABILITY_DELIVERY_TIME_PENDING = "availability:delivery_time";
 
 function isStandaloneDeliveryTime(text: string) {
   const remainder = text
-    .replace(/(?:(?:上午|早上|中午|下午|晚上|夜晚)\s*)?(?:[01]?\d|2[0-3])\s*[:：點点時时]\s*(?:\d{1,2}\s*分?|半)?/, "")
+    .replace(/(?<!\d)(?:(?:上午|早上|中午|午夜|下午|晚上|夜晚)\s*)?(?:[01]?\d|2[0-4])\s*[:：點点時时]\s*(?:\d{1,2}\s*分?|半)?(?!\d)/, "")
     .replace(/希望|我想|想|大約|大概|差不多|左右|送到|送達|時間|改為|改到|收到|可以嗎|可以|得唔得|唔該|謝謝|多謝|約|點|時/g, "")
     .replace(/[\s，。！？,.!?:：]/g, "");
   return remainder.length === 0;
@@ -715,6 +761,13 @@ const FAQ_DIRECT_MATCH_RULES: Array<{
     excluded: /優惠碼.{0,8}(?:有效|用唔用得|失效)/,
   },
 ];
+
+// Very broad queries are unsafe for semantic fallback because almost any
+// retrieved FAQ could appear relevant without enough customer context.
+const FAQ_MODEL_FALLBACK_GENERIC_QUERIES = new Set([
+  "付款", "送貨", "餐牌", "地址", "網站", "訂餐",
+  "payment", "delivery", "address", "website",
+]);
 
 function strongPublishedFaqMatch(query: string, hit: CustomerServiceFaqHit) {
   const left = normalizedFaqText(query);
@@ -1405,18 +1458,28 @@ async function replyFaq(
 ): Promise<BotTurn> {
   const hits = await deps.searchFaqs(query);
   const approvedHits = hits.filter((hit) => strongPublishedFaqMatch(query, hit));
-  if (deps.answerFaqWithModel && approvedHits.length) {
+  // Text rules remain a fast path, not an allow-list for newly published knowledge.
+  // Weak candidates may only produce a cited model answer, never a raw fallback.
+  const normalizedQuery = normalizedFaqText(query);
+  const genericQuery = FAQ_MODEL_FALLBACK_GENERIC_QUERIES.has(normalizedQuery.toLowerCase());
+  const modelCandidates = approvedHits.length ? approvedHits : genericQuery ? [] : hits.filter((hit) => {
+    const question = normalizedFaqText(hit.question);
+    return !FAQ_DIRECT_MATCH_RULES.some((rule) =>
+      (normalizedFaqText(rule.question) === question || rule.aliases.some((alias) => alias.test(question))) &&
+      rule.excluded?.test(normalizedQuery)
+    );
+  });
+  if (deps.answerFaqWithModel && modelCandidates.length) {
     try {
-      const modelAnswer = await deps.answerFaqWithModel(query, approvedHits);
+      const modelAnswer = await deps.answerFaqWithModel(query, modelCandidates);
       const answer =
         typeof modelAnswer === "string" ? modelAnswer : modelAnswer?.answer;
-      if (answer) {
-        const faqSourceIds =
-          typeof modelAnswer === "string"
-            ? []
-            : (modelAnswer?.sourceIds ?? []);
-        const excludeIds = faqSourceIds.length
-          ? faqSourceIds
+      const returnedSourceIds = typeof modelAnswer === "object" && modelAnswer ? modelAnswer.sourceIds : [];
+      const citedIds = returnedSourceIds.filter((id) => modelCandidates.some((hit) => hit.id === id));
+      const validFallbackSources = citedIds.length > 0 && citedIds.length === returnedSourceIds.length;
+      if (answer && (approvedHits.length > 0 || validFallbackSources)) {
+        const excludeIds = citedIds.length
+          ? citedIds
             : approvedHits[0]?.id
             ? [approvedHits[0].id]
             : [];
@@ -1426,8 +1489,8 @@ async function replyFaq(
           wroteInquiry: false,
           notified: false,
           usedModel: true,
-          faqSourceIds,
-          relatedFaqs: selectRelatedFaqs(approvedHits, excludeIds),
+          faqSourceIds: citedIds,
+          relatedFaqs: selectRelatedFaqs(modelCandidates, excludeIds),
           model:
             typeof modelAnswer === "string"
               ? null
@@ -1536,6 +1599,7 @@ export async function handleCustomerServiceTurn({
 
   if (
     conversation.state !== "awaiting_human" &&
+    conversation.pending_request !== "confirm:catering_inquiry" &&
     deps.replyTemplates?.acknowledgement &&
     isCustomerServiceEmojiAcknowledgement(text)
   ) {
@@ -1548,6 +1612,13 @@ export async function handleCustomerServiceTurn({
       intentKey: "acknowledgement",
       toolKeys: [],
     };
+  }
+
+  if (
+    conversation.pending_request === "confirm:catering_inquiry" &&
+    /^(?:確認|確定|係|是|好|可以|ok|okay|yes|唔確認|不確認|否|唔好|不用|不要|no|取消|算了|算啦)[!！。.？?\s]*$/iu.test(text.trim())
+  ) {
+    return await replyCollect(deps, phone, await classify(text), conversation, text);
   }
 
   if (
@@ -1877,17 +1948,24 @@ export async function handleCustomerServiceTurn({
     })
     : [];
   const storedSelection = findOrderIntakeRecommendation(text, storedRecommendations);
+  const storedAllowedTerms = Array.isArray(conversation.workflow_slots?.orderIntakeAllowedProductTerms)
+    ? conversation.workflow_slots.orderIntakeAllowedProductTerms.filter((value): value is string => typeof value === "string")
+    : [];
+  const storedProductTerm = storedAllowedTerms.find((term) => normalizedFaqText(text).includes(normalizedFaqText(term)));
+  const storedChannelName = typeof conversation.workflow_slots?.orderIntakeRecognizedChannelName === "string"
+    ? conversation.workflow_slots.orderIntakeRecognizedChannelName
+    : "";
   const restrictedDate = resolveCustomerServiceDeliveryDate(text) || String(conversation.workflow_slots?.eventDate ?? "");
   if (
     canContinueAvailability && conversation.state === "collecting" &&
     conversation.pending_request === "特別接單安排人工覆核" &&
-    storedSelection && restrictedDate && deps.checkOrderIntakeAvailability
+    (storedSelection || storedProductTerm) && restrictedDate && deps.checkOrderIntakeAvailability
   ) {
     let intake: CustomerServiceOrderIntakeAvailability = { status: "unknown" };
     try {
       intake = await deps.checkOrderIntakeAvailability(
         restrictedDate,
-        text,
+        [storedChannelName, text].filter(Boolean).join(" "),
         { deliveryTime: extractCustomerServiceClockTime(text) || String(conversation.workflow_slots?.deliveryTime ?? "") || null },
       );
     } catch (error) {
@@ -1900,6 +1978,16 @@ export async function handleCustomerServiceTurn({
       text,
       intake.recommendations ?? [],
     );
+    if (!selected && storedProductTerm && intake.recommendations?.length) {
+      return annotate({
+        reply: orderIntakeAvailabilityReply(restrictedDate, intake, extractCustomerServiceClockTime(text)),
+        conversation: nextConversation(conversation, {
+          workflow_slots: { ...conversation.workflow_slots, orderIntakeRecommendations: intake.recommendations },
+        }),
+        wroteInquiry: false, notified: false, usedModel: classified.usedModel,
+        intentKey: "delivery_availability", toolKeys: ["check_order_intake"],
+      });
+    }
     if (intake.status === "available" && selected) {
       if (intake.requiresTime) {
         return annotate({
@@ -1996,6 +2084,8 @@ export async function handleCustomerServiceTurn({
               deliveryTime: extractCustomerServiceClockTime(text) || null,
               availabilityQuestion: text.trim().slice(0, 1_000),
               orderIntakeRecommendations: intake.recommendations ?? [],
+              orderIntakeAllowedProductTerms: intake.allowedProductTerms ?? [],
+              orderIntakeRecognizedChannelName: intake.recognizedChannelName ?? null,
               note: `接單規則需人工覆核：${text}`.slice(0, 1_000),
             },
           })
@@ -2139,8 +2229,11 @@ export async function handleCustomerServiceTurn({
     !isSameDayOrderDemand(text) &&
     classified.intent === "search_faq"
   ) {
+    const seasonalMenuQuery = asksForMenu
+      ? customerServiceSeasonalMenuFaqQuery(text)
+      : null;
     const catalogQuery = deps.searchCatalog &&
-        asksForMenu
+        asksForMenu && !seasonalMenuQuery
       ? customerServiceCatalogQuery(text, conversation.recent_messages)
       : "";
     if (catalogQuery) {
@@ -2170,7 +2263,9 @@ export async function handleCustomerServiceTurn({
     }
 
     try {
-      const menuQuery = asksForMenu ? customerServiceMenuFaqQuery(text) : "";
+      const menuQuery = asksForMenu
+        ? seasonalMenuQuery || customerServiceMenuFaqQuery(text)
+        : "";
       const faqQuery = asksHowToOrder ? "點樣喺網站落單？" : asksForMenu ? menuQuery : text;
       const faqHits = await searchFaqsOnce(faqQuery);
       const preferredFaq = faqHits.find((hit) =>
@@ -2178,7 +2273,9 @@ export async function handleCustomerServiceTurn({
       );
       if (preferredFaq) {
         return annotate({
-          reply: faqReply(preferredFaq.answer),
+          reply: seasonalMenuQuery
+            ? sanitizeOutboundReply(preferredFaq.answer)
+            : faqReply(preferredFaq.answer),
           conversation: routedConversation,
           wroteInquiry: false,
           notified: false,

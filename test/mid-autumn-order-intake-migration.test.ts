@@ -21,5 +21,6 @@ describe("2026 Mid-Autumn order-intake configuration", () => {
     expect(sql).toContain("array['中秋套餐', '中秋單點']::text[]");
     expect(sql).toContain("start_time = null");
     expect(sql).toContain("      null\n    from unnest(v_channel_ids)");
+    expect(sql).toContain("coalesce(cardinality(v_channel_ids), 0) <> 2");
   });
 });

@@ -58,6 +58,11 @@ describe("global order-intake rules", () => {
     const result = await evaluateOrderIntakeWithCatalog({ date: "2026-09-26", text: "品牌A 火雞" }, [first, second], async (_channel, terms) => terms.map((name) => ({ name, url: `https://a/${name}` })));
     expect(result.recommendations).toEqual([]);
     expect(result.status).toBe("manual_review");
+    expect(result).toMatchObject({
+      recognizedChannelName: "品牌A",
+      allowedProductTermGroups: [["火雞"], ["盆菜"]],
+      needsProductSelection: true,
+    });
   });
   it("requires a time even when the only date rule applies to a time range", () => {
     const rule = { ...festivalRule, handling: "manual_review" as const, startTime: "17:00", endTime: "19:00" };
@@ -68,6 +73,16 @@ describe("global order-intake rules", () => {
   it("allows an explicitly permitted festival brand and product", () => {
     expect(evaluateOrderIntakeRules({ date: "2026-09-26", text: "想訂 FCC 中秋套餐" }, [festivalRule]).status)
       .toBe("available");
+  });
+
+  it("reports a recognized brand separately from a missing allowed product", () => {
+    const result = evaluateOrderIntakeRules({ date: "2026-09-26", text: "想訂 FCC 到會" }, [festivalRule]);
+    expect(result).toMatchObject({
+      status: "manual_review",
+      recognizedChannelName: "Food Channels Catering",
+      allowedProductTerms: ["中秋套餐", "中秋單點"],
+      needsProductSelection: true,
+    });
   });
 
   it("soft-routes an unsupported request and recommends allowed brands", () => {

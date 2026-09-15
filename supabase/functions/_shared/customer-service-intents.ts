@@ -150,9 +150,15 @@ export function extractInquirySlots(text: string): InquirySlots {
   const iso = text.match(/\b(20\d{2})[-/.](\d{1,2})[-/.](\d{1,2})\b/);
   const md = text.match(/\b(\d{1,2})\s*月\s*(\d{1,2})\s*(?:日|號|号)/);
   const chineseMd = text.match(/([一二兩两三四五六七八九十]{1,3})\s*月\s*([零一二兩两三四五六七八九十\d]{1,3})\s*(?:日|號|号)/);
-  const dmy = text.match(
+  const rawDmy = text.match(
     /(?:^|\D)(\d{1,2})\s*[/.]\s*(\d{1,2})(?:\s*[/.]\s*(20\d{2}))?(?!\d)/,
   );
+  const dmyEnd = rawDmy ? (rawDmy.index ?? 0) + rawDmy[0].length : 0;
+  const dmy = rawDmy &&
+      !/^(?:\s*(?:萬|千|百|人|位|頭|折|倍|元|蚊|%))/u.test(text.slice(dmyEnd)) &&
+      !/(?:預算|budget)[^，。；;\n]{0,16}$/iu.test(text.slice(0, dmyEnd))
+    ? rawDmy
+    : null;
   const headcount = text.match(/(\d{1,4})\s*(人|位|頭)/);
   const budget = text.match(/(?:預算|budget)\s*[為是:：]?\s*\$?\s*(\d{2,6})/i)
     || text.match(/\$\s*(\d{2,6})/);
@@ -251,7 +257,7 @@ export function resolveCustomerServiceDeliveryDate(text: string, now = new Date(
   const explicit = extractInquirySlots(text).eventDate;
   if (explicit) return explicit;
   // A malformed explicit date or recurring schedule is not a single relative day.
-  if (/(?:\d{1,2}\s*月\s*\d|20\d{2}[-/.]\d|\d{1,2}\s*[/.]\s*\d)|(?:每|逢)(?:個|个)?(?:星期|禮拜|礼拜|週|周)|\bevery\b/i.test(text)) return "";
+  if (/(?:\d{1,2}\s*月\s*\d|20\d{2}[-/.]\d)|(?:每|逢)(?:個|个)?(?:星期|禮拜|礼拜|週|周)|\bevery\b/i.test(text)) return "";
   const today = new Date(`${hongKongCalendarDate(now)}T00:00:00Z`);
   const relativeDays = [...text.matchAll(/今日|今天|聽日|听日|明天|明日|後天|后天|後日|后日|\btoday\b|\btomorrow\b/gi)];
   const weekdays = [...text.matchAll(/(?:(下下|上上|下|上|今|本|這|这|呢)(?:個|个)?)?(?:星期|禮拜|礼拜|週|周)\s*([一二三四五六日天1-7])/g)];
@@ -282,7 +288,7 @@ export function resolveCustomerServiceDeliveryDate(text: string, now = new Date(
 /** Extract a customer-supplied wall-clock time without assigning business intent. */
 export function extractCustomerServiceClockTime(text: string) {
   const match = text.trim().match(
-    /(?:(上午|早上|中午|下午|晚上|夜晚)\s*)?([01]?\d|2[0-3])\s*(?:[:：點点時时])\s*(?:(\d{1,2})\s*分?|半)?/,
+    /(?<!\d)(?:(上午|早上|中午|午夜|下午|晚上|夜晚)\s*)?([01]?\d|2[0-4])\s*(?:[:：點点時时])\s*(?:(\d{1,2})\s*分?|半)?(?!\d)/,
   );
   if (!match) return "";
   let hour = Number(match[2]);
@@ -292,6 +298,9 @@ export function extractCustomerServiceClockTime(text: string) {
       ? 30
       : 0;
   if (minute > 59) return "";
+  if (hour === 24) return minute === 0 ? "00:00" : "";
+  if (/午夜/.test(match[1] ?? "") && hour === 12) hour = 0;
+  if (/中午/.test(match[1] ?? "") && hour < 11) hour += 12;
   if (/(?:下午|晚上|夜晚)/.test(match[1] ?? "") && hour < 12) {
     hour += 12;
   }
@@ -341,12 +350,15 @@ export function customerServiceBrandIdentityName(value: string) {
 export function isDeliveryAvailabilityQuestion(text: string) {
   const body = text.trim();
   if (!body || !resolveCustomerServiceDeliveryDate(body)) return false;
+  const slots = extractInquirySlots(body);
   const delivery = /送貨|送餐|配送|交收|訂餐|订餐|訂貨|订货|訂購|订购|預訂|预订|到會|到会|落單|落单/i.test(body);
   const availability =
     /可唔可以|可以(?:送)?(?:嗎|吗|呀|啊)?|能否|能不能|得唔得|送唔送|有冇得送|有沒有得送|是否(?:可以)?|會唔會送|会不会送/i
       .test(body);
-  const datedBooking = /(?:預訂|预订|訂|订|落單|落单).{0,8}(?:到會|到会|餐)|(?:到會|到会).{0,8}(?:預訂|预订|訂|订)/i.test(body);
-  return delivery && (availability || datedBooking || /係咪|系咪|是不是/.test(body));
+  const datedBooking = /(?:預訂|预订|預定|预定|訂|订|落單|落单).{0,8}(?:到會|到会|餐)|(?:到會|到会).{0,8}(?:預訂|预订|預定|预定|訂|订)/i.test(body);
+  const isDetailedOrder = Boolean(slots.headcount || slots.budget || slots.dietary || slots.cuisine) ||
+    /(?:幫我|替我|直接)(?:訂|订|落單|落单)/i.test(body);
+  return delivery && (availability || (datedBooking && !isDetailedOrder) || /係咪|系咪|是不是/.test(body));
 }
 
 export function customerServiceMenuFaqQuery(value: string) {
@@ -396,6 +408,18 @@ export function isCustomerServiceGreeting(text: string) {
   return GREETING.test(text.trim());
 }
 
+export function customerServiceSeasonalMenuFaqQuery(value: string) {
+  const text = value.trim();
+  if (!/(?:中秋|mid[\s-]*autumn)/i.test(text)) return null;
+  if (/(?:food\s*channels?\s*kitchen|fc\s*kitchen|fck|桂花[‧·・．.]?八月)/i.test(text)) {
+    return "Food Channels Kitchen 2026中秋餐牌";
+  }
+  if (/(?:food\s*channels?\s*catering|fc\s*catering|fcc)/i.test(text)) {
+    return "Food Channels Catering 2026中秋餐牌";
+  }
+  return null;
+}
+
 export function isCustomerServiceEmojiAcknowledgement(text: string) {
   const body = text.trim();
   return body !== "" && /^(?:[👍🙏👌😊🙂🙌👏❤️❤✨]+|(?:ok|okay)[!！.]*)$/iu.test(body);
@@ -408,7 +432,7 @@ export function isCustomerServiceThanks(text: string) {
 export function isTakeawayPackagingRequest(text: string) {
   const body = text.trim();
   return /(?:外賣盒|外卖盒|餐盒|食物盒|膠盒|胶盒|打包盒|包裝盒|包装盒|餐具|筷子)/iu.test(body) &&
-    /(?:想要|需要|可唔可以|可以|提供|加|補|补|多|有冇|有沒有|有没有)/iu.test(body);
+    /(?:想要|需要|可唔可以|可以提供|請提供|提供多|加(?:多|入|購|购)|補|补)/iu.test(body);
 }
 
 export function isProductQualityComplaint(text: string) {

@@ -82,6 +82,12 @@ async function faq(db: PGlite) {
 }
 
 describe("transactional learning safety", () => {
+ it("seeds every allow-listed learned reply template in a disabled state", () => {
+  for (const key of ["acknowledgement", "complaint_handoff", "packaging_request", "thanks"]) {
+   expect(migration).toContain(`('${key}'`);
+  }
+  expect(migration).toContain("'zh-HK', false");
+ });
  it("merges sequential aliases, ignores model keywords, and records execution", async () => {
   const db=await database(); try {
    await faq(db); const id=await store(db); await store(db,suggestion("怎樣網站下單"));

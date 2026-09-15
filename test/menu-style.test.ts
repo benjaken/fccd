@@ -37,7 +37,7 @@ describe("menu styles", () => {
     window.removeEventListener(MENU_STYLE_CHANGED, listener);
   });
 
-  it("keeps eight business primary sections and nests canonical pages in the sidebar", () => {
+  it("keeps business primary sections and nests canonical pages in the sidebar", () => {
     expect(businessPrimaryNav.map((item) => item.key)).toEqual([
       "overview",
       "followUp",
@@ -46,6 +46,7 @@ describe("menu styles", () => {
       "restaurant",
       "accountingFollowUp",
       "reports",
+      "promotion",
       "settings",
     ]);
     const catering = businessSidebarNav("catering", "orders");
@@ -222,7 +223,7 @@ describe("menu styles", () => {
     ]);
   });
 
-  it("keeps shared report routes inside the original reports menu", () => {
+  it("keeps shared report routes and promotion settings in their current sections", () => {
     expect(businessSectionFromLocation("/reports/kitchen/channel-sales", "")).toBe("reports");
     expect(businessSectionFromLocation("/reports/frozen-meat/raw-meat-stock", "")).toBe("reports");
     expect(businessSectionFromLocation("/reports/shops/pnl", "")).toBe("reports");
@@ -238,6 +239,8 @@ describe("menu styles", () => {
       "users",
       "rolePermissions",
       "loginLogs",
+    ]);
+    expect(businessSidebarNav("promotion", "").map((item) => item.key)).toEqual([
       "watiEmailLogs",
       "customerFaq",
       "dictionaries",
@@ -246,6 +249,7 @@ describe("menu styles", () => {
       "attachments",
     ]);
     expect(businessSidebarNav("settings", "")[0]?.to).toContain("nav=settings");
+    expect(businessSidebarNav("promotion", "")[0]?.to).toContain("nav=promotion");
 
     expect(
       isBusinessNavTargetActive(
@@ -321,6 +325,7 @@ describe("menu styles", () => {
       "restaurant",
       "accountingFollowUp",
       "reports",
+      "promotion",
       "settings",
     ]);
 

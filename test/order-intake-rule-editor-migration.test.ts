@@ -16,4 +16,15 @@ describe("order-intake rule editor migration", () => {
     expect(sql).toContain("allowed_channel_required");
     expect(sql).toContain("grant execute on function public.update_order_intake_rule");
   });
+
+  it("creates a rule and its channels in one transaction-backed RPC", () => {
+    const sql = readFileSync(
+      resolve(process.cwd(), "supabase/migrations/20260915165000_create_order_intake_rule.sql"),
+      "utf8",
+    );
+    expect(sql).toContain("create or replace function public.create_order_intake_rule");
+    expect(sql).toContain("insert into public.order_intake_rules");
+    expect(sql).toContain("insert into public.order_intake_rule_channels");
+    expect(sql).toContain("grant execute on function public.create_order_intake_rule");
+  });
 });

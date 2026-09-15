@@ -46,20 +46,27 @@ revoke all on table public.order_intake_rules, public.order_intake_rule_channels
 grant select, insert, update on table public.order_intake_rules, public.order_intake_rule_channels to authenticated;
 grant all on table public.order_intake_rules, public.order_intake_rule_channels to service_role;
 
+drop policy if exists "Order intake rule readers" on public.order_intake_rules;
 create policy "Order intake rule readers" on public.order_intake_rules
   for select to authenticated using (private.has_page_access('orders.settings.addon_block_dates'));
+drop policy if exists "Order intake rule managers insert" on public.order_intake_rules;
 create policy "Order intake rule managers insert" on public.order_intake_rules
   for insert to authenticated with check (private.has_page_manage('orders.settings.addon_block_dates'));
+drop policy if exists "Order intake rule managers update" on public.order_intake_rules;
 create policy "Order intake rule managers update" on public.order_intake_rules
   for update to authenticated using (private.has_page_manage('orders.settings.addon_block_dates'))
   with check (private.has_page_manage('orders.settings.addon_block_dates'));
+drop policy if exists "Order intake channel readers" on public.order_intake_rule_channels;
 create policy "Order intake channel readers" on public.order_intake_rule_channels
   for select to authenticated using (private.has_page_access('orders.settings.addon_block_dates'));
+drop policy if exists "Order intake channel managers insert" on public.order_intake_rule_channels;
 create policy "Order intake channel managers insert" on public.order_intake_rule_channels
   for insert to authenticated with check (private.has_page_manage('orders.settings.addon_block_dates'));
+drop policy if exists "Order intake channel managers update" on public.order_intake_rule_channels;
 create policy "Order intake channel managers update" on public.order_intake_rule_channels
   for update to authenticated using (private.has_page_manage('orders.settings.addon_block_dates'))
   with check (private.has_page_manage('orders.settings.addon_block_dates'));
+drop policy if exists "Order intake channel managers delete" on public.order_intake_rule_channels;
 create policy "Order intake channel managers delete" on public.order_intake_rule_channels
   for delete to authenticated using (private.has_page_manage('orders.settings.addon_block_dates'));
 

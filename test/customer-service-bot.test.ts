@@ -5,8 +5,10 @@ import {
   classifyCustomerServiceMessage,
   customerServiceBrandIdentityName,
   customerServiceMenuFaqQuery,
+  customerServiceSeasonalMenuFaqQuery,
   explicitCustomerServiceOrderNumber,
   extractInquirySlots,
+  extractCustomerServiceClockTime,
   extractOrderNumber,
   isCustomerServiceEmojiAcknowledgement,
   isCustomerServiceThanks,
@@ -91,7 +93,25 @@ describe("customer-service intents", () => {
     expect(isCustomerServiceEmojiAcknowledgement("👍 幾時送貨")).toBe(false);
     expect(isCustomerServiceThanks("多謝🙏")).toBe(true);
     expect(isTakeawayPackagingRequest("可唔可以提供多幾個外賣盒？")).toBe(true);
+    expect(isTakeawayPackagingRequest("有冇餐具？")).toBe(false);
     expect(isProductQualityComplaint("筷子發霉")).toBe(true);
+  });
+
+  it("answers an informational utensils question from a cited published FAQ", async () => {
+    const searchFaqs = vi.fn().mockResolvedValue([{
+      id: "utensils-faq",
+      question: "餐具有啲咩",
+      answer: "餐具包包括碟、叉及紙巾。",
+    }]);
+    const turn = await handleCustomerServiceTurn({
+      phone: conversation.phone_normalized,
+      text: "有冇餐具？",
+      conversation,
+      deps: deps({ searchFaqs, replyTemplates: { packaging_request: "請提供數量。" } }),
+    });
+    expect(searchFaqs).toHaveBeenCalled();
+    expect(turn.reply).toContain("餐具包包括碟、叉及紙巾");
+    expect(turn.faqSourceIds).toEqual(["utensils-faq"]);
   });
 
   it("detects clear same-day order demand and leaves Express how-to to FAQ", () => {
@@ -127,6 +147,22 @@ describe("customer-service intents", () => {
       toolKey: "check_delivery_date",
     });
     expect(classified.slots.eventDate).toMatch(/-09-26$/);
+  });
+
+  it("routes a detailed dated order into inquiry collection instead of a read-only availability check", () => {
+    const classified = classifyCustomerServiceMessage("幫我訂12月25日到會，40人");
+    expect(classified.intent).toBe("collect_inquiry");
+    expect(classified.configuredIntentKey).toBeUndefined();
+    expect(classified.slots).toMatchObject({ eventDate: expect.stringMatching(/-12-25$/), headcount: "40" });
+  });
+
+  it.each([
+    ["中午1點", "13:00"],
+    ["午夜12點", "00:00"],
+    ["24:00", "00:00"],
+    ["24:30", ""],
+  ])("normalizes customer clock time %s", (text, expected) => {
+    expect(extractCustomerServiceClockTime(text)).toBe(expected);
   });
 
   it("parses an unambiguous month/day slash date without rolling the month", () => {
@@ -310,6 +346,12 @@ describe("customer-service intents", () => {
     );
     expect(customerServiceMenuFaqQuery("想睇即日到會餐牌")).toBe(
       "Food Channels Express 有冇餐牌可以睇？",
+    );
+    expect(customerServiceSeasonalMenuFaqQuery("客問FCC中秋menu")).toBe(
+      "Food Channels Catering 2026中秋餐牌",
+    );
+    expect(customerServiceSeasonalMenuFaqQuery("想睇FCK中秋餐牌")).toBe(
+      "Food Channels Kitchen 2026中秋餐牌",
     );
     expect(classifyCustomerServiceMessage("B-1555 幾時送，同埋訂咗咩菜？").requestedFields)
       .toEqual(["delivery_date", "items"]);
@@ -883,6 +925,35 @@ describe("customer-service bot turns", () => {
     expect(classify).not.toHaveBeenCalled();
   });
 
+  it("sends only the matching brand's Mid-Autumn menu prompt", async () => {
+    const fckAnswer = "FCK👇🏻\n【2026中秋套餐】\nhttps://foodchannels-kitchen.com/collections/mid-autumn-private-kitchen";
+    const searchFaqs = vi.fn().mockResolvedValue([{
+      id: "fck-mid-autumn",
+      category: "menu",
+      question: "Food Channels Kitchen 2026中秋餐牌",
+      answer: fckAnswer,
+    }]);
+    const searchCatalog = vi.fn();
+    const turn = await handleCustomerServiceTurn({
+      phone: conversation.phone_normalized,
+      text: "想睇FCK中秋menu",
+      conversation,
+      deps: deps({ searchFaqs, searchCatalog }),
+      classify: vi.fn().mockResolvedValue({
+        intent: "search_faq",
+        slots: classifyCustomerServiceMessage("").slots,
+        orderNumber: "",
+        usedModel: true,
+        configuredIntentKey: "browse_menu",
+      }),
+    });
+
+    expect(searchCatalog).not.toHaveBeenCalled();
+    expect(searchFaqs).toHaveBeenCalledWith("Food Channels Kitchen 2026中秋餐牌");
+    expect(turn.reply).toBe(fckAnswer);
+    expect(turn.reply).not.toContain("FCC👇🏻");
+  });
+
   it("soft-routes a restricted dated catering request and includes alternatives", async () => {
     const checkOrderIntakeAvailability = vi.fn().mockResolvedValue({
       status: "manual_review",
@@ -1016,7 +1087,7 @@ describe("customer-service bot turns", () => {
     const checkOrderIntakeAvailability = vi.fn().mockResolvedValue({
       status: "manual_review",
       unavailableChannelName: "HK Party Food",
-      message: "當日只有 FCC 及 FCK 的中秋套餐或中秋單點可以訂購。",
+      message: "XXX 9月19-20 及 25-27日不接單",
       recommendations: [{ name: "中秋套餐", url: "https://example.com/mid-autumn" }],
     });
     const turn = await handleCustomerServiceTurn({
@@ -1030,15 +1101,65 @@ describe("customer-service bot turns", () => {
       }),
     });
 
-    expect(turn.reply).toContain("HK Party Food");
-    expect(turn.reply).toContain("26/9（星期六）");
-    expect(turn.reply).not.toContain("星期三");
-    expect(turn.reply).toContain("當日只有 FCC 及 FCK");
-    expect(turn.reply).toContain("https://example.com/mid-autumn");
-    expect(turn.reply).toContain("請留下希望送達時間、地區、人數及預算");
+    expect(turn.reply).toBe("HK Party Food 9月19-20 及 25-27日不接單");
+    expect(turn.reply).not.toContain("XXX");
+    expect(turn.reply).not.toContain("FCC👇🏻");
+    expect(turn.reply).not.toContain("https://example.com/mid-autumn");
     expect(turn.reply).not.toContain("請選擇其他日期訂購");
     expect(turn.reply).not.toContain("中秋三味乳鴿皇");
     expect(turn.conversation.state).toBe("collecting");
+  });
+
+  it("sends only the quotation form for a blocked delivery time", async () => {
+    const formReply = "請幫忙填一填這份報價表格留一留資料俾我地☺️，我們同事會盡快回覆\nhttps://www.emailmeform.com/builder/form/E9Wuer6Mw0aqat3NHfmd8";
+    const turn = await handleCustomerServiceTurn({
+      phone: conversation.phone_normalized,
+      text: "9月26日18:00可以送貨嗎？",
+      conversation,
+      deps: deps({
+        checkOrderIntakeAvailability: vi.fn().mockResolvedValue({
+          status: "manual_review",
+          message: formReply,
+          recommendations: [{ name: "中秋套餐", url: "https://example.com/mid-autumn" }],
+        }),
+      }),
+      classify: vi.fn().mockResolvedValue({
+        intent: "collect_inquiry",
+        slots: classifyCustomerServiceMessage("").slots,
+        orderNumber: "",
+        usedModel: true,
+        configuredIntentKey: "delivery_availability",
+      }),
+    });
+
+    expect(turn.reply).toBe(formReply);
+    expect(turn.reply).not.toContain("https://example.com/mid-autumn");
+    expect(turn.reply).not.toContain("請留下地區、人數及預算");
+  });
+
+  it("never shows an unavailable-brand placeholder for an allowed order", async () => {
+    const turn = await handleCustomerServiceTurn({
+      phone: conversation.phone_normalized,
+      text: "9月26日15:00想訂FCC中秋套餐",
+      conversation,
+      deps: deps({
+        checkOrderIntakeAvailability: vi.fn().mockResolvedValue({
+          status: "available",
+          message: "XXX 9月19-20 及 25-27日不接單",
+          recommendations: [{ name: "FCC中秋套餐", url: "https://example.com/fcc" }],
+        }),
+      }),
+      classify: vi.fn().mockResolvedValue({
+        intent: "collect_inquiry",
+        slots: classifyCustomerServiceMessage("").slots,
+        orderNumber: "",
+        usedModel: true,
+        configuredIntentKey: "delivery_availability",
+      }),
+    });
+
+    expect(turn.reply).not.toContain("XXX");
+    expect(turn.reply).toContain("目前可以落單");
   });
 
   it("does not tell a general new catering customer that no order was found", async () => {
@@ -1171,9 +1292,9 @@ describe("customer-service bot turns", () => {
 
     const confirmed = await handleCustomerServiceTurn({
       phone: conversation.phone_normalized,
-      text: "確認",
+      text: "ok",
       conversation: proposed.conversation,
-      deps: deps({ writeInquiry, queueHandoff }),
+      deps: deps({ writeInquiry, queueHandoff, replyTemplates: { acknowledgement: "收到，多謝你。" } }),
     });
     expect(writeInquiry).toHaveBeenCalledOnce();
     expect(queueHandoff).toHaveBeenCalledWith(

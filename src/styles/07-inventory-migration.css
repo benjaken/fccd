@@ -3019,6 +3019,7 @@
 .customer-faq-page > .customer-faq-layout { min-height: 0; }
 .customer-faq-layout { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(300px, 0.7fr); align-items: stretch; gap: 18px; min-height: 0; }
 .customer-faq-layout > .panel { min-height: 0; }
+.customer-faq-answer-cell { min-width: 18rem; max-width: 34rem; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--muted-foreground); line-height: 1.55; }
 .customer-faq-preview { display: flex; flex-direction: column; min-height: 650px; overflow: hidden; background: #fff; }
 .customer-faq-chat-header { display: flex; flex: 0 0 auto; align-items: center; justify-content: space-between; min-height: 64px; padding: 9px 10px 9px 12px; border-bottom: 1px solid #e3e7e5; background: #fff; }
 .customer-faq-chat-contact { display: flex; min-width: 0; align-items: center; gap: 10px; }
@@ -3028,6 +3029,11 @@
 .customer-faq-chat-contact p { margin: 2px 0 0; overflow: hidden; color: #667781; font-size: 12px; line-height: 1.3; text-overflow: ellipsis; white-space: nowrap; }
 .customer-faq-chat-reset { flex: 0 0 auto; color: #54656f; }
 .customer-faq-chat-reset:hover { background: #f0f2f5; color: #111b21; }
+.customer-faq-preview-phone { display: grid; flex: 0 0 auto; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 4px 10px; padding: 9px 12px; border-bottom: 1px solid #e3e7e5; background: #f8faf9; }
+.customer-faq-preview-phone > span { color: #334155; font-size: 12px; font-weight: 700; }
+.customer-faq-preview-phone > input { min-width: 0; height: 36px; padding: 0 10px; border: 1px solid #cbd5e1; border-radius: 8px; background: #fff; color: #111b21; font: inherit; }
+.customer-faq-preview-phone > input:focus { border-color: #128c7e; outline: 3px solid rgb(18 140 126 / 14%); }
+.customer-faq-preview-phone > small { grid-column: 1 / -1; color: #667781; font-size: 12px; line-height: 1.35; }
 .customer-faq-preview-body { display: flex; flex: 1 1 auto; flex-direction: column; min-height: 0; overflow: hidden; padding: 0; }
 .customer-faq-chat-shell { display: flex; flex: 1 1 auto; flex-direction: column; min-height: 0; background: #f0ebe3; }
 .customer-faq-preview-list { margin-top: 0; }
@@ -3075,6 +3081,19 @@
 }
 
 .customer-faq-chat-message p { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 14px; line-height: 1.45; }
+.customer-faq-chat-message p a {
+  color: #087a68;
+  font-weight: 600;
+  text-decoration-line: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+}
+.customer-faq-chat-message p a:hover { color: #005f52; }
+.customer-faq-chat-message p a:focus-visible {
+  border-radius: 3px;
+  outline: 2px solid #128c7e;
+  outline-offset: 2px;
+}
 .customer-faq-chat-message footer { display: flex; min-height: 15px; align-items: end; justify-content: flex-end; gap: 3px; margin-top: 2px; }
 .customer-faq-chat-message small { margin-right: auto; color: #667781; font-size: 12px; line-height: 1.3; }
 .customer-faq-chat-message time { color: #667781; font-size: 12px; line-height: 1; }

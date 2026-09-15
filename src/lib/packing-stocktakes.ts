@@ -26,13 +26,13 @@ export type StocktakeDateItem = { date: string; updatedAt: string };
 
 const PACKING_VARIANT_SUFFIXES = [
   { pattern: /(?:[\s\-–—_/（(]+)(?:蓋|盒蓋|lid)[）)]?$/iu, rank: 10 },
-  { pattern: /(?:盒蓋|蓋)$/u, rank: 10 },
+  { pattern: /蓋$/u, rank: 10 },
   { pattern: /(?:[\s\-–—_/（(]+)(?:盒|盒身|box|base)[）)]?$/iu, rank: 20 },
   { pattern: /(?:盒身)$/u, rank: 20 },
   { pattern: /盒盒$/u, rank: 20 },
-  { pattern: /(?:[\s\-–—_/（(]*)(?:大碼|大號|大型|大|large|lg)[）)]?$/iu, rank: 30 },
-  { pattern: /(?:[\s\-–—_/（(]*)(?:中碼|中號|中型|中|medium|md)[）)]?$/iu, rank: 40 },
-  { pattern: /(?:[\s\-–—_/（(]*)(?:細碼|小碼|細號|小號|細型|小型|細|小|small|sm)[）)]?$/iu, rank: 50 },
+  { pattern: /(?:[\s\-–—_/（(]+)(?:大碼|大號|大型|大|large|lg)[）)]?$/iu, rank: 30 },
+  { pattern: /(?:[\s\-–—_/（(]+)(?:中碼|中號|中型|中|medium|md)[）)]?$/iu, rank: 40 },
+  { pattern: /(?:[\s\-–—_/（(]+)(?:細碼|小碼|細號|小號|細型|小型|細|小|small|sm)[）)]?$/iu, rank: 50 },
 ] as const;
 
 function normalizePackingName(value: string | null | undefined) {
@@ -143,37 +143,55 @@ export async function fetchPackingStocktakes({
     ingredientNameIds = (ingredientRows ?? []).map((row) => String(row.id));
   }
 
-  let query = supabase
-    .from(eventTable(kind))
-    .select(
-      "id,ingredient_id,stocktake_at,sku_snapshot,quantity,ingredients(sku,name,ingredient_type,stocktake_unit,suppliers(company_name,phone_number))",
-      { count: "exact" },
-    )
-    .order("stocktake_at", { ascending: false, nullsFirst: false });
+  const buildQuery = () => {
+    let query = supabase
+      .from(eventTable(kind))
+      .select(
+        "id,ingredient_id,stocktake_at,sku_snapshot,quantity,ingredients(sku,name,ingredient_type,stocktake_unit,suppliers(company_name,phone_number))",
+        { count: "exact" },
+      )
+      .order("stocktake_at", { ascending: false, nullsFirst: false });
+    if (normalizedSearch) {
+      const ingredientFilter = ingredientNameIds.length > 0
+        ? `ingredient_id.in.(${ingredientNameIds.join(",")})`
+        : null;
+      query = query.or(
+        ingredientFilter
+          ? `sku_snapshot.ilike.%${normalizedSearch}%,${ingredientFilter}`
+          : `sku_snapshot.ilike.%${normalizedSearch}%`,
+      );
+    }
+    if (stocktakeDate) {
+      query = query
+        .gte("stocktake_at", `${stocktakeDate}T00:00:00+08:00`)
+        .lt("stocktake_at", `${nextDate(stocktakeDate)}T00:00:00+08:00`);
+    }
+    return query;
+  };
 
-  if (normalizedSearch) {
-    const ingredientFilter = ingredientNameIds.length > 0
-      ? `ingredient_id.in.(${ingredientNameIds.join(",")})`
-      : null;
-    query = query.or(
-      ingredientFilter
-        ? `sku_snapshot.ilike.%${normalizedSearch}%,${ingredientFilter}`
-        : `sku_snapshot.ilike.%${normalizedSearch}%`,
-    );
+  let rows: PackingStocktakeRow[] = [];
+  let total = 0;
+  if (kind === "packing") {
+    // Sorting packaging families needs the complete result set. Read it in
+    // bounded server pages so the API row cap cannot silently truncate it.
+    let offset = 0;
+    while (offset <= total) {
+      const { data, count, error } = await buildQuery().range(offset, offset + 999);
+      if (error) throw error;
+      const chunk = (data ?? []) as PackingStocktakeRow[];
+      if (offset === 0) total = count ?? chunk.length;
+      rows.push(...chunk);
+      if (!chunk.length) break;
+      offset += chunk.length;
+      if (offset >= total) break;
+    }
+  } else {
+    const { data, count, error } = await buildQuery().range(start, end);
+    if (error) throw error;
+    rows = (data ?? []) as PackingStocktakeRow[];
+    total = count ?? rows.length;
   }
-  if (stocktakeDate) {
-    query = query
-      .gte("stocktake_at", `${stocktakeDate}T00:00:00+08:00`)
-      .lt("stocktake_at", `${nextDate(stocktakeDate)}T00:00:00+08:00`);
-  }
-
-  // Packaging sets must be sorted before pagination or a lid/base/size family
-  // can be split across pages. Ingredient stocktakes keep server pagination.
-  query = kind === "packing" ? query.range(0, 4999) : query.range(start, end);
-
-  const { data, count, error } = await query;
-  if (error) throw error;
-  const mappedItems = ((data ?? []) as PackingStocktakeRow[]).map(mapRow);
+  const mappedItems = rows.map(mapRow);
   const items = kind === "packing"
     ? sortPackingStocktakeItems(mappedItems).slice(start, end + 1)
     : mappedItems;
@@ -199,7 +217,7 @@ export async function fetchPackingStocktakes({
   }
   return {
     items,
-    total: count ?? 0,
+    total,
   };
 }
 

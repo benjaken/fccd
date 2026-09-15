@@ -1523,7 +1523,7 @@ function OperationsShell() {
               />
               <Route
                 path="/promotion"
-                element={<Navigate to={secondaryNav.promotion.find((item) => pageAccess.canAccess(item.permissionKey!))?.to ?? "/settings/wati-email-logs"} replace />}
+                element={<Navigate to={secondaryNav.promotion.find((item) => pageAccess.canAccess(item.permissionKey ?? pageAccessKey(item.to)))?.to ?? "/settings/wati-email-logs"} replace />}
               />
               <Route
                 path="/settings/employees"

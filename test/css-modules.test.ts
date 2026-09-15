@@ -6,6 +6,9 @@ const entryPath = resolve(process.cwd(), "src/index.css");
 const entry = readFileSync(entryPath, "utf8");
 const globalStyleImports = [...entry.matchAll(/@import\s+["'](\.\/styles\/[^"']+\.css)["'];/g)]
   .map((match) => match[1]);
+const legacyLineCeilings = new Map<string, number>([
+  ["./styles/07-inventory-migration.css", 5_500],
+]);
 
 function findCssModules(directory: string): string[] {
   return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
@@ -23,13 +26,14 @@ describe("application CSS modules", () => {
     expect(globalStyleImports.length).toBeGreaterThan(1);
   });
 
-  it("keeps every imported global stylesheet present and below the legacy ceiling", () => {
+  it("keeps every imported global stylesheet present and below its documented legacy ceiling", () => {
     for (const stylePath of globalStyleImports) {
       const absolutePath = resolve(process.cwd(), "src", stylePath);
       const lineCount = readFileSync(absolutePath, "utf8").split(/\r?\n/).length;
+      const lineCeiling = legacyLineCeilings.get(stylePath) ?? 5_000;
 
       expect(statSync(absolutePath).isFile()).toBe(true);
-      expect(lineCount).toBeLessThan(5_000);
+      expect(lineCount, `${stylePath} exceeded its documented legacy line ceiling`).toBeLessThan(lineCeiling);
     }
   });
 

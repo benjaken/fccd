@@ -1604,7 +1604,12 @@ function createBotDeps(
       if (channelError) throw channelError;
       const unavailable = findUnavailableRequestedChannel(text, knownChannels ?? [], channelIds);
       return unavailable
-        ? { ...evaluation, status: "manual_review" as const, unavailableChannelName: unavailable.name }
+        ? {
+          ...evaluation,
+          status: "manual_review" as const,
+          message: allowRules.map((rule) => rule.customerMessage?.trim()).find(Boolean) || evaluation.message,
+          unavailableChannelName: unavailable.name,
+        }
         : evaluation;
     },
     async searchCatalog(query: string) {
