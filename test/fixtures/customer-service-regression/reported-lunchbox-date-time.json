@@ -14,6 +14,11 @@
         "id": "lunchbox-menu",
         "question": "HK Lunch Box 有冇餐牌可以睇？",
         "answer": "HK Lunch Box 提供飯盒及便當，餐牌：https://hklunchbox.com/"
+      },
+      {
+        "id": "ordering-howto",
+        "question": "點樣喺網站落單？",
+        "answer": "請到品牌網站揀選餐款，加入購物車，再於結帳填寫送貨日期、時間及地址。"
       }
     ]
   },
@@ -56,6 +61,62 @@
         "pendingRequest": null,
         "intakeDate": "2026-10-14",
         "intakeTime": "11:45",
+        "effects": {
+          "writeInquiry": 0,
+          "queueHandoff": 0
+        }
+      }
+    },
+    {
+      "customer": "點落單呢",
+      "recordedClassification": {
+        "intent": "search_faq",
+        "configuredIntentKey": "delivery_availability"
+      },
+      "expect": {
+        "replyContains": [
+          "購物車",
+          "結帳"
+        ],
+        "replyExcludes": [
+          "邊一日",
+          "未搵到",
+          "幾點送到"
+        ],
+        "intent": "search_faq",
+        "pendingRequest": null,
+        "slots": {
+          "eventDate": "2026-10-14",
+          "deliveryTime": "11:45"
+        },
+        "effects": {
+          "writeInquiry": 0,
+          "queueHandoff": 0
+        }
+      }
+    },
+    {
+      "customer": "點落單呢",
+      "recordedClassification": {
+        "intent": "search_faq",
+        "configuredIntentKey": "delivery_availability"
+      },
+      "expect": {
+        "replyContains": [
+          "購物車",
+          "結帳"
+        ],
+        "replyExcludes": [
+          "邊一日",
+          "未搵到",
+          "幾點送到"
+        ],
+        "intent": "search_faq",
+        "pendingRequest": null,
+        "slots": {
+          "eventDate": "2026-10-14",
+          "deliveryTime": "11:45"
+        },
         "effects": {
           "writeInquiry": 0,
           "queueHandoff": 0

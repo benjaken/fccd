@@ -228,6 +228,13 @@ export function isBrandIntroductionRequest(value: string) {
   return /(?:想問|想了解|查詢|詢問|介紹|了解).{0,60}(?:問題|服務|飯盒|餐牌|餐飲)|(?:品牌|飯盒|送餐).{0,20}(?:介紹|問題|服務)/i.test(text);
 }
 
+/** Only standalone ordering instructions; mixed complaints and booking requests retain their intent. */
+export function isOrderingInstructionsRequest(value: string) {
+  const text = value.trim().replace(/[\s，。！？,.!?]/g, "");
+  return /^(?:(?:你好|請問|想問|我想問|咁|甘|唔該))*(?:點(?:樣)?|如何|怎樣|怎么|怎麼)(?:喺|在)?(?:網站|網上)?(?:落單|下單|下单|訂購|订购|訂餐|订餐)(?:呢|呀|啊|嗎|吗|㗎|架)?$/i.test(text) ||
+    /^(?:howtoorder|howdoiorder|howcan(?:i|we)(?:placeanorder|order))\??$/i.test(text);
+}
+
 export function isMenuInformationRequest(value: string) {
   const text = value.trim();
   const asksToBrowse = /(?:有冇|有無|有沒有|有吗|有嗎|睇|看|看看|提供|發|发|send|想問|想问|詢問|询问|索取|想訂|想订|訂購|订购|落單|下单)/i.test(text);

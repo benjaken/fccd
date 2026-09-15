@@ -3,6 +3,7 @@ import {
   customerServiceBrandIdentityName,
   customerServiceMenuFaqQuery,
   isBrandIntroductionRequest,
+  isOrderingInstructionsRequest,
   extractCustomerServiceClockTime,
   extractInquirySlots,
   extractOrderNumber,
@@ -1778,7 +1779,15 @@ export async function handleCustomerServiceTurn({
     searchFaqs: searchFaqsOnce,
   };
 
-  const modelClassified = await classify(text);
+  const rawClassified = await classify(text);
+  const asksHowToOrder = isOrderingInstructionsRequest(text) &&
+    ["search_faq", "collect_inquiry"].includes(rawClassified.intent) &&
+    !rawClassified.requiresHuman;
+  // A direct how-to follow-up must not inherit the previous availability task.
+  const modelClassified: ClassifiedMessage = asksHowToOrder
+    ? { ...rawClassified, intent: "search_faq", configuredIntentKey: "search_faq",
+      toolKey: "search_faqs", needsClarification: false, clarificationQuestion: undefined }
+    : rawClassified;
   // The current utterance is authoritative for the requested order fields.
   // This prevents recent context (for example, a previous dish lookup) from
   // making the model repeat the old field for a new delivery-time follow-up.
@@ -2162,7 +2171,7 @@ export async function handleCustomerServiceTurn({
 
     try {
       const menuQuery = asksForMenu ? customerServiceMenuFaqQuery(text) : "";
-      const faqQuery = asksForMenu ? menuQuery : text;
+      const faqQuery = asksHowToOrder ? "點樣喺網站落單？" : asksForMenu ? menuQuery : text;
       const faqHits = await searchFaqsOnce(faqQuery);
       const preferredFaq = faqHits.find((hit) =>
         strongPublishedFaqMatch(faqQuery, hit)
@@ -2244,7 +2253,7 @@ export async function handleCustomerServiceTurn({
   ) {
     return annotate(await replyCollect(deps, phone, classified, routedConversation, text));
   }
-  const faqQuery = asksForMenu
+  const faqQuery = asksHowToOrder ? "點樣喺網站落單？" : asksForMenu
     ? customerServiceMenuFaqQuery(text)
     : text;
   return annotate(await replyFaq(cachedDeps, classified, routedConversation, faqQuery));
