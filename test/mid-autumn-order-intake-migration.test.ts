@@ -6,7 +6,7 @@ describe("2026 Mid-Autumn order-intake configuration", () => {
   const sql = readFileSync(
     resolve(process.cwd(), "supabase/migrations/20260915145000_mid_autumn_catalog_rules.sql"),
     "utf8",
-  );
+  ).replace(/\r\n/g, "\n");
 
   it("uses product-database links instead of manually configured recommendation URLs", () => {
     expect(sql).toContain("create or replace function public.search_order_intake_catalog");
