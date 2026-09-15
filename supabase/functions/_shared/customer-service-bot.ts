@@ -2,16 +2,22 @@ import {
   classifyCustomerServiceMessage,
   customerServiceBrandIdentityName,
   customerServiceMenuFaqQuery,
+  extractCustomerServiceClockTime,
   extractInquirySlots,
+  extractOrderNumber,
   extractRequestedOrderFields,
   hasCollectableSlots,
   hongKongCalendarDate,
   isCustomerServiceGreeting,
+  isCustomerServiceEmojiAcknowledgement,
+  isCustomerServiceThanks,
   isDeliveryAvailabilityQuestion,
   isHongKongCalendarDateToday,
   isMenuInformationRequest,
   isOrderConfirmationAcknowledgement,
+  isProductQualityComplaint,
   isSameDayOrderDemand,
+  isTakeawayPackagingRequest,
   normalizeCustomerServiceOrderNumber,
   type ClassifiedMessage,
   type InquirySlots,
@@ -150,6 +156,12 @@ export type CustomerServiceDeliveryAvailability =
   | "blocked"
   | "unknown";
 
+export type CustomerServiceOrderIntakeAvailability = {
+  status: "available" | "manual_review" | "unknown";
+  message?: string | null;
+  recommendations?: Array<{ name: string; url: string | null }>;
+};
+
 export type CustomerServiceBotDeps = {
   workflowAutoResume?: Partial<Record<CustomerServicePilotGoal, boolean>>;
   replyTemplates?: Partial<
@@ -161,7 +173,11 @@ export type CustomerServiceBotDeps = {
       | "collect_more"
       | "collect_done"
       | "no_faq"
-      | "refuse",
+      | "refuse"
+      | "acknowledgement"
+      | "thanks"
+      | "complaint_handoff"
+      | "packaging_request",
       string
     >
   >;
@@ -185,6 +201,10 @@ export type CustomerServiceBotDeps = {
   checkDeliveryDateAvailability?: (
     date: string,
   ) => Promise<CustomerServiceDeliveryAvailability>;
+  checkOrderIntakeAvailability?: (
+    date: string,
+    text: string,
+  ) => Promise<CustomerServiceOrderIntakeAvailability>;
   answerFaqWithModel?: (
     query: string,
     candidates: CustomerServiceFaqHit[],
@@ -284,6 +304,143 @@ function normalizedFaqText(value: string) {
     .toLowerCase()
     .replace(/[\s，。！？、,.!?：:；;（）()「」『』"']/g, "")
     .replace(/^(請問|想問|我想問|可唔可以問)/, "");
+}
+
+function orderIntakeAvailabilityReply(
+  date: string,
+  availability: CustomerServiceOrderIntakeAvailability,
+) {
+  const label = deliveryDateLabel(date);
+  const recommendations = (availability.recommendations ?? [])
+    .map((item) => item.url ? `${item.name}：${item.url}` : item.name)
+    .join("\n");
+  if (availability.status === "manual_review") {
+    return [
+      availability.message || `${label}有特別接單安排。`,
+      recommendations ? `你亦可以考慮以下可接選擇：\n${recommendations}` : null,
+      "如你想查詢其他品牌或產品，請留下希望送達時間、活動／用餐時間、地區、人數及預算；同事會按訂單金額及實際情況再確認。",
+    ].filter(Boolean).join("\n");
+  }
+  if (availability.status === "available") {
+    return [
+      `${label}目前可以落單。`,
+      availability.message,
+      recommendations || null,
+      "請問希望幾點送到？我可以再按你提供嘅時間核對接單安排。",
+    ].filter(Boolean).join("\n");
+  }
+  return `${label}嘅接單安排暫時未能自動確認。請先提供希望送達時間，我再幫你核對下一步。`;
+}
+
+const AVAILABILITY_DELIVERY_TIME_PENDING = "availability:delivery_time";
+const AVAILABILITY_EVENT_TIME_PENDING = "availability:event_time";
+
+async function replyAvailabilityTimeFollowUp(
+  deps: CustomerServiceBotDeps,
+  conversation: CustomerServiceConversation,
+  text: string,
+): Promise<BotTurn | null> {
+  const pending = conversation.pending_request;
+  if (
+    pending !== AVAILABILITY_DELIVERY_TIME_PENDING &&
+    pending !== AVAILABILITY_EVENT_TIME_PENDING
+  ) return null;
+
+  const time = extractCustomerServiceClockTime(text);
+  if (!time) {
+    if (!/(?:點|点|時|时|時間|时间|大約|大约|差不多)/.test(text)) {
+      return null;
+    }
+    return {
+      reply: "我未能確認個時間，請用例如「19:00」或者「晚上7點」再講一次。",
+      conversation,
+      wroteInquiry: false,
+      notified: false,
+      usedModel: false,
+      intentKey: "delivery_availability",
+      toolKeys: [],
+      failureReason: "availability_time_invalid",
+    };
+  }
+
+  const saved = conversation.workflow_slots ?? {};
+  const eventDate = String(saved.eventDate ?? "");
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(eventDate)) {
+    return {
+      reply: "我搵唔返頭先查詢嘅日期，請再提供一次日期，我會重新幫你查接單安排。",
+      conversation: nextConversation(conversation, {
+        pending_request: null,
+        workflow_slots: {},
+      }),
+      wroteInquiry: false,
+      notified: false,
+      usedModel: false,
+      intentKey: "delivery_availability",
+      toolKeys: [],
+      failureReason: "availability_context_missing",
+    };
+  }
+
+  const label = deliveryDateLabel(eventDate);
+  if (pending === AVAILABILITY_DELIVERY_TIME_PENDING) {
+    let intake: CustomerServiceOrderIntakeAvailability = { status: "unknown" };
+    if (deps.checkOrderIntakeAvailability) {
+      try {
+        intake = await deps.checkOrderIntakeAvailability(
+          eventDate,
+          `${String(saved.availabilityQuestion ?? "")} 送達時間 ${time}`.trim(),
+        );
+      } catch (error) {
+        console.error(
+          "customer-service follow-up intake check failed",
+          error instanceof Error ? error.message.slice(0, 200) : String(error),
+        );
+      }
+    }
+    if (intake.status === "manual_review") {
+      return {
+        reply: `${intake.message || `${label} ${time}嘅接單安排需要人工確認。`}如果你想客服跟進，請明確回覆「請客服跟進」，並提供地區、人數及預算。`,
+        conversation: nextConversation(conversation, {
+          pending_request: null,
+          workflow_slots: {},
+        }),
+        wroteInquiry: false,
+        notified: false,
+        usedModel: false,
+        intentKey: "delivery_availability",
+        toolKeys: ["check_order_intake"],
+      };
+    }
+    return {
+      reply: `收到，你希望 ${label} 約 ${time}送到。請問活動／用餐幾點開始？`,
+      conversation: nextConversation(conversation, {
+        pending_request: AVAILABILITY_EVENT_TIME_PENDING,
+        workflow_slots: { ...saved, deliveryTime: time },
+      }),
+      wroteInquiry: false,
+      notified: false,
+      usedModel: false,
+      intentKey: "delivery_availability",
+      toolKeys: deps.checkOrderIntakeAvailability ? ["check_order_intake"] : [],
+      failureReason: intake.status === "unknown"
+        ? "order_intake_unknown"
+        : null,
+    };
+  }
+
+  const deliveryTime = String(saved.deliveryTime ?? "");
+  return {
+    reply: `收到：${label} 約 ${deliveryTime || "未指定時間"}送到，活動／用餐約 ${time}開始。該日目前可以落單；實際可選時段及配額以網站結帳頁顯示為準。`,
+    conversation: nextConversation(conversation, {
+      pending_request: null,
+      workflow_slots: {},
+    }),
+    wroteInquiry: false,
+    notified: false,
+    usedModel: false,
+    intentKey: "delivery_availability",
+    toolKeys: [],
+  };
 }
 
 function isSelectedOrderItemFollowUp(text: string) {
@@ -1057,9 +1214,45 @@ async function replyCollect(
   conversation: CustomerServiceConversation,
   text: string,
 ): Promise<BotTurn> {
+  const awaitingConfirmation =
+    conversation.pending_request === "confirm:catering_inquiry";
+  const normalizedControl = latestBurstMessage(text)
+    .toLowerCase()
+    .replace(/[\s，。！？、,.!?「」'\"]/g, "");
+  const confirmationDenied = awaitingConfirmation && (
+    classified.dialogAction === "deny" ||
+    /^(?:唔確認|不確認|否|唔好|不用|不要|no|取消|算了|算啦)$/.test(
+      normalizedControl,
+    )
+  );
+  const confirmationGranted = awaitingConfirmation && !confirmationDenied && (
+    classified.dialogAction === "confirm" ||
+    /^(?:確認|確定|係|是|好|可以|ok|okay|yes|確認建立|確認記錄|確定建立|確定記錄)$/.test(
+      normalizedControl,
+    )
+  );
+
+  if (confirmationDenied) {
+    const queued = conversation.state === "awaiting_human";
+    if (queued) await deps.cancelHandoff(phone);
+    const restored = restoreSuspendedConversation(conversation);
+    return {
+      reply: `${queued ? REPLIES.handoffCancelled : REPLIES.currentTaskCancelled}${
+        restored ? " 已返回上一個未完成事項。" : ""
+      }`,
+      conversation: restored ?? resetPilotConversation(conversation),
+      wroteInquiry: false,
+      notified: false,
+      queuedHandoff: false,
+      usedModel: classified.usedModel,
+    };
+  }
+
   const saved = conversation.workflow_slots ?? {};
   const previousNote = String(saved.note ?? "").trim();
-  const incomingNote = (classified.slots.note || text).trim();
+  const incomingNote = confirmationGranted
+    ? ""
+    : (classified.slots.note || text).trim();
   const slots: InquirySlots = {
     eventDate: classified.slots.eventDate || String(saved.eventDate ?? ""),
     headcount: classified.slots.headcount || String(saved.headcount ?? ""),
@@ -1081,10 +1274,36 @@ async function replyCollect(
       conversation: nextConversation(conversation, {
         state: "collecting",
         active_goal: "catering_inquiry",
+        pending_request: null,
         workflow_slots: slots,
       }),
       wroteInquiry: false,
       notified: false,
+      usedModel: classified.usedModel,
+    };
+  }
+  if (!confirmationGranted) {
+    const summary = [
+      slots.eventDate && `活動日期：${slots.eventDate}`,
+      slots.headcount && `人數：${slots.headcount}人`,
+      slots.budget && `預算：${slots.budget}`,
+      slots.dietary && `飲食要求：${slots.dietary}`,
+      slots.cuisine && `餐飲偏好：${slots.cuisine}`,
+    ].filter(Boolean).join("；");
+    return {
+      reply: `我已整理以下到會資料：${summary}。如果你想我建立查詢並通知客服，請回覆「確認」；未確認前系統唔會記錄或通知同事。`,
+      conversation: nextConversation(conversation, {
+        state: conversation.state === "awaiting_human"
+          ? "awaiting_human"
+          : "collecting",
+        active_goal: "catering_inquiry",
+        pending_request: "confirm:catering_inquiry",
+        workflow_slots: slots,
+      }),
+      wroteInquiry: false,
+      notified: false,
+      queuedHandoff: false,
+      toolKeys: [],
       usedModel: classified.usedModel,
     };
   }
@@ -1147,6 +1366,7 @@ async function replyCollect(
     wroteInquiry: true,
     notified: urgent,
     queuedHandoff: true,
+    toolKeys: ["write_inquiry"],
     usedModel: classified.usedModel,
   };
 }
@@ -1252,7 +1472,8 @@ export async function handleCustomerServiceTurn({
     };
   }
 
-  const hasActiveTask = conversation.state !== "identifying";
+  const hasActiveTask = conversation.state !== "identifying" ||
+    Boolean(conversation.pending_request);
   const explicitPreviousCancellation = isExplicitPreviousHandoffCancellation(text);
   if (
     (hasActiveTask && isCancelCurrentTaskMessage(text))
@@ -1284,6 +1505,100 @@ export async function handleCustomerServiceTurn({
       notified: false,
       queuedHandoff: false,
       usedModel: false,
+    };
+  }
+
+  if (
+    conversation.state !== "awaiting_human" &&
+    deps.replyTemplates?.acknowledgement &&
+    isCustomerServiceEmojiAcknowledgement(text)
+  ) {
+    return {
+      reply: configuredReply(deps, "acknowledgement", "收到，多謝你。"),
+      conversation,
+      wroteInquiry: false,
+      notified: false,
+      usedModel: false,
+      intentKey: "acknowledgement",
+      toolKeys: [],
+    };
+  }
+
+  const availabilityFollowUp = await replyAvailabilityTimeFollowUp(
+    deps,
+    conversation,
+    text,
+  );
+  if (availabilityFollowUp) return availabilityFollowUp;
+
+  if (
+    conversation.state !== "awaiting_human" &&
+    deps.replyTemplates?.thanks &&
+    isCustomerServiceThanks(text)
+  ) {
+    return {
+      reply: configuredReply(deps, "thanks", "唔使客氣，多謝你。"),
+      conversation,
+      wroteInquiry: false,
+      notified: false,
+      usedModel: false,
+      intentKey: "thanks",
+      toolKeys: [],
+    };
+  }
+
+  if (
+    conversation.state !== "awaiting_human" &&
+    deps.replyTemplates?.packaging_request &&
+    isTakeawayPackagingRequest(text) &&
+    !extractOrderNumber(text)
+  ) {
+    return {
+      reply: configuredReply(
+        deps,
+        "packaging_request",
+        "請提供需要嘅外賣盒／餐具種類同數量。",
+      ),
+      conversation,
+      wroteInquiry: false,
+      notified: false,
+      usedModel: false,
+      intentKey: "search_faq",
+      toolKeys: [],
+    };
+  }
+
+  if (
+    conversation.state !== "awaiting_human" &&
+    deps.replyTemplates?.complaint_handoff &&
+    isProductQualityComplaint(text)
+  ) {
+    await deps.queueHandoff({
+      phone,
+      quoteId: null,
+      orderNumber: extractOrderNumber(text) || null,
+      summary: `產品質素投訴：${text.trim().slice(0, 500)}`,
+      kind: "order_handoff",
+      urgent: false,
+    });
+    return {
+      reply: configuredReply(
+        deps,
+        "complaint_handoff",
+        "唔好意思出現呢個情況。請傳送照片及訂單編號，客服同事會跟進。",
+      ),
+      conversation: nextConversation(conversation, {
+        state: "awaiting_human",
+        handoff_at: new Date().toISOString(),
+        handoff_kind: "general",
+        handoff_urgent: false,
+      }),
+      wroteInquiry: false,
+      notified: false,
+      queuedHandoff: true,
+      usedModel: false,
+      intentKey: "complaint_refund",
+      toolKeys: ["notify_internal"],
     };
   }
 
@@ -1470,7 +1785,9 @@ export async function handleCustomerServiceTurn({
       ? { ...modelClassified, requestedFields: explicitRequestedFields }
       : modelClassified;
   const annotate = (turn: BotTurn): BotTurn => {
-    const defaultTool = classified.intent === "lookup_order" ||
+    const defaultTool = classified.configuredIntentKey === "delivery_availability"
+      ? "check_order_intake"
+      : classified.intent === "lookup_order" ||
         classified.intent === "handoff_order"
       ? "lookup_orders"
       : classified.intent === "search_faq"
@@ -1483,7 +1800,6 @@ export async function handleCustomerServiceTurn({
       confidence: classified.confidence,
       toolKeys: [...new Set([
         ...(turn.toolKeys ?? []),
-        classified.toolKey,
         defaultTool,
       ].filter((tool): tool is string => Boolean(tool)))],
       failureReason: turn.failureReason ?? null,
@@ -1492,8 +1808,44 @@ export async function handleCustomerServiceTurn({
     };
   };
 
-  if (isDeliveryAvailabilityQuestion(text)) {
+  if (
+    classified.configuredIntentKey === "delivery_availability" ||
+    (!classified.usedModel && isDeliveryAvailabilityQuestion(text))
+  ) {
     const requestedDate = extractInquirySlots(text).eventDate;
+    if (deps.checkOrderIntakeAvailability) {
+      let intake: CustomerServiceOrderIntakeAvailability = { status: "unknown" };
+      try {
+        intake = await deps.checkOrderIntakeAvailability(requestedDate, text);
+      } catch (error) {
+        console.error("customer-service order intake check failed", error instanceof Error ? error.message.slice(0, 200) : String(error));
+      }
+      const intakeConversation = intake.status === "manual_review"
+        ? nextConversation(conversation, {
+            state: "collecting",
+            active_goal: "catering_inquiry",
+            pending_request: "特別接單安排人工覆核",
+            workflow_slots: {
+              ...(conversation.workflow_slots ?? {}),
+              eventDate: requestedDate,
+              note: `接單規則需人工覆核：${text}`.slice(0, 1_000),
+            },
+          })
+        : nextConversation(conversation, {
+            pending_request: AVAILABILITY_DELIVERY_TIME_PENDING,
+            workflow_slots: {
+              ...(conversation.workflow_slots ?? {}),
+              eventDate: requestedDate,
+              availabilityQuestion: text.trim().slice(0, 1_000),
+            },
+          });
+      return annotate({
+        reply: orderIntakeAvailabilityReply(requestedDate, intake), conversation: intakeConversation,
+        wroteInquiry: false, notified: false, usedModel: classified.usedModel,
+        intentKey: "delivery_availability", toolKeys: ["check_order_intake"],
+        failureReason: intake.status === "unknown" ? "order_intake_unknown" : null,
+      });
+    }
     let availability: CustomerServiceDeliveryAvailability = "unknown";
     if (deps.checkDeliveryDateAvailability) {
       try {
@@ -1621,10 +1973,15 @@ export async function handleCustomerServiceTurn({
     classified.intent === "handoff_order" ||
     classified.intent === "out_of_scope" ||
     classified.intent === "prompt_injection";
-  if (!highRiskIntent && !isSameDayOrderDemand(text)) {
+  const asksForMenu = classified.configuredIntentKey === "browse_menu" ||
+    (!classified.usedModel && isMenuInformationRequest(text));
+  if (
+    !highRiskIntent &&
+    !isSameDayOrderDemand(text) &&
+    classified.intent === "search_faq"
+  ) {
     const catalogQuery = deps.searchCatalog &&
-        (classified.intent === "search_faq" ||
-          classified.intent === "collect_inquiry")
+        asksForMenu
       ? customerServiceCatalogQuery(text, conversation.recent_messages)
       : "";
     if (catalogQuery) {
@@ -1654,7 +2011,6 @@ export async function handleCustomerServiceTurn({
     }
 
     try {
-      const asksForMenu = isMenuInformationRequest(text);
       const menuQuery = asksForMenu ? customerServiceMenuFaqQuery(text) : "";
       const faqQuery = asksForMenu ? menuQuery : text;
       const faqHits = await searchFaqsOnce(faqQuery);
@@ -1738,8 +2094,7 @@ export async function handleCustomerServiceTurn({
   ) {
     return annotate(await replyCollect(deps, phone, classified, routedConversation, text));
   }
-  const faqQuery = classified.configuredIntentKey === "browse_menu" ||
-      isMenuInformationRequest(text)
+  const faqQuery = asksForMenu
     ? customerServiceMenuFaqQuery(text)
     : text;
   return annotate(await replyFaq(cachedDeps, classified, routedConversation, faqQuery));

@@ -7,9 +7,13 @@ import {
   customerServiceMenuFaqQuery,
   explicitCustomerServiceOrderNumber,
   extractOrderNumber,
+  isCustomerServiceEmojiAcknowledgement,
+  isCustomerServiceThanks,
   isHongKongCalendarDateToday,
   isOrderConfirmationAcknowledgement,
+  isProductQualityComplaint,
   isSameDayOrderDemand,
+  isTakeawayPackagingRequest,
   normalizeCustomerServiceOrderNumber,
   shouldBypassCustomerServiceAi,
 } from "../supabase/functions/_shared/customer-service-intents.ts";
@@ -81,6 +85,14 @@ function deps(
 }
 
 describe("customer-service intents", () => {
+  it("recognizes the runtime-gated learned acknowledgement patterns", () => {
+    expect(isCustomerServiceEmojiAcknowledgement("👍🙏")).toBe(true);
+    expect(isCustomerServiceEmojiAcknowledgement("👍 幾時送貨")).toBe(false);
+    expect(isCustomerServiceThanks("多謝🙏")).toBe(true);
+    expect(isTakeawayPackagingRequest("可唔可以提供多幾個外賣盒？")).toBe(true);
+    expect(isProductQualityComplaint("筷子發霉")).toBe(true);
+  });
+
   it("detects clear same-day order demand and leaves Express how-to to FAQ", () => {
     expect(isSameDayOrderDemand("即日訂餐")).toBe(true);
     expect(isSameDayOrderDemand("今日想訂到會急單")).toBe(true);
@@ -101,6 +113,123 @@ describe("customer-service intents", () => {
     expect(classified.configuredIntentKey).toBe("delivery_availability");
     expect(classified.toolKey).toBe("check_delivery_date");
     expect(classified.slots.eventDate).toMatch(/-09-26$/);
+  });
+
+  it("treats a dated 訂貨 question as an order-intake availability check", () => {
+    const classified = classifyCustomerServiceMessage(
+      "你好 請問9月26號可以訂貨嗎",
+    );
+
+    expect(classified).toMatchObject({
+      intent: "search_faq",
+      configuredIntentKey: "delivery_availability",
+      toolKey: "check_delivery_date",
+    });
+    expect(classified.slots.eventDate).toMatch(/-09-26$/);
+  });
+
+  it("answers a dated 訂貨 question immediately instead of handing off", async () => {
+    const checkOrderIntakeAvailability = vi.fn().mockResolvedValue({
+      status: "available",
+      message: null,
+      recommendations: [],
+    });
+    const runtimeDeps = deps({ checkOrderIntakeAvailability });
+
+    const turn = await handleCustomerServiceTurn({
+      phone: conversation.phone_normalized,
+      text: "你好 請問9月26號可以訂貨嗎",
+      conversation,
+      deps: runtimeDeps,
+    });
+
+    expect(turn.reply).toContain("26/9");
+    expect(turn.reply).toContain("目前可以落單");
+    expect(turn.reply).not.toContain("同事跟進");
+    expect(turn.queuedHandoff).not.toBe(true);
+    expect(runtimeDeps.queueHandoff).not.toHaveBeenCalled();
+    expect(checkOrderIntakeAvailability).toHaveBeenCalledWith(
+      expect.stringMatching(/-09-26$/),
+      "你好 請問9月26號可以訂貨嗎",
+    );
+  });
+
+  it("checks availability for 九月26號預訂到會 instead of recording an inquiry", async () => {
+    const checkOrderIntakeAvailability = vi.fn().mockResolvedValue({
+      status: "available",
+      message: null,
+      recommendations: [],
+    });
+    const runtimeDeps = deps({ checkOrderIntakeAvailability });
+
+    const turn = await handleCustomerServiceTurn({
+      phone: conversation.phone_normalized,
+      text: "你好 請問九月26號預訂到會可以嗎？",
+      conversation,
+      deps: runtimeDeps,
+    });
+
+    expect(turn.reply).toContain("26/9");
+    expect(turn.reply).toContain("目前可以落單");
+    expect(turn.wroteInquiry).toBe(false);
+    expect(turn.notified).toBe(false);
+    expect(runtimeDeps.writeInquiry).not.toHaveBeenCalled();
+    expect(runtimeDeps.queueHandoff).not.toHaveBeenCalled();
+    expect(checkOrderIntakeAvailability).toHaveBeenCalledWith(
+      expect.stringMatching(/-09-26$/),
+      "你好 請問九月26號預訂到會可以嗎？",
+    );
+  });
+
+  it("keeps delivery and event time replies in the availability workflow", async () => {
+    const checkOrderIntakeAvailability = vi.fn().mockResolvedValue({
+      status: "available",
+      message: null,
+      recommendations: [],
+    });
+    const runtimeDeps = deps({ checkOrderIntakeAvailability });
+
+    const first = await handleCustomerServiceTurn({
+      phone: conversation.phone_normalized,
+      text: "你好 請問九月26號預訂到會可以嗎？",
+      conversation,
+      deps: runtimeDeps,
+    });
+    expect(first.conversation.pending_request).toBe(
+      "availability:delivery_time",
+    );
+    expect(first.conversation.workflow_slots?.eventDate).toMatch(/-09-26$/);
+
+    const deliveryTime = await handleCustomerServiceTurn({
+      phone: conversation.phone_normalized,
+      text: "19點差不多",
+      conversation: first.conversation,
+      deps: runtimeDeps,
+    });
+    expect(deliveryTime.intentKey).toBe("delivery_availability");
+    expect(deliveryTime.reply).toContain("19:00送到");
+    expect(deliveryTime.reply).toContain("活動／用餐幾點開始");
+    expect(deliveryTime.reply).not.toContain("搵唔到已公布嘅答案");
+    expect(deliveryTime.conversation.pending_request).toBe(
+      "availability:event_time",
+    );
+    expect(deliveryTime.conversation.workflow_slots?.deliveryTime).toBe(
+      "19:00",
+    );
+
+    const eventTime = await handleCustomerServiceTurn({
+      phone: conversation.phone_normalized,
+      text: "20點開始",
+      conversation: deliveryTime.conversation,
+      deps: runtimeDeps,
+    });
+    expect(eventTime.intentKey).toBe("delivery_availability");
+    expect(eventTime.reply).toContain("19:00送到");
+    expect(eventTime.reply).toContain("20:00開始");
+    expect(eventTime.conversation.pending_request).toBeNull();
+    expect(runtimeDeps.searchFaqs).not.toHaveBeenCalled();
+    expect(runtimeDeps.writeInquiry).not.toHaveBeenCalled();
+    expect(runtimeDeps.queueHandoff).not.toHaveBeenCalled();
   });
 
   it("blocks jailbreaks and small talk without a model", () => {
@@ -242,8 +371,65 @@ describe("customer-service intents", () => {
   });
 });
 
-describe("customer-service FAQ routing priority", () => {
-  it("answers a named catering brand question from its menu FAQ", async () => {
+describe("approved learning runtime policies", () => {
+  it("handles emoji, thanks and packaging without a handoff once their templates exist", async () => {
+    const runtimeDeps = deps({
+      replyTemplates: {
+        acknowledgement: "收到。",
+        thanks: "唔使客氣。",
+        packaging_request: "請提供包裝種類及數量。",
+      },
+    });
+
+    const emoji = await handleCustomerServiceTurn({
+      phone: conversation.phone_normalized,
+      text: "👍",
+      conversation,
+      deps: runtimeDeps,
+    });
+    const thanks = await handleCustomerServiceTurn({
+      phone: conversation.phone_normalized,
+      text: "多謝",
+      conversation,
+      deps: runtimeDeps,
+    });
+    const packaging = await handleCustomerServiceTurn({
+      phone: conversation.phone_normalized,
+      text: "想要多幾個外賣盒",
+      conversation,
+      deps: runtimeDeps,
+    });
+
+    expect(emoji.reply).toBe("收到。");
+    expect(thanks.reply).toBe("唔使客氣。");
+    expect(packaging.reply).toBe("請提供包裝種類及數量。");
+    expect(runtimeDeps.queueHandoff).not.toHaveBeenCalled();
+  });
+
+  it("collects a photo and queues product-quality complaints once approved", async () => {
+    const runtimeDeps = deps({
+      replyTemplates: {
+        complaint_handoff: "請提供照片及訂單編號，客服會跟進。",
+      },
+    });
+    const turn = await handleCustomerServiceTurn({
+      phone: conversation.phone_normalized,
+      text: "B-1550C 筷子發霉",
+      conversation,
+      deps: runtimeDeps,
+    });
+
+    expect(turn.reply).toContain("照片");
+    expect(turn.intentKey).toBe("complaint_refund");
+    expect(turn.queuedHandoff).toBe(true);
+    expect(runtimeDeps.queueHandoff).toHaveBeenCalledWith(
+      expect.objectContaining({ orderNumber: "B-1550C" }),
+    );
+  });
+});
+
+describe("customer-service intent-first routing", () => {
+  it("does not let a named-brand FAQ match override the AI catering intent", async () => {
     const stages: string[] = [];
     const searchFaqs = vi.fn().mockImplementation(async () => {
       stages.push("faq");
@@ -274,14 +460,10 @@ describe("customer-service FAQ routing priority", () => {
       classify,
     });
 
-    expect(searchFaqs).toHaveBeenCalledWith(
-      "Food Channels Kitchen 有冇餐牌可以睇？",
-    );
-    expect(turn.reply).toContain("桂花‧八月高級中菜到會");
-    expect(turn.reply).toContain("foodchannels-kitchen.com");
-    expect(turn.reply).not.toContain("未搵到用呢個 WhatsApp 號碼");
+    expect(searchFaqs).not.toHaveBeenCalled();
+    expect(turn.reply).toBe(REPLIES.collectPrompt);
     expect(classify).toHaveBeenCalledOnce();
-    expect(stages).toEqual(["intent", "faq"]);
+    expect(stages).toEqual(["intent"]);
   });
 
   it("answers the original seasonal menu question without asking for a brand", async () => {
@@ -374,11 +556,11 @@ describe("customer-service FAQ routing priority", () => {
       items: ["醬香牛展拌粉皮 (1磅)", "川香椒麻魚片 (1磅)"],
     }]);
     const classify = vi.fn().mockResolvedValue({
-      intent: "collect_inquiry",
+      intent: "search_faq",
       slots: classifyCustomerServiceMessage("").slots,
       orderNumber: "",
       usedModel: true,
-      configuredIntentKey: "catering_inquiry",
+      configuredIntentKey: "browse_menu",
     });
 
     const turn = await handleCustomerServiceTurn({
@@ -518,11 +700,11 @@ describe("customer-service FAQ routing priority", () => {
   it("uses an exact published chef FAQ after intent classification", async () => {
     const queueHandoff = vi.fn().mockResolvedValue(undefined);
     const classify = vi.fn().mockResolvedValue({
-      intent: "handoff",
+      intent: "search_faq",
       slots: classifyCustomerServiceMessage("").slots,
       orderNumber: "",
       usedModel: true,
-      configuredIntentKey: "kitchen_confirmation",
+      configuredIntentKey: "search_faq",
     });
     const turn = await handleCustomerServiceTurn({
       phone: conversation.phone_normalized,
@@ -600,7 +782,7 @@ describe("customer-service FAQ routing priority", () => {
     expect(turn.faqSourceIds).toBeUndefined();
   });
 
-  it("provides the published menu after classifying a catering inquiry", async () => {
+  it("provides the published menu after AI classifies a menu request", async () => {
     const searchFaqs = vi.fn().mockResolvedValue([{
       id: "menu-links",
       category: "menu",
@@ -608,11 +790,11 @@ describe("customer-service FAQ routing priority", () => {
       answer: "可以查看餐牌：https://foodchannels-catering.com/",
     }]);
     const classify = vi.fn().mockResolvedValue({
-      intent: "collect_inquiry",
+      intent: "search_faq",
       slots: classifyCustomerServiceMessage("").slots,
       orderNumber: "",
       usedModel: true,
-      configuredIntentKey: "catering_inquiry",
+      configuredIntentKey: "browse_menu",
     });
     const turn = await handleCustomerServiceTurn({
       phone: conversation.phone_normalized,
@@ -702,6 +884,33 @@ describe("customer-service bot turns", () => {
     expect(turn.intentKey).toBe("brand_identity");
     expect(searchFaqs).not.toHaveBeenCalled();
     expect(classify).not.toHaveBeenCalled();
+  });
+
+  it("soft-routes a restricted dated catering request and includes alternatives", async () => {
+    const checkOrderIntakeAvailability = vi.fn().mockResolvedValue({
+      status: "manual_review",
+      message: "25至27日只接受 FCC 及 FCK 中秋套餐或中秋單點。",
+      recommendations: [
+        { name: "FCC", url: "https://example.com/fcc" },
+        { name: "FCK", url: "https://example.com/fck" },
+      ],
+    });
+    const turn = await handleCustomerServiceTurn({
+      phone: conversation.phone_normalized,
+      text: "九月26號預訂其他品牌到會",
+      conversation,
+      deps: deps({ checkOrderIntakeAvailability }),
+      classify: vi.fn().mockResolvedValue({
+        intent: "collect_inquiry", slots: classifyCustomerServiceMessage("").slots,
+        orderNumber: "", usedModel: true, configuredIntentKey: "delivery_availability",
+      }),
+    });
+    expect(checkOrderIntakeAvailability).toHaveBeenCalledWith("2026-09-26", "九月26號預訂其他品牌到會");
+    expect(turn.reply).toContain("https://example.com/fcc");
+    expect(turn.reply).toContain("同事會按訂單金額及實際情況再確認");
+    expect(turn.reply).not.toContain("拒絕");
+    expect(turn.conversation.state).toBe("collecting");
+    expect(turn.conversation.workflow_slots?.eventDate).toBe("2026-09-26");
   });
 
   it("does not tell a general new catering customer that no order was found", async () => {
@@ -802,30 +1011,95 @@ describe("customer-service bot turns", () => {
     expect(picked.reply).not.toContain("秘密狀態");
   });
 
-  it("collects an inquiry, queues staff follow-up, and never writes a formal order", async () => {
+  it("requires confirmation before it records and queues a catering inquiry", async () => {
     const writeInquiry = vi.fn().mockResolvedValue({
       quote_id: "quote-1",
       order_number: "FCLQ20260901",
       created: true,
     });
     const queueHandoff = vi.fn().mockResolvedValue(undefined);
-    const turn = await handleCustomerServiceTurn({
+    const searchFaqs = vi.fn().mockResolvedValue([{
+      id: "misleading-date-faq",
+      question: "2026-10-03 40人到會",
+      answer: "相似 FAQ 不應搶先回覆。",
+    }]);
+    const proposed = await handleCustomerServiceTurn({
       phone: conversation.phone_normalized,
       text: "2026-10-03 40人到會",
       conversation,
+      deps: deps({ writeInquiry, queueHandoff, searchFaqs }),
+    });
+    expect(proposed.reply).toContain("回覆「確認」");
+    expect(proposed.reply).toContain("2026-10-03");
+    expect(proposed.reply).toContain("40人");
+    expect(proposed.conversation.pending_request).toBe(
+      "confirm:catering_inquiry",
+    );
+    expect(proposed.wroteInquiry).toBe(false);
+    expect(proposed.toolKeys).not.toContain("write_inquiry");
+    expect(searchFaqs).not.toHaveBeenCalled();
+    expect(writeInquiry).not.toHaveBeenCalled();
+    expect(queueHandoff).not.toHaveBeenCalled();
+
+    const confirmed = await handleCustomerServiceTurn({
+      phone: conversation.phone_normalized,
+      text: "確認",
+      conversation: proposed.conversation,
       deps: deps({ writeInquiry, queueHandoff }),
     });
-    expect(writeInquiry).toHaveBeenCalled();
+    expect(writeInquiry).toHaveBeenCalledOnce();
     expect(queueHandoff).toHaveBeenCalledWith(
       expect.objectContaining({
         phone: "85291234567",
         quoteId: "quote-1",
       }),
     );
-    expect(turn.reply).toBe(
+    expect(confirmed.reply).toBe(
       "已經幫你記低，客服會喺下一個工作日上午 9 點後跟進。",
     );
-    expect(turn.wroteInquiry).toBe(true);
+    expect(confirmed.wroteInquiry).toBe(true);
+    expect(confirmed.toolKeys).toContain("write_inquiry");
+  });
+
+  it.each([
+    "2026-10-03",
+    "40人",
+  ])("never treats collected data as permission to write: %s", async (text) => {
+    const runtimeDeps = deps();
+    const turn = await handleCustomerServiceTurn({
+      phone: conversation.phone_normalized,
+      text,
+      conversation,
+      deps: runtimeDeps,
+    });
+
+    expect(turn.reply).toContain("回覆「確認」");
+    expect(turn.wroteInquiry).toBe(false);
+    expect(turn.notified).toBe(false);
+    expect(runtimeDeps.writeInquiry).not.toHaveBeenCalled();
+    expect(runtimeDeps.queueHandoff).not.toHaveBeenCalled();
+  });
+
+  it("discards a pending catering write when the customer declines", async () => {
+    const runtimeDeps = deps();
+    const proposed = await handleCustomerServiceTurn({
+      phone: conversation.phone_normalized,
+      text: "2026-10-03 40人到會",
+      conversation,
+      deps: runtimeDeps,
+    });
+    const denied = await handleCustomerServiceTurn({
+      phone: conversation.phone_normalized,
+      text: "唔好",
+      conversation: proposed.conversation,
+      deps: runtimeDeps,
+    });
+
+    expect(denied.reply).toBe(REPLIES.currentTaskCancelled);
+    expect(denied.conversation.state).toBe("identifying");
+    expect(denied.conversation.pending_request).toBeNull();
+    expect(runtimeDeps.writeInquiry).not.toHaveBeenCalled();
+    expect(runtimeDeps.queueHandoff).not.toHaveBeenCalled();
   });
 
   it("returns related FAQ suggestions after a multi-hit FAQ answer", async () => {
@@ -1178,7 +1452,7 @@ describe("customer-service bot turns", () => {
 
   it("resumes a suspended order workflow after completing a catering inquiry", async () => {
     const queueHandoff = vi.fn().mockResolvedValue(undefined);
-    const turn = await handleCustomerServiceTurn({
+    const proposed = await handleCustomerServiceTurn({
       phone: conversation.phone_normalized,
       text: "9月20日 30人到會",
       conversation: {
@@ -1197,10 +1471,19 @@ describe("customer-service bot turns", () => {
       }),
     });
 
-    expect(turn.wroteInquiry).toBe(true);
-    expect(turn.reply).toContain("返回上一個未完成事項");
-    expect(turn.conversation.state).toBe("awaiting_human");
-    expect(turn.conversation.active_goal).toBe("order_change");
+    expect(proposed.wroteInquiry).toBe(false);
+    expect(proposed.reply).toContain("回覆「確認」");
+
+    const confirmed = await handleCustomerServiceTurn({
+      phone: conversation.phone_normalized,
+      text: "確認",
+      conversation: proposed.conversation,
+      deps: deps({ queueHandoff }),
+    });
+    expect(confirmed.wroteInquiry).toBe(true);
+    expect(confirmed.reply).toContain("返回上一個未完成事項");
+    expect(confirmed.conversation.state).toBe("awaiting_human");
+    expect(confirmed.conversation.active_goal).toBe("order_change");
   });
 
   it.each([
@@ -1274,7 +1557,7 @@ describe("customer-service bot turns", () => {
       day: "2-digit",
     }).format(new Date());
     const queueHandoff = vi.fn().mockResolvedValue(undefined);
-    const turn = await handleCustomerServiceTurn({
+    const proposed = await handleCustomerServiceTurn({
       phone: conversation.phone_normalized,
       text: `${today} 80人到會`,
       conversation,
@@ -1291,10 +1574,21 @@ describe("customer-service bot turns", () => {
       }),
     });
 
-    expect(turn.reply).toBe(REPLIES.sameDayUrgent);
-    expect(turn.wroteInquiry).toBe(true);
-    expect(turn.notified).toBe(true);
-    expect(turn.conversation).toMatchObject({
+    expect(proposed.reply).toContain("回覆「確認」");
+    expect(proposed.wroteInquiry).toBe(false);
+    expect(proposed.notified).toBe(false);
+    expect(queueHandoff).not.toHaveBeenCalled();
+
+    const confirmed = await handleCustomerServiceTurn({
+      phone: conversation.phone_normalized,
+      text: "確認",
+      conversation: proposed.conversation,
+      deps: deps({ queueHandoff }),
+    });
+    expect(confirmed.reply).toBe(REPLIES.sameDayUrgent);
+    expect(confirmed.wroteInquiry).toBe(true);
+    expect(confirmed.notified).toBe(true);
+    expect(confirmed.conversation).toMatchObject({
       state: "awaiting_human",
       active_goal: "catering_inquiry",
       handoff_kind: "same_day_catering",
@@ -1323,7 +1617,7 @@ describe("customer-service bot turns", () => {
       conversation,
       deps: deps({ writeInquiry, queueHandoff }),
     });
-    const second = await handleCustomerServiceTurn({
+    const proposed = await handleCustomerServiceTurn({
       phone: conversation.phone_normalized,
       text: "8 人，想訂 Express",
       conversation: first.conversation,
@@ -1341,9 +1635,18 @@ describe("customer-service bot turns", () => {
       }),
     });
 
+    expect(proposed.reply).toContain("回覆「確認」");
+    expect(writeInquiry).not.toHaveBeenCalled();
+
+    const confirmed = await handleCustomerServiceTurn({
+      phone: conversation.phone_normalized,
+      text: "確認",
+      conversation: proposed.conversation,
+      deps: deps({ writeInquiry, queueHandoff }),
+    });
     expect(writeInquiry).toHaveBeenCalledOnce();
-    expect(second.wroteInquiry).toBe(true);
-    expect(second.conversation).toMatchObject({
+    expect(confirmed.wroteInquiry).toBe(true);
+    expect(confirmed.conversation).toMatchObject({
       state: "awaiting_human",
       handoff_kind: "same_day_catering",
       handoff_quote_id: "quote-urgent",

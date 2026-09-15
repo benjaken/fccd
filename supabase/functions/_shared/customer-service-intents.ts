@@ -114,9 +114,19 @@ export function emptyInquirySlots(): InquirySlots {
   return { ...EMPTY_SLOTS };
 }
 
+function parseChineseCalendarNumber(value: string) {
+  if (/^\d+$/.test(value)) return Number(value);
+  const digits: Record<string, number> = { 零: 0, 一: 1, 二: 2, 兩: 2, 两: 2, 三: 3, 四: 4, 五: 5, 六: 6, 七: 7, 八: 8, 九: 9 };
+  if (value === "十") return 10;
+  const [tens, ones] = value.split("十");
+  if (value.includes("十")) return (tens ? digits[tens] : 1) * 10 + (ones ? digits[ones] : 0);
+  return digits[value] ?? Number.NaN;
+}
+
 export function extractInquirySlots(text: string): InquirySlots {
   const iso = text.match(/\b(20\d{2})[-/.](\d{1,2})[-/.](\d{1,2})\b/);
-  const md = text.match(/\b(\d{1,2})\s*月\s*(\d{1,2})\s*日/);
+  const md = text.match(/\b(\d{1,2})\s*月\s*(\d{1,2})\s*(?:日|號|号)/);
+  const chineseMd = text.match(/([一二兩两三四五六七八九十]{1,3})\s*月\s*([零一二兩两三四五六七八九十\d]{1,3})\s*(?:日|號|号)/);
   const dmy = text.match(
     /(?:^|\D)(\d{1,2})\s*[/.]\s*(\d{1,2})(?:\s*[/.]\s*(20\d{2}))?(?!\d)/,
   );
@@ -128,6 +138,8 @@ export function extractInquirySlots(text: string): InquirySlots {
       ? `${iso[1]}-${iso[2].padStart(2, "0")}-${iso[3].padStart(2, "0")}`
       : md
         ? `${new Date().getFullYear()}-${md[1].padStart(2, "0")}-${md[2].padStart(2, "0")}`
+        : chineseMd
+          ? `${new Date().getFullYear()}-${String(parseChineseCalendarNumber(chineseMd[1])).padStart(2, "0")}-${String(parseChineseCalendarNumber(chineseMd[2])).padStart(2, "0")}`
         : dmy
           ? `${dmy[3] || new Date().getFullYear()}-${dmy[2].padStart(2, "0")}-${dmy[1].padStart(2, "0")}`
           : "",
@@ -189,6 +201,26 @@ export function isMenuInformationRequest(value: string) {
   return /(?:飯盒|便當|便当|餐盒|meal\s*box|lunch\s*box|lunchbox|派對小食|派对小食|party\s*food)/i.test(text) && asksToBrowse;
 }
 
+/** Extract a customer-supplied wall-clock time without assigning business intent. */
+export function extractCustomerServiceClockTime(text: string) {
+  const match = text.trim().match(
+    /(?:(上午|早上|中午|下午|晚上|夜晚)\s*)?([01]?\d|2[0-3])\s*(?:[:：點点時时])\s*(?:(\d{1,2})\s*分?|半)?/,
+  );
+  if (!match) return "";
+  let hour = Number(match[2]);
+  const minute = match[3]
+    ? Number(match[3])
+    : /半/.test(match[0])
+      ? 30
+      : 0;
+  if (minute > 59) return "";
+  if (/(?:下午|晚上|夜晚)/.test(match[1] ?? "") && hour < 12) {
+    hour += 12;
+  }
+  if (/(?:上午|早上)/.test(match[1] ?? "") && hour === 12) hour = 0;
+  return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+}
+
 const CUSTOMER_SERVICE_BRAND_IDENTITIES = [
   {
     name: "HK Lunch Box",
@@ -231,11 +263,12 @@ export function customerServiceBrandIdentityName(value: string) {
 export function isDeliveryAvailabilityQuestion(text: string) {
   const body = text.trim();
   if (!body || !extractInquirySlots(body).eventDate) return false;
-  const delivery = /送貨|送餐|配送|交收/i.test(body);
+  const delivery = /送貨|送餐|配送|交收|訂餐|订餐|訂貨|订货|訂購|订购|預訂|预订|到會|到会|落單|落单/i.test(body);
   const availability =
     /可唔可以|可以(?:送)?(?:嗎|吗|呀|啊)?|能否|能不能|得唔得|送唔送|有冇得送|有沒有得送|是否(?:可以)?|會唔會送|会不会送/i
       .test(body);
-  return delivery && availability;
+  const datedBooking = /(?:預訂|预订|訂|订|落單|落单).{0,8}(?:到會|到会|餐)|(?:到會|到会).{0,8}(?:預訂|预订|訂|订)/i.test(body);
+  return delivery && (availability || datedBooking);
 }
 
 export function customerServiceMenuFaqQuery(value: string) {
@@ -283,6 +316,25 @@ export function extractRequestedOrderFields(text: string) {
 
 export function isCustomerServiceGreeting(text: string) {
   return GREETING.test(text.trim());
+}
+
+export function isCustomerServiceEmojiAcknowledgement(text: string) {
+  const body = text.trim();
+  return body !== "" && /^(?:[👍🙏👌😊🙂🙌👏❤️❤✨]+|(?:ok|okay)[!！.]*)$/iu.test(body);
+}
+
+export function isCustomerServiceThanks(text: string) {
+  return /^(?:多謝|唔該晒|謝謝|谢谢|thanks?|thank\s+you)[!！。.🙏😊]*$/iu.test(text.trim());
+}
+
+export function isTakeawayPackagingRequest(text: string) {
+  const body = text.trim();
+  return /(?:外賣盒|外卖盒|餐盒|食物盒|膠盒|胶盒|打包盒|包裝盒|包装盒|餐具|筷子)/iu.test(body) &&
+    /(?:想要|需要|可唔可以|可以|提供|加|補|补|多|有冇|有沒有|有没有)/iu.test(body);
+}
+
+export function isProductQualityComplaint(text: string) {
+  return /(?:發霉|发霉|霉菌|異物|异物|變壞|变坏|酸餿|酸馊|包裝破損|包装破损)/iu.test(text.trim());
 }
 
 /** Hong Kong calendar date YYYY-MM-DD for a given instant. */

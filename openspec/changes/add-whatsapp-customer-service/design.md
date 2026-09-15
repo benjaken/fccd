@@ -39,18 +39,13 @@
 
 **Alternative considered:** 用 WATI 內建 chatbot 接 FAQ，只把查單 webhook 回 FCCD。FAQ 與報價寫入會分裂，且 WATI 流程無法保證「無匹配不杜撰」。不採用。
 
-### 2. 意圖先規則、再小模型；工具結果才是事實
+### 2. 完整語意先分類；RAG 只在知識意圖後執行
 
-入站文字先走固定規則，順序為：
+提示注入保留為不呼叫模型的硬性攔截；其餘業務語意由小型 LLM 先閱讀完整訊息及近期對話，再輸出嚴格 JSON schema。模型不可只按日期、品牌、菜式或另一個孤立詞語選擇意圖；允許意圖包括查單、到會蒐集、指定日期接單查詢、餐牌／FAQ、轉真人及拒答。模型不可用時才採用 deterministic fallback。
 
-1. 越權／套提示模式（忽略指示、扮演角色、重複 prompt、列出工具、要求當通用 AI）
-2. 明顯無關（閒聊、時事、翻譯、寫作、功課、程式）
-3. 危險業務（改期／取消／投訴／議價／付款爭議）
-4. 訂單號、政策詞、到會槽位詞
+RAG 不參與第一階段意圖競爭。只有完整語意已分類為 `search_faq` 或 `browse_menu` 後，才可搜尋已發布 FAQ／餐牌；`collect_inquiry` 不得因字面相似候選而被 FAQ 回覆搶先截斷。指定日期能否預訂使用 `delivery_availability` 及接單規則工具，不把問句當作建立查詢。
 
-1 與 2 命中則**不呼叫模型**，只用固定拒答。分不清才呼叫小型 LLM 做意圖與槽位抽取，輸出嚴格 JSON schema，允許的意圖列只有：`lookup_order`、`collect_inquiry`、`search_faq`、`handoff`、`out_of_scope`、`prompt_injection`。後兩類同樣只映射固定拒答，模型不得生成其所要求的內容。
-
-查單摘要、FAQ 答覆、報價寫入內容 MUST 來自工具／RPC，模型不得發明狀態、政策或價錢。客服 provider 設定與報表 AI／供應商 PDF 分開：獨立 daily limit、prompt version、timeout。Bot 關閉時不呼叫模型。Prompt 明確寫：只分類、不聊天、不改角色、不透露自身是模型。
+查單摘要、FAQ 答覆、報價寫入內容 MUST 來自工具／RPC，模型不得發明狀態、政策或價錢。日期、人數等槽位只代表已知資料，不代表客人授權寫入。所有到會寫入及新內部通知必須經單一 mutation gate；資料齊備後先顯示摘要，客人明確確認才可落盤。客服 provider 設定與報表 AI／供應商 PDF 分開：獨立 daily limit、prompt version、timeout。Bot 關閉時不呼叫模型。
 
 **Alternative considered:** 每則訊息都打大模型做 RAG 或自由對話。成本高，且容易被套去寫作、閒聊或洩漏提示。不採用。
 
@@ -64,7 +59,7 @@
 
 ### 4. 到會意見寫成 WhatsApp 來源報價，再通知內部
 
-蒐集槽位：日期、人數、預算、忌口、菜式。至少日期或人數其一即可落盤，其餘可空。寫入比照 EmailMeForm：`document_type = 'quote'`、`quote_status` 未完成、`source_system = 'whatsapp'`，聯絡電話用 WhatsApp 號碼。若該電話已有未轉單報價，把新意見附加到最近一張未關閉報價的 note／timeline，避免一人多張空報價；若業務上需要新場，才另開報價。
+蒐集槽位：日期、人數、預算、忌口、菜式。至少日期或人數其一代表已有足夠資料可提出寫入摘要，但不可直接落盤；系統必須先列出摘要並要求客人明確確認。確認後才按 EmailMeForm 形狀寫入：`document_type = 'quote'`、`quote_status` 未完成、`source_system = 'whatsapp'`，聯絡電話用 WhatsApp 號碼。若該電話已有未轉單報價，把新意見附加到最近一張未關閉報價的 note／timeline，避免一人多張空報價；若業務上需要新場，才另開報價。
 
 內部通知走現有內部 Email 及／或內部 WATI 收件人設定，payload 含報價號、電話、摘要。客人只在 WhatsApp 收到「同事會跟進」。
 
@@ -163,3 +158,10 @@ FC Delivery：訂滿 $2800 地面交收免費（不包括偏遠及機場）。
 
 - WATI 入站 payload 與 session 發訊路徑要以目前租戶（`live-mt-server` v1 或 `WATI_API_ENDPOINT` v2）哪一套為準，需在實作開頭對帳，不影響行為規格。
 - 內部通知收件人複用 `order_first_notification_recipients` 還是另設客服跟進名單，可在實作時按現有設定頁擴充，不改客人可見行為。
+
+## 2026-09 全局接單及自主學習補充決策
+
+- 廚房產能是一個全局資源；日期／時段規則放在 `order_intake_rules`，品牌只作允許例外及推薦，不各自建立 Block Date。
+- `allow_only` 必須同時命中品牌及產品關鍵字。未命中或時段需覆核時，回覆會收集送達時間、活動時間、地區、人數及預算並交同事考慮，不向客人作硬拒絕。
+- 人類客服訊息是每日學習證據，但單次大額訂單例外、價格、退款、停單及承諾不得自動泛化。自動寫入只限答案與既有已發布 FAQ 完全一致的問法／關鍵字。
+- WATI `showFile` 是需 Bearer token 的受保護端點，不可直接寄給同事；附件必須私有轉存並以短期 signed URL 分享。

@@ -43,6 +43,7 @@ import {
 } from "../_shared/customer-service-replies.ts";
 import {
   classifyCustomerServiceMessage,
+  extractCustomerServiceClockTime,
   explicitCustomerServiceOrderNumber,
   shouldBypassCustomerServiceAi,
   type ClassifiedMessage,
@@ -80,6 +81,15 @@ import {
   watiEmergencySwitchAllows,
 } from "../_shared/wati-notification-controls.ts";
 import { isWithinCustomerServiceSchedule } from "../_shared/customer-service-schedule.ts";
+import {
+  evaluateOrderIntakeRules,
+  type OrderIntakeRule,
+} from "../_shared/customer-service-order-intake.ts";
+import {
+  buildInboundMediaHandoffSummary,
+  isTrustedWatiMediaUrl,
+  mediaStoragePath,
+} from "../_shared/customer-service-media.ts";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -172,7 +182,11 @@ type ReplyTemplates = Partial<
     | "collect_more"
     | "collect_done"
     | "no_faq"
-    | "refuse",
+    | "refuse"
+    | "acknowledgement"
+    | "thanks"
+    | "complaint_handoff"
+    | "packaging_request",
     string
   >
 >;
@@ -187,6 +201,7 @@ type WorkflowPolicy = {
 
 const ACTION_INTENTS: Record<string, CustomerServiceIntent> = {
   faq_search: "search_faq",
+  availability_check: "search_faq",
   order_lookup: "lookup_order",
   order_handoff: "handoff_order",
   inquiry_collect: "collect_inquiry",
@@ -195,6 +210,7 @@ const ACTION_INTENTS: Record<string, CustomerServiceIntent> = {
 
 const ACTION_TO_REQUIRED_TOOL: Record<string, string> = {
   faq_search: "search_faqs",
+  availability_check: "check_order_intake",
   order_lookup: "lookup_orders",
   order_handoff: "lookup_orders",
   inquiry_collect: "write_inquiry",
@@ -1531,6 +1547,35 @@ function createBotDeps(
       if (error) throw error;
       return count && count > 0 ? "blocked" as const : "not_blocked" as const;
     },
+    async checkOrderIntakeAvailability(date: string, text: string) {
+      const { data, error } = await admin.from("order_intake_rules")
+        .select("id,name,starts_on,ends_on,start_time,end_time,handling,customer_message,order_intake_rule_channels(brand_terms,product_terms,recommendation_url,channels(name))")
+        .eq("is_active", true).is("archived_at", null)
+        .lte("starts_on", date).gte("ends_on", date);
+      if (error) throw error;
+      const requestedTime = extractCustomerServiceClockTime(text) || null;
+      const rules: OrderIntakeRule[] = ((data ?? []) as Array<{
+        id: string; name: string; starts_on: string; ends_on: string;
+        start_time: string | null; end_time: string | null;
+        handling: OrderIntakeRule["handling"]; customer_message: string | null;
+        order_intake_rule_channels?: Array<{
+          brand_terms?: string[] | null; product_terms?: string[] | null; recommendation_url?: string | null;
+          channels?: { name?: string | null } | Array<{ name?: string | null }> | null;
+        }>;
+      }>).map((row) => ({
+        id: row.id, name: row.name, startsOn: row.starts_on, endsOn: row.ends_on,
+        startTime: row.start_time?.slice(0, 5) ?? null, endTime: row.end_time?.slice(0, 5) ?? null,
+        handling: row.handling, customerMessage: row.customer_message,
+        channels: (row.order_intake_rule_channels ?? []).map((item: {
+          brand_terms?: string[] | null; product_terms?: string[] | null; recommendation_url?: string | null;
+          channels?: { name?: string | null } | Array<{ name?: string | null }> | null;
+        }) => ({
+          name: (Array.isArray(item.channels) ? item.channels[0]?.name : item.channels?.name) || "",
+          aliases: item.brand_terms ?? [], terms: item.product_terms ?? [], url: item.recommendation_url || null,
+        })),
+      }));
+      return evaluateOrderIntakeRules({ date, time: requestedTime, text }, rules);
+    },
     async searchCatalog(query: string) {
       const searchAnchor = customerServiceCatalogSearchAnchor(query);
       if (!searchAnchor) return [];
@@ -2103,16 +2148,74 @@ function mediaTypeLabel(type: string) {
   return "音訊";
 }
 
+const CUSTOMER_SERVICE_MEDIA_BUCKET = "customer-service-media";
+const CUSTOMER_SERVICE_MEDIA_MAX_BYTES = 10 * 1024 * 1024;
+
+async function mirrorInboundMedia(
+  admin: AdminClient,
+  event: Pick<WatiInboundEvent, "id" | "waId" | "mediaUrl">,
+) {
+  if (!isTrustedWatiMediaUrl(event.mediaUrl)) return null;
+  const token = env("WATI_API_TOKEN") || env("WATI_ACCESS_TOKEN");
+  if (!token) return null;
+  try {
+    const response = await fetch(event.mediaUrl!, {
+      headers: { Authorization: `Bearer ${token.replace(/^Bearer\s+/i, "")}` },
+    });
+    if (!response.ok) throw new Error(`wati_media_download_failed:${response.status}`);
+    const declaredSize = Number(response.headers.get("content-length") || 0);
+    if (declaredSize > CUSTOMER_SERVICE_MEDIA_MAX_BYTES) {
+      throw new Error("wati_media_too_large");
+    }
+    const contentType = (response.headers.get("content-type") || "application/octet-stream")
+      .split(";", 1)[0].trim().toLowerCase();
+    if (!contentType.startsWith("image/") && !contentType.startsWith("audio/")) {
+      throw new Error(`wati_media_type_not_allowed:${contentType}`);
+    }
+    const body = await response.arrayBuffer();
+    if (body.byteLength > CUSTOMER_SERVICE_MEDIA_MAX_BYTES) {
+      throw new Error("wati_media_too_large");
+    }
+    const path = mediaStoragePath({
+      environment: deploymentEnvironment(),
+      phone: event.waId,
+      messageId: event.id,
+      mediaUrl: event.mediaUrl!,
+      contentType,
+    });
+    const { error: uploadError } = await admin.storage
+      .from(CUSTOMER_SERVICE_MEDIA_BUCKET)
+      .upload(path, body, { contentType, upsert: true });
+    if (uploadError) throw uploadError;
+    const { data, error: signedUrlError } = await admin.storage
+      .from(CUSTOMER_SERVICE_MEDIA_BUCKET)
+      .createSignedUrl(path, 60 * 60 * 24 * 30);
+    if (signedUrlError) throw signedUrlError;
+    return data.signedUrl;
+  } catch (error) {
+    console.error("customer_service_media_mirror_failed", {
+      providerMessageId: event.id,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return null;
+  }
+}
+
 async function handleInboundMedia(admin: AdminClient, event: WatiInboundEvent) {
   const conversation = await loadConversation(admin, event.waId);
   if (conversation.state === "human_owned") return;
   const label = mediaTypeLabel(event.type);
-  const detail = [event.caption, event.mediaUrl].filter(Boolean).join("\n").slice(0, 1_000);
+  const attachmentUrl = await mirrorInboundMedia(admin, event);
   await queueInternalHandoff(admin, {
     phone: event.waId,
     quoteId: conversation.selected_order_id,
     orderNumber: null,
-    summary: `客人傳送${label}，需要同事查看。${detail ? `\n${detail}` : ""}`,
+    summary: buildInboundMediaHandoffSummary({
+      label,
+      caption: event.caption,
+      originalUrl: event.mediaUrl,
+      attachmentUrl,
+    }),
     kind: "order_handoff",
   });
   const nextConversation: CustomerServiceConversation = {

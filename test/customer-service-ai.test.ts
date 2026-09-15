@@ -183,6 +183,10 @@ describe("customer-service grounded AI", () => {
     expect(requestBody.messages[1].content).toContain('"role":"human"');
     expect(requestBody.messages[0].content).toContain("role human");
     expect(requestBody.messages[0].content).toContain("dialogAction");
+    expect(requestBody.messages[0].content).toContain("complete current message");
+    expect(requestBody.messages[0].content).toContain(
+      "do not by themselves mean the customer authorized",
+    );
   });
 
   it("rejects a model-selected tool outside the configured allowlist", async () => {
