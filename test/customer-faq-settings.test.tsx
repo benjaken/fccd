@@ -8,6 +8,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { CustomerFaqPage } from "@/components/settings/CustomerFaqPage";
 import i18n from "@/i18n";
 import { normalizeCustomerFaqInput } from "@/lib/customer-faq";
+import * as customerFaqApi from "@/lib/customer-faq";
 
 const accessState = vi.hoisted(() => ({
   canAccess: (_key: string) => true,
@@ -190,6 +191,63 @@ describe("CustomerFaqPage", () => {
 
     await user.click(screen.getByRole("button", { name: "重新開始對話" }));
     expect(screen.getByText("輸入客人問題開始多輪測試。")).toBeInTheDocument();
+  });
+
+  it("shows exact learning proposals and only permits complete proposals to be approved", async () => {
+    const user = userEvent.setup();
+    const base = {
+      reportId: "report-1", reportDate: "2026-09-15", reason: "真人回覆佐證",
+      evidenceCount: 1, status: "draft", targetFaqId: null, runtimeTarget: null,
+      executionStatus: "pending" as const, executionResult: {}, executedAt: null,
+      createdAt: faq.updatedAt,
+    };
+    const suggestions: customerFaqApi.CustomerServiceLearningSuggestion[] = [
+      { ...base, id: "complete", title: "完整問答", suggestionType: "faq",
+        proposedContent: { question: "幾點可以自取？", answer: "請先聯絡同事約定自取時間。", keywords: "自取時間,領取", category: "ordering" } },
+      { ...base, id: "missing-answer", title: "缺少答案", suggestionType: "faq", proposedContent: { question: "可以改期嗎？" } },
+      { ...base, id: "missing-mapping", title: "缺少設定", suggestionType: "policy", proposedContent: {} },
+      { ...base, id: "mapped", title: "更新回覆", suggestionType: "intent", proposedContent: {
+        runtime_changes: [{ target: "reply_template", key: "thanks", patch: { content: "多謝支持。", enabled: true } }],
+      } },
+    ];
+    const review = vi.spyOn(customerFaqApi, "reviewCustomerServiceLearningSuggestion")
+      .mockResolvedValue({ target_faq_id: null });
+    const spies = [
+      review,
+      vi.spyOn(customerFaqApi, "fetchCustomerServiceDailyReports").mockResolvedValue([]),
+      vi.spyOn(customerFaqApi, "fetchCustomerServiceLearningSuggestions").mockResolvedValue(suggestions),
+      vi.spyOn(customerFaqApi, "fetchCustomerServiceConfigVersions").mockResolvedValue([]),
+      vi.spyOn(customerFaqApi, "fetchCustomerServiceEvaluationRuns").mockResolvedValue([]),
+      vi.spyOn(customerFaqApi, "fetchCustomerServiceOutboundMessages").mockResolvedValue([]),
+    ];
+    try {
+      render(<CustomerFaqPage loadFaqs={vi.fn().mockResolvedValue({ items: [], total: 0 })}
+        loadControls={vi.fn().mockResolvedValue({ botEnabled: false, allowedPhones: [], updatedAt: faq.updatedAt })} />);
+      await user.click(await screen.findByRole("button", { name: "AI 成效報告" }));
+      const complete = (await screen.findByText("完整問答")).closest("article")!;
+      expect(within(complete).getByText("幾點可以自取？")).toBeVisible();
+      expect(within(complete).getByText("請先聯絡同事約定自取時間。")).toBeVisible();
+      expect(within(complete).getByText("自取時間,領取")).toBeVisible();
+      expect(within(complete).getByRole("button", { name: "批准並發布" })).toBeEnabled();
+      for (const title of ["缺少答案", "缺少設定"]) {
+        const article = screen.getByText(title).closest("article")!;
+        expect(within(article).getByRole("button", { name: /批准並/ })).toBeDisabled();
+        expect(within(article).getByRole("button", { name: "忽略" })).toBeEnabled();
+      }
+      const mapped = screen.getByText("更新回覆").closest("article")!;
+      expect(within(mapped).getByText("回覆內容")).toBeVisible();
+      expect(within(mapped).getByText("多謝支持。")).toBeVisible();
+      expect(within(mapped).getByRole("button", { name: "批准並套用" })).toBeEnabled();
+      await user.click(within(complete).getByRole("button", { name: "批准並發布" }));
+      await waitFor(() => expect(review).toHaveBeenCalledWith("complete", "approved"));
+      await waitFor(() => expect(screen.queryByText("完整問答")).not.toBeInTheDocument());
+      const incomplete = screen.getByText("缺少答案").closest("article")!;
+      await user.click(within(incomplete).getByRole("button", { name: "忽略" }));
+      await waitFor(() => expect(review).toHaveBeenCalledWith("missing-answer", "rejected"));
+      await waitFor(() => expect(screen.queryByText("缺少答案")).not.toBeInTheDocument());
+    } finally {
+      spies.forEach((spy) => spy.mockRestore());
+    }
   });
 
 

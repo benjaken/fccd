@@ -9,6 +9,7 @@ const webhook = readFileSync(
   "supabase/functions/wati-customer-service/index.ts",
   "utf8",
 );
+const learning = readFileSync("supabase/functions/_shared/customer-service-learning.ts", "utf8");
 const dailyReport = readFileSync(
   "supabase/functions/customer-service-daily-report/index.ts",
   "utf8",
@@ -37,8 +38,8 @@ describe("customer service P1/P2 quality controls", () => {
     expect(migration).toContain("evaluation_quality_gate_failed");
     expect(migration).toContain("v_run.sample_size < 5");
     expect(migration).toContain("agreement_rate_delta");
-    expect(dailyReport).toContain("groundedAnswer");
-    expect(dailyReport).toContain("evaluationOutcome.get(id) === \"success\"");
-    expect(dailyReport).toContain("item.evidenceTurnIds.length > 0");
+    expect(learning).toContain("groundedAnswer");
+    expect(learning).toContain("evaluationOutcome.get(turn.id) === \"success\"");
+    expect(learning).toContain("!evidenceTurnIds.length && !evidenceMessageIds.length");
   });
 });

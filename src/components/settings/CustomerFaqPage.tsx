@@ -84,6 +84,32 @@ import {
   type CustomerServiceWorkflowPolicy,
 } from "@/lib/customer-faq";
 
+const LEARNING_FIELD_LABELS: Record<string, string> = {
+  description_append: "補充辨識說明", examples_append: "新增問法",
+  display_name: "名稱", content: "回覆內容", enabled: "啟用",
+  instructions_append: "補充處理指引", context_window: "參考訊息數量",
+  clarification_threshold: "追問門檻", auto_resume: "自動恢復回覆",
+};
+const LEARNING_TARGET_LABELS: Record<string, string> = {
+  intent: "查詢意圖", reply_template: "回覆範本", workflow_policy: "處理規則",
+};
+function hasCompleteLearningProposal(suggestion: CustomerServiceLearningSuggestion) {
+  const proposal = suggestion.proposedContent;
+  if (suggestion.suggestionType === "faq") {
+    return Boolean(proposal.question?.trim() && proposal.answer?.trim());
+  }
+  return Boolean(proposal.runtime_changes?.length && proposal.runtime_changes.every(
+    (change) => change.key?.trim() && LEARNING_TARGET_LABELS[change.target] &&
+      change.patch && Object.keys(change.patch).length > 0,
+  ));
+}
+function learningValue(value: unknown): string {
+  if (typeof value === "boolean") return value ? "是" : "否";
+  if (Array.isArray(value)) return value.map(learningValue).join("；");
+  if (value !== null && typeof value === "object") return JSON.stringify(value);
+  return String(value ?? "");
+}
+
 function previousHongKongDate() {
   return new Date(Date.now() + 8 * 60 * 60 * 1_000 - 24 * 60 * 60 * 1_000)
     .toISOString()
@@ -731,8 +757,16 @@ export function CustomerFaqPage({
       const result = await reviewCustomerServiceLearningSuggestion(id, status);
       setSuggestions((current) => current.filter((item) => item.id !== id));
       if (result?.target_faq_id) setReloadKey((value) => value + 1);
-    } catch {
-      setInsightsError("審核學習建議失敗。");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      setInsightsError(
+        message.includes("suggestion_mapping_required") ||
+            message.includes("suggestion_mapping_invalid")
+          ? "建議內容尚未完整，未有作出任何變更。"
+          : message.includes("suggestion_faq_conflict")
+            ? "已有同名 FAQ，內容與這項建議不同；請先在 FAQ 編輯頁核對。"
+            : "審核學習建議失敗，未有作出任何變更。",
+      );
     } finally {
       setReviewingSuggestion("");
     }
@@ -1449,7 +1483,7 @@ export function CustomerFaqPage({
       <SidePanel
         open={insightsOpen}
         title="AI 成效報告"
-        description="掌握 WhatsApp 客服的即時狀況，快速判斷是否需要採取行動。"
+        description="每日報告會分析前一日 WhatsApp 對話，包括客服同事的真人回覆；此處亦可重新分析指定日期。"
         onClose={() => setInsightsOpen(false)}
         closeLabel={t("common.close")}
         className="customer-service-insights-panel"
@@ -1472,7 +1506,7 @@ export function CustomerFaqPage({
               onClick={() => void generateReport()}
             >
               <Sparkles />
-              {generatingReport ? "分析中…" : "產生報告"}
+              {generatingReport ? "分析中…" : "重新分析"}
             </Button>
           </div>
         }
@@ -1625,7 +1659,7 @@ export function CustomerFaqPage({
                   <span><Sparkles /></span>
                   AI 學習建議
                 </h3>
-                <p>批准後只會建立未發布 FAQ 草稿。</p>
+                <p>與現有已發布 FAQ 完全一致的低風險問法會自動加入關鍵字；其他建議需人工確認。請先核對下方的完整內容；批准後會立即更新客服使用的答案或設定。</p>
               </div>
               <span className="status-badge neutral">{suggestions.length}</span>
             </header>
@@ -1638,19 +1672,39 @@ export function CustomerFaqPage({
                   <strong>{suggestion.title}</strong>
                 </div>
                 <p>{suggestion.reason}</p>
+                {suggestion.suggestionType === "faq" ? (
+                  <dl>
+                    <dt>問題</dt><dd>{suggestion.proposedContent.question || "尚欠問題"}</dd>
+                    <dt>答案</dt><dd style={{ whiteSpace: "pre-wrap" }}>{suggestion.proposedContent.answer || "尚欠答案"}</dd>
+                    <dt>關鍵字</dt><dd>{suggestion.proposedContent.keywords || "無"}</dd>
+                  </dl>
+                ) : suggestion.proposedContent.runtime_changes?.map((change, index) => (
+                  <section key={index} aria-label="建議設定變更">
+                    <p>{LEARNING_TARGET_LABELS[change.target] || change.target}：{change.key}</p>
+                    <dl>{Object.entries(change.patch || {}).map(([field, value]) => (
+                      <div key={field}>
+                        <dt>{LEARNING_FIELD_LABELS[field] || field}</dt>
+                        <dd style={{ whiteSpace: "pre-wrap" }}>{learningValue(value)}</dd>
+                      </div>
+                    ))}</dl>
+                  </section>
+                ))}
+                {!hasCompleteLearningProposal(suggestion) && (
+                  <p>建議內容尚未完整，暫時無法批准。</p>
+                )}
                 <footer>
                   <span>證據 {suggestion.evidenceCount} 條</span>
                   {canEdit ? (
                     <div>
                       <Button
                         size="sm"
-                        disabled={reviewingSuggestion === suggestion.id}
+                        disabled={reviewingSuggestion === suggestion.id || !hasCompleteLearningProposal(suggestion)}
                         onClick={() =>
                           void reviewSuggestion(suggestion.id, "approved")
                         }
                       >
                         <Check />
-                        批准
+                        {suggestion.suggestionType === "faq" ? "批准並發布" : "批准並套用"}
                       </Button>
                       <Button
                         size="sm"

@@ -154,6 +154,7 @@ export type CustomerServiceDailyMetrics = {
   success_rate: number | null;
   send_success_rate: number | null;
   average_latency_ms: number;
+  human_learning_conversations?: number;
 };
 
 export type CustomerServiceDailyReport = {
@@ -187,10 +188,19 @@ export type CustomerServiceLearningSuggestion = {
     answer?: string;
     category?: string;
     keywords?: string;
+    runtime_changes?: Array<{
+      target: "intent" | "reply_template" | "workflow_policy";
+      key: string;
+      patch: Record<string, unknown>;
+    }>;
   };
   evidenceCount: number;
   status: string;
   targetFaqId: string | null;
+  runtimeTarget: string | null;
+  executionStatus: "pending" | "applied" | "failed" | "not_applicable";
+  executionResult: Record<string, unknown>;
+  executedAt: string | null;
   createdAt: string;
 };
 
@@ -723,6 +733,14 @@ export async function fetchCustomerServiceLearningSuggestions(
       status: String(row.status || "draft"),
       targetFaqId:
         typeof row.target_faq_id === "string" ? row.target_faq_id : null,
+      runtimeTarget:
+        typeof row.runtime_target === "string" ? row.runtime_target : null,
+      executionStatus: String(row.execution_status || "pending") as CustomerServiceLearningSuggestion["executionStatus"],
+      executionResult:
+        row.execution_result && typeof row.execution_result === "object"
+          ? (row.execution_result as Record<string, unknown>)
+          : {},
+      executedAt: typeof row.executed_at === "string" ? row.executed_at : null,
       createdAt: String(row.created_at),
     }),
   );
