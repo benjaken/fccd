@@ -19,6 +19,11 @@ describe("relative delivery dates", () => {
   it.each(["星期六或星期日", "每個星期日", "2026-02-30 星期日"])("does not invent a single date for %s", (text) => {
     expect(resolveCustomerServiceDeliveryDate(text, new Date("2026-09-15T07:00:00Z"))).toBe("");
   });
+
+  it.each(["星期日，預算1.5萬", "星期日，23/4人"])("does not mistake a numeric value for the date in %s", (text) => {
+    expect(resolveCustomerServiceDeliveryDate(text, new Date("2026-09-15T07:00:00Z")))
+      .toBe("2026-09-20");
+  });
   it.each([
     ["2026-09-15T07:00:00Z", "請問星期日係咪唔送貨？", "2026-09-20"],
     ["2026-09-15T07:00:00Z", "今個星期日送唔送貨？", "2026-09-20"],

@@ -1,0 +1,86 @@
+{
+  "schemaVersion": 1,
+  "id": "reported-catering-brand-product-choice",
+  "title": "已識別到會品牌後只追問受限產品",
+  "status": "approved",
+  "clock": "2026-09-15T09:08:00.000Z",
+  "source": {
+    "kind": "reported_conversation",
+    "reference": "2026-09-15 user screenshot 17:08"
+  },
+  "world": {
+    "products": [
+      {
+        "channelId": "catering",
+        "name": "中秋套餐 A（15-20人）",
+        "url": "https://example.com/mid-autumn-set-a"
+      }
+    ],
+    "rules": [
+      {
+        "id": "mid-autumn",
+        "name": "中秋接單安排（25–27/9）",
+        "startsOn": "2026-09-25",
+        "endsOn": "2026-09-27",
+        "startTime": null,
+        "endTime": null,
+        "handling": "allow_only",
+        "customerMessage": "9月25至27日只有 Food Channels Catering 外賣到會及桂花八月高級中菜到會接單，並只提供中秋套餐及中秋單點。",
+        "channels": [
+          {
+            "channelId": "catering",
+            "name": "Catering",
+            "aliases": ["FCC", "外賣到會", "到會"],
+            "terms": ["中秋套餐", "中秋單點"]
+          },
+          {
+            "channelId": "kitchen",
+            "name": "Kitchen",
+            "aliases": ["桂花八月", "高級中菜到會"],
+            "terms": ["中秋套餐", "中秋單點"]
+          }
+        ]
+      }
+    ]
+  },
+  "turns": [
+    {
+      "customer": "你好 我想預定9月26號的到會",
+      "expect": {
+        "replyContains": [
+          "已了解你想預訂 Food Channels Catering",
+          "中秋套餐",
+          "中秋單點",
+          "請問想選哪一類"
+        ],
+        "replyExcludes": [
+          "只有 Food Channels Catering",
+          "桂花八月"
+        ],
+        "state": "collecting",
+        "pendingRequest": "特別接單安排人工覆核",
+        "intakeDate": "2026-09-26",
+        "effects": {
+          "writeInquiry": 0,
+          "queueHandoff": 0
+        }
+      }
+    },
+    {
+      "customer": "中秋套餐",
+      "expect": {
+        "replyContains": [
+          "中秋套餐 A",
+          "https://example.com/mid-autumn-set-a"
+        ],
+        "replyExcludes": [
+          "我已整理以下到會資料"
+        ],
+        "effects": {
+          "writeInquiry": 0,
+          "queueHandoff": 0
+        }
+      }
+    }
+  ]
+}

@@ -6,7 +6,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { PackingStocktakesPage } from "@/components/PackingStocktakesPage";
 import i18n from "@/i18n";
-import type { PackingStocktakeItem } from "@/lib/packing-stocktakes";
+import { sortPackingStocktakeItems, type PackingStocktakeItem } from "@/lib/packing-stocktakes";
 
 vi.mock("@/auth/AuthProvider", () => ({
   useAuth: () => ({ user: { app_metadata: { role: "Super Admin" } }, profile: { role: "Super Admin" } }),
@@ -109,6 +109,15 @@ describe("Packaging stocktake records page", () => {
       "銀色保溫袋 中",
       "銀色保温袋 細",
     ]);
+  });
+
+  it("keeps lid/base pairs together without truncating ordinary size-ending words", () => {
+    const items = ["特大", "集中", "縮小", "鋁盒", "鋁盒蓋"].map((name, index) => ({
+      ...records[0], id: `edge-${index}`, sku: `EDGE-${index}`, name,
+    }));
+    const sorted = sortPackingStocktakeItems(items).map((item) => item.name);
+    expect(sorted.indexOf("鋁盒蓋") - sorted.indexOf("鋁盒")).toBe(1);
+    expect(sorted).toEqual(expect.arrayContaining(["特大", "集中", "縮小"]));
   });
 
   it("loads the latest balance per material for the current-stock column", () => {

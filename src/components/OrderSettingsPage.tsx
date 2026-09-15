@@ -503,9 +503,9 @@ export function OrderSettingsPage({
   const createLabel = activeTab === "payments"
     ? t("orderSettings.payments.add")
       : activeTab === "add-ons"
-        ? "加入產品"
+        ? t("orderSettings.addonAdd")
       : activeTab === "add-on-block-dates"
-        ? "新增接單安排"
+        ? t("orderSettings.orderIntake.add")
       : activeTab === "customer-tags"
         ? t("orderSettings.customerTags.add")
         : activeTab === "cost-options"

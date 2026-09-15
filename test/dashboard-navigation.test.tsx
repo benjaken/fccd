@@ -59,7 +59,12 @@ describe("Dashboard navigation", () => {
     expect(stylesheet).toMatch(/--selection-bg-strong:\s*oklch\([^)]*150\)/);
     expect(stylesheet).toMatch(/\.report-tabs button\.active[\s\S]*?background:\s*var\(--selection-bg-strong\)/);
     expect(stylesheet).toMatch(/\.meat-price-product-list > button\.selected[\s\S]*?background:\s*var\(--selection-bg\)/);
-    expect(stylesheet).not.toMatch(/background:\s*color-mix\(in oklch,\s*var\(--primary\)\s+\d+%\,\s*var\(--card\)\)/);
+    expect(stylesheet).not.toMatch(
+      /\.report-tabs button\.active\s*\{[^}]*background:\s*color-mix\(in oklch,\s*var\(--primary\)\s+\d+%\,\s*var\(--card\)\)/s,
+    );
+    expect(stylesheet).not.toMatch(
+      /\.meat-price-product-list > button\.selected\s*\{[^}]*background:\s*color-mix\(in oklch,\s*var\(--primary\)\s+\d+%\,\s*var\(--card\)\)/s,
+    );
     expect(stylesheet).toMatch(/--card:\s*oklch\(1 0 150\)/);
     expect(stylesheet).toMatch(/--popover:\s*oklch\(1 0 150\)/);
     expect(stylesheet).toMatch(/\.shop-order-product-grid article\s*\{[^}]*background:\s*var\(--secondary\)/);

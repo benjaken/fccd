@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { ListTable } from "@/components/ui/list-table";
 import { SearchSelect } from "@/components/ui/search-select";
 import { SidePanel } from "@/components/ui/side-panel";
@@ -235,11 +236,13 @@ export function OrderAddonBlockDatesSettings({ canManage, createOpen, onCreateOp
   const [editingRule, setEditingRule] = useState<OrderIntakeRuleSetting | null>(null);
 
   useEffect(() => {
+    let active = true;
     void Promise.all([fetchOrderIntakeRules(), fetchAddonChannels()]).then(([rules, brands]) => {
-      setRows(rules); setChannels(brands);
-    }).catch(() => setError("暫時無法載入全局接單安排。"))
-      .finally(() => setLoading(false));
-  }, []);
+      if (active) { setRows(rules); setChannels(brands); }
+    }).catch(() => { if (active) setError(t("orderSettings.orderIntake.loadError")); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, [t]);
 
   const resetForm = () => {
     setName(""); setStartsOn(""); setEndsOn(""); setStartTime(""); setEndTime("");
@@ -302,7 +305,7 @@ export function OrderAddonBlockDatesSettings({ canManage, createOpen, onCreateOp
       setRows(await fetchOrderIntakeRules());
       resetForm();
       onCreateOpenChange(false);
-    } catch { setError(`無法${editingRule ? "儲存" : "建立"}接單安排，請檢查日期、時間及品牌資料。`); }
+    } catch { setError(t(editingRule ? "orderSettings.orderIntake.saveEditError" : "orderSettings.orderIntake.saveCreateError")); }
     finally { setSaving(false); }
   }
 
@@ -311,71 +314,68 @@ export function OrderAddonBlockDatesSettings({ canManage, createOpen, onCreateOp
     <div className="order-intake-toolbar">
       <div className="order-intake-guidance" role="note">
         <Info aria-hidden="true" />
-        <p><strong>同一廚房的全局接單例外：</strong>可設定節日或特別日子的安排。多項安排重疊時須同時符合；人工覆核優先，時段包含開始時間、不包含結束時間。</p>
+        <p><strong>{t("orderSettings.orderIntake.guideTitle")}</strong>{t("orderSettings.orderIntake.guideBody")}</p>
       </div>
       {action ? <div className="order-intake-toolbar-action">{action}</div> : null}
     </div>
-    <ListTable className="order-intake-table-wrap" tableClassName="order-intake-table" loading={loading} loadingLabel="正在載入全局接單安排…" skeletonColumns={canManage ? 5 : 4}
-      header={<tr><th>安排</th><th>日期／時段</th><th>處理方式</th><th>可推薦品牌</th>{canManage ? <th aria-label="操作" /> : null}</tr>}>
+    <ListTable className="order-intake-table-wrap" tableClassName="order-intake-table" loading={loading} loadingLabel={t("orderSettings.orderIntake.loading")} skeletonColumns={canManage ? 5 : 4}
+      header={<tr><th>{t("orderSettings.orderIntake.columns.rule")}</th><th>{t("orderSettings.orderIntake.columns.schedule")}</th><th>{t("orderSettings.orderIntake.columns.handling")}</th><th>{t("orderSettings.orderIntake.columns.brands")}</th>{canManage ? <th aria-label={t("orderSettings.orderIntake.columns.actions")} /> : null}</tr>}>
       {rows.length ? rows.map((row) => <tr key={row.id}>
-        <td><div className="order-intake-name-cell"><strong>{row.name}</strong><small>{row.internalNote || row.customerMessage || "未有備註"}</small></div></td>
-        <td><div className="order-intake-schedule-cell"><span><CalendarDays aria-hidden="true" />{displayDate(row.startsOn)}{row.endsOn !== row.startsOn ? ` – ${displayDate(row.endsOn)}` : ""}</span><small><Clock3 aria-hidden="true" />{row.startTime && row.endTime ? `${row.startTime}–${row.endTime}` : "全日"}</small></div></td>
-        <td><span className={`status-badge ${row.handling === "allow_only" ? "blue" : "amber"}`}>{row.handling === "allow_only" ? "只接受指定品牌／產品" : "人工覆核"}</span></td>
-        <td>{row.channels.length ? <div className="order-intake-brand-list">{row.channels.map((item) => <span key={item.id}>{item.channelName}</span>)}</div> : <span className="order-intake-empty-value">不適用</span>}</td>
-        {canManage ? <td className="table-actions-cell"><div className="table-row-actions"><Button type="button" variant="outline" size="icon" aria-label={`編輯 ${row.name}`} onClick={() => openEditPanel(row)}><Pencil /></Button><Button type="button" variant="outline" size="icon" aria-label={`刪除 ${row.name}`} onClick={() => {
-          if (!window.confirm(`確定刪除「${row.name}」？`)) return;
-          void archiveOrderIntakeRule(row.id).then(() => setRows((current) => current.filter((item) => item.id !== row.id))).catch(() => setError("無法刪除接單安排。"));
+        <td><div className="order-intake-name-cell"><strong>{row.name}</strong><small>{row.internalNote || row.customerMessage || t("orderSettings.orderIntake.noNote")}</small></div></td>
+        <td><div className="order-intake-schedule-cell"><span><CalendarDays aria-hidden="true" />{displayDate(row.startsOn)}{row.endsOn !== row.startsOn ? ` – ${displayDate(row.endsOn)}` : ""}</span><small><Clock3 aria-hidden="true" />{row.startTime && row.endTime ? `${row.startTime}–${row.endTime}` : t("orderSettings.orderIntake.allDay")}</small></div></td>
+        <td><span className={`status-badge ${row.handling === "allow_only" ? "blue" : "amber"}`}>{t(row.handling === "allow_only" ? "orderSettings.orderIntake.allowOnly" : "orderSettings.orderIntake.manualReview")}</span></td>
+        <td>{row.channels.length ? <div className="order-intake-brand-list">{row.channels.map((item) => <span key={item.id}>{item.channelName}</span>)}</div> : <span className="order-intake-empty-value">{t("orderSettings.orderIntake.notApplicable")}</span>}</td>
+        {canManage ? <td className="table-actions-cell"><div className="table-row-actions"><Button type="button" variant="outline" size="icon" aria-label={t("orderSettings.orderIntake.editAria", { name: row.name })} onClick={() => openEditPanel(row)}><Pencil /></Button><Button type="button" variant="outline" size="icon" aria-label={t("orderSettings.orderIntake.deleteAria", { name: row.name })} onClick={() => {
+          if (!window.confirm(t("orderSettings.orderIntake.deleteConfirm", { name: row.name }))) return;
+          void archiveOrderIntakeRule(row.id).then(() => setRows((current) => current.filter((item) => item.id !== row.id))).catch(() => setError(t("orderSettings.orderIntake.deleteError")));
         }}><Trash2 /></Button></div></td> : null}
-      </tr>) : !loading ? <tr><td colSpan={canManage ? 5 : 4} className="table-empty-cell">尚未設定特別接單安排；一般時段可正常落單。</td></tr> : null}
+      </tr>) : !loading ? <tr><td colSpan={canManage ? 5 : 4} className="table-empty-cell">{t("orderSettings.orderIntake.empty")}</td></tr> : null}
     </ListTable>
-    <SidePanel open={canManage && (createOpen || Boolean(editingRule))} title={editingRule ? "編輯接單安排" : "新增接單安排"} description="設定適用日期、時段，以及命中安排後的處理方式。" onClose={closeCreatePanel} closeLabel={`關閉${editingRule ? "編輯" : "新增"}接單安排側邊欄`} wide className="order-intake-create-panel"
-      footer={<><Button type="button" variant="outline" disabled={saving} onClick={closeCreatePanel}>取消</Button><Button type="submit" form="order-intake-rule-form" disabled={saving || !canSubmit}>{editingRule ? <Pencil /> : <CalendarOff />}{saving ? "儲存中…" : editingRule ? "儲存變更" : "建立安排"}</Button></>}>
+    <SidePanel open={canManage && (createOpen || Boolean(editingRule))} title={t(editingRule ? "orderSettings.orderIntake.editTitle" : "orderSettings.orderIntake.addTitle")} description={t("orderSettings.orderIntake.panelDescription")} onClose={closeCreatePanel} closeLabel={t(editingRule ? "orderSettings.orderIntake.closeEdit" : "orderSettings.orderIntake.closeAdd")} wide className="order-intake-create-panel"
+      footer={<><Button type="button" variant="outline" disabled={saving} onClick={closeCreatePanel}>{t("orderSettings.cancel")}</Button><Button type="submit" form="order-intake-rule-form" disabled={saving || !canSubmit}>{editingRule ? <Pencil /> : <CalendarOff />}{t(saving ? "orderSettings.orderIntake.saving" : editingRule ? "orderSettings.orderIntake.saveChanges" : "orderSettings.orderIntake.create")}</Button></>}>
       <form id="order-intake-rule-form" className="order-intake-form" onSubmit={(event) => void submit(event)}>
         <section className="order-intake-form-section" aria-labelledby="order-intake-basics-title">
-          <div className="order-intake-form-section-heading"><CalendarDays aria-hidden="true" /><div><h3 id="order-intake-basics-title">日期與時段</h3><p>同一天請選相同開始及結束日期。</p></div></div>
-          <label className="order-settings-field"><span>安排名稱</span><input autoFocus value={name} onChange={(event) => setName(event.target.value)} placeholder={t("orderSettings.orderIntakeNamePlaceholder")} /></label>
-          <div className="order-intake-field-grid">
-            <label className="order-settings-field"><span>開始日期</span><input type="date" value={startsOn} onChange={(event) => { setStartsOn(event.target.value); if (!endsOn || endsOn < event.target.value) setEndsOn(event.target.value); }} /></label>
-            <label className="order-settings-field"><span>結束日期</span><input type="date" min={startsOn} value={endsOn} onChange={(event) => setEndsOn(event.target.value)} /></label>
-          </div>
+          <div className="order-intake-form-section-heading"><CalendarDays aria-hidden="true" /><div><h3 id="order-intake-basics-title">{t("orderSettings.orderIntake.dateTitle")}</h3><p>{t("orderSettings.orderIntake.dateDescription")}</p></div></div>
+          <label className="order-settings-field"><span>{t("orderSettings.orderIntake.name")}</span><input autoFocus value={name} onChange={(event) => setName(event.target.value)} placeholder={t("orderSettings.orderIntakeNamePlaceholder")} /></label>
+          <DateRangePicker startId="order-intake-start-date" endId="order-intake-end-date" startValue={startsOn} endValue={endsOn} onStartChange={setStartsOn} onEndChange={setEndsOn} startLabel={t("orderSettings.orderIntake.startDate")} endLabel={t("orderSettings.orderIntake.endDate")} legend={t("orderSettings.orderIntake.dateRange")} />
           <fieldset className="order-intake-time-fieldset">
-            <legend>時段</legend>
-            <div className="order-intake-segmented" aria-label="選擇接單安排時段">
-              <button type="button" className={timeMode === "all_day" ? "is-active" : undefined} aria-pressed={timeMode === "all_day"} onClick={() => { setTimeMode("all_day"); setStartTime(""); setEndTime(""); }}><CalendarDays aria-hidden="true" />全日</button>
-              <button type="button" className={timeMode === "time_range" ? "is-active" : undefined} aria-pressed={timeMode === "time_range"} onClick={() => setTimeMode("time_range")}><Clock3 aria-hidden="true" />指定時段</button>
+            <legend>{t("orderSettings.orderIntake.time")}</legend>
+            <div className="order-intake-segmented" aria-label={t("orderSettings.orderIntake.selectSchedule")}>
+              <button type="button" className={timeMode === "all_day" ? "is-active" : undefined} aria-pressed={timeMode === "all_day"} onClick={() => { setTimeMode("all_day"); setStartTime(""); setEndTime(""); }}><CalendarDays aria-hidden="true" />{t("orderSettings.orderIntake.allDay")}</button>
+              <button type="button" className={timeMode === "time_range" ? "is-active" : undefined} aria-pressed={timeMode === "time_range"} onClick={() => setTimeMode("time_range")}><Clock3 aria-hidden="true" />{t("orderSettings.orderIntake.specificTime")}</button>
             </div>
           </fieldset>
           {timeMode === "time_range" ? <div className="order-intake-field-grid order-intake-time-grid">
-            <label className="order-settings-field"><span>開始時間</span><input type="time" value={startTime} onChange={(event) => setStartTime(event.target.value)} /></label>
-            <label className="order-settings-field"><span>結束時間</span><input type="time" value={endTime} onChange={(event) => setEndTime(event.target.value)} /></label>
-            {timeRangeInvalid && (startTime || endTime) ? <small className="order-intake-field-error">請同時填寫開始及結束時間，結束時間須晚於開始時間。</small> : null}
+            <label className="order-settings-field"><span>{t("orderSettings.orderIntake.startTime")}</span><input type="time" value={startTime} onChange={(event) => setStartTime(event.target.value)} /></label>
+            <label className="order-settings-field"><span>{t("orderSettings.orderIntake.endTime")}</span><input type="time" value={endTime} onChange={(event) => setEndTime(event.target.value)} /></label>
+            {timeRangeInvalid && (startTime || endTime) ? <small className="order-intake-field-error">{t("orderSettings.orderIntake.timeInvalid")}</small> : null}
           </div> : null}
         </section>
 
         <section className="order-intake-form-section" aria-labelledby="order-intake-handling-title">
-          <div className="order-intake-form-section-heading"><Store aria-hidden="true" /><div><h3 id="order-intake-handling-title">命中後如何處理</h3><p>選擇保留需求給同事，或只推薦仍可接單的品牌。</p></div></div>
-          <label className="order-settings-field"><span>處理方式</span><select value={handling} onChange={(event) => setHandling(event.target.value as typeof handling)}><option value="manual_review">先留需求，人工覆核</option><option value="allow_only">只接受指定品牌及產品</option></select></label>
-          <label className="order-settings-field"><span>自助加購</span><select value={addonHandling} onChange={(event) => setAddonHandling(event.target.value as typeof addonHandling)}><option value="manual_review">轉人工覆核</option><option value="allow">沿用一般加購安排</option></select><small>獨立於新單政策；沿用一般安排仍須符合原有截止時間及可加購產品限制。</small></label>
+          <div className="order-intake-form-section-heading"><Store aria-hidden="true" /><div><h3 id="order-intake-handling-title">{t("orderSettings.orderIntake.handlingTitle")}</h3><p>{t("orderSettings.orderIntake.handlingDescription")}</p></div></div>
+          <label className="order-settings-field"><span>{t("orderSettings.orderIntake.handlingLabel")}</span><select value={handling} onChange={(event) => setHandling(event.target.value as typeof handling)}><option value="manual_review">{t("orderSettings.orderIntake.manualOption")}</option><option value="allow_only">{t("orderSettings.orderIntake.allowOption")}</option></select></label>
+          <label className="order-settings-field"><span>{t("orderSettings.orderIntake.addonLabel")}</span><select value={addonHandling} onChange={(event) => setAddonHandling(event.target.value as typeof addonHandling)}><option value="manual_review">{t("orderSettings.orderIntake.addonManual")}</option><option value="allow">{t("orderSettings.orderIntake.addonAllow")}</option></select><small>{t("orderSettings.orderIntake.addonHint")}</small></label>
           <div className={`order-intake-outcome ${handling === "allow_only" ? "is-allow-only" : "is-manual-review"}`}>
-            <strong>{handling === "allow_only" ? "系統只會推薦下方選取的品牌" : "系統會收集需求，再交由同事確認"}</strong>
-            <span>{handling === "allow_only" ? "未選取的品牌不會被承諾可接單。" : "客人不會因為命中安排而被直接拒絕。"}</span>
+            <strong>{t(handling === "allow_only" ? "orderSettings.orderIntake.outcomeAllowTitle" : "orderSettings.orderIntake.outcomeManualTitle")}</strong>
+            <span>{t(handling === "allow_only" ? "orderSettings.orderIntake.outcomeAllowBody" : "orderSettings.orderIntake.outcomeManualBody")}</span>
           </div>
           {handling === "allow_only" ? <div className="order-intake-brand-settings">
-            <fieldset className="order-intake-brand-fieldset"><legend>可接品牌</legend><div className="order-intake-brand-options">{channels.map((channel) => <label key={channel.id}><input type="checkbox" checked={selectedChannels.includes(channel.id)} onChange={(event) => setSelectedChannels((current) => event.target.checked ? [...current, channel.id] : current.filter((id) => id !== channel.id))} /><span>{channel.name}</span></label>)}</div>{brandSelectionInvalid ? <small className="order-intake-field-error">請至少選擇一個可接品牌。</small> : null}</fieldset>
-            <small>每個品牌分別設定允許產品，以逗號分隔。實際產品及訂購連結會由產品資料庫自動取得。</small>
+            <fieldset className="order-intake-brand-fieldset"><legend>{t("orderSettings.orderIntake.brands")}</legend><div className="order-intake-brand-options">{channels.map((channel) => <label key={channel.id}><input type="checkbox" checked={selectedChannels.includes(channel.id)} onChange={(event) => setSelectedChannels((current) => event.target.checked ? [...current, channel.id] : current.filter((id) => id !== channel.id))} /><span>{channel.name}</span></label>)}</div>{brandSelectionInvalid ? <small className="order-intake-field-error">{t("orderSettings.orderIntake.brandRequired")}</small> : null}</fieldset>
+            <small>{t("orderSettings.orderIntake.brandHint")}</small>
             {selectedChannels.map((id) => <div className="order-intake-channel-card" key={id}>
               <strong>{channels.find((item) => item.id === id)?.name}</strong>
-              <label className="order-settings-field"><span>允許產品關鍵字</span><input value={productTerms[id] || ""} onChange={(event) => setProductTerms((current) => ({ ...current, [id]: event.target.value }))} aria-label={`${channels.find((item) => item.id === id)?.name} 允許產品關鍵字`} placeholder={t("orderSettings.orderIntakeProductPlaceholder")} /></label>
-              <label className="order-settings-field"><span>品牌別名</span><input value={brandTerms[id] || ""} onChange={(event) => setBrandTerms((current) => ({ ...current, [id]: event.target.value }))} aria-label={`${channels.find((item) => item.id === id)?.name} 品牌別名`} /><small>選填；只用於識別客人常用的品牌稱呼。</small></label>
+              <label className="order-settings-field"><span>{t("orderSettings.orderIntake.productKeywords")}</span><input value={productTerms[id] || ""} onChange={(event) => setProductTerms((current) => ({ ...current, [id]: event.target.value }))} aria-label={t("orderSettings.orderIntake.productKeywordsAria", { name: channels.find((item) => item.id === id)?.name })} placeholder={t("orderSettings.orderIntakeProductPlaceholder")} /></label>
+              <label className="order-settings-field"><span>{t("orderSettings.orderIntake.brandAliases")}</span><input value={brandTerms[id] || ""} onChange={(event) => setBrandTerms((current) => ({ ...current, [id]: event.target.value }))} aria-label={t("orderSettings.orderIntake.brandAliasesAria", { name: channels.find((item) => item.id === id)?.name })} /><small>{t("orderSettings.orderIntake.aliasHint")}</small></label>
             </div>)}
-            {productSelectionInvalid ? <small className="order-intake-field-error">請為每個可接品牌填寫至少一個允許產品關鍵字。</small> : null}
+            {productSelectionInvalid ? <small className="order-intake-field-error">{t("orderSettings.orderIntake.productRequired")}</small> : null}
           </div> : null}
         </section>
 
         <section className="order-intake-form-section" aria-labelledby="order-intake-copy-title">
-          <div className="order-intake-form-section-heading"><MessageSquareText aria-hidden="true" /><div><h3 id="order-intake-copy-title">訊息與備註</h3><p>客人訊息會用於回覆；內部備註只供同事查看。</p></div></div>
-          <label className="order-settings-field"><span>客人訊息</span><textarea rows={3} value={customerMessage} onChange={(event) => setCustomerMessage(event.target.value)} placeholder={t("orderSettings.orderIntakeMessagePlaceholder")} /></label>
-          <label className="order-settings-field"><span>內部備註</span><textarea rows={2} value={internalNote} onChange={(event) => setInternalNote(event.target.value)} placeholder={t("orderSettings.orderIntakeInternalNotePlaceholder")} /></label>
+          <div className="order-intake-form-section-heading"><MessageSquareText aria-hidden="true" /><div><h3 id="order-intake-copy-title">{t("orderSettings.orderIntake.copyTitle")}</h3><p>{t("orderSettings.orderIntake.copyDescription")}</p></div></div>
+          <label className="order-settings-field"><span>{t("orderSettings.orderIntake.customerMessage")}</span><textarea rows={3} value={customerMessage} onChange={(event) => setCustomerMessage(event.target.value)} placeholder={t("orderSettings.orderIntakeMessagePlaceholder")} /></label>
+          <label className="order-settings-field"><span>{t("orderSettings.orderIntake.internalNote")}</span><textarea rows={2} value={internalNote} onChange={(event) => setInternalNote(event.target.value)} placeholder={t("orderSettings.orderIntakeInternalNotePlaceholder")} /></label>
         </section>
         {error ? <p className="list-inline-error" role="alert">{error}</p> : null}
       </form>

@@ -1,11 +1,12 @@
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   OrderAddonBlockDatesSettings,
   OrderAddonProductsSettings,
 } from "@/components/OrderAddonSettings";
+import i18n from "@/i18n";
 
 const addonMocks = vi.hoisted(() => ({
   addAddonProduct: vi.fn(),
@@ -35,6 +36,21 @@ vi.mock("@/lib/order-intake-rules", () => ({
   fetchOrderIntakeRules: intakeMocks.fetchOrderIntakeRules,
   updateOrderIntakeRule: intakeMocks.updateOrderIntakeRule,
 }));
+
+vi.mock("@/components/ui/date-range-picker", () => ({
+  DateRangePicker: ({ startValue, endValue, onStartChange, onEndChange, startLabel, endLabel }: {
+    startValue: string; endValue: string; onStartChange: (value: string) => void;
+    onEndChange: (value: string) => void; startLabel: string; endLabel: string;
+  }) => <div>
+    <label>{startLabel}<input type="date" value={startValue} onChange={(event) => {
+      onStartChange(event.target.value);
+      if (!endValue || endValue < event.target.value) onEndChange(event.target.value);
+    }} /></label>
+    <label>{endLabel}<input type="date" min={startValue} value={endValue} onChange={(event) => onEndChange(event.target.value)} /></label>
+  </div>,
+}));
+
+afterEach(async () => { await i18n.changeLanguage("zh-HK"); });
 
 describe("OrderAddonProductsSettings", () => {
   it("filters products by brand and keeps one product-search control", async () => {
@@ -85,6 +101,16 @@ describe("OrderAddonProductsSettings", () => {
 });
 
 describe("OrderAddonBlockDatesSettings", () => {
+  it("renders the intake interface in English when English is selected", async () => {
+    await i18n.changeLanguage("en");
+    intakeMocks.fetchOrderIntakeRules.mockResolvedValue([]);
+    addonMocks.fetchAddonChannels.mockResolvedValue([]);
+    render(<OrderAddonBlockDatesSettings canManage createOpen onCreateOpenChange={vi.fn()} />);
+    expect(await screen.findByRole("dialog", { name: "Add intake rule" })).toBeInTheDocument();
+    expect(screen.getByText("Date / time")).toBeInTheDocument();
+    expect(screen.getByText("What happens when this rule matches")).toBeInTheDocument();
+    expect(screen.queryByText("新增接單安排")).not.toBeInTheDocument();
+  });
   it("preserves each brand's products and addon policy when editing only a name", async () => {
     const user = userEvent.setup();
     const channels = [

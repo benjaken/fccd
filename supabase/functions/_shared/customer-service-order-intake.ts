@@ -25,6 +25,10 @@ export type OrderIntakeEvaluation = {
   recommendations: Array<{ name: string; url: string | null }>;
   requiresTime?: boolean;
   selectedRecommendation?: { name: string; url: string | null } | null;
+  recognizedChannelName?: string | null;
+  allowedProductTerms?: string[];
+  allowedProductTermGroups?: string[][];
+  needsProductSelection?: boolean;
 };
 
 function normalize(value: string) {
@@ -105,6 +109,29 @@ export function evaluateOrderIntakeRules(
   const allowed = allowRules.length > 0 && allowRules.every((rule) =>
     rule.channels.some((channel) => matchesAllowedChannel(input.text, channel))
   );
+  const requestedChannelRules = allowRules.flatMap((rule) =>
+    rule.channels.filter((channel) => matchesRequestedBrand(input.text, channel))
+  );
+  const requestedChannelNames = [...new Map(requestedChannelRules.map((channel) =>
+    [normalize(channel.name), channel.name]
+  )).values()];
+  const recognizedChannelName = requestedChannelNames.length === 1
+    ? requestedChannelNames[0]
+    : null;
+  const recognizedKey = recognizedChannelName ? normalize(recognizedChannelName) : "";
+  const termsByRule = recognizedKey
+    ? allowRules.map((rule) => rule.channels
+      .filter((channel) => normalize(channel.name) === recognizedKey)
+      .flatMap((channel) => channel.terms.map((term) => term.trim()).filter(Boolean)))
+    : [];
+  const allowedProductTerms = termsByRule.length
+    ? [...new Map(termsByRule[0]
+      .filter((term) => termsByRule.every((terms) => terms.some((candidate) => normalize(candidate) === normalize(term))))
+      .map((term) => [normalize(term), term])).values()]
+    : [];
+  const allowedProductTermGroups = termsByRule.map((terms) =>
+    [...new Map(terms.map((term) => [normalize(term), term])).values()]
+  );
   const recommendations = [...new Map(
     allowRules.flatMap((rule) => rule.channels).map((channel) => [
       normalize(channel.name),
@@ -121,6 +148,11 @@ export function evaluateOrderIntakeRules(
     matchedRuleIds: matched.map((rule) => rule.id),
     recommendations,
     requiresTime,
+    recognizedChannelName,
+    allowedProductTerms,
+    allowedProductTermGroups,
+    needsProductSelection: !forcedReview && !allowed && Boolean(recognizedChannelName) &&
+      allowedProductTermGroups.length > 0 && allowedProductTermGroups.every((terms) => terms.length > 0),
   };
 }
 

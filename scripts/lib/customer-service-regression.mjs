@@ -58,7 +58,7 @@ export function redactRegressionText(text) {
     .replace(/https?:\/\/[^\s<>]+/gi, "[連結已隱藏]")
     .replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, "[電郵已隱藏]")
     .replace(/\b[A-Z]{2,8}\d{6,}\b/gi, "[訂單編號已隱藏]")
-    .replace(/(?:\+?\d[\s-]*){8,}/g, "[電話或編號已隱藏]")
+    .replace(/(?<![\d-])(?!20\d{2}[-/.]\d{1,2}[-/.]\d{1,2}\b)(?:\+?\d[\s-]*){8,}(?!\d)/g, "[電話或編號已隱藏]")
     .replace(/((?:地址|address|姓名|name|聯絡人|联系人)\s*[:：])[^\n]+/gi, "$1[資料已隱藏]")
     .trim();
 }

@@ -93,24 +93,19 @@ export async function fetchOrderIntakeRules(): Promise<OrderIntakeRuleSetting[]>
 }
 
 export async function createOrderIntakeRule(input: OrderIntakeRuleInput) {
-  const { data: rule, error } = await supabase.from("order_intake_rules").insert({
-    name: input.name.trim(), starts_on: input.startsOn, ends_on: input.endsOn,
-    start_time: input.startTime || null, end_time: input.endTime || null,
-    handling: input.handling, addon_handling: input.addonHandling,
-    customer_message: input.customerMessage.trim() || null, internal_note: input.internalNote.trim() || null,
-  }).select("id").single();
+  const { error } = await supabase.rpc("create_order_intake_rule", {
+    p_name: input.name.trim(),
+    p_starts_on: input.startsOn,
+    p_ends_on: input.endsOn,
+    p_start_time: input.startTime || null,
+    p_end_time: input.endTime || null,
+    p_handling: input.handling,
+    p_addon_handling: input.addonHandling,
+    p_customer_message: input.customerMessage.trim() || null,
+    p_internal_note: input.internalNote.trim() || null,
+    p_channels: input.channels,
+  });
   if (error) throw error;
-  if (input.channels.length) {
-    const { error: channelError } = await supabase.from("order_intake_rule_channels").insert(
-      input.channels.map((channel) => ({ rule_id: rule.id, channel_id: channel.channelId,
-        brand_terms: channel.brandTerms, product_terms: channel.productTerms,
-        recommendation_url: null })),
-    );
-    if (channelError) {
-      await supabase.from("order_intake_rules").update({ archived_at: new Date().toISOString() }).eq("id", rule.id);
-      throw channelError;
-    }
-  }
 }
 
 export async function updateOrderIntakeRule(id: string, input: OrderIntakeRuleInput) {

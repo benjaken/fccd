@@ -111,7 +111,7 @@ begin
     and is_active
     and archived_at is null;
 
-  if cardinality(v_channel_ids) <> 2 then
+  if coalesce(cardinality(v_channel_ids), 0) <> 2 then
     raise exception 'Expected active Catering and Kitchen channels';
   end if;
 
