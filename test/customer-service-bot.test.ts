@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { handleCustomerServiceTurn } from "../supabase/functions/_shared/customer-service-bot.ts";
+import {
+  handleCustomerServiceTurn,
+  type CustomerServiceTraceStep,
+} from "../supabase/functions/_shared/customer-service-bot.ts";
 import {
   classifyCustomerServiceMessage,
   customerServiceBrandIdentityName,
@@ -2613,5 +2616,47 @@ describe("WATI adapter", () => {
         "85291234567",
       ),
     ).toEqual(["85255551234", "guest@example.com"]);
+  });
+});
+
+describe("customer-service execution trace", () => {
+  it("records the deterministic fast path that answered instead of routing", async () => {
+    const traceSteps: CustomerServiceTraceStep[] = [];
+    const turn = await handleCustomerServiceTurn({
+      phone: conversation.phone_normalized,
+      text: "多謝🙏",
+      conversation,
+      deps: deps({ replyTemplates: { thanks: "唔使客氣，多謝你。" } }),
+      traceSteps,
+    });
+    expect(turn.intentKey).toBe("thanks");
+    expect(traceSteps).toEqual([
+      { stage: "guard", status: "ok", code: "thanks" },
+    ]);
+  });
+
+  it("records the classified intent and pilot routing for a routed turn", async () => {
+    const traceSteps: CustomerServiceTraceStep[] = [];
+    const searchFaqs = vi.fn().mockResolvedValue([
+      {
+        id: "faq-shipping",
+        question: "運費幾多",
+        answer: "地面交收：新界 HK$50。",
+      },
+    ]);
+    await handleCustomerServiceTurn({
+      phone: conversation.phone_normalized,
+      text: "運費幾多？",
+      conversation,
+      deps: deps({ searchFaqs }),
+      traceSteps,
+    });
+    const stages = traceSteps.map((step) => step.stage);
+    expect(stages[0]).toBe("classify");
+    expect(stages).toContain("pilot");
+    expect(searchFaqs).toHaveBeenCalled();
+    const classifyStep = traceSteps.find((step) => step.stage === "classify");
+    expect(classifyStep?.code).toBe("search_faq");
+    expect(classifyStep?.status).toBe("ok");
   });
 });

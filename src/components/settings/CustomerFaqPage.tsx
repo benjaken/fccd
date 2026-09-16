@@ -8,6 +8,7 @@ import {
 } from "react";
 import { useTranslation } from "react-i18next";
 import {
+  AlertTriangle,
   BarChart3,
   CalendarDays,
   Check,
@@ -17,6 +18,7 @@ import {
   ChevronRight,
   MessageCircleMore,
   ListTree,
+  Minus,
   Pencil,
   Plus,
   RefreshCw,
@@ -74,6 +76,8 @@ import {
   type CustomerFaqWriteInput,
   type CustomerServicePreviewConversation,
   type CustomerServicePreviewResult,
+  type CustomerServiceTraceStatus,
+  type CustomerServiceTraceStep,
   type CustomerServiceControls,
   type CustomerServiceIntentSetting,
   type CustomerServiceLogic,
@@ -285,7 +289,149 @@ type PreviewExecutionTrace = {
   simulatedWrite: boolean;
   simulatedNotify: boolean;
   replyGenerated: boolean;
+  failureReason: string | null;
+  steps: CustomerServiceTraceStep[];
 };
+
+type TraceStepView = {
+  key: string;
+  label: string;
+  summary: string;
+  detail: string;
+  code: string | null;
+  status: CustomerServiceTraceStatus;
+};
+
+const TRACE_STAGE_NAMES = [
+  "input",
+  "load",
+  "guard",
+  "classify_rule",
+  "classify_ai",
+  "classify_decision",
+  "classify",
+  "pilot",
+  "route",
+  "reply",
+  "effects",
+  "result",
+] as const;
+
+type Translator = ReturnType<typeof useTranslation>["t"];
+
+function formatTraceParams(params: CustomerServiceTraceStep["params"]) {
+  return Object.entries(params)
+    .filter(([, value]) => value !== null && value !== "")
+    .map(([key, value]) => `${key}=${String(value)}`)
+    .join(" · ");
+}
+
+function traceStageLabel(stage: string, t: Translator) {
+  return (TRACE_STAGE_NAMES as readonly string[]).includes(stage)
+    ? t(`settings.customerFaq.previewTraceStage_${stage}`)
+    : stage;
+}
+
+function TraceStatusIcon({ status }: { status: CustomerServiceTraceStatus }) {
+  if (status === "failed") return <X aria-hidden="true" />;
+  if (status === "warn") return <AlertTriangle aria-hidden="true" />;
+  if (status === "skipped") return <Minus aria-hidden="true" />;
+  return <Check aria-hidden="true" />;
+}
+
+function buildTraceSteps(
+  trace: PreviewExecutionTrace,
+  t: Translator,
+): TraceStepView[] {
+  if (trace.steps.length) {
+    return trace.steps.map((step, index) => {
+      const params = formatTraceParams(step.params);
+      return {
+        key: `${index}-${step.stage}-${step.code ?? ""}`,
+        label: traceStageLabel(step.stage, t),
+        summary: step.code
+          ? params
+            ? `${step.code} · ${params}`
+            : step.code
+          : params,
+        detail: t(`settings.customerFaq.previewTraceStatus_${step.status}`),
+        code: step.code,
+        status: step.status,
+      };
+    });
+  }
+  const source = trace.humanHandoff
+    ? t("settings.customerFaq.previewTraceSourceHandoff")
+    : trace.usedModel
+      ? t("settings.customerFaq.previewTraceSourceAi")
+      : t("settings.customerFaq.previewTraceSourceRule");
+  const effects = [
+    trace.simulatedWrite
+      ? t("settings.customerFaq.previewTraceEffectWrite")
+      : null,
+    trace.simulatedNotify
+      ? t("settings.customerFaq.previewTraceEffectNotify")
+      : null,
+  ].filter((item): item is string => Boolean(item));
+  return [
+    {
+      key: "request",
+      label: t("settings.customerFaq.previewTraceRequest"),
+      summary: t("settings.customerFaq.previewTraceRequestSummary"),
+      detail: t("settings.customerFaq.previewTraceRequestDetail"),
+      code: null,
+      status: "ok" as const,
+    },
+    {
+      key: "intent",
+      label: `${t("settings.customerFaq.previewTraceIntent")}：${
+        trace.intentKey || t("settings.customerFaq.previewTraceUnknown")
+      }`,
+      summary: trace.confidence === undefined
+        ? source
+        : `${source} · ${t("settings.customerFaq.previewTraceConfidence", {
+          value: `${Math.round(trace.confidence * 100)}%`,
+        })}`,
+      detail: t("settings.customerFaq.previewTraceIntentDetail"),
+      code: null,
+      status: "ok" as const,
+    },
+    {
+      key: "route",
+      label: t("settings.customerFaq.previewTraceRoute"),
+      summary: trace.toolKeys.length
+        ? trace.toolKeys.join(" → ")
+        : t("settings.customerFaq.previewTraceRouteNone"),
+      detail: t("settings.customerFaq.previewTraceRouteDetail"),
+      code: null,
+      status: "ok" as const,
+    },
+    {
+      key: "state",
+      label: t("settings.customerFaq.previewTraceState"),
+      summary: `${trace.stateBefore} → ${trace.stateAfter}`,
+      detail: trace.stateBefore === trace.stateAfter
+        ? t("settings.customerFaq.previewTraceStateUnchanged")
+        : t("settings.customerFaq.previewTraceStateChanged"),
+      code: null,
+      status: "ok" as const,
+    },
+    {
+      key: "result",
+      label: t("settings.customerFaq.previewTraceResult"),
+      summary: trace.replyGenerated
+        ? t("settings.customerFaq.previewTraceReplyGenerated")
+        : t("settings.customerFaq.previewTraceReplySilent"),
+      detail: effects.length
+        ? t("settings.customerFaq.previewTraceEffects", {
+          effects: effects.join("、"),
+        })
+        : t("settings.customerFaq.previewTraceNoEffects"),
+      code: null,
+      status: "ok" as const,
+    },
+  ];
+}
 
 function PreviewTracePopover({ trace }: { trace: PreviewExecutionTrace }) {
   const { t } = useTranslation();
@@ -305,62 +451,8 @@ function PreviewTracePopover({ trace }: { trace: PreviewExecutionTrace }) {
     if (closeTimer.current) clearTimeout(closeTimer.current);
   }, []);
 
-  const source = trace.humanHandoff
-    ? t("settings.customerFaq.previewTraceSourceHandoff")
-    : trace.usedModel
-      ? t("settings.customerFaq.previewTraceSourceAi")
-      : t("settings.customerFaq.previewTraceSourceRule");
-  const effects = [
-    trace.simulatedWrite
-      ? t("settings.customerFaq.previewTraceEffectWrite")
-      : null,
-    trace.simulatedNotify
-      ? t("settings.customerFaq.previewTraceEffectNotify")
-      : null,
-  ].filter((item): item is string => Boolean(item));
-  const steps = [
-    {
-      label: t("settings.customerFaq.previewTraceRequest"),
-      summary: t("settings.customerFaq.previewTraceRequestSummary"),
-      detail: t("settings.customerFaq.previewTraceRequestDetail"),
-    },
-    {
-      label: `${t("settings.customerFaq.previewTraceIntent")}：${
-        trace.intentKey || t("settings.customerFaq.previewTraceUnknown")
-      }`,
-      summary: trace.confidence === undefined
-        ? source
-        : `${source} · ${t("settings.customerFaq.previewTraceConfidence", {
-          value: `${Math.round(trace.confidence * 100)}%`,
-        })}`,
-      detail: t("settings.customerFaq.previewTraceIntentDetail"),
-    },
-    {
-      label: t("settings.customerFaq.previewTraceRoute"),
-      summary: trace.toolKeys.length
-        ? trace.toolKeys.join(" → ")
-        : t("settings.customerFaq.previewTraceRouteNone"),
-      detail: t("settings.customerFaq.previewTraceRouteDetail"),
-    },
-    {
-      label: t("settings.customerFaq.previewTraceState"),
-      summary: `${trace.stateBefore} → ${trace.stateAfter}`,
-      detail: trace.stateBefore === trace.stateAfter
-        ? t("settings.customerFaq.previewTraceStateUnchanged")
-        : t("settings.customerFaq.previewTraceStateChanged"),
-    },
-    {
-      label: t("settings.customerFaq.previewTraceResult"),
-      summary: trace.replyGenerated
-        ? t("settings.customerFaq.previewTraceReplyGenerated")
-        : t("settings.customerFaq.previewTraceReplySilent"),
-      detail: effects.length
-        ? t("settings.customerFaq.previewTraceEffects", {
-          effects: effects.join("、"),
-        })
-        : t("settings.customerFaq.previewTraceNoEffects"),
-    },
-  ];
+  const steps = buildTraceSteps(trace, t);
+  const firstFailure = steps.find((step) => step.status === "failed");
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -399,15 +491,27 @@ function PreviewTracePopover({ trace }: { trace: PreviewExecutionTrace }) {
           </div>
           <span>{t("settings.customerFaq.previewTraceStepCount", { count: steps.length })}</span>
         </header>
+        {firstFailure ? (
+          <div className="customer-faq-trace-failure" role="alert">
+            <AlertTriangle aria-hidden="true" />
+            <span>
+              {t("settings.customerFaq.previewTraceFailureAt", {
+                stage: firstFailure.label,
+                code: firstFailure.code || firstFailure.summary ||
+                  t("settings.customerFaq.previewTraceFailureUnknown"),
+              })}
+            </span>
+          </div>
+        ) : null}
         <ol>
           {steps.map((step, index) => (
-            <li key={step.label}>
+            <li key={step.key} className={`is-${step.status}`}>
               <span className="customer-faq-trace-marker" aria-hidden="true">
-                <Check />
+                <TraceStatusIcon status={step.status} />
               </span>
               <div>
                 <strong>{step.label}</strong>
-                <p>{step.summary}</p>
+                {step.summary ? <p>{step.summary}</p> : null}
                 <small>{step.detail}</small>
               </div>
               <span className="customer-faq-trace-stage" aria-hidden="true">
@@ -737,6 +841,8 @@ export function CustomerFaqPage({
             simulatedWrite: result.simulatedWrite,
             simulatedNotify: result.simulatedNotify,
             replyGenerated: Boolean(result.reply),
+            failureReason: result.failureReason ?? null,
+            steps: result.trace ?? [],
           },
         },
       ]);

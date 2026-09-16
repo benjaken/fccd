@@ -91,6 +91,15 @@ export type RelatedFaqSuggestion = {
   question: string;
 };
 
+export type CustomerServiceTraceStatus = "ok" | "skipped" | "warn" | "failed";
+
+export type CustomerServiceTraceStep = {
+  stage: string;
+  status: CustomerServiceTraceStatus;
+  code: string | null;
+  params: Record<string, string | number | boolean | null>;
+};
+
 export type CustomerServicePreviewResult = {
   reply: string | null;
   conversation: CustomerServicePreviewConversation;
@@ -102,6 +111,8 @@ export type CustomerServicePreviewResult = {
   confidence?: number;
   toolKeys?: string[];
   relatedFaqs?: RelatedFaqSuggestion[];
+  failureReason?: string | null;
+  trace?: CustomerServiceTraceStep[];
 };
 
 export type CustomerServiceHandoff = {
@@ -571,6 +582,8 @@ export async function previewCustomerServiceTurn(input: {
     confidence?: unknown;
     tool_keys?: unknown;
     related_faqs?: unknown;
+    failure_reason?: unknown;
+    trace?: unknown;
   } | null;
   if (!payload?.conversation)
     throw new Error("customer_service_preview_invalid_response");
@@ -603,7 +616,40 @@ export async function previewCustomerServiceTurn(input: {
         )
       : [],
     relatedFaqs,
+    failureReason:
+      typeof payload.failure_reason === "string" ? payload.failure_reason : null,
+    trace: parseCustomerServiceTrace(payload.trace),
   };
+}
+
+function parseCustomerServiceTrace(value: unknown): CustomerServiceTraceStep[] {
+  if (!Array.isArray(value)) return [];
+  const statuses: CustomerServiceTraceStatus[] = ["ok", "skipped", "warn", "failed"];
+  return value.flatMap((item) => {
+    if (!item || typeof item !== "object") return [];
+    const row = item as {
+      stage?: unknown;
+      status?: unknown;
+      code?: unknown;
+      params?: unknown;
+    };
+    if (typeof row.stage !== "string" || !row.stage) return [];
+    const status = statuses.find((candidate) => candidate === row.status) ?? "ok";
+    const params: Record<string, string | number | boolean | null> = {};
+    if (row.params && typeof row.params === "object") {
+      for (const [key, raw] of Object.entries(row.params as Record<string, unknown>)) {
+        if (raw === null || ["string", "number", "boolean"].includes(typeof raw)) {
+          params[key] = raw as string | number | boolean | null;
+        }
+      }
+    }
+    return [{
+      stage: row.stage,
+      status,
+      code: typeof row.code === "string" ? row.code : null,
+      params,
+    }];
+  });
 }
 
 export async function fetchCustomerServiceDailyReports(

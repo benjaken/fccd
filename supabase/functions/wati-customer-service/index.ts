@@ -36,6 +36,7 @@ import {
 import {
   handleCustomerServiceTurn,
   type CustomerServiceConversation,
+  type CustomerServiceTraceStep,
 } from "../_shared/customer-service-bot.ts";
 import {
   appendRelatedFaqsToReply,
@@ -311,6 +312,7 @@ function createCustomerServiceClassifier({
   activeGoal,
   workflowPolicies = [],
   tiers,
+  traceSteps,
 }: {
   intents: CustomerServiceIntentConfig[];
   conversationState: string;
@@ -319,13 +321,35 @@ function createCustomerServiceClassifier({
   activeGoal?: WorkflowPolicy["goalKey"] | null;
   workflowPolicies?: WorkflowPolicy[];
   tiers: CustomerServiceAiTierConfig;
+  traceSteps?: CustomerServiceTraceStep[];
 }) {
+  const trace = (step: CustomerServiceTraceStep) => {
+    traceSteps?.push(step);
+  };
   return async (text: string): Promise<ClassifiedMessage> => {
     const fallback = classifyCustomerServiceMessage(text);
     const activePolicy = workflowPolicies.find((item) => item.goalKey === activeGoal);
+    trace({
+      stage: "classify_rule",
+      status: "ok",
+      code: fallback.intent,
+      params: {
+        configured_intent: fallback.configuredIntentKey ?? null,
+        requires_human: Boolean(fallback.requiresHuman),
+        order_number: fallback.orderNumber || null,
+      },
+    });
     // Keep only prompt attacks as a hard Regex route. Business meaning is
     // AI-first; the deterministic classifier is the availability fallback.
-    if (shouldBypassCustomerServiceAi(fallback)) return fallback;
+    if (shouldBypassCustomerServiceAi(fallback)) {
+      trace({
+        stage: "classify_ai",
+        status: "skipped",
+        code: "prompt_injection_bypass",
+        params: { source: "rule" },
+      });
+      return fallback;
+    }
     try {
       const result = await classifyCustomerServiceWithTieredAi({
         message: text,
@@ -336,21 +360,68 @@ function createCustomerServiceClassifier({
         intents,
         tiers,
       });
-      if (!result) return fallback;
+      if (!result) {
+        trace({
+          stage: "classify_ai",
+          status: "failed",
+          code: "ai_unavailable",
+          params: { primary_model: tiers.primary.model, fallback_model: tiers.fallback?.model ?? null },
+        });
+        trace({
+          stage: "classify_decision",
+          status: "warn",
+          code: fallback.configuredIntentKey ?? fallback.intent,
+          params: { source: "rule_fallback" },
+        });
+        return fallback;
+      }
+      trace({
+        stage: "classify_ai",
+        status: "ok",
+        code: result.model,
+        params: {
+          intent: result.intentKey,
+          confidence: result.confidence,
+          escalation_confidence: tiers.escalationConfidence,
+        },
+      });
       const config = intents.find(
         (item) => item.intentKey === result.intentKey,
       );
-      if (!config) return fallback;
-      const requiredTool = ACTION_TO_REQUIRED_TOOL[config.actionKey];
-      if (requiredTool && !config.toolKeys.includes(requiredTool))
+      if (!config) {
+        trace({
+          stage: "classify_decision",
+          status: "failed",
+          code: "intent_not_configured",
+          params: { intent: result.intentKey },
+        });
         return fallback;
+      }
+      const requiredTool = ACTION_TO_REQUIRED_TOOL[config.actionKey];
+      if (requiredTool && !config.toolKeys.includes(requiredTool)) {
+        trace({
+          stage: "classify_decision",
+          status: "failed",
+          code: "tool_not_permitted",
+          params: { intent: config.intentKey, tool: requiredTool },
+        });
+        return fallback;
+      }
       const intent =
         config.actionKey === "refuse"
           ? config.intentKey === "prompt_injection"
             ? "prompt_injection"
             : "out_of_scope"
           : ACTION_INTENTS[config.actionKey];
-      if (!intent) return fallback;
+      if (!intent) {
+        trace({
+          stage: "classify_decision",
+          status: "failed",
+          code: "intent_action_unmapped",
+          params: { action: config.actionKey },
+        });
+        return fallback;
+      }
       const targetGoal = intent === "handoff_order"
         ? "order_change"
         : intent === "collect_inquiry"
@@ -362,6 +433,26 @@ function createCustomerServiceClassifier({
       );
       const confidenceNeedsClarification =
         result.confidence < config.confidenceThreshold;
+      trace({
+        stage: "classify_decision",
+        status:
+          result.needsClarification ||
+            confidenceNeedsClarification ||
+            policyNeedsClarification
+            ? "warn"
+            : "ok",
+        code: config.intentKey,
+        params: {
+          source: "ai",
+          intent,
+          confidence: result.confidence,
+          confidence_threshold: config.confidenceThreshold,
+          clarification_threshold: targetPolicy?.clarificationThreshold ?? null,
+          low_confidence: confidenceNeedsClarification,
+          policy_clarification: policyNeedsClarification,
+          model_clarification: result.needsClarification,
+        },
+      });
       return {
         ...fallback,
         intent,
@@ -397,6 +488,20 @@ function createCustomerServiceClassifier({
         },
       };
     } catch (error) {
+      trace({
+        stage: "classify_ai",
+        status: "failed",
+        code: "ai_error",
+        params: {
+          message: error instanceof Error ? error.message.slice(0, 300) : String(error),
+        },
+      });
+      trace({
+        stage: "classify_decision",
+        status: "warn",
+        code: fallback.configuredIntentKey ?? fallback.intent,
+        params: { source: "rule_fallback" },
+      });
       console.error(
         "customer-service AI classification failed",
         error instanceof Error ? error.message.slice(0, 300) : String(error),
@@ -2109,11 +2214,33 @@ async function handleBackendPreview(
     ) || "85200000000";
   const admin = createAdminClient();
   const conversation = previewConversation(payload.conversation, phone);
+  const traceSteps: CustomerServiceTraceStep[] = [];
+  traceSteps.push({
+    stage: "input",
+    status: "ok",
+    code: null,
+    params: {
+      state: conversation.state,
+      pending_request: conversation.pending_request ?? null,
+    },
+  });
   const [runtime, activeConfig] = await Promise.all([
     loadCustomerServiceRuntime(admin),
     loadActiveCustomerServiceConfig(admin),
   ]);
   const tiers = customerServiceAiTiers(activeConfig);
+  traceSteps.push({
+    stage: "load",
+    status: "ok",
+    code: activeConfig?.model ?? tiers.primary.model,
+    params: {
+      intents: runtime.intents.length,
+      reply_templates: Object.keys(runtime.replyTemplates).length,
+      workflow_policies: runtime.workflowPolicies.length,
+      fallback_model: tiers.fallback?.model ?? null,
+      escalation_confidence: tiers.escalationConfidence,
+    },
+  });
   const turn = await handleCustomerServiceTurn({
     phone,
     text,
@@ -2133,13 +2260,57 @@ async function handleBackendPreview(
       activeGoal: conversation.active_goal,
       workflowPolicies: runtime.workflowPolicies,
       tiers,
+      traceSteps,
     }),
+    traceSteps,
   });
   turn.conversation.recent_messages = sanitizeCustomerServiceRecentMessages([
     ...(conversation.recent_messages ?? []),
     { role: "customer", text },
     ...(turn.reply ? [{ role: "assistant" as const, text: turn.reply }] : []),
   ]);
+  const failureReason = turn.failureReason ?? null;
+  traceSteps.push({
+    stage: "route",
+    status: "ok",
+    code: turn.intentKey ?? null,
+    params: {
+      tools: (turn.toolKeys ?? []).join(" → ") || null,
+      model: turn.model ?? null,
+      dialog_action: turn.dialogAction ?? null,
+    },
+  });
+  traceSteps.push({
+    stage: "reply",
+    status: turn.reply ? "ok" : "skipped",
+    code: null,
+    params: {
+      reply_length: turn.reply?.length ?? 0,
+      has_image: Boolean(turn.imageUrl),
+    },
+  });
+  traceSteps.push({
+    stage: "effects",
+    status: "ok",
+    code: null,
+    params: {
+      simulated_write: turn.wroteInquiry,
+      simulated_notify: Boolean(turn.queuedHandoff || turn.notified),
+      human_handoff: ["awaiting_human", "human_owned"].includes(
+        turn.conversation.state,
+      ),
+    },
+  });
+  traceSteps.push({
+    stage: "result",
+    status: failureReason ? "failed" : "ok",
+    code: failureReason,
+    params: {
+      intent: turn.intentKey ?? null,
+      confidence: turn.confidence ?? null,
+      state: turn.conversation.state,
+    },
+  });
   return jsonResponse({
     ok: true,
     reply: turn.reply,
@@ -2154,6 +2325,8 @@ async function handleBackendPreview(
     confidence: turn.confidence,
     tool_keys: turn.toolKeys ?? [],
     related_faqs: turn.relatedFaqs ?? [],
+    failure_reason: failureReason,
+    trace: traceSteps,
   });
 }
 
