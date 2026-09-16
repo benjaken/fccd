@@ -200,6 +200,44 @@ export function buildEnquiryInternalContent(input: EnquiryInternalNotificationIn
   ]);
 }
 
+export type HandoffDigestItem = {
+  kind?: "inquiry" | "order_handoff";
+  orderNumber?: string | null;
+  phone?: string | null;
+  summary?: string | null;
+  detailUrl?: string | null;
+};
+
+/**
+ * One aggregate email for the 09:00 Hong Kong handoff digest. The previous
+ * night's newly-due WATI handoffs are listed here while the WhatsApp side only
+ * reports a single total count.
+ */
+export function buildHandoffDigestContent(input: {
+  date: string;
+  items: HandoffDigestItem[];
+}) {
+  const count = input.items.length;
+  const subject = `WATI待處理：${input.date} 前一晚共 ${count} 筆待跟進`;
+  const lines: Array<string | false | null | undefined> = [
+    `以下為前一晚經 WhatsApp 收到、需要真人跟進的項目，共 ${count} 筆。`,
+    "",
+  ];
+  input.items.forEach((item, index) => {
+    lines.push(
+      `${index + 1}. ${(item.orderNumber || "未連結訂單").trim()}｜${
+        item.kind === "inquiry" ? "到會查詢" : "訂單跟進"
+      }`,
+      item.phone && `客人電話：${item.phone}`,
+      item.summary && `內容：${item.summary}`,
+      item.detailUrl && `連結：${item.detailUrl}`,
+      "",
+    );
+  });
+  lines.push("請登入 FCCD「WATI待處理」頁面跟進。");
+  return content(subject, lines);
+}
+
 export function buildEnquiryInternalWatiParameters(input: EnquiryInternalNotificationInput) {
   const displayName = enquiryCustomerDisplayName(input.customerName, input.salutation);
   // fccd_enquiry_internal_v1 uses WhatsApp numbered placeholders {{1}}..{{11}}

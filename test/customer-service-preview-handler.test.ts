@@ -84,6 +84,15 @@ describe("customer-service backend conversation preview", () => {
     expect(source).toContain("controls.recipientPolicy");
   });
 
+  it("sends one aggregate morning digest email and only a total WATI count", () => {
+    expect(source).toContain("buildHandoffDigestContent");
+    expect(source).toContain("notifyHandoffDigest");
+    expect(source).toContain('WATI_PENDING_DIGEST_TEMPLATE = "fccd_wati_pending_digest_v1"');
+    expect(source).toContain('env("WATI_ENQUIRY_DIGEST_TEMPLATE_NAME")');
+    expect(source).toContain('{ name: "2", value: String(requests.length) }');
+    expect(source).toContain("await notifyHandoffDigest(admin, requests)");
+  });
+
   it("keeps guest replies flowing when urgent staff notify fails", () => {
     expect(source).toContain("urgent staff notify failed");
     expect(source).toContain("Never block the guest reply on staff-notify failure");

@@ -9,6 +9,7 @@ import {
   buildEnquiryAckContent,
   buildEnquiryInternalContent,
   buildEnquiryInternalWatiParameters,
+  buildHandoffDigestContent,
   enquiryPendingDetailUrl,
   fillEnquiryEmailTemplate,
 } from "../supabase/functions/_shared/enquiry-notification-content.ts";
@@ -73,6 +74,32 @@ describe("enquiry notification emails", () => {
       { name: "10", value: "公司午餐 到會" },
       { name: "11", value: "https://example.com/quotes/pending/sub-1" },
     ]);
+  });
+
+  it("builds one aggregate WATI-pending digest listing every newly-due handoff", () => {
+    const mail = buildHandoffDigestContent({
+      date: "16/09/2026",
+      items: [
+        {
+          kind: "order_handoff",
+          orderNumber: "6832",
+          phone: "85253964335",
+          summary: "客人想改送貨時間",
+          detailUrl: "https://app.example.com/orders/order-1",
+        },
+        {
+          kind: "inquiry",
+          phone: "85291234567",
+          summary: "查詢到會報價",
+        },
+      ],
+    });
+    expect(mail.subject).toBe("WATI待處理：16/09/2026 前一晚共 2 筆待跟進");
+    expect(mail.text).toContain("共 2 筆");
+    expect(mail.text).toContain("6832｜訂單跟進");
+    expect(mail.text).toContain("未連結訂單｜到會查詢");
+    expect(mail.text).toContain("https://app.example.com/orders/order-1");
+    expect(mail.html).toContain("請登入 FCCD「WATI待處理」頁面跟進。");
   });
 
   it("always builds a pending-quote URL, falling back to the public app host", () => {

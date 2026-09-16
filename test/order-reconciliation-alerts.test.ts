@@ -33,6 +33,10 @@ const perOrderWatiMigration = readFileSync(
   "supabase/migrations/20260901230000_per_order_internal_wati_notifications.sql",
   "utf8",
 );
+const limitedWatiWindowMigration = readFileSync(
+  "supabase/migrations/20260916120000_limit_missing_order_wati_window.sql",
+  "utf8",
+);
 const factoryUnsentSection = migration.slice(
   migration.indexOf("select 'factory_unsent'"),
   migration.indexOf("with candidates as (", migration.indexOf("select 'factory_unsent'") + 1),
@@ -114,6 +118,17 @@ describe("Shopify/FCCD order reconciliation alerts", () => {
     expect(notificationWorker).not.toContain('{ name: "delivery_address"');
     expect(notificationWorker).toContain('replace(/^#+\\s*/, "")');
     expect(internalTemplateConfig).toContain('replace(/[\\r\\n\\t]+/g, " ")');
+  });
+
+  it("limits missing-order WhatsApp alerts to delivery dates within three days", () => {
+    expect(limitedWatiWindowMigration).toContain(
+      "function private.enqueue_order_reconciliation_alerts",
+    );
+    expect(limitedWatiWindowMigration).toContain(
+      "issue.issue_type not in ('missing_fccd', 'unlinked_fccd')",
+    );
+    expect(limitedWatiWindowMigration).toContain("v_today + 2");
+    expect(limitedWatiWindowMigration).toContain("join public.orders order_row on order_row.id = issue.order_id");
   });
 
   it("sends matching all-clear WhatsApp and email copy when the daily count is zero", () => {

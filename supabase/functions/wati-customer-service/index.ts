@@ -67,6 +67,7 @@ import {
 import {
   buildEnquiryInternalContent,
   buildEnquiryInternalWatiParameters,
+  buildHandoffDigestContent,
   ENQUIRY_INTERNAL_WATI_TEMPLATE,
 } from "../_shared/enquiry-notification-content.ts";
 import {
@@ -1215,6 +1216,141 @@ async function notifyInternal(
   if (!delivered) throw new Error("internal_notification_recipient_missing");
 }
 
+/** Approved WATI Utility template reporting the daily WATI-pending total. */
+const WATI_PENDING_DIGEST_TEMPLATE = "fccd_wati_pending_digest_v1";
+
+function hongKongDateLabel(now = new Date()) {
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Hong_Kong",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  }).formatToParts(now);
+  const part = (type: string) =>
+    parts.find((entry) => entry.type === type)?.value || "";
+  return `${part("day")}/${part("month")}/${part("year")}`;
+}
+
+/**
+ * 09:00 Hong Kong digest: one aggregate email listing the previous night's
+ * newly-due handoffs, plus a single WhatsApp total-count message. Per-order
+ * detail stays in email; WhatsApp only carries the total.
+ */
+async function notifyHandoffDigest(
+  admin: AdminClient,
+  requests: Array<{
+    id: string;
+    phone_normalized: string;
+    order_id: string | null;
+    order_number: string | null;
+    summary: string;
+    kind: "inquiry" | "order_handoff";
+  }>,
+) {
+  const digestTemplate = env("WATI_ENQUIRY_DIGEST_TEMPLATE_NAME");
+  let delivered = false;
+  const controls = await loadWatiNotificationControls(admin);
+  const emailEnabled = notificationChannelEnabled(controls, "enquiry_internal", "email");
+  const watiEnabled = notificationChannelEnabled(controls, "enquiry_internal", "wati")
+    && (deploymentEnvironment() === "develop"
+      || watiEmergencySwitchAllows("WATI_ENQUIRY_INTERNAL_ENABLED"))
+    && Boolean(digestTemplate);
+  if (!emailEnabled && !watiEnabled) return;
+
+  const environment = deploymentEnvironment();
+  const appUrl = env("APP_URL").replace(/\/$/, "");
+  const items = requests.map((item) => ({
+    kind: item.kind,
+    orderNumber: item.order_number,
+    phone: item.phone_normalized,
+    summary: item.summary,
+    detailUrl: appUrl && item.order_id
+      ? `${appUrl}/${item.kind === "order_handoff" ? "orders" : "quotes"}/${item.order_id}`
+      : "",
+  }));
+
+  if (emailEnabled) {
+    const { data: recipients, error } = await admin.rpc(
+      "enquiry_internal_email_recipients",
+    );
+    if (error) throw error;
+    const addresses = [
+      ...new Set(
+        ((recipients || []) as Array<{ recipient_address?: string }>)
+          .map((item) => (item.recipient_address || "").trim().toLowerCase())
+          .filter(Boolean),
+      ),
+    ];
+    const targetAddresses = toNotificationEmailRecipients(
+      addresses,
+      controls.recipientPolicy,
+    );
+    if (targetAddresses.length) {
+      const mail = buildHandoffDigestContent({
+        date: hongKongDateLabel(),
+        items,
+      });
+      await sendInternalEmail(targetAddresses, mail.subject, mail.html);
+      delivered = true;
+    }
+  }
+
+  if (watiEnabled) {
+    const { data: staff, error: staffError } = await admin
+      .from("order_first_notification_recipients")
+      .select("phone");
+    if (staffError) throw staffError;
+    const phones = toNotificationWatiPhones(resolveInternalWatiPhones(
+      ((staff || []) as Array<{ phone?: string }>).map((item) => item.phone || ""),
+      "",
+      environment,
+    ), controls.recipientPolicy);
+    const parameters = [
+      { name: "1", value: hongKongDateLabel() },
+      { name: "2", value: String(requests.length) },
+    ];
+    const endpoint = requiredEnv("WATI_API_ENDPOINT").replace(/\/$/, "");
+    const token = requiredEnv("WATI_API_TOKEN");
+    for (const phone of phones) {
+      const response = await fetch(
+        `${endpoint}/api/v2/sendTemplateMessage?whatsappNumber=${encodeURIComponent(phone)}`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token.replace(/^Bearer\s+/i, "")}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            template_name: digestTemplate,
+            broadcast_name: env("WATI_ENQUIRY_DIGEST_BROADCAST_NAME") || digestTemplate,
+            channel_number: env("WATI_CHANNEL_NUMBER") || BRAND_WHATSAPP_CHANNEL,
+            parameters,
+          }),
+        },
+      );
+      if (response.ok) {
+        delivered = true;
+        continue;
+      }
+      // Develop lab often lacks the production digest template; fall back to a
+      // session text so staff still get the total count.
+      if (environment === "develop") {
+        await deliverWatiSessionMessage({
+          creds: watiCredentials(),
+          phone,
+          text: `WATI待處理：前一晚共 ${requests.length} 筆待跟進。`,
+          channelNumber: env("WATI_CHANNEL_NUMBER") || BRAND_WHATSAPP_CHANNEL,
+          localMessageId: `fcc-bot-staff-${crypto.randomUUID()}`,
+        });
+        delivered = true;
+        continue;
+      }
+      throw new Error(`wati_digest_send_failed:${response.status}`);
+    }
+  }
+  if (!delivered) throw new Error("internal_notification_recipient_missing");
+}
+
 type HandoffNotificationInput = {
   phone: string;
   quoteId: string | null;
@@ -1321,42 +1457,46 @@ async function processHandoffDigest(request: Request) {
     summary: string;
     kind: "inquiry" | "order_handoff";
   }>;
-  let notified = 0;
-  let failed = 0;
-  for (const item of requests) {
-    try {
-      await notifyInternal(admin, {
-        phone: item.phone_normalized,
-        quoteId: item.order_id,
-        orderNumber: item.order_number,
-        summary: item.summary,
-        kind: item.kind,
-      });
-      const { error: updateError } = await admin
-        .from("customer_service_handoff_requests")
-        .update({
-          status: "notified",
-          notified_at: new Date().toISOString(),
-          last_error: null,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", item.id);
-      if (updateError) throw updateError;
-      notified += 1;
-    } catch (error) {
-      failed += 1;
-      const message = error instanceof Error ? error.message : String(error);
-      await admin
-        .from("customer_service_handoff_requests")
-        .update({
-          status: "failed",
-          last_error: message.slice(0, 500),
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", item.id);
-    }
+  if (!requests.length) {
+    return jsonResponse({ ok: true, claimed: 0, notified: 0, failed: 0 });
   }
-  return jsonResponse({ ok: true, claimed: requests.length, notified, failed });
+  const ids = requests.map((item) => item.id);
+  const now = new Date().toISOString();
+  try {
+    await notifyHandoffDigest(admin, requests);
+    const { error: updateError } = await admin
+      .from("customer_service_handoff_requests")
+      .update({
+        status: "notified",
+        notified_at: now,
+        last_error: null,
+        updated_at: now,
+      })
+      .in("id", ids);
+    if (updateError) throw updateError;
+    return jsonResponse({
+      ok: true,
+      claimed: requests.length,
+      notified: requests.length,
+      failed: 0,
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    await admin
+      .from("customer_service_handoff_requests")
+      .update({
+        status: "failed",
+        last_error: message.slice(0, 500),
+        updated_at: now,
+      })
+      .in("id", ids);
+    return jsonResponse({
+      ok: true,
+      claimed: requests.length,
+      notified: 0,
+      failed: requests.length,
+    });
+  }
 }
 
 async function authorizeOutboundRetry(request: Request) {
