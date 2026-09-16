@@ -32,6 +32,12 @@ demand. Order BOM snapshots are preferred, with product/package recipes used
 as fallback. Each affected order is queued once per WhatsApp recipient per day;
 all open problems for that order are combined into `issue_summary`.
 
+Daily WhatsApp alerts for `missing_fccd` and `unlinked_fccd` are limited to
+orders whose delivery date is within three days (today through the next two
+days) or already overdue; orders without a delivery date are still alerted. The
+daily email keeps listing every open issue, including far-future orders, so no
+follow-up disappears from the daily report.
+
 The worker refreshes the existing reconciliation/urgent issues every minute;
 the heavier readiness and inventory audit runs once daily after 09:00. An
 existing reconciliation issue becomes urgent when its calculated
