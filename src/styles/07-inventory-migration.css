@@ -3172,6 +3172,22 @@
   padding-top: 2px; color: var(--muted-foreground); font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
   font-size: 10px; font-variant-numeric: tabular-nums;
 }
+.customer-faq-trace-failure {
+  display: flex; align-items: flex-start; gap: 7px; margin: 10px 10px 0;
+  padding: 9px 11px; border-radius: 10px;
+  background: rgb(220 38 38 / 10%); color: #b91c1c; font-size: 12px; line-height: 1.45;
+}
+.customer-faq-trace-failure svg { width: 15px; height: 15px; flex: 0 0 auto; margin-top: 1px; }
+.customer-faq-trace-popover li.is-failed .customer-faq-trace-marker { background: rgb(220 38 38 / 12%); color: #dc2626; }
+.customer-faq-trace-popover li.is-warn .customer-faq-trace-marker { background: rgb(217 119 6 / 14%); color: #b45309; }
+.customer-faq-trace-popover li.is-skipped .customer-faq-trace-marker { background: var(--muted); color: var(--muted-foreground); }
+.customer-faq-trace-popover li.is-failed strong { color: #b91c1c; }
+.customer-faq-trace-popover li.is-warn strong { color: #b45309; }
+.dark .customer-faq-trace-failure { background: rgb(248 113 113 / 14%); color: #fca5a5; }
+.dark .customer-faq-trace-popover li.is-failed .customer-faq-trace-marker { background: rgb(248 113 113 / 16%); color: #f87171; }
+.dark .customer-faq-trace-popover li.is-warn .customer-faq-trace-marker { background: rgb(251 191 36 / 16%); color: #fbbf24; }
+.dark .customer-faq-trace-popover li.is-failed strong { color: #fca5a5; }
+.dark .customer-faq-trace-popover li.is-warn strong { color: #fbbf24; }
 .customer-faq-chat-message.user small { color: inherit; opacity: .8; }
 .customer-faq-chat-empty { align-self: center; margin: auto 0; padding: 7px 11px; border-radius: 7px; background: rgb(255 255 255 / 82%); color: #667781; box-shadow: 0 1px 1px rgb(11 20 26 / 10%); font-size: 12px; text-align: center; }
 .customer-faq-chat-composer { display: grid; flex: 0 0 auto; grid-template-columns: 38px minmax(0, 1fr) 42px; align-items: center; gap: 4px; min-height: 62px; padding: 10px 9px; border-top: 1px solid rgb(210 204 194 / 70%); background: #f0f2f5; }

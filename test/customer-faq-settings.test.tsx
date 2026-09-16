@@ -212,6 +212,67 @@ describe("CustomerFaqPage", () => {
     expect(screen.getByText("輸入客人問題開始多輪測試。")).toBeInTheDocument();
   });
 
+  it("renders the full execution trace and points at the failing step", async () => {
+    const user = userEvent.setup();
+    const previewTurn = vi.fn().mockResolvedValue({
+      reply: "唔好意思，我暫時答唔到，已轉交同事。",
+      conversation: {
+        phone_normalized: "8613828747224",
+        state: "awaiting_human",
+        selected_order_id: null,
+        handoff_at: "2026-09-04T00:00:00.000Z",
+      },
+      usedModel: true,
+      simulatedWrite: false,
+      simulatedNotify: true,
+      humanHandoff: true,
+      intentKey: "search_faq",
+      failureReason: "faq_not_found",
+      trace: [
+        { stage: "input", status: "ok", code: null, params: { state: "identifying" } },
+        {
+          stage: "classify_ai",
+          status: "ok",
+          code: "grok-4.3",
+          params: { intent: "search_faq", confidence: 0.4 },
+        },
+        {
+          stage: "result",
+          status: "failed",
+          code: "faq_not_found",
+          params: { intent: "search_faq", state: "awaiting_human" },
+        },
+      ],
+    });
+
+    render(
+      <CustomerFaqPage
+        loadFaqs={vi.fn().mockResolvedValue({ items: [faq], total: 1 })}
+        loadControls={vi.fn().mockResolvedValue({
+          botEnabled: true,
+          allowedPhones: [],
+          updatedAt: faq.updatedAt,
+        })}
+        previewTurn={previewTurn}
+      />,
+    );
+
+    await user.type(screen.getByLabelText("客人會點問"), "有咩新產品？");
+    await user.click(screen.getByRole("button", { name: "傳送測試訊息" }));
+    const traceTrigger = await screen.findByRole("button", {
+      name: "查看執行步驟軌跡",
+    });
+    await user.hover(traceTrigger);
+
+    expect(await screen.findByText("3 個步驟")).toBeInTheDocument();
+    expect(screen.getByText("大模型分類")).toBeInTheDocument();
+    expect(screen.getByText(/grok-4\.3/)).toBeInTheDocument();
+    expect(
+      screen.getByText("出錯步驟：最終結果（faq_not_found）"),
+    ).toBeInTheDocument();
+  });
+
+
   it("shows exact learning proposals and only permits complete proposals to be approved", async () => {
     const user = userEvent.setup();
     const base = {

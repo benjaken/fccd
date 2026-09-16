@@ -261,6 +261,20 @@ export type BotTurn = {
   dialogAction?: ClassifiedMessage["dialogAction"];
 };
 
+/**
+ * One observable step of a customer-service turn, in execution order.
+ * A preview renders these so a wrong reply can be traced to the exact stage
+ * that produced it instead of a five-line summary.
+ */
+export type CustomerServiceTraceStatus = "ok" | "skipped" | "warn" | "failed";
+
+export type CustomerServiceTraceStep = {
+  stage: string;
+  status: CustomerServiceTraceStatus;
+  code?: string | null;
+  params?: Record<string, string | number | boolean | null>;
+};
+
 function configuredReply(
   deps: CustomerServiceBotDeps,
   key: keyof NonNullable<CustomerServiceBotDeps["replyTemplates"]>,
@@ -1631,33 +1645,45 @@ export async function handleCustomerServiceTurn({
   conversation,
   deps,
   classify = classifyCustomerServiceMessage,
+  traceSteps,
 }: {
   phone: string;
   text: string;
   conversation: CustomerServiceConversation;
   deps: CustomerServiceBotDeps;
   classify?: (text: string) => ClassifiedMessage | Promise<ClassifiedMessage>;
+  traceSteps?: CustomerServiceTraceStep[];
 }): Promise<BotTurn> {
+  const trace = (step: CustomerServiceTraceStep) => {
+    traceSteps?.push(step);
+  };
+  // Every deterministic short-circuit is reported so a preview can tell whether
+  // a fast path fired instead of intent classification and routing.
+  const guarded = (code: string, turn: BotTurn): BotTurn => {
+    trace({ stage: "guard", status: "ok", code });
+    return turn;
+  };
+
   if (conversation.state === "human_owned") {
-    return {
+    return guarded("human_owned", {
       reply: null,
       conversation,
       wroteInquiry: false,
       notified: false,
       usedModel: false,
-    };
+    });
   }
 
   // Delivery-confirmation template button (e.g. 「確定訂單」): acknowledge silently.
   // Must run before awaiting_human supplement / LOOKUP("訂單") so we neither reply nor re-queue.
   if (isOrderConfirmationAcknowledgement(text)) {
-    return {
+    return guarded("order_confirmation", {
       reply: null,
       conversation,
       wroteInquiry: false,
       notified: false,
       usedModel: false,
-    };
+    });
   }
 
   const hasActiveTask = conversation.state !== "identifying" ||
@@ -1671,17 +1697,17 @@ export async function handleCustomerServiceTurn({
     if (isQueuedHandoff) {
       const cancelled = await deps.cancelHandoff(phone);
       if (!cancelled && conversation.state !== "awaiting_human") {
-        return {
+        return guarded("cancel_current", {
           reply: REPLIES.noPendingHandoff,
           conversation,
           wroteInquiry: false,
           notified: false,
           queuedHandoff: false,
           usedModel: false,
-        };
+        });
       }
     }
-    return {
+    return guarded("cancel_current", {
       reply: isQueuedHandoff ? REPLIES.handoffCancelled : REPLIES.currentTaskCancelled,
       conversation: nextConversation(conversation, {
         state: "identifying",
@@ -1693,7 +1719,7 @@ export async function handleCustomerServiceTurn({
       notified: false,
       queuedHandoff: false,
       usedModel: false,
-    };
+    });
   }
 
   if (
@@ -1702,7 +1728,7 @@ export async function handleCustomerServiceTurn({
     deps.replyTemplates?.acknowledgement &&
     isCustomerServiceEmojiAcknowledgement(text)
   ) {
-    return {
+    return guarded("acknowledgement", {
       reply: configuredReply(deps, "acknowledgement", "收到，多謝你。"),
       conversation,
       wroteInquiry: false,
@@ -1710,13 +1736,14 @@ export async function handleCustomerServiceTurn({
       usedModel: false,
       intentKey: "acknowledgement",
       toolKeys: [],
-    };
+    });
   }
 
   if (
     conversation.pending_request === "confirm:catering_inquiry" &&
     /^(?:確認|確定|係|是|好|可以|ok|okay|yes|唔確認|不確認|否|唔好|不用|不要|no|取消|算了|算啦)[!！。.？?\s]*$/iu.test(text.trim())
   ) {
+    trace({ stage: "guard", status: "ok", code: "confirm_catering" });
     return await replyCollect(deps, phone, await classify(text), conversation, text);
   }
 
@@ -1725,7 +1752,7 @@ export async function handleCustomerServiceTurn({
     deps.replyTemplates?.thanks &&
     isCustomerServiceThanks(text)
   ) {
-    return {
+    return guarded("thanks", {
       reply: configuredReply(deps, "thanks", "唔使客氣，多謝你。"),
       conversation,
       wroteInquiry: false,
@@ -1733,7 +1760,7 @@ export async function handleCustomerServiceTurn({
       usedModel: false,
       intentKey: "thanks",
       toolKeys: [],
-    };
+    });
   }
 
   if (
@@ -1742,7 +1769,7 @@ export async function handleCustomerServiceTurn({
     isTakeawayPackagingRequest(text) &&
     !extractOrderNumber(text)
   ) {
-    return {
+    return guarded("packaging", {
       reply: configuredReply(
         deps,
         "packaging_request",
@@ -1754,7 +1781,7 @@ export async function handleCustomerServiceTurn({
       usedModel: false,
       intentKey: "search_faq",
       toolKeys: [],
-    };
+    });
   }
 
   if (
@@ -1770,7 +1797,7 @@ export async function handleCustomerServiceTurn({
       kind: "order_handoff",
       urgent: false,
     });
-    return {
+    return guarded("complaint", {
       reply: configuredReply(
         deps,
         "complaint_handoff",
@@ -1788,10 +1815,11 @@ export async function handleCustomerServiceTurn({
       usedModel: false,
       intentKey: "complaint_refund",
       toolKeys: ["notify_internal"],
-    };
+    });
   }
 
   if (conversation.state === "verifying_order") {
+    trace({ stage: "guard", status: "ok", code: "verifying_order" });
     if (ORDER_EMAIL_IDENTITY_VERIFICATION_ENABLED) {
       return await replyOrderVerification(deps, phone, text, conversation);
     }
@@ -1866,7 +1894,7 @@ export async function handleCustomerServiceTurn({
       kind: "order_handoff",
       urgent: Boolean(conversation.handoff_urgent),
     });
-    return {
+    return guarded("awaiting_human_supplement", {
       reply: null,
       conversation,
       wroteInquiry: false,
@@ -1874,22 +1902,22 @@ export async function handleCustomerServiceTurn({
       queuedHandoff: true,
       usedModel: false,
       toolKeys: ["queue_handoff"],
-    };
+    });
   }
 
   if (isCustomerServiceGreeting(text)) {
-    return {
+    return guarded("greeting", {
       reply: configuredReply(deps, "help", REPLIES.help),
       conversation,
       wroteInquiry: false,
       notified: false,
       usedModel: false,
-    };
+    });
   }
 
   const brandIdentityName = customerServiceBrandIdentityName(text);
   if (brandIdentityName) {
-    return {
+    return guarded("brand_identity", {
       reply: `你好，係呀，我哋係 ${brandIdentityName}，請問有咩可以幫到你？`,
       conversation,
       wroteInquiry: false,
@@ -1898,7 +1926,7 @@ export async function handleCustomerServiceTurn({
       intentKey: "brand_identity",
       toolKeys: [],
       failureReason: null,
-    };
+    });
   }
 
   // Same-day / urgent order demand must not be swallowed by Express FAQ and
@@ -1916,7 +1944,7 @@ export async function handleCustomerServiceTurn({
       kind: "inquiry",
       urgent: true,
     });
-    return {
+    return guarded("same_day_urgent", {
       reply: configuredReply(deps, "same_day_urgent", REPLIES.sameDayUrgent),
       conversation: nextConversation(conversation, {
         state: "awaiting_human",
@@ -1938,7 +1966,7 @@ export async function handleCustomerServiceTurn({
       intentKey: "kitchen_confirmation",
       toolKeys: ["notify_internal"],
       failureReason: null,
-    };
+    });
   }
 
   const faqSearchCache = new Map<string, Promise<CustomerServiceFaqHit[]>>();
@@ -1990,6 +2018,24 @@ export async function handleCustomerServiceTurn({
     : explicitRequestedFields.length
       ? { ...modelClassified, requestedFields: explicitRequestedFields }
       : modelClassified;
+  trace({
+    stage: "classify",
+    status: classified.needsClarification ? "warn" : "ok",
+    code: classified.configuredIntentKey ?? classified.intent,
+    params: {
+      intent: classified.intent,
+      confidence: classified.confidence ?? null,
+      used_model: classified.usedModel,
+      model: classified.model ?? null,
+      requires_human: Boolean(classified.requiresHuman),
+      needs_clarification: Boolean(classified.needsClarification),
+      dialog_action: classified.dialogAction ?? null,
+      order_number: classified.orderNumber || null,
+      requested_fields: (classified.requestedFields ?? []).join(",") || null,
+      missing_fields: (classified.missingFields ?? []).join(",") || null,
+      order_item_follow_up: selectedOrderItemFollowUp,
+    },
+  });
   const annotate = (turn: BotTurn): BotTurn => {
     const defaultTool = turn.failureReason === "availability_date_missing" ? null : classified.configuredIntentKey === "delivery_availability"
       ? "check_order_intake"
@@ -2040,6 +2086,16 @@ export async function handleCustomerServiceTurn({
     activeGoal,
     conversationState: conversation.state,
     classified,
+  });
+  trace({
+    stage: "pilot",
+    status: "ok",
+    code: pilotAction,
+    params: {
+      active_goal: activeGoal ?? null,
+      state: conversation.state,
+      pending_request: conversation.pending_request ?? null,
+    },
   });
   const storedRecommendations = Array.isArray(
       conversation.workflow_slots?.orderIntakeRecommendations,
