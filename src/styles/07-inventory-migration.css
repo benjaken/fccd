@@ -3101,30 +3101,34 @@
 .customer-faq-trace-trigger {
   display: inline-flex; min-height: 24px; align-items: center; gap: 4px;
   margin: -5px 3px -4px 0; padding: 2px 7px; border: 0; border-radius: 999px;
-  background: transparent; color: #527267; font: inherit; font-size: 11px; font-weight: 700; line-height: 1; cursor: pointer;
+  background: transparent; color: var(--muted-foreground); font: inherit; font-size: 11px; font-weight: 700; line-height: 1; cursor: pointer;
 }
 .customer-faq-trace-trigger:hover,
 .customer-faq-trace-trigger:focus-visible,
 .customer-faq-trace-trigger[data-state='open'] {
   outline: none;
-  background: #e7f4ef;
-  color: #08745f;
+  background: var(--accent);
+  color: var(--accent-foreground);
 }
 .customer-faq-chat-message footer .customer-faq-trace-trigger svg { width: 13px; height: 13px; color: currentColor; }
 .customer-faq-trace-popover {
   width: min(390px, calc(100vw - 24px)); max-height: min(540px, calc(100dvh - 32px)); overflow: auto;
-  padding: 0; border: 0; border-radius: 14px; background: #10211b; color: #effaf6;
-  box-shadow: 0 16px 38px rgb(4 20 15 / 24%);
+  padding: 0; border: 1px solid var(--border); border-radius: 14px;
+  background: var(--popover); color: var(--popover-foreground);
+  box-shadow: 0 16px 38px rgb(15 23 42 / 14%);
+}
+.dark .customer-faq-trace-popover {
+  box-shadow: 0 18px 42px rgb(0 0 0 / 48%);
 }
 .customer-faq-trace-popover > header {
   display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 16px 12px;
-  border-bottom: 1px solid rgb(202 235 223 / 13%);
+  border-bottom: 1px solid var(--border);
 }
 .customer-faq-trace-popover > header > div { display: flex; align-items: center; gap: 8px; }
-.customer-faq-trace-popover > header svg { width: 17px; height: 17px; color: #5ee0ae; }
+.customer-faq-trace-popover > header svg { width: 17px; height: 17px; color: var(--primary); }
 .customer-faq-trace-popover > header strong { font-size: 14px; font-weight: 750; }
 .customer-faq-trace-popover > header > span {
-  flex: 0 0 auto; color: #9ec1b5; font-size: 11px; font-variant-numeric: tabular-nums;
+  flex: 0 0 auto; color: var(--muted-foreground); font-size: 11px; font-variant-numeric: tabular-nums;
 }
 .customer-faq-trace-popover ol {
   display: grid; gap: 0; margin: 0; padding: 6px 10px 10px; list-style: none;
@@ -3139,12 +3143,12 @@
   bottom: -4px;
   left: 17px;
   width: 1px;
-  background: rgb(94 224 174 / 24%);
+  background: var(--border);
   content: "";
 }
 .customer-faq-trace-marker {
   position: relative; z-index: 1; display: grid; width: 22px; height: 22px;
-  place-items: center; border-radius: 999px; background: #123e30; color: #64e9b6;
+  place-items: center; border-radius: 999px; background: var(--accent); color: var(--primary);
 }
 .customer-faq-trace-marker svg { width: 13px; height: 13px; stroke-width: 2.5; }
 .customer-faq-trace-popover li > div { min-width: 0; }
@@ -3156,16 +3160,16 @@
   overflow-wrap: anywhere;
 }
 .customer-faq-trace-popover li strong {
-  color: #f2fbf8; font-size: 12px; font-weight: 750; line-height: 1.35;
+  color: var(--popover-foreground); font-size: 12px; font-weight: 750; line-height: 1.35;
 }
 .customer-faq-trace-popover li p {
-  margin-top: 2px; color: #b8d6cb; font-size: 12px; line-height: 1.4;
+  margin-top: 2px; color: var(--muted-foreground); font-size: 12px; line-height: 1.4;
 }
 .customer-faq-trace-popover li small {
-  margin-top: 3px; color: #83a89b; font-size: 11px; line-height: 1.4;
+  margin-top: 3px; color: var(--muted-foreground); opacity: .82; font-size: 11px; line-height: 1.4;
 }
 .customer-faq-trace-stage {
-  padding-top: 2px; color: #658b7d; font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  padding-top: 2px; color: var(--muted-foreground); font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
   font-size: 10px; font-variant-numeric: tabular-nums;
 }
 .customer-faq-chat-message.user small { color: inherit; opacity: .8; }
