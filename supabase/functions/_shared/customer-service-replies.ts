@@ -1,3 +1,5 @@
+import type { CustomerServiceRecentMessage } from "./customer-service-context.ts";
+
 export const CUSTOMER_SERVICE_REPLY_VERSION = "zh-HK.v1";
 
 const PROFANITY = /閪|屌|冚家|屄|操你|傻逼|幹你|冚家鏟|撚|鳩/;
@@ -25,7 +27,7 @@ export const REPLIES = {
     "收到。麻煩再提供活動日期或者人數其中一項；資料齊後我會先俾你確認，確認後先交俾客服跟進。",
   collectDone: "已經幫你記低，客服會喺下一個工作日上午 9 點後跟進。",
   noFaq:
-    "唔好意思，呢條我未搵到已公布嘅答案。你可以問運費、查訂單，或者話我知到會日期／人數。",
+    "多謝你嘅查詢！暫時未有已公布資料可以回覆。我已經為你建立客服跟進；同事會喺下一個辦公時段處理。你可以繼續補充資料，我會加入同一個跟進事項。",
   help: "你好，請問是查詢現有訂單，還是需要到會訂餐協助？",
   fallback: "唔好意思，系統暫時未能完成呢則回覆。同事會跟進。",
   pickOrder:
@@ -318,5 +320,51 @@ export function appendRelatedFaqsToReply(
   const appendix = formatRelatedFaqsAppendix(relatedFaqs);
   if (!appendix) return sanitizeOutboundReply(reply);
   return sanitizeOutboundReply(`${reply.trim()}\n\n${appendix}`);
+}
+
+const RECENT_REPLY_COOLDOWN_MS = 10 * 60 * 1_000;
+const RECENT_REPLY_SIMILARITY_FLOOR = 0.92;
+
+function normalizeReplyForComparison(value: string) {
+  return value
+    .replace(/^【develop】/u, "")
+    .toLowerCase()
+    .replace(/[\s，。！？、,.!?：:；;（）()「」『』"']/gu, "")
+    .trim();
+}
+
+function characterBigrams(value: string) {
+  const grams = new Set<string>();
+  for (let index = 0; index < value.length - 1; index += 1) {
+    grams.add(value.slice(index, index + 2));
+  }
+  return grams;
+}
+
+/** Prevent a customer receiving the same substantive answer repeatedly in a short burst. */
+export function suppressRecentSimilarReply(
+  candidate: string,
+  recentMessages: CustomerServiceRecentMessage[] | undefined,
+  now = Date.now(),
+) {
+  const normalizedCandidate = normalizeReplyForComparison(candidate);
+  if (normalizedCandidate.length < 2 || !recentMessages?.length) return false;
+  const candidateBigrams = characterBigrams(normalizedCandidate);
+  return recentMessages.some((message) => {
+    if (message.role !== "assistant" || !message.occurredAt) return false;
+    const occurredAt = Date.parse(message.occurredAt);
+    if (!Number.isFinite(occurredAt) || now - occurredAt < 0 || now - occurredAt > RECENT_REPLY_COOLDOWN_MS) {
+      return false;
+    }
+    const normalizedPrevious = normalizeReplyForComparison(message.text);
+    if (normalizedPrevious === normalizedCandidate) return true;
+    const previousBigrams = characterBigrams(normalizedPrevious);
+    if (!candidateBigrams.size || !previousBigrams.size) return false;
+    let overlap = 0;
+    for (const gram of candidateBigrams) {
+      if (previousBigrams.has(gram)) overlap += 1;
+    }
+    return (2 * overlap) / (candidateBigrams.size + previousBigrams.size) >= RECENT_REPLY_SIMILARITY_FLOOR;
+  });
 }
 

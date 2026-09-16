@@ -39,6 +39,7 @@ import {
 } from "../_shared/customer-service-bot.ts";
 import {
   appendRelatedFaqsToReply,
+  suppressRecentSimilarReply,
   withEnvironmentOutboundMarker,
 } from "../_shared/customer-service-replies.ts";
 import {
@@ -2069,7 +2070,13 @@ async function persistCustomerServiceTurn(
   const replyWithRelated = turn.reply
     ? appendRelatedFaqsToReply(turn.reply, turn.relatedFaqs ?? [])
     : null;
-  const outboundReply = replyWithRelated
+  const duplicateReplySuppressed = replyWithRelated
+    ? suppressRecentSimilarReply(replyWithRelated, conversation.recent_messages)
+    : false;
+  const effectiveTurn = duplicateReplySuppressed
+    ? { ...turn, reply: null, failureReason: "duplicate_reply_suppressed" }
+    : turn;
+  const outboundReply = replyWithRelated && !duplicateReplySuppressed
     ? withEnvironmentOutboundMarker(replyWithRelated, deploymentEnvironment())
     : null;
   if (outboundReply) {
@@ -2132,14 +2139,14 @@ async function persistCustomerServiceTurn(
           next_retry_at: retryAt(1),
         }).catch((auditError: unknown) => console.error("outbound failure audit failed", auditError));
       }
-      await saveConversation(admin, turn.conversation);
+      await saveConversation(admin, effectiveTurn.conversation);
       await recordCustomerServiceTurn(admin, {
         providerMessageId: input.providerMessageId,
         phone: input.phone,
         question: input.text,
         stateBefore: conversation.state,
         startedAt,
-        turn: { ...turn, reply: outboundReply },
+        turn: { ...effectiveTurn, reply: outboundReply },
         replyAttempted: true,
         replySent: false,
         deliveryStatus: "failed",
@@ -2156,14 +2163,14 @@ async function persistCustomerServiceTurn(
       throw error;
     }
   }
-  await saveConversation(admin, turn.conversation);
+  await saveConversation(admin, effectiveTurn.conversation);
   await recordCustomerServiceTurn(admin, {
     providerMessageId: input.providerMessageId,
     phone: input.phone,
     question: input.text,
     stateBefore: conversation.state,
     startedAt,
-    turn: outboundReply ? { ...turn, reply: outboundReply } : turn,
+    turn: outboundReply ? { ...effectiveTurn, reply: outboundReply } : effectiveTurn,
     replyAttempted: Boolean(outboundReply),
     replySent: Boolean(outboundReply),
     deliveryStatus: outboundReply ? "sent" : "not_required",

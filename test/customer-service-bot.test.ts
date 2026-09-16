@@ -24,6 +24,7 @@ import {
   faqReply,
   REPLIES,
   sanitizeOutboundReply,
+  suppressRecentSimilarReply,
   withEnvironmentOutboundMarker,
   DEVELOP_OUTBOUND_MARKER,
 } from "../supabase/functions/_shared/customer-service-replies.ts";
@@ -1393,7 +1394,192 @@ describe("customer-service bot turns", () => {
       deps: deps({ searchFaqs: vi.fn().mockResolvedValue([]) }),
     });
     expect(miss.failureReason).toBe("faq_not_found");
-    expect(miss.relatedFaqs).toBeUndefined();
+    expect(miss.relatedFaqs ?? []).toEqual([]);
+  });
+
+  it("creates one human handoff for an unanswered FAQ and appends later details without another customer reply", async () => {
+    const runtimeDeps = deps({ searchFaqs: vi.fn().mockResolvedValue([]) });
+    const initial = await handleCustomerServiceTurn({
+      phone: conversation.phone_normalized,
+      text: "你哋可唔可以幫我安排特別車隊？",
+      conversation,
+      deps: runtimeDeps,
+    });
+
+    expect(initial.reply).toContain("客服跟進");
+    expect(initial.conversation.state).toBe("awaiting_human");
+    expect(initial.queuedHandoff).toBe(true);
+    expect(initial.relatedFaqs ?? []).toEqual([]);
+    expect(runtimeDeps.queueHandoff).toHaveBeenCalledTimes(1);
+
+    const supplement = await handleCustomerServiceTurn({
+      phone: conversation.phone_normalized,
+      text: "送去葵涌，星期五下午需要。",
+      conversation: initial.conversation,
+      deps: runtimeDeps,
+    });
+
+    expect(supplement.reply).toBeNull();
+    expect(supplement.queuedHandoff).toBe(true);
+    expect(runtimeDeps.queueHandoff).toHaveBeenCalledTimes(2);
+    expect(runtimeDeps.queueHandoff).toHaveBeenLastCalledWith(expect.objectContaining({
+      summary: expect.stringContaining("客戶補充資料"),
+    }));
+  });
+
+  it("routes broad delivery and transport questions to the consolidated delivery FAQ", async () => {
+    const turn = await handleCustomerServiceTurn({
+      phone: conversation.phone_normalized,
+      text: "運輸",
+      conversation,
+      deps: deps({
+        searchFaqs: vi.fn().mockResolvedValue([{
+          id: "delivery-overview",
+          question: "送貨／運輸／交收方式有咩選擇？",
+          answer: "一般可選地面交收或送貨上門；收費按地區及方式計算。",
+        }]),
+      }),
+    });
+
+    expect(turn.reply).toContain("地面交收或送貨上門");
+    expect(turn.faqSourceIds).toEqual(["delivery-overview"]);
+    expect(turn.relatedFaqs ?? []).toEqual([]);
+  });
+
+  it("suppresses an exact or highly similar assistant reply only within the ten-minute cooldown", () => {
+    const now = Date.parse("2026-09-16T12:00:00.000Z");
+    expect(suppressRecentSimilarReply(
+      "你好。新界運費係 HK$50。",
+      [{ role: "assistant", text: "你好，新界運費係HK$50！", occurredAt: "2026-09-16T11:55:00.000Z" }],
+      now,
+    )).toBe(true);
+    expect(suppressRecentSimilarReply(
+      "你好。新界運費係 HK$50。",
+      [{ role: "assistant", text: "你好。新界運費係 HK$50。", occurredAt: "2026-09-16T11:40:00.000Z" }],
+      now,
+    )).toBe(false);
+  });
+
+  it("answers each FAQ question when the customer asks several questions on one line", async () => {
+    const turn = await handleCustomerServiceTurn({
+      phone: conversation.phone_normalized,
+      text: "食物會用什麼容器？同埋湯是什麼容器？有沒有餐具提供？thanks",
+      conversation,
+      deps: deps({
+        searchFaqs: vi.fn().mockImplementation((question: string) => {
+          if (question === "食物會用什麼容器？") {
+            return Promise.resolve([
+              { id: "packaging", question, answer: "一般使用加厚鋁盒。" },
+            ]);
+          }
+          if (question === "有沒有餐具提供？") {
+            return Promise.resolve([
+              { id: "utensils", question, answer: "一般到會會提供基本餐具。" },
+            ]);
+          }
+          return Promise.resolve([]);
+        }),
+      }),
+    });
+
+    expect(turn.reply).toContain("1. 你好。一般使用加厚鋁盒。");
+    expect(turn.reply).toContain(`2. ${REPLIES.noFaq}`);
+    expect(turn.reply).toContain("3. 你好。一般到會會提供基本餐具。");
+    expect(turn.faqSourceIds).toEqual(["packaging", "utensils"]);
+    expect(turn.failureReason).toBe("faq_partially_answered");
+  });
+
+  it("splits Cantonese questions joined on one line without repeated question marks", async () => {
+    const turn = await handleCustomerServiceTurn({
+      phone: conversation.phone_normalized,
+      text: "有冇餐具，同埋食物會唔會用鋁盒？",
+      conversation,
+      deps: deps({
+        searchFaqs: vi.fn().mockImplementation((question: string) => {
+          if (question === "有冇餐具") {
+            return Promise.resolve([
+              { id: "utensils", question, answer: "一般到會會提供基本餐具。" },
+            ]);
+          }
+          if (question === "食物會唔會用鋁盒？") {
+            return Promise.resolve([
+              { id: "packaging", question, answer: "一般使用加厚鋁盒。" },
+            ]);
+          }
+          return Promise.resolve([]);
+        }),
+      }),
+    });
+
+    expect(turn.reply).toContain("1. 你好。一般到會會提供基本餐具。");
+    expect(turn.reply).toContain("2. 你好。一般使用加厚鋁盒。");
+    expect(turn.faqSourceIds).toEqual(["utensils", "packaging"]);
+    expect(turn.failureReason).toBeNull();
+  });
+
+  it("does not split a product phrase that contains the Cantonese joiner", async () => {
+    const searchFaqs = vi.fn().mockImplementation((question: string) => {
+      if (question === "叉燒同埋燒肉幾多錢？") {
+        return Promise.resolve([{
+          id: "bbq-price",
+          question,
+          answer: "價錢請參考最新餐牌。",
+        }]);
+      }
+      return Promise.resolve([]);
+    });
+
+    const turn = await handleCustomerServiceTurn({
+      phone: conversation.phone_normalized,
+      text: "叉燒同埋燒肉幾多錢？",
+      conversation,
+      deps: deps({ searchFaqs }),
+    });
+
+    expect(searchFaqs).toHaveBeenCalledTimes(1);
+    expect(searchFaqs).toHaveBeenCalledWith("叉燒同埋燒肉幾多錢？");
+    expect(turn.reply).toBe("你好。價錢請參考最新餐牌。");
+    expect(turn.faqSourceIds).toEqual(["bbq-price"]);
+  });
+
+  it("keeps URL query parameters intact while splitting the next question", async () => {
+    const orderUrl = "https://example.com/order?brand=fcc&date=2026-09-25";
+    const searchFaqs = vi.fn().mockImplementation((question: string) => {
+      if (question === `網站 ${orderUrl} 可以落單嗎？`) {
+        return Promise.resolve([{
+          id: "online-order",
+          question,
+          answer: "可以經網站落單。",
+        }]);
+      }
+      if (question === "有冇餐具？") {
+        return Promise.resolve([{
+          id: "utensils",
+          question,
+          answer: "一般到會會提供基本餐具。",
+        }]);
+      }
+      return Promise.resolve([]);
+    });
+
+    const turn = await handleCustomerServiceTurn({
+      phone: conversation.phone_normalized,
+      text: `網站 ${orderUrl} 可以落單嗎？另外有冇餐具？`,
+      conversation,
+      deps: deps({ searchFaqs }),
+      classify: vi.fn().mockResolvedValue({
+        ...classifyCustomerServiceMessage("有冇餐具？"),
+        intent: "search_faq",
+        usedModel: true,
+      }),
+    });
+
+    expect(searchFaqs).toHaveBeenCalledTimes(2);
+    expect(searchFaqs).toHaveBeenNthCalledWith(1, `網站 ${orderUrl} 可以落單嗎？`);
+    expect(searchFaqs).toHaveBeenNthCalledWith(2, "有冇餐具？");
+    expect(turn.reply).toContain("1. 你好。可以經網站落單。");
+    expect(turn.reply).toContain("2. 你好。一般到會會提供基本餐具。");
+    expect(turn.faqSourceIds).toEqual(["online-order", "utensils"]);
   });
 
   it("answers FAQ text unchanged and hands off when nothing matches", async () => {
@@ -1418,7 +1604,7 @@ describe("customer-service bot turns", () => {
       deps: deps({ searchFaqs: vi.fn().mockResolvedValue([]) }),
     });
     expect(miss.reply).toBe(REPLIES.noFaq);
-    expect(miss.conversation.state).toBe("identifying");
+    expect(miss.conversation.state).toBe("awaiting_human");
   });
 
   it("answers a delivery-date question using a suffixed B order number", async () => {
@@ -1919,7 +2105,7 @@ describe("customer-service bot turns", () => {
 
     expect(first.conversation.handoff_kind).toBe("general");
     expect(second.reply).toBeNull();
-    expect(queueHandoff).toHaveBeenCalledTimes(1);
+    expect(queueHandoff).toHaveBeenCalledTimes(2);
     expect(queueHandoff).not.toHaveBeenCalledWith(
       expect.objectContaining({ urgent: true }),
     );
