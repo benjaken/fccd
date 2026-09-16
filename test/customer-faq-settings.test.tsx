@@ -116,7 +116,11 @@ describe("CustomerFaqPage", () => {
         },
         usedModel: true,
         simulatedWrite: false,
+        simulatedNotify: false,
         humanHandoff: false,
+        intentKey: "search_faq",
+        confidence: 0.93,
+        toolKeys: ["search_faqs"],
       })
       .mockResolvedValueOnce({
         reply: "唔好意思，呢單要同事跟進。",
@@ -190,6 +194,11 @@ describe("CustomerFaqPage", () => {
     expect(productLink).toHaveAttribute("target", "_blank");
     expect(screen.getByText(/請查收/)).toBeInTheDocument();
     expect(screen.getByText("大模型理解完整語意後回覆")).toBeInTheDocument();
+    const traceTrigger = screen.getByRole("button", { name: "查看執行步驟軌跡" });
+    await user.hover(traceTrigger);
+    expect(await screen.findByText("執行步驟軌跡")).toBeInTheDocument();
+    expect(screen.getByText("意圖分類：search_faq")).toBeInTheDocument();
+    expect(screen.getByText("search_faqs")).toBeInTheDocument();
 
     await user.type(screen.getByLabelText("客人會點問"), "我要退款");
     await user.click(screen.getByRole("button", { name: "傳送測試訊息" }));

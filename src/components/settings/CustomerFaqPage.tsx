@@ -16,6 +16,7 @@ import {
   ChevronLeft,
   ChevronRight,
   MessageCircleMore,
+  ListTree,
   Pencil,
   Plus,
   RefreshCw,
@@ -35,6 +36,7 @@ import { ListSearchBar } from "@/components/ui/list-search-bar";
 import { ListTable } from "@/components/ui/list-table";
 import {
   Popover,
+  PopoverAnchor,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
@@ -269,7 +271,155 @@ type PreviewMessage = {
   simulatedWrite?: boolean;
   simulatedNotify?: boolean;
   relatedFaqs?: Array<{ id: string; question: string }>;
+  trace?: PreviewExecutionTrace;
 };
+
+type PreviewExecutionTrace = {
+  stateBefore: string;
+  stateAfter: string;
+  intentKey?: string;
+  confidence?: number;
+  toolKeys: string[];
+  usedModel: boolean;
+  humanHandoff: boolean;
+  simulatedWrite: boolean;
+  simulatedNotify: boolean;
+  replyGenerated: boolean;
+};
+
+function PreviewTracePopover({ trace }: { trace: PreviewExecutionTrace }) {
+  const { t } = useTranslation();
+  const [open, setOpen] = useState(false);
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const openTrace = () => {
+    if (closeTimer.current) clearTimeout(closeTimer.current);
+    closeTimer.current = null;
+    setOpen(true);
+  };
+  const closeTrace = () => {
+    if (closeTimer.current) clearTimeout(closeTimer.current);
+    closeTimer.current = setTimeout(() => setOpen(false), 120);
+  };
+
+  useEffect(() => () => {
+    if (closeTimer.current) clearTimeout(closeTimer.current);
+  }, []);
+
+  const source = trace.humanHandoff
+    ? t("settings.customerFaq.previewTraceSourceHandoff")
+    : trace.usedModel
+      ? t("settings.customerFaq.previewTraceSourceAi")
+      : t("settings.customerFaq.previewTraceSourceRule");
+  const effects = [
+    trace.simulatedWrite
+      ? t("settings.customerFaq.previewTraceEffectWrite")
+      : null,
+    trace.simulatedNotify
+      ? t("settings.customerFaq.previewTraceEffectNotify")
+      : null,
+  ].filter((item): item is string => Boolean(item));
+  const steps = [
+    {
+      label: t("settings.customerFaq.previewTraceRequest"),
+      summary: t("settings.customerFaq.previewTraceRequestSummary"),
+      detail: t("settings.customerFaq.previewTraceRequestDetail"),
+    },
+    {
+      label: `${t("settings.customerFaq.previewTraceIntent")}：${
+        trace.intentKey || t("settings.customerFaq.previewTraceUnknown")
+      }`,
+      summary: trace.confidence === undefined
+        ? source
+        : `${source} · ${t("settings.customerFaq.previewTraceConfidence", {
+          value: `${Math.round(trace.confidence * 100)}%`,
+        })}`,
+      detail: t("settings.customerFaq.previewTraceIntentDetail"),
+    },
+    {
+      label: t("settings.customerFaq.previewTraceRoute"),
+      summary: trace.toolKeys.length
+        ? trace.toolKeys.join(" → ")
+        : t("settings.customerFaq.previewTraceRouteNone"),
+      detail: t("settings.customerFaq.previewTraceRouteDetail"),
+    },
+    {
+      label: t("settings.customerFaq.previewTraceState"),
+      summary: `${trace.stateBefore} → ${trace.stateAfter}`,
+      detail: trace.stateBefore === trace.stateAfter
+        ? t("settings.customerFaq.previewTraceStateUnchanged")
+        : t("settings.customerFaq.previewTraceStateChanged"),
+    },
+    {
+      label: t("settings.customerFaq.previewTraceResult"),
+      summary: trace.replyGenerated
+        ? t("settings.customerFaq.previewTraceReplyGenerated")
+        : t("settings.customerFaq.previewTraceReplySilent"),
+      detail: effects.length
+        ? t("settings.customerFaq.previewTraceEffects", {
+          effects: effects.join("、"),
+        })
+        : t("settings.customerFaq.previewTraceNoEffects"),
+    },
+  ];
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverAnchor asChild>
+        <button
+          type="button"
+          className="customer-faq-trace-trigger"
+          aria-label={t("settings.customerFaq.previewTraceAction")}
+          aria-haspopup="dialog"
+          aria-expanded={open}
+          onMouseEnter={openTrace}
+          onMouseLeave={closeTrace}
+          onFocus={openTrace}
+          onBlur={closeTrace}
+          onClick={openTrace}
+        >
+          <ListTree aria-hidden="true" />
+          <span>{t("settings.customerFaq.previewTraceShort")}</span>
+        </button>
+      </PopoverAnchor>
+      <PopoverContent
+        className="customer-faq-trace-popover"
+        side="top"
+        align="end"
+        sideOffset={8}
+        onOpenAutoFocus={(event) => event.preventDefault()}
+        onMouseEnter={openTrace}
+        onMouseLeave={closeTrace}
+        onFocusCapture={openTrace}
+        onBlurCapture={closeTrace}
+      >
+        <header>
+          <div>
+            <ListTree aria-hidden="true" />
+            <strong>{t("settings.customerFaq.previewTraceTitle")}</strong>
+          </div>
+          <span>{t("settings.customerFaq.previewTraceStepCount", { count: steps.length })}</span>
+        </header>
+        <ol>
+          {steps.map((step, index) => (
+            <li key={step.label}>
+              <span className="customer-faq-trace-marker" aria-hidden="true">
+                <Check />
+              </span>
+              <div>
+                <strong>{step.label}</strong>
+                <p>{step.summary}</p>
+                <small>{step.detail}</small>
+              </div>
+              <span className="customer-faq-trace-stage" aria-hidden="true">
+                {String(index + 1).padStart(2, "0")}
+              </span>
+            </li>
+          ))}
+        </ol>
+      </PopoverContent>
+    </Popover>
+  );
+}
 
 export function CustomerFaqPage({
   loadFaqs = fetchCustomerFaqs,
@@ -550,6 +700,7 @@ export function CustomerFaqPage({
     const text = rawText.trim();
     if (!text || previewing) return;
     const messageId = Date.now();
+    const stateBefore = previewConversation?.state ?? "identifying";
     setPreviewMessages((current) => [
       ...current,
       { id: messageId, role: "user", text },
@@ -575,6 +726,18 @@ export function CustomerFaqPage({
           simulatedWrite: result.simulatedWrite,
           simulatedNotify: result.simulatedNotify,
           relatedFaqs: result.relatedFaqs ?? [],
+          trace: {
+            stateBefore,
+            stateAfter: result.conversation.state,
+            intentKey: result.intentKey,
+            confidence: result.confidence,
+            toolKeys: result.toolKeys ?? [],
+            usedModel: result.usedModel,
+            humanHandoff: result.humanHandoff,
+            simulatedWrite: result.simulatedWrite,
+            simulatedNotify: result.simulatedNotify,
+            replyGenerated: Boolean(result.reply),
+          },
         },
       ]);
     } catch {
@@ -1324,6 +1487,9 @@ export function CustomerFaqPage({
                                 ? ` · ${t("settings.customerFaq.previewSimulatedNotify")}`
                                 : ""}
                             </small>
+                          ) : null}
+                          {message.trace ? (
+                            <PreviewTracePopover trace={message.trace} />
                           ) : null}
                           <time>
                             {new Date(message.id).toLocaleTimeString([], {

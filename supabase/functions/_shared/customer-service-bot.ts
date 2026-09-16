@@ -591,6 +591,14 @@ const FAQ_DIRECT_MATCH_RULES: Array<{
     aliases: [/地面交收(?:係咩|意思|點樣|是什麼)/, /groundcollection/],
   },
   {
+    question: "送貨／運輸／交收方式有咩選擇",
+    aliases: [
+      /^(?:送貨|運輸|運送|配送|交收方式|送貨方式|delivery|shipping)$/,
+      /(?:送貨|運輸|運送|配送).{0,8}(?:方式|安排|選擇|資料)/,
+    ],
+    excluded: /(?:改|轉|更改).{0,8}(?:送貨|地址)|(?:我|張|訂單|order).{0,12}(?:送貨|運送|配送)/,
+  },
+  {
     question: "有冇送貨上門服務",
     aliases: [/(?:有冇|可以|可否).{0,8}(?:送貨上門|送上樓|homedelivery)/, /(?:送貨上門|送上樓).{0,8}(?:服務|得唔得|可以)/],
     excluded: /(?:改|轉|更改).{0,8}(?:送貨|上門)|(?:我|張|訂單).{0,8}(?:送貨|上門)/,
@@ -783,6 +791,58 @@ function strongPublishedFaqMatch(query: string, hit: CustomerServiceFaqHit) {
   );
   if (!rule || rule.excluded?.test(left)) return false;
   return rule.aliases.some((alias) => alias.test(left));
+}
+
+const DELIVERY_OVERVIEW_FAQ = "送貨／運輸／交收方式有咩選擇";
+
+function isDeliveryOverviewFaq(question: string) {
+  return normalizedFaqText(question) === normalizedFaqText(DELIVERY_OVERVIEW_FAQ);
+}
+
+const FAQ_URL_QUESTION_MARK = "\uE000";
+const FAQ_POLITE_CLOSING = /^(?:thanks?|thank\s+you|thx|多謝|唔該)[!！.。\s]*$/iu;
+const FAQ_QUESTION_CUE = /(?:點樣|點算|幾多|幾時|邊度|邊款|有冇|可唔可以|會唔會|係咪|是否|什麼|甚麼|怎么|怎樣|嗎|呢|how|what|when|where|can\s|do\s+you|is\s+there)/iu;
+
+/**
+ * Keep FAQ retrieval question-scoped when a customer asks several questions
+ * in one WhatsApp message. Question marks are strong boundaries; common
+ * Cantonese/Chinese/English joiners are removed from the next question.
+ * URL query strings are protected so their question marks are not boundaries.
+ */
+function splitCustomerServiceFaqQuestions(query: string) {
+  const text = query.replace(/\r\n/g, "\n").trim();
+  if (!text) return [];
+
+  const numbered = text.split(
+    /(?:\n|\s{2,})\s*(?=(?:\d{1,2}\s*[.)、]|[一二三四五六七八九十]+\s*[、.)]))/u,
+  );
+  const lines = numbered.length > 1 ? numbered : text.split(/\n+/u);
+  const clean = (part: string) => part
+    .replace(/^\s*(?:\d{1,2}\s*[.)、]|[一二三四五六七八九十]+\s*[、.)]|[①②③④⑤⑥⑦⑧⑨⑩])\s*/u, "")
+    .replace(/^\s*(?:同埋|另外|仲有|以及|還有|还有|and|also)\s*[,，、:]?\s*/iu, "")
+    .replaceAll(FAQ_URL_QUESTION_MARK, "?")
+    .trim();
+  const cleanedLines = lines.map(clean).filter(Boolean);
+  if (cleanedLines.length > 1) return cleanedLines;
+
+  const protectedText = text.replace(
+    /https?:\/\/[^\s，。！？、]+/giu,
+    (url) => url.replaceAll("?", FAQ_URL_QUESTION_MARK),
+  );
+  const sentenceParts = protectedText.match(/[^?？]+[?？]+|[^?？]+$/gu) ?? [];
+  const cleanedParts = sentenceParts
+    .map(clean)
+    .filter((part) => part && !FAQ_POLITE_CLOSING.test(part));
+  const explicitQuestions = cleanedParts.filter((part) => /[?？]\s*$/u.test(part));
+  if (explicitQuestions.length > 1) return cleanedParts;
+
+  const connectedParts = protectedText
+    .split(/\s*(?:[，,、;；]\s*)?(?:同埋|另外|仲有|以及|還有|还有)\s*|\s+(?:and|also)\s+/iu)
+    .map(clean)
+    .filter((part) => part && !FAQ_POLITE_CLOSING.test(part));
+  return connectedParts.length > 1 && connectedParts.every((part) => FAQ_QUESTION_CUE.test(part))
+    ? connectedParts
+    : [text];
 }
 
 function resetPilotConversation(conversation: CustomerServiceConversation) {
@@ -1450,7 +1510,7 @@ async function replyCollect(
   };
 }
 
-async function replyFaq(
+async function replySingleFaq(
   deps: CustomerServiceBotDeps,
   classified: ClassifiedMessage,
   conversation: CustomerServiceConversation,
@@ -1490,7 +1550,9 @@ async function replyFaq(
           notified: false,
           usedModel: true,
           faqSourceIds: citedIds,
-          relatedFaqs: selectRelatedFaqs(modelCandidates, excludeIds),
+          relatedFaqs: modelCandidates.some((hit) => isDeliveryOverviewFaq(hit.question))
+            ? []
+            : selectRelatedFaqs(modelCandidates, excludeIds),
           model:
             typeof modelAnswer === "string"
               ? null
@@ -1513,7 +1575,9 @@ async function replyFaq(
       notified: false,
       usedModel: classified.usedModel,
       faqSourceIds: [deterministicHit.id],
-      relatedFaqs: selectRelatedFaqs(approvedHits, [deterministicHit.id]),
+      relatedFaqs: isDeliveryOverviewFaq(deterministicHit.question)
+        ? []
+        : selectRelatedFaqs(approvedHits, [deterministicHit.id]),
     };
   }
   return {
@@ -1523,6 +1587,41 @@ async function replyFaq(
     notified: false,
     usedModel: classified.usedModel,
     failureReason: "faq_not_found",
+  };
+}
+
+async function replyFaq(
+  deps: CustomerServiceBotDeps,
+  classified: ClassifiedMessage,
+  conversation: CustomerServiceConversation,
+  query: string,
+): Promise<BotTurn> {
+  const questions = splitCustomerServiceFaqQuestions(query);
+  if (questions.length <= 1) {
+    return replySingleFaq(deps, classified, conversation, query);
+  }
+
+  const turns = await Promise.all(
+    questions.map((question) => replySingleFaq(deps, classified, conversation, question)),
+  );
+  const answered = turns.filter((turn) => turn.reply && !turn.failureReason);
+  const unanswered = turns.filter((turn) => turn.failureReason === "faq_not_found");
+  return {
+    reply: turns.map((turn, index) =>
+      `${index + 1}. ${turn.reply?.trim() || configuredReply(deps, "no_faq", REPLIES.noFaq)}`
+    ).join("\n\n"),
+    conversation,
+    wroteInquiry: false,
+    notified: false,
+    usedModel: turns.some((turn) => turn.usedModel),
+    faqSourceIds: turns.flatMap((turn) => turn.faqSourceIds ?? []),
+    relatedFaqs: turns.flatMap((turn) => turn.relatedFaqs ?? []).slice(0, 3),
+    failureReason: unanswered.length === turns.length
+      ? "faq_not_found"
+      : answered.length < turns.length
+      ? "faq_partially_answered"
+      : null,
+    model: turns.find((turn) => turn.model)?.model ?? null,
   };
 }
 
@@ -1759,6 +1858,14 @@ export async function handleCustomerServiceTurn({
       (!conversation.handoff_kind && !conversation.active_goal &&
         !conversation.selected_order_id))
   ) {
+    await deps.queueHandoff({
+      phone,
+      quoteId: conversation.handoff_quote_id ?? conversation.selected_order_id,
+      orderNumber: null,
+      summary: `客戶補充資料：${text.trim().slice(0, 500)}`,
+      kind: "order_handoff",
+      urgent: Boolean(conversation.handoff_urgent),
+    });
     return {
       reply: null,
       conversation,
@@ -1766,6 +1873,7 @@ export async function handleCustomerServiceTurn({
       notified: false,
       queuedHandoff: true,
       usedModel: false,
+      toolKeys: ["queue_handoff"],
     };
   }
 
@@ -2221,12 +2329,14 @@ export async function handleCustomerServiceTurn({
     classified.intent === "handoff_order" ||
     classified.intent === "out_of_scope" ||
     classified.intent === "prompt_injection";
+  const hasMultipleFaqQuestions = splitCustomerServiceFaqQuestions(text).length > 1;
   const asksForMenu = classified.configuredIntentKey === "browse_menu" ||
     (classified.intent === "search_faq" && isBrandIntroductionRequest(text)) ||
     (!classified.usedModel && isMenuInformationRequest(text));
   if (
     !highRiskIntent &&
     !isSameDayOrderDemand(text) &&
+    !hasMultipleFaqQuestions &&
     classified.intent === "search_faq"
   ) {
     const seasonalMenuQuery = asksForMenu
@@ -2283,7 +2393,9 @@ export async function handleCustomerServiceTurn({
           intentKey: asksForMenu ? "browse_menu" : "search_faq",
           toolKeys: ["search_faqs"],
           faqSourceIds: [preferredFaq.id],
-          relatedFaqs: selectRelatedFaqs(faqHits, [preferredFaq.id]),
+          relatedFaqs: isDeliveryOverviewFaq(preferredFaq.question)
+            ? []
+            : selectRelatedFaqs(faqHits, [preferredFaq.id]),
           failureReason: null,
         });
       }
@@ -2353,5 +2465,34 @@ export async function handleCustomerServiceTurn({
   const faqQuery = asksHowToOrder ? "點樣喺網站落單？" : asksForMenu
     ? customerServiceMenuFaqQuery(text)
     : text;
-  return annotate(await replyFaq(cachedDeps, classified, routedConversation, faqQuery));
+  const faqTurn = await replyFaq(cachedDeps, classified, routedConversation, faqQuery);
+  if (!faqTurn.failureReason?.startsWith("faq_")) return annotate(faqTurn);
+
+  await deps.queueHandoff({
+    phone,
+    quoteId: null,
+    orderNumber: null,
+    summary: `${faqTurn.failureReason === "faq_partially_answered" ? "部分" : ""}FAQ 未命中：${text.trim().slice(0, 500)}`,
+    kind: "order_handoff",
+    urgent: false,
+  });
+  return annotate({
+    ...faqTurn,
+    // A wholly unanswered multi-question message used to repeat the same
+    // fallback once per question. Send the handoff notice exactly once.
+    reply: faqTurn.failureReason === "faq_not_found"
+      ? configuredReply(deps, "no_faq", REPLIES.noFaq)
+      : faqTurn.reply,
+    conversation: nextConversation(routedConversation, {
+      state: "awaiting_human",
+      handoff_at: new Date().toISOString(),
+      active_goal: null,
+      handoff_kind: "general",
+      handoff_urgent: false,
+      handoff_quote_id: null,
+    }),
+    relatedFaqs: [],
+    queuedHandoff: true,
+    toolKeys: [...(faqTurn.toolKeys ?? []), "queue_handoff"],
+  });
 }
