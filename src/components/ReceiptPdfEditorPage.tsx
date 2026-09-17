@@ -16,9 +16,14 @@ import {
   type OrderDetailResult,
 } from "@/lib/order-details";
 import {
+  applyReceiptPdfSettings,
+  fetchReceiptPdfSettings,
+  receiptPdfSettingsFromDraft,
+  saveReceiptPdfSettings,
   splitPdfProductLines,
   type ReceiptPdfDraft,
   type ReceiptPdfLineDraft,
+  type ReceiptPdfSettings,
 } from "@/lib/receipt-pdf-draft";
 import { DICT_TYPE, dictItemLabel, useDictItems } from "@/lib/dictionaries";
 import {
@@ -32,6 +37,15 @@ import { fetchShippingFees, type ShippingFee } from "@/lib/shipping-fees";
 type ReceiptPdfLoader = typeof fetchOrderDetail;
 type ShippingFeeLoader = () => Promise<ShippingFee[]>;
 type FinancialDocumentKind = "receipt" | "invoice";
+type ReceiptPdfSettingsLoader = (
+  orderId: string,
+  documentKind: FinancialDocumentKind,
+) => Promise<Partial<ReceiptPdfSettings> | null>;
+type ReceiptPdfSettingsSaver = (
+  orderId: string,
+  documentKind: FinancialDocumentKind,
+  settings: ReceiptPdfSettings,
+) => Promise<void>;
 type ReceiptTrailingUnit =
   | { kind: "node"; key: string; node: ReactNode }
   | { kind: "term" | "payment"; itemIndex: number | null };
@@ -146,10 +160,14 @@ function resultToDraft(
 export function ReceiptPdfEditorPage({
   loadDetail = fetchOrderDetail,
   loadShippingFees = fetchConfiguredShippingFees,
+  loadDraft = fetchReceiptPdfSettings,
+  saveDraft = saveReceiptPdfSettings,
   documentKind = "receipt",
 }: {
   loadDetail?: ReceiptPdfLoader;
   loadShippingFees?: ShippingFeeLoader;
+  loadDraft?: ReceiptPdfSettingsLoader;
+  saveDraft?: ReceiptPdfSettingsSaver;
   documentKind?: FinancialDocumentKind;
 }) {
   const { t, i18n } = useTranslation();
@@ -173,6 +191,8 @@ export function ReceiptPdfEditorPage({
   const [termSearch, setTermSearch] = useState("");
   const [paymentsOpen, setPaymentsOpen] = useState(false);
   const [paymentSearch, setPaymentSearch] = useState("");
+  const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const skipNextSave = useRef(false);
   const paginationResetKey = `${id}:${documentKind}`;
   const paginationModuleCount = draft
     ? documentKind === "invoice"
@@ -197,6 +217,7 @@ export function ReceiptPdfEditorPage({
   const load = useCallback(async () => {
     setLoading(true);
     setError(false);
+    const storedSettings = loadDraft(id, documentKind).catch(() => null);
     try {
       const result = await loadDetail(id, "order", true);
       if (!result.order) throw new Error("not-found");
@@ -207,13 +228,15 @@ export function ReceiptPdfEditorPage({
         shopifyStoreDomain: result.order.shopifyStoreDomain || "",
         orderNumber: result.order.orderNumber || "",
       });
-      setDraft(fallback);
+      const merged = applyReceiptPdfSettings(fallback, await storedSettings);
+      skipNextSave.current = true;
+      setDraft(merged);
     } catch {
       setError(true);
     } finally {
       setLoading(false);
     }
-  }, [documentKind, id, loadDetail]);
+  }, [documentKind, id, loadDetail, loadDraft]);
 
   useEffect(() => {
     void load();
@@ -296,6 +319,27 @@ export function ReceiptPdfEditorPage({
     if (!draft) return;
     update("receiptPayments", draft.receiptPayments.map((payment, paymentIndex) => paymentIndex === index ? { ...payment, ...patch } : payment));
   };
+
+  const persistedSettings = useMemo(
+    () => (draft ? receiptPdfSettingsFromDraft(draft) : null),
+    [draft],
+  );
+
+  useEffect(() => {
+    if (!draft || !persistedSettings) return;
+    if (skipNextSave.current) {
+      skipNextSave.current = false;
+      setSaveState("saved");
+      return;
+    }
+    setSaveState("saving");
+    const timer = window.setTimeout(() => {
+      void saveDraft(id, documentKind, persistedSettings)
+        .then(() => setSaveState("saved"))
+        .catch(() => setSaveState("error"));
+    }, 500);
+    return () => window.clearTimeout(timer);
+  }, [draft, documentKind, id, persistedSettings, saveDraft]);
 
   if (loading) {
     return (
@@ -532,7 +576,14 @@ export function ReceiptPdfEditorPage({
       <div className="quote-pdf-toolbar receipt-pdf-toolbar">
         <div>
           <strong>{documentName}預覽</strong>
-          <span>所有白色欄位均可直接編輯；重新開啟時會載入最新訂單資料</span>
+          <span>所有白色欄位均可直接編輯；條款、付款方式、運費及折扣等設定會自動儲存</span>
+          {saveState === "saving" ? (
+            <span className="receipt-pdf-save-state">儲存中…</span>
+          ) : saveState === "error" ? (
+            <span className="receipt-pdf-save-state is-error">儲存失敗，修改欄位後會重試</span>
+          ) : saveState === "saved" ? (
+            <span className="receipt-pdf-save-state">已自動儲存</span>
+          ) : null}
         </div>
         <div>
           <Button onClick={() => printPdf(isInvoice ? "發票" : "收據", isInvoice ? sourceBrand.orderNumber : draft.receiptNumber)}><Printer />確定並列印 PDF</Button>

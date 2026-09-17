@@ -83,11 +83,13 @@ const shippingFees = [
 function renderPage(
   loadDetail = vi.fn().mockResolvedValue(result),
   loadShippingFees = vi.fn().mockResolvedValue(shippingFees),
+  loadDraft = vi.fn().mockResolvedValue(null),
+  saveDraft = vi.fn().mockResolvedValue(undefined),
 ) {
   render(
     <MemoryRouter initialEntries={["/orders/order-1/receipt"]}>
       <Routes>
-        <Route path="/orders/:id/receipt" element={<ReceiptPdfEditorPage loadDetail={loadDetail} loadShippingFees={loadShippingFees} />} />
+        <Route path="/orders/:id/receipt" element={<ReceiptPdfEditorPage loadDetail={loadDetail} loadShippingFees={loadShippingFees} loadDraft={loadDraft} saveDraft={saveDraft} />} />
       </Routes>
     </MemoryRouter>,
   );
@@ -273,26 +275,29 @@ describe("Receipt PDF editor", () => {
     await user.tab();
 
     expect(receiptNumber).toHaveValue("REC/CUSTOM-A");
-    expect(window.localStorage.getItem("fccd:receipt-pdf-draft:order-1")).toBeNull();
 
     cleanup();
     renderPage();
     expect(await screen.findByLabelText("收據編號")).toHaveValue("REC/B-1547");
   });
 
-  it("ignores stale browser PDF data and always loads the latest source data", async () => {
-    localStorage.setItem("fccd:receipt-pdf-draft:order-1", JSON.stringify({
+  it("refreshes source order fields while restoring saved PDF settings", async () => {
+    const loadDraft = vi.fn().mockResolvedValue({
       receiptNumber: "REC/STALE",
-      customer: "舊客戶",
-      contactPerson: "00000000",
+      customerName: "舊客戶",
       deliveryAddress: "舊地址",
       deliveryDate: "1/1/2020",
       deliveryTime: "00:00 - 00:30",
       lines: [{ id: "line-1", description: "舊產品", unitPrice: "1", quantity: "1" }],
       paymentInformation: "舊付款狀態",
-    }));
+      signaturePartyName: "儲存的簽署名稱",
+      deliveryFeeId: "fee-1",
+      deliveryFeeLabel: "運費－新界區－地面交收",
+      deliveryFee: "100",
+    });
+    const saveDraft = vi.fn().mockResolvedValue(undefined);
 
-    renderPage();
+    renderPage(undefined, undefined, loadDraft, saveDraft);
 
     expect(await screen.findByLabelText("收據編號")).toHaveValue("REC/B-1547");
     expect(screen.getByLabelText("Customer Name:")).toHaveValue("Momo");
@@ -304,6 +309,9 @@ describe("Receipt PDF editor", () => {
     expect(screen.getByLabelText("產品 1")).toHaveValue("雙格 雞扒意粉");
     expect(screen.getByLabelText("單價 1")).toHaveValue("45");
     expect(screen.getByLabelText("付款資料")).toHaveValue("Payment Status: Paid");
+    expect(screen.getByLabelText("運費")).toHaveValue("100");
+    expect(loadDraft).toHaveBeenCalledWith("order-1", "receipt");
+    expect(saveDraft).not.toHaveBeenCalled();
   });
 
   it("keeps invoice clauses and signing in document order without manual page controls", async () => {
@@ -390,11 +398,68 @@ describe("Receipt PDF editor", () => {
     expect(signatureName).toHaveValue("簽名客戶");
   });
 
-  it("recalculates totals without persisting receipt edits", async () => {
+  it("loads saved invoice clauses and signature from the server draft", async () => {
+    const loadDraft = vi.fn().mockResolvedValue({
+      terms: ["已儲存條款"],
+      paymentMethods: ["已儲存付款方式"],
+      showCustomerSignature: true,
+      signaturePartyName: "已儲存簽署",
+    });
+    const saveDraft = vi.fn().mockResolvedValue(undefined);
+
+    render(
+      <MemoryRouter initialEntries={["/orders/order-1/invoice"]}>
+        <Routes>
+          <Route path="/orders/:id/invoice" element={<ReceiptPdfEditorPage documentKind="invoice" loadDetail={vi.fn().mockResolvedValue(result)} loadShippingFees={vi.fn().mockResolvedValue(shippingFees)} loadDraft={loadDraft} saveDraft={saveDraft} />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole("heading", { name: "INVOICE" })).toBeInTheDocument();
+    expect(screen.getByLabelText("條款及細則 1")).toHaveValue("已儲存條款");
+    expect(screen.getByLabelText("付款方式 1")).toHaveValue("已儲存付款方式");
+    expect(screen.getByLabelText("簽署公司或客戶名稱")).toHaveValue("已儲存簽署");
+    expect(loadDraft).toHaveBeenCalledWith("order-1", "invoice");
+    expect(saveDraft).not.toHaveBeenCalled();
+  });
+
+  it("automatically saves invoice clause and signature changes", async () => {
     const user = userEvent.setup();
-    renderPage();
+    const saveDraft = vi.fn().mockResolvedValue(undefined);
+    render(
+      <MemoryRouter initialEntries={["/orders/order-1/invoice"]}>
+        <Routes>
+          <Route path="/orders/:id/invoice" element={<ReceiptPdfEditorPage documentKind="invoice" loadDetail={vi.fn().mockResolvedValue(result)} loadShippingFees={vi.fn().mockResolvedValue(shippingFees)} loadDraft={vi.fn().mockResolvedValue(null)} saveDraft={saveDraft} />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    await screen.findByRole("heading", { name: "INVOICE" });
+    expect(saveDraft).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole("button", { name: /條款及細則/ }));
+    const termsDialog = screen.getByRole("dialog", { name: "條款及細則" });
+    await user.type(within(termsDialog).getByLabelText("搜尋條款及細則"), "新增條款");
+    await user.click(within(termsDialog).getByRole("button", { name: "加入" }));
+
+    await waitFor(() => expect(saveDraft).toHaveBeenCalled());
+    expect(saveDraft.mock.calls.at(-1)?.[2]).toMatchObject({ terms: ["新增條款"] });
+
+    await user.click(within(termsDialog).getByRole("button", { name: "確定" }));
+    await user.click(screen.getByRole("checkbox", { name: "顯示客戶簽署" }));
+    await waitFor(() => {
+      const settings = saveDraft.mock.calls.at(-1)?.[2] as { showCustomerSignature?: boolean };
+      expect(settings.showCustomerSignature).toBe(true);
+    });
+  });
+
+  it("recalculates totals and automatically saves the PDF shipping setting", async () => {
+    const user = userEvent.setup();
+    const saveDraft = vi.fn().mockResolvedValue(undefined);
+    renderPage(undefined, undefined, undefined, saveDraft);
 
     await screen.findByRole("heading", { name: "RECEIPT" });
+    expect(saveDraft).not.toHaveBeenCalled();
     await user.clear(screen.getByLabelText("單價 1"));
     await user.type(screen.getByLabelText("單價 1"), "50");
     expect(screen.getByText("$1,650")).toBeInTheDocument();
@@ -405,21 +470,28 @@ describe("Receipt PDF editor", () => {
     expect(screen.getByText("$1,790")).toBeInTheDocument();
     expect(screen.getByLabelText("運費")).toHaveValue("100");
     expect(document.querySelector(".quote-pdf-print-only")).toHaveTextContent("運費－新界區－地面交收");
-    expect(screen.queryByText("已自動儲存")).not.toBeInTheDocument();
-    expect(window.localStorage.getItem("fccd:receipt-pdf-draft:order-1")).toBeNull();
+    await waitFor(() => expect(saveDraft).toHaveBeenCalled());
+    expect(saveDraft.mock.calls.at(-1)?.[0]).toBe("order-1");
+    expect(saveDraft.mock.calls.at(-1)?.[1]).toBe("receipt");
+    expect(saveDraft.mock.calls.at(-1)?.[2]).toMatchObject({
+      deliveryFeeId: "fee-1",
+      deliveryFeeLabel: "運費－新界區－地面交收",
+      deliveryFee: "100",
+    });
+    expect(await screen.findByText("已自動儲存")).toBeInTheDocument();
   });
 
-  it("ignores zero totals from legacy receipt drafts", async () => {
-    localStorage.setItem("fccd:receipt-pdf-draft:order-1", JSON.stringify({
+  it("keeps product lines from the latest order even when a draft is saved", async () => {
+    const loadDraft = vi.fn().mockResolvedValue({
       lines: result.lines.map((line) => ({
         id: line.id,
         description: line.productName,
         quantity: String(line.quantity),
         unitPrice: "0",
       })),
-    }));
+    });
 
-    renderPage();
+    renderPage(undefined, undefined, loadDraft);
 
     expect(await screen.findByLabelText("單價 1")).toHaveValue("45");
     expect(screen.getByText("$1,650")).toBeInTheDocument();
