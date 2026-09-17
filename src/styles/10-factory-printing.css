@@ -682,7 +682,49 @@
   }
 }
 
+/* Mobile-only return button shown next to the driver assignment on the factory order page. */
+.factory-order-aside .factory-order-assign {
+  display: contents;
+}
+
+.factory-order-aside .factory-order-return {
+  display: none;
+}
+
 @media (max-width: 760px) {
+  .factory-order-aside .factory-order-assign {
+    display: flex;
+    order: -2;
+    gap: 6px;
+  }
+
+  .factory-order-aside .factory-order-assign > button {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  .factory-order-aside .factory-order-return {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    white-space: nowrap;
+    border: 2px solid var(--factory-green);
+    border-radius: 8px;
+    background: #ffffff;
+    color: var(--factory-green);
+  }
+
+  .factory-order-aside .factory-order-return svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .factory-order-aside .factory-order-return:hover {
+    border-color: var(--factory-green-hover);
+    color: var(--factory-green-hover);
+  }
+
   .factory-board .factory-qz,
   .factory-board .factory-qz-tip {
     display: none !important;
@@ -1161,10 +1203,6 @@
   .factory-order-aside .factory-order-printer,
   .factory-order-aside hr {
     display: none;
-  }
-
-  .factory-order-aside .factory-order-selected {
-    order: -2;
   }
 
   .factory-label-modal .factory-label-printer-select,

@@ -388,6 +388,18 @@ describe("FactoryBoardPage", () => {
       /@media \(max-width: 760px\)[\s\S]*?\.factory-board-heading\.factory-page-title-heading\s*\{[^}]*display:\s*flex/,
     );
     expect(stylesheet).toMatch(
+      /\.factory-order-aside \.factory-order-assign\s*\{[^}]*display:\s*contents/,
+    );
+    expect(stylesheet).toMatch(
+      /\.factory-order-aside \.factory-order-return\s*\{[^}]*display:\s*none/,
+    );
+    expect(stylesheet).toMatch(
+      /@media \(max-width: 760px\)[\s\S]*?\.factory-order-aside \.factory-order-assign\s*\{[^}]*display:\s*flex[^}]*order:\s*-2/,
+    );
+    expect(stylesheet).toMatch(
+      /@media \(max-width: 760px\)[\s\S]*?\.factory-order-aside \.factory-order-return\s*\{[^}]*display:\s*inline-flex/,
+    );
+    expect(stylesheet).toMatch(
       /@media \(max-width: 760px\)[\s\S]*?\.factory-board-heading\.factory-calendar-heading\s*\{[^}]*display:\s*flex/,
     );
     expect(stylesheet).toMatch(

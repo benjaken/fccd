@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { CheckCircle2, Printer, ShoppingCart, TriangleAlert } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Printer, ShoppingCart, TriangleAlert } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
@@ -112,6 +112,7 @@ export function FactoryOrderJobView({
   saveDispatchTime = updateFactoryDispatchTime,
   onLinePrinted,
   onAssigned,
+  onBack,
   qz,
 }: {
   item: DeliveryListItem;
@@ -126,6 +127,7 @@ export function FactoryOrderJobView({
   saveDispatchTime?: typeof updateFactoryDispatchTime;
   onLinePrinted?: (lineId: string) => void;
   onAssigned?: (fleet: FactoryFleet) => void;
+  onBack?: () => void;
   qz: ReturnType<typeof useQzTray>;
 }) {
   const { t, i18n } = useTranslation();
@@ -528,20 +530,32 @@ export function FactoryOrderJobView({
         >
           {t("factoryBoard.printDeliveryNote")}
         </Button>
-        <Button
-          type="button"
-          className="factory-order-selected"
-          disabled={printBlocked}
-          onClick={() => {
-            setSelectedFleetId(assignedFleetId);
-            setAssignError(false);
-            setAssignOpen(true);
-          }}
-        >
-          {assignedFleetId
-            ? t("factoryBoard.selectedFleet", { name: selectedName })
-            : t("factoryBoard.assignDriver")}
-        </Button>
+        <div className="factory-order-assign">
+          <Button
+            type="button"
+            className="factory-order-selected"
+            disabled={printBlocked}
+            onClick={() => {
+              setSelectedFleetId(assignedFleetId);
+              setAssignError(false);
+              setAssignOpen(true);
+            }}
+          >
+            {assignedFleetId
+              ? t("factoryBoard.selectedFleet", { name: selectedName })
+              : t("factoryBoard.assignDriver")}
+          </Button>
+          {onBack ? (
+            <button
+              type="button"
+              className="factory-order-return"
+              onClick={onBack}
+            >
+              <ArrowLeft aria-hidden="true" />
+              {t("factoryBoard.backToFactory")}
+            </button>
+          ) : null}
+        </div>
         <hr />
         <label className="factory-order-printer">
           <span>{t("factoryBoard.connectPrinter")}</span>

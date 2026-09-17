@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
-import { act, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 
@@ -173,5 +173,49 @@ describe("order editing factory workflow", () => {
     expect(screen.getByRole("alert")).toBeInTheDocument();
     act(() => emitPresence(new Set()));
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  it("returns to the factory board from the mobile back button", async () => {
+    const qzClient: QzTrayClient = {
+      connect: vi.fn(async () => undefined),
+      disconnect: vi.fn(async () => undefined),
+      listPrinters: vi.fn(async () => []),
+      queryStatuses: vi.fn(async () => []),
+      printLabels: vi.fn(async () => undefined),
+    };
+    const closeSpy = vi.spyOn(window, "close").mockImplementation(() => {});
+
+    render(
+      <MemoryRouter initialEntries={["/factory/order/delivery-1"]}>
+        <Routes>
+          <Route
+            path="/factory/order/:deliveryId"
+            element={(
+              <FactoryOrderPage
+                loadDelivery={vi.fn().mockResolvedValue(item)}
+                loadOrderJob={vi.fn().mockResolvedValue({
+                  packingNote: null,
+                  dispatchTime: "09:00",
+                  arrivalWindow: "10:00 - 10:30",
+                  isBeingEdited: false,
+                  lines: [],
+                })}
+                loadFleets={vi.fn().mockResolvedValue([])}
+                subscribeEditPresence={() => () => undefined}
+                qzClient={qzClient}
+              />
+            )}
+          />
+          <Route path="/factory" element={<p>工場版面</p>} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: "返回工場版面" }),
+    );
+    expect(closeSpy).toHaveBeenCalled();
+    expect(await screen.findByText("工場版面")).toBeInTheDocument();
+    closeSpy.mockRestore();
   });
 });
