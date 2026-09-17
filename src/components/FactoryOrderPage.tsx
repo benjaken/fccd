@@ -173,6 +173,7 @@ export function FactoryOrderPage({
                 : current,
             )
           }
+          onBack={closePage}
           qz={qz}
         />
       )}
