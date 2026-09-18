@@ -423,6 +423,76 @@ describe("Quote editor", () => {
     expect(screen.getByRole("heading", { name: "Add product" })).toBeInTheDocument();
   });
 
+  it("allows a manual number on a new quote and blocks an existing one", async () => {
+    const user = userEvent.setup();
+    const orderNumberExists = vi.fn().mockResolvedValue(true);
+    const props = renderEditor({ orderNumberExists }, "/quotes/new");
+
+    const numberInput = await screen.findByLabelText("Quote no.");
+    expect(numberInput).toBeEnabled();
+    await user.type(numberInput, "FCLQ20260901");
+    await fillRequiredQuoteDetails(user);
+    await user.click(screen.getByRole("button", { name: "Save and add products" }));
+
+    await waitFor(() => expect(orderNumberExists).toHaveBeenCalledWith("FCLQ20260901", "channel-1"));
+    expect(await screen.findByRole("alert")).toHaveTextContent("This order number already exists. Enter a different number.");
+    expect(props.saveQuote).not.toHaveBeenCalled();
+  });
+
+  it("keeps the manager-typed number when it is not a duplicate", async () => {
+    const user = userEvent.setup();
+    const orderNumberExists = vi.fn().mockResolvedValue(false);
+    const props = renderEditor({ orderNumberExists }, "/quotes/new");
+
+    await user.type(await screen.findByLabelText("Quote no."), "FCLQ20260909");
+    await fillRequiredQuoteDetails(user);
+    await user.click(screen.getByRole("button", { name: "Save and add products" }));
+
+    await waitFor(() => expect(props.saveQuote).toHaveBeenCalledWith(expect.objectContaining({
+      orderNumber: "FCLQ20260909",
+      channelId: "channel-1",
+    })));
+    expect(orderNumberExists).toHaveBeenCalledWith("FCLQ20260909", "channel-1");
+  });
+
+  it("blocks a duplicate number on a new order", async () => {
+    const user = userEvent.setup();
+    const orderNumberExists = vi.fn().mockResolvedValue(true);
+    const createOrder = vi.fn();
+    const props = renderEditor(
+      { documentType: "order", orderNumberExists, createOrder },
+      "/orders/new",
+    );
+
+    await user.type(await screen.findByLabelText("Quote no."), "FCCO20260901");
+    await fillRequiredQuoteDetails(user);
+    await user.click(screen.getByRole("button", { name: "Save and add products" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("This order number already exists. Enter a different number.");
+    expect(props.createOrder).not.toHaveBeenCalled();
+  });
+
+  it("checks a typed number on blur and shows a loading indicator", async () => {
+    const user = userEvent.setup();
+    let resolveCheck: (value: boolean) => void = () => undefined;
+    const orderNumberExists = vi.fn().mockImplementation(
+      () => new Promise<boolean>((resolve) => { resolveCheck = resolve; }),
+    );
+    renderEditor({ orderNumberExists }, "/quotes/new");
+
+    const numberInput = await screen.findByLabelText("Quote no.");
+    await user.type(numberInput, "FCLQ20260901");
+    await user.tab();
+
+    expect(await screen.findByRole("status", {
+      name: "Checking whether the number already exists…",
+    })).toBeInTheDocument();
+    expect(orderNumberExists).toHaveBeenCalledWith("FCLQ20260901", "");
+
+    resolveCheck(true);
+    expect(await screen.findByRole("alert")).toHaveTextContent("This order number already exists. Enter a different number.");
+  });
+
   it("copies an order through the shared editor", async () => {
     const user = userEvent.setup();
     const copyOrder = vi.fn().mockResolvedValue({

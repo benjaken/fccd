@@ -835,6 +835,17 @@
   transform: translateY(-50%);
 }
 
+.quote-order-number-status {
+  position: absolute;
+  top: 50%;
+  right: 0.625rem;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  color: var(--muted-foreground);
+  pointer-events: none;
+}
+
 .quote-editor-form-column > label.quote-editor-checkbox {
   align-items: center;
 }

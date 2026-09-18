@@ -42,6 +42,13 @@ describe("classifyQuoteSaveError", () => {
       classifyQuoteSaveError({ message: "invalid_order_payment", code: "22023" }),
     ).toBe("paymentInvalid");
   });
+
+  it("maps the database duplicate-number guard to a specific message", () => {
+    expect(
+      classifyQuoteSaveError({ message: "order_number_exists", code: "23505" }),
+    ).toBe("numberExists");
+    expect(isQuoteSaveErrorKey("numberExists")).toBe(true);
+  });
 });
 
 describe("isPersistableOrderPayment", () => {
