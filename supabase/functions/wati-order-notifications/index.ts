@@ -892,6 +892,20 @@ Deno.serve(async (request) => {
         }).eq("id", job.id);
         continue;
       }
+      if (!explicitlyManual && isCancelledStatus(order.delivery_status)) {
+        const skippedAt = new Date().toISOString();
+        await admin.from("wati_order_notification_outbox").update({
+          status: "skipped",
+          wati_skipped_at: job.wati_sent_at ? job.wati_skipped_at : job.wati_skipped_at || skippedAt,
+          email_skipped_at: job.email_sent_at ? job.email_skipped_at : job.email_skipped_at || skippedAt,
+          wati_error: "order_cancelled",
+          email_error: "order_cancelled",
+          last_error: "order_cancelled",
+          locked_at: null,
+          updated_at: skippedAt,
+        }).eq("id", job.id);
+        continue;
+      }
       if (template.is_active === false) {
         const skippedAt = new Date().toISOString();
         await admin.from("wati_order_notification_outbox").update({
@@ -1038,7 +1052,7 @@ Deno.serve(async (request) => {
     if (internalIds.length) {
       const { data, error: internalLoadError } = await admin
         .from("order_internal_notification_outbox")
-        .select("id,attempts,channel,recipient_name,recipient_address,order:orders(id,order_number,customer_name_snapshot,company_name_snapshot,document_type,archived_at,delivery_at,delivery_time,shipping_address_snapshot,created_at,is_sent_to_factory,do_not_send_to_factory)")
+        .select("id,attempts,channel,recipient_name,recipient_address,order:orders(id,order_number,customer_name_snapshot,company_name_snapshot,document_type,archived_at,delivery_at,delivery_time,shipping_address_snapshot,created_at,is_sent_to_factory,do_not_send_to_factory,delivery_status)")
         .in("id", internalIds.map((row) => row.id));
       if (internalLoadError) {
         throw new Error(`internal_notification_load_failed:${internalLoadError.message}`);
@@ -1061,6 +1075,15 @@ Deno.serve(async (request) => {
         await admin.from("order_internal_notification_outbox").update({
           status: "skipped",
           last_error: "order_not_active",
+          locked_at: null,
+          updated_at: new Date().toISOString(),
+        }).eq("id", job.id);
+        continue;
+      }
+      if (isCancelledStatus(order.delivery_status)) {
+        await admin.from("order_internal_notification_outbox").update({
+          status: "skipped",
+          last_error: "order_cancelled",
           locked_at: null,
           updated_at: new Date().toISOString(),
         }).eq("id", job.id);
