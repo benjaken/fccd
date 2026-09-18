@@ -1,6 +1,8 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
+  CUSTOMER_SERVICE_EMBEDDING_DIMENSIONS,
+  customerServiceEmbeddingConfig,
   embedCustomerServiceQuery,
   embedCustomerServiceTexts,
 } from "../supabase/functions/_shared/customer-service-embedding.ts";
@@ -27,6 +29,35 @@ function embeddingResponse(count: number, dimensions = config.dimensions) {
 }
 
 describe("customer-service embedding client", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("defaults to the 1024-d column used by retrieval", () => {
+    expect(CUSTOMER_SERVICE_EMBEDDING_DIMENSIONS).toBe(1024);
+  });
+
+  it("stays disabled when only OPENAI_API_KEY is present", () => {
+    vi.stubGlobal("Deno", {
+      env: {
+        get: (name: string) => name === "OPENAI_API_KEY" ? "sk-test" : "",
+      },
+    });
+    expect(customerServiceEmbeddingConfig().enabled).toBe(false);
+    vi.unstubAllGlobals();
+  });
+
+  it("enables with a dedicated embedding key", () => {
+    vi.stubGlobal("Deno", {
+      env: {
+        get: (name: string) => name === "CUSTOMER_SERVICE_EMBEDDING_API_KEY" ? "ark-key" : "",
+      },
+    });
+    const config = customerServiceEmbeddingConfig();
+    expect(config.enabled).toBe(true);
+    expect(config.apiKey).toBe("ark-key");
+    expect(config.dimensions).toBe(1024);
+    vi.unstubAllGlobals();
+  });
+
   it("embeds a query with the configured model and dimensions", async () => {
     const fetchMock = vi.fn().mockResolvedValue(embeddingResponse(1));
     const embedding = await embedCustomerServiceQuery("點樣退錢？", {

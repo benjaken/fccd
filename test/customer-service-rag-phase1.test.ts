@@ -44,8 +44,24 @@ describe("customer-service RAG phase 1 retrieval rewrite", () => {
 
     expect(deps.rewriteQuery).toHaveBeenCalledWith("點樣退錢？");
     expect(deps.searchFaqs).toHaveBeenCalledWith("退款流程是什麼");
-    expect(deps.answerFaqWithModel).toHaveBeenCalledWith("退款流程是什麼", [faq]);
+    expect(deps.answerFaqWithModel).toHaveBeenCalledWith("點樣退錢？", [faq], "退款流程是什麼");
     expect(result.reply).toContain(faq.answer);
+  });
+
+  it("appends a grounded clarification question to the FAQ answer", async () => {
+    const { deps, run } = setup();
+    deps.answerFaqWithModel = vi.fn().mockResolvedValue({
+      answer: faq.answer,
+      sourceIds: [faq.id],
+      model: "test",
+      needsClarification: true,
+      clarificationQuestion: "你想退全數定部分金額？",
+    });
+
+    const result = await run("點樣退錢？");
+
+    expect(result.reply).toContain(faq.answer);
+    expect(result.reply).toContain("你想退全數定部分金額？");
   });
 
   it("keeps the original query when rewrite asks for clarification", async () => {

@@ -33,8 +33,16 @@ describe("customer service media phase 2 routing", () => {
     expect(webhook).toContain("shopify_catalog_mappings");
     expect(webhook).toContain("shopify_catalog_drafts");
     expect(webhook).toContain("customerServiceShopifyProductUrl");
+    expect(webhook).toContain("customerServiceExactSkuFilter");
+    expect(webhook).toContain("customerServiceSkuProductsForBrand");
+    expect(webhook).not.toContain('.ilike("sku", `%${code}%`)');
     expect(webhook).toContain("entities?.productCode");
     expect(webhook).toContain('product_source: skuReply');
+  });
+
+  it("degrades hybrid retrieval when either side fails", () => {
+    expect(webhook).toContain("customer-service lexical retrieval failed; using vector only");
+    expect(webhook).toContain("customer-service vector retrieval failed; using lexical only");
   });
 
   it("checks block dates for a menu image and asks for the date when unknown", () => {
@@ -52,9 +60,11 @@ describe("customer service media phase 2 routing", () => {
     expect(webhook).toContain("{ ...baseResult, orderNumber }");
   });
 
-  it("reports the chosen media route in the webhook response", () => {
+  it("queues inbound media off the webhook request", () => {
     expect(webhook).toContain("media_type: event.type");
-    expect(webhook).toContain("route,");
-    expect(webhook).toContain('handoff: route === "handoff"');
+    expect(webhook).toContain("deferBackground(");
+    expect(webhook).toContain("handleInboundMedia(admin, event)");
+    expect(webhook).toContain("queued: true");
+    expect(webhook).not.toContain("handoff: route === \"handoff\"");
   });
 });

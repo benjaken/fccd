@@ -21,14 +21,15 @@ export type CustomerServiceRrfOptions = {
   limit: number;
 };
 
-function rankMap(candidates: CustomerServiceFaqCandidate[], key: "lexical" | "vector") {
+function firstById(candidates: CustomerServiceFaqCandidate[]) {
   const ranks = new Map<string, number>();
+  const scores = new Map<string, number | null>();
   candidates.forEach((candidate, index) => {
-    if (!candidate?.id) return;
-    if (!ranks.has(candidate.id)) ranks.set(candidate.id, index + 1);
-    void key;
+    if (!candidate?.id || ranks.has(candidate.id)) return;
+    ranks.set(candidate.id, index + 1);
+    scores.set(candidate.id, candidate.score ?? null);
   });
-  return ranks;
+  return { ranks, scores };
 }
 
 /**
@@ -43,8 +44,10 @@ export function fuseCustomerFaqCandidates(
   options: CustomerServiceRrfOptions,
 ): CustomerServiceFaqRanked[] {
   const rrfK = Math.max(1, options.rrfK);
-  const lexicalRanks = rankMap(lexical, "lexical");
-  const vectorRanks = rankMap(vector, "vector");
+  const lexicalIndex = firstById(lexical);
+  const vectorIndex = firstById(vector);
+  const lexicalRanks = lexicalIndex.ranks;
+  const vectorRanks = vectorIndex.ranks;
   const byId = new Map<string, CustomerServiceFaqCandidate>();
   for (const candidate of [...lexical, ...vector]) {
     if (!candidate?.id) continue;
@@ -65,8 +68,8 @@ export function fuseCustomerFaqCandidates(
       rrfScore,
       lexicalRank,
       vectorRank,
-      lexicalScore: lexicalRank === null ? null : candidate.score ?? null,
-      vectorScore: vectorRank === null ? null : candidate.score ?? null,
+      lexicalScore: lexicalRank === null ? null : lexicalIndex.scores.get(id) ?? null,
+      vectorScore: vectorRank === null ? null : vectorIndex.scores.get(id) ?? null,
     });
   }
 

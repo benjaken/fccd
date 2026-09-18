@@ -242,6 +242,12 @@ export type CustomerServiceReviewTurn = {
   note: string | null;
 };
 
+export type CustomerServiceRagFlags = {
+  enableRagV2: boolean;
+  enableQueryRewrite: boolean;
+  enableGroundedClarification: boolean;
+};
+
 export type CustomerServiceConfigVersion = {
   id: string;
   environment: string;
@@ -254,10 +260,20 @@ export type CustomerServiceConfigVersion = {
   systemPrompt: string;
   temperature: number;
   retrievalLimit: number;
+  ragConfig: CustomerServiceRagFlags;
   status: "draft" | "active" | "archived";
   activatedAt: string | null;
   createdAt: string;
 };
+
+export function parseCustomerServiceRagConfig(raw: unknown): CustomerServiceRagFlags {
+  const row = raw && typeof raw === "object" ? raw as Record<string, unknown> : {};
+  return {
+    enableRagV2: row.enable_rag_v2 === true,
+    enableQueryRewrite: row.enable_query_rewrite === true,
+    enableGroundedClarification: row.enable_grounded_clarification === true,
+  };
+}
 
 export type CustomerServiceEvaluationRun = {
   id: string;
@@ -479,6 +495,16 @@ export async function fetchCustomerFaqs({
   };
 }
 
+async function refreshCustomerFaqEmbeddings() {
+  try {
+    await supabase.functions.invoke("customer-service-faq-embed", {
+      body: { limit: 50 },
+    });
+  } catch {
+    return;
+  }
+}
+
 export async function createCustomerFaq(input: CustomerFaqWriteInput) {
   const fields = normalizeCustomerFaqInput(input);
   const { error } = await supabase.from("customer_faqs").insert({
@@ -491,6 +517,7 @@ export async function createCustomerFaq(input: CustomerFaqWriteInput) {
     sort_order: fields.sortOrder,
   });
   if (error) throw error;
+  void refreshCustomerFaqEmbeddings();
 }
 
 export async function updateCustomerFaq(
@@ -511,6 +538,7 @@ export async function updateCustomerFaq(
     })
     .eq("id", id);
   if (error) throw error;
+  void refreshCustomerFaqEmbeddings();
 }
 
 export async function fetchCustomerServiceControls(): Promise<CustomerServiceControls> {
@@ -833,6 +861,7 @@ export async function generateCustomerServiceDailyReport(reportDate: string) {
     { body: { report_date: reportDate } },
   );
   if (error) throw error;
+  void refreshCustomerFaqEmbeddings();
   return data;
 }
 
@@ -845,6 +874,7 @@ export async function reviewCustomerServiceLearningSuggestion(
     { p_id: id, p_status: status },
   );
   if (error) throw error;
+  if (status === "approved") void refreshCustomerFaqEmbeddings();
   return (data as Array<{ target_faq_id: string | null }> | null)?.[0];
 }
 
@@ -903,6 +933,7 @@ export async function submitCustomerServiceTurnFeedback(input: {
     },
   );
   if (error) throw error;
+  if (input.createFaqDraft) void refreshCustomerFaqEmbeddings();
   return data;
 }
 
@@ -927,12 +958,28 @@ export async function fetchCustomerServiceConfigVersions(
       systemPrompt: String(row.system_prompt || ""),
       temperature: Number(row.temperature),
       retrievalLimit: Number(row.retrieval_limit),
+      ragConfig: parseCustomerServiceRagConfig(row.rag_config),
       status: row.status as CustomerServiceConfigVersion["status"],
       activatedAt:
         typeof row.activated_at === "string" ? row.activated_at : null,
       createdAt: String(row.created_at),
     }),
   );
+}
+
+export async function setCustomerServiceConfigRag(
+  id: string,
+  ragConfig: CustomerServiceRagFlags,
+) {
+  const { error } = await supabase.rpc("customer_service_config_set_rag", {
+    p_id: id,
+    p_rag_config: {
+      enable_rag_v2: ragConfig.enableRagV2,
+      enable_query_rewrite: ragConfig.enableQueryRewrite,
+      enable_grounded_clarification: ragConfig.enableGroundedClarification,
+    },
+  });
+  if (error) throw error;
 }
 
 export async function createCustomerServiceConfig(input: {
@@ -945,6 +992,7 @@ export async function createCustomerServiceConfig(input: {
   systemPrompt: string;
   temperature: number;
   retrievalLimit: number;
+  ragConfig?: CustomerServiceRagFlags;
 }) {
   const { data, error } = await supabase.rpc("customer_service_config_create_tiered", {
     p_environment: input.environment || "develop",
@@ -958,7 +1006,9 @@ export async function createCustomerServiceConfig(input: {
     p_retrieval_limit: input.retrievalLimit,
   });
   if (error) throw error;
-  return String(data);
+  const id = String(data);
+  if (input.ragConfig) await setCustomerServiceConfigRag(id, input.ragConfig);
+  return id;
 }
 
 export async function activateCustomerServiceConfig(id: string) {

@@ -13,8 +13,8 @@ export type CustomerServiceEmbeddingConfig = {
   batchSize: number;
 };
 
-/** Default matches OpenAI text-embedding-3-small. Override for Doubao etc. */
-export const CUSTOMER_SERVICE_EMBEDDING_DIMENSIONS = 1536;
+/** Matches the pgvector column and Doubao 1024-d output. */
+export const CUSTOMER_SERVICE_EMBEDDING_DIMENSIONS = 1024;
 
 function firstEnv(...names: string[]) {
   for (const name of names) {
@@ -44,11 +44,11 @@ const ARK_MULTIMODAL_ENDPOINT = "https://ark.cn-beijing.volces.com/api/v3/embedd
 const OPENAI_ENDPOINT = "https://api.openai.com/v1/embeddings";
 
 export function customerServiceEmbeddingConfig(): CustomerServiceEmbeddingConfig {
-  const apiKey = firstEnv(
+  const dedicatedKey = firstEnv(
     "CUSTOMER_SERVICE_EMBEDDING_API_KEY",
     "ARK_API_KEY",
-    "OPENAI_API_KEY",
   );
+  const apiKey = dedicatedKey || firstEnv("OPENAI_API_KEY");
   const model = firstEnv(
     "CUSTOMER_SERVICE_EMBEDDING_MODEL",
     "ARK_EMBEDDING_MODEL",
@@ -68,7 +68,7 @@ export function customerServiceEmbeddingConfig(): CustomerServiceEmbeddingConfig
     "OPENAI_EMBEDDING_ENDPOINT",
   ) || (apiStyle === "ark_multimodal" ? ARK_MULTIMODAL_ENDPOINT : OPENAI_ENDPOINT);
   return {
-    enabled: apiKey !== "",
+    enabled: boolEnv("CUSTOMER_SERVICE_EMBEDDING_ENABLED", dedicatedKey !== ""),
     apiStyle,
     endpoint,
     apiKey,

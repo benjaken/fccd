@@ -11,8 +11,10 @@ import {
   customerServiceMenuProductMatches,
   customerServiceMenuProductReplyText,
   customerServiceMenuUrlMatchesBrand,
+  customerServiceExactSkuFilter,
   customerServicePublicProductUrl,
   customerServiceShopifyProductUrl,
+  customerServiceSkuProductsForBrand,
   decideCustomerServiceMediaRoute,
 } from "../supabase/functions/_shared/customer-service-vision-routing";
 import type { CustomerServiceVisionResult } from "../supabase/functions/_shared/customer-service-vision";
@@ -277,6 +279,24 @@ describe("customer service product code link resolution", () => {
     expect(
       customerServiceMenuUrlMatchesBrand("https://example.com/x", ""),
     ).toBe(true);
+  });
+
+  it("rejects wildcard SKUs and keeps exact codes", () => {
+    expect(customerServiceExactSkuFilter("CC0012-1")).toBe("CC0012-1");
+    expect(customerServiceExactSkuFilter("  cc0012-1  ")).toBe("cc0012-1");
+    expect(customerServiceExactSkuFilter("ab")).toBe("");
+    expect(customerServiceExactSkuFilter("CC%0012")).toBe("");
+    expect(customerServiceExactSkuFilter("CC_0012")).toBe("");
+  });
+
+  it("drops SKU hits that belong to another brand", () => {
+    const products = [
+      { name: "A", productUrl: "https://hklunchbox.com/products/a" },
+      { name: "B", productUrl: "https://foodchannels-catering.com/products/b" },
+    ];
+    expect(customerServiceSkuProductsForBrand(products, "Food Channels Catering"))
+      .toEqual([{ name: "B", productUrl: "https://foodchannels-catering.com/products/b" }]);
+    expect(customerServiceSkuProductsForBrand(products, "HK Party Food")).toEqual([]);
   });
 
   it("rewrites myshopify catalog URLs to the public storefront", () => {

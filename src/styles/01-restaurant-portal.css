@@ -59,7 +59,12 @@
 .customer-service-config-list { display: grid; gap: 9px; }
 .customer-service-config-form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .customer-service-config-form textarea,
-.customer-service-config-form > button { grid-column: 1 / -1; }
+.customer-service-config-form > button,
+.customer-service-config-form .customer-service-rag-flags { grid-column: 1 / -1; }
+.customer-service-rag-flags { display: grid; gap: 6px; margin: 0; padding: 10px 12px; border: 1px solid var(--border); border-radius: 9px; }
+.customer-service-rag-flags legend { padding: 0 4px; font-weight: 600; }
+.customer-service-rag-flags p { margin: 0; color: var(--muted-foreground); font-size: 12px; }
+.customer-service-rag-flags label { display: flex; align-items: center; gap: 8px; }
 @media (max-width: 640px) {
   .customer-service-report-generator,
   .customer-service-review-queue article > footer,

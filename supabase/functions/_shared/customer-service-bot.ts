@@ -232,8 +232,17 @@ export type CustomerServiceBotDeps = {
   answerFaqWithModel?: (
     query: string,
     candidates: CustomerServiceFaqHit[],
+    rewrittenQuery?: string,
   ) => Promise<
-    string | { answer: string; sourceIds: string[]; model: string } | null
+    | string
+    | {
+      answer: string;
+      sourceIds: string[];
+      model: string;
+      needsClarification?: boolean;
+      clarificationQuestion?: string;
+    }
+    | null
   >;
   answerWithoutFaqWithModel?: (input: {
     query: string;
@@ -1572,9 +1581,19 @@ async function replySingleFaq(
   });
   if (deps.answerFaqWithModel && modelCandidates.length) {
     try {
-      const modelAnswer = await deps.answerFaqWithModel(lookupQuery, modelCandidates);
-      const answer =
+      const rewrittenQuery = lookupQuery !== query ? lookupQuery : undefined;
+      const modelAnswer = rewrittenQuery
+        ? await deps.answerFaqWithModel(query, modelCandidates, rewrittenQuery)
+        : await deps.answerFaqWithModel(query, modelCandidates);
+      const rawAnswer =
         typeof modelAnswer === "string" ? modelAnswer : modelAnswer?.answer;
+      const clarification =
+        typeof modelAnswer === "object" && modelAnswer?.needsClarification
+          ? modelAnswer.clarificationQuestion?.trim() ?? ""
+          : "";
+      const answer = rawAnswer && clarification && !rawAnswer.includes(clarification)
+        ? `${rawAnswer}\n${clarification}`
+        : rawAnswer;
       const returnedSourceIds = typeof modelAnswer === "object" && modelAnswer ? modelAnswer.sourceIds : [];
       const citedIds = returnedSourceIds.filter((id) => modelCandidates.some((hit) => hit.id === id));
       const validFallbackSources = citedIds.length > 0 && citedIds.length === returnedSourceIds.length;

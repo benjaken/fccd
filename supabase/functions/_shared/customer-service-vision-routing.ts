@@ -226,6 +226,27 @@ export function customerServiceMenuProductMatches(
   return results;
 }
 
+/** Case-insensitive exact SKU match. Rejects LIKE wildcards from OCR. */
+export function customerServiceExactSkuFilter(sku: string) {
+  const code = sku.trim();
+  if (code.length < 3 || code.length > 64) return "";
+  if (/[%_*?]/.test(code)) return "";
+  return code;
+}
+
+export function customerServiceSkuProductsForBrand(
+  products: readonly CustomerServiceMenuProduct[],
+  brand: string,
+  limit = 3,
+): CustomerServiceMenuProduct[] {
+  const filtered = brand
+    ? products.filter((product) =>
+      customerServiceMenuUrlMatchesBrand(product.productUrl, brand)
+    )
+    : [...products];
+  return filtered.slice(0, Math.max(0, limit));
+}
+
 export function customerServiceMenuProductReplyText(
   products: readonly CustomerServiceMenuProduct[],
   brand = "",

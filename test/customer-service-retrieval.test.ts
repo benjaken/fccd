@@ -20,6 +20,8 @@ describe("customer-service reciprocal rank fusion", () => {
     expect(fused.map((item) => item.id)).toEqual(["b", "a", "d", "c"]);
     expect(fused[0].lexicalRank).toBe(2);
     expect(fused[0].vectorRank).toBe(1);
+    expect(fused[0].lexicalScore).toBe(8);
+    expect(fused[0].vectorScore).toBe(0.91);
     expect(fused[0].rrfScore).toBeCloseTo(0.3 / 62 + 0.7 / 61, 10);
     expect(fused[0].rrfScore).toBeGreaterThan(fused[1].rrfScore);
   });

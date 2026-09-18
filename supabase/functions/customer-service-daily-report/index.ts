@@ -69,6 +69,31 @@ async function authorize(request: Request, admin: AdminClient) {
   if (accessError) throw new Error("page_access_required");
 }
 
+async function refreshPendingFaqEmbeddings() {
+  const url = `${env("SUPABASE_URL")}/functions/v1/customer-service-faq-embed`;
+  try {
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${serviceRoleKey()}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ limit: 250 }),
+    });
+    if (!response.ok) {
+      console.error(
+        "customer-service faq embed after learning failed",
+        (await response.text().catch(() => "")).slice(0, 200),
+      );
+    }
+  } catch (error) {
+    console.error(
+      "customer-service faq embed after learning failed",
+      error instanceof Error ? error.message.slice(0, 200) : String(error),
+    );
+  }
+}
+
 function previousHongKongDate() {
   return new Date(Date.now() + 8 * 60 * 60 * 1_000 - 24 * 60 * 60 * 1_000)
     .toISOString()
@@ -365,6 +390,7 @@ Deno.serve(async (request) => {
       }
     }
 
+    await refreshPendingFaqEmbeddings();
     return jsonResponse({ ok: true, report_id: report.id, report_date: reportDate, status, metrics });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);

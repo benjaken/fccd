@@ -11,7 +11,7 @@ import {
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-cron-secret",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
@@ -45,15 +45,18 @@ type FaqRow = {
 Deno.serve(async (request) => {
   if (request.method === "OPTIONS") return new Response("ok", { headers: CORS_HEADERS });
   if (request.method !== "POST") return json({ error: "method_not_allowed" }, 405);
-  const authorization = request.headers.get("authorization")?.trim() || "";
-  if (!/^Bearer\s+\S+/i.test(authorization)) return json({ error: "authentication_required" }, 401);
-
   const url = env("SUPABASE_URL");
   const serviceKey = serviceRoleKey();
+  const cronSecret = env("CUSTOMER_SERVICE_REPORT_CRON_SECRET") || env("WATI_ORDER_CRON_SECRET");
+  const suppliedCron = request.headers.get("x-cron-secret")?.trim() || "";
+  const authorization = request.headers.get("authorization")?.trim() || "";
+  const cronAuthorized = Boolean(cronSecret && suppliedCron && suppliedCron === cronSecret);
+  if (!cronAuthorized && !/^Bearer\s+\S+/i.test(authorization)) {
+    return json({ error: "authentication_required" }, 401);
+  }
+
   const bearer = authorization.replace(/^Bearer\s+/i, "");
-  // Scheduled/internal calls authenticate with the service-role key; interactive
-  // calls must additionally hold the FAQ edit page permission.
-  if (bearer !== serviceKey) {
+  if (!cronAuthorized && bearer !== serviceKey) {
     const user = createClient(url, env("SUPABASE_ANON_KEY"), {
       global: { headers: { Authorization: authorization } },
       auth: { persistSession: false, autoRefreshToken: false },
@@ -87,6 +90,9 @@ Deno.serve(async (request) => {
     .select("id,question,answer,content_hash,embedding_status")
     .eq("is_published", true);
   if (faqIds.length) targetQuery = targetQuery.in("id", faqIds);
+  else if (!force) {
+    targetQuery = targetQuery.in("embedding_status", ["pending", "stale", "failed"]);
+  }
   const { data: faqRows, error: faqError } = await targetQuery
     .order("sort_order")
     .limit(limit);

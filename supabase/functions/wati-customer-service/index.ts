@@ -120,8 +120,10 @@ import {
   customerServiceMenuImageReplyText,
   customerServiceMenuProductMatches,
   customerServiceMenuProductReplyText,
+  customerServiceExactSkuFilter,
   customerServicePublicProductUrl,
   customerServiceShopifyProductUrl,
+  customerServiceSkuProductsForBrand,
   decideCustomerServiceMediaRoute,
   type CustomerServiceMediaRoute,
 } from "../_shared/customer-service-vision-routing.ts";
@@ -1707,12 +1709,20 @@ async function searchCustomerFaqsHybrid(
   ragConfig: CustomerServiceRagConfig,
 ): Promise<Array<{ id: string; category: string; question: string; answer: string }>> {
   const lexicalPromise = (async () => {
-    const { data, error } = await admin.rpc("search_published_customer_faqs", {
-      p_query: query,
-      p_limit: ragConfig.lexicalTopK,
-    });
-    if (error) throw error;
-    return (data ?? []) as CustomerServiceFaqCandidate[];
+    try {
+      const { data, error } = await admin.rpc("search_published_customer_faqs", {
+        p_query: query,
+        p_limit: ragConfig.lexicalTopK,
+      });
+      if (error) throw error;
+      return (data ?? []) as CustomerServiceFaqCandidate[];
+    } catch (error) {
+      console.error(
+        "customer-service lexical retrieval failed; using vector only",
+        error instanceof Error ? error.message.slice(0, 200) : String(error),
+      );
+      return [];
+    }
   })();
   const vectorPromise = (async () => {
     try {
@@ -2140,10 +2150,12 @@ function createBotDeps(
         question: string;
         answer: string;
       }>,
+      rewrittenQuery?: string,
     ) {
       if (!candidates.length) return null;
       const result = await answerCustomerServiceFaqWithTieredAi({
         question: query,
+        rewrittenQuestion: rewrittenQuery ?? "",
         recentMessages: sanitizeCustomerServiceRecentMessages(
           recentMessages,
           ragConfig.contextRounds * 2,
@@ -3017,19 +3029,19 @@ async function loadCustomerServiceMenuSkuReply(
   sku: string,
   brand: string,
 ): Promise<string> {
-  const code = sku.trim();
-  if (code.length < 3) return "";
+  const code = customerServiceExactSkuFilter(sku);
+  if (!code) return "";
   try {
     const [variantResult, productResult] = await Promise.all([
       admin
         .from("shopify_catalog_draft_variants")
         .select("draft_id")
-        .ilike("sku", `%${code}%`)
+        .ilike("sku", code)
         .limit(20),
       admin
         .from("products")
         .select("id")
-        .ilike("sku", `%${code}%`)
+        .ilike("sku", code)
         .limit(20),
     ]);
     if (variantResult.error) throw variantResult.error;
@@ -3147,12 +3159,13 @@ async function loadCustomerServiceMenuSkuReply(
       if (!name || !productUrl || seen.has(productUrl)) continue;
       seen.add(productUrl);
       products.push({ name, productUrl });
-      if (products.length >= 3) break;
     }
+    const matched = customerServiceSkuProductsForBrand(products, brand);
+    if (!matched.length) return "";
     const resolvedBrand = customerServiceMenuBrandFromUrl(
-      products[0]?.productUrl ?? "",
+      matched[0]?.productUrl ?? "",
     ) || brand;
-    return customerServiceMenuProductReplyText(products, resolvedBrand);
+    return customerServiceMenuProductReplyText(matched, resolvedBrand);
   } catch (error) {
     console.error(
       "customer_service_menu_sku_lookup_failed",
@@ -3721,12 +3734,18 @@ Deno.serve(async (request) => {
       return jsonResponse({ ok: true, filtered: "advertisement" });
     }
     if (isCustomerServiceMediaType(event.type)) {
-      const route = await handleInboundMedia(admin, event);
+      deferBackground(
+        handleInboundMedia(admin, event).catch((error) => {
+          console.error(
+            "customer service inbound media failed",
+            error instanceof Error ? error.message.slice(0, 300) : String(error),
+          );
+        }),
+      );
       return jsonResponse({
         ok: true,
         media_type: event.type,
-        route,
-        handoff: route === "handoff",
+        queued: true,
       });
     }
 

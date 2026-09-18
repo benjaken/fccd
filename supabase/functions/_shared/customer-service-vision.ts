@@ -51,20 +51,14 @@ function firstEnv(...names: string[]) {
   return "";
 }
 
-function config(): VisionConfig {
+export function customerServiceVisionConfig(): VisionConfig {
   const explicitEnabled = env("CUSTOMER_SERVICE_VISION_ENABLED");
-  // An explicit vision flag always wins. Otherwise vision inherits the same
-  // enable flags and credentials as the customer-service AI, so enabling the
-  // bot's text AI (through any of its supported flags) does not silently leave
-  // image analysis switched off.
+  // Vision follows the customer-service AI switch only. Report, supplier-quote
+  // and address-translation flags must not start analysing inbound WhatsApp
+  // images.
   const enabled = explicitEnabled
     ? explicitEnabled.toLowerCase() === "true"
-    : firstEnv(
-      "CUSTOMER_SERVICE_AI_ENABLED",
-      "ADDRESS_TRANSLATION_AI_ENABLED",
-      "REPORT_AI_ENABLED",
-      "SUPPLIER_QUOTE_AI_ENABLED",
-    ).toLowerCase() === "true";
+    : env("CUSTOMER_SERVICE_AI_ENABLED").toLowerCase() === "true";
   const endpoint =
     env("CUSTOMER_SERVICE_VISION_ENDPOINT") || "https://api.x.ai/v1/responses";
   return {
@@ -72,25 +66,19 @@ function config(): VisionConfig {
     endpoint,
     apiKey: firstEnv(
       "CUSTOMER_SERVICE_VISION_API_KEY",
-      "XAI_API_KEY",
       "CUSTOMER_SERVICE_AI_API_KEY",
-      "REPORT_AI_API_KEY",
-      "SUPPLIER_QUOTE_AI_API_KEY",
-      "ADDRESS_TRANSLATION_AI_API_KEY",
+      "XAI_API_KEY",
     ),
     model: firstEnv(
       "CUSTOMER_SERVICE_VISION_MODEL",
       "CUSTOMER_SERVICE_AI_MODEL",
-      "REPORT_AI_MODEL",
-      "SUPPLIER_QUOTE_AI_MODEL",
-      "ADDRESS_TRANSLATION_AI_MODEL",
     ) || "grok-4.6",
     timeoutMs: Math.min(
       Math.max(
-        Number(env("CUSTOMER_SERVICE_VISION_TIMEOUT_MS")) || 30_000,
-        5_000,
+        Number(env("CUSTOMER_SERVICE_VISION_TIMEOUT_MS")) || 12_000,
+        3_000,
       ),
-      60_000,
+      15_000,
     ),
     maxBytes: Math.min(
       Math.max(
@@ -113,7 +101,7 @@ function config(): VisionConfig {
  * reasons (a provider error is surfaced by its thrown message instead).
  */
 export function customerServiceVisionUnavailableReason(imageUrl?: string) {
-  const settings = config();
+  const settings = customerServiceVisionConfig();
   if (!settings.enabled) return "disabled";
   if (!settings.endpoint) return "endpoint_missing";
   if (!settings.apiKey) return "api_key_missing";
@@ -181,7 +169,7 @@ async function fetchImage(imageUrl: string, maxBytes: number) {
 export async function analyzeCustomerServiceImage(
   input: CustomerServiceVisionInput,
 ): Promise<CustomerServiceVisionResult | null> {
-  const settings = config();
+  const settings = customerServiceVisionConfig();
   const unavailableReason = !settings.enabled
     ? "disabled"
     : !settings.endpoint

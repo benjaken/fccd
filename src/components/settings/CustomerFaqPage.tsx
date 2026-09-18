@@ -69,6 +69,7 @@ import {
   retryCustomerServiceOutboundMessage,
   rollbackCustomerServiceConfig,
   setCustomerServiceBotEnabled,
+  setCustomerServiceConfigRag,
   submitCustomerServiceTurnFeedback,
   updateCustomerFaq,
   updateCustomerServiceIntent,
@@ -84,6 +85,7 @@ import {
   type CustomerServiceIntentSetting,
   type CustomerServiceLogic,
   type CustomerServiceConfigVersion,
+  type CustomerServiceRagFlags,
   type CustomerServiceDailyReport,
   type CustomerServiceOutboundMessage,
   type CustomerServiceEvaluationRun,
@@ -680,6 +682,11 @@ export function CustomerFaqPage({
     systemPrompt: "",
     temperature: 0.1,
     retrievalLimit: 3,
+    ragConfig: {
+      enableRagV2: false,
+      enableQueryRewrite: false,
+      enableGroundedClarification: false,
+    } as CustomerServiceRagFlags,
   });
 
   const totalPages = Math.max(1, Math.ceil(total / CUSTOMER_FAQS_PAGE_SIZE));
@@ -1221,6 +1228,19 @@ export function CustomerFaqPage({
       setConfigVersions(await fetchCustomerServiceConfigVersions("develop"));
     } catch {
       setInsightsError("發布模型配置失敗。");
+    } finally {
+      setConfigBusy("");
+    }
+  };
+  const saveRagFlags = async (id: string, ragConfig: CustomerServiceRagFlags) => {
+    if (!canEdit || configBusy) return;
+    setConfigBusy(id);
+    setInsightsError("");
+    try {
+      await setCustomerServiceConfigRag(id, ragConfig);
+      setConfigVersions(await fetchCustomerServiceConfigVersions("develop"));
+    } catch {
+      setInsightsError(t("settings.customerFaq.ragSaveError"));
     } finally {
       setConfigBusy("");
     }
@@ -2329,7 +2349,66 @@ export function CustomerFaqPage({
                       }))
                     }
                   />
-                </label>
+                    </label>
+                <fieldset className="customer-service-rag-flags">
+                  <legend>{t("settings.customerFaq.ragTitle")}</legend>
+                  <p>{t("settings.customerFaq.ragHint")}</p>
+                  <label>
+                    <input
+                      type="checkbox"
+                      aria-label={t("settings.customerFaq.ragV2")}
+                      checked={configDraft.ragConfig.enableRagV2}
+                      onChange={(event) => {
+                        const enabled = event.target.checked;
+                        setConfigDraft((current) => ({
+                          ...current,
+                          ragConfig: {
+                            enableRagV2: enabled,
+                            enableQueryRewrite: enabled,
+                            enableGroundedClarification: enabled,
+                          },
+                        }));
+                      }}
+                    />
+                    {t("settings.customerFaq.ragV2")}
+                  </label>
+                  <label>
+                    <input
+                      type="checkbox"
+                      aria-label={t("settings.customerFaq.ragRewrite")}
+                      checked={configDraft.ragConfig.enableQueryRewrite}
+                      disabled={!configDraft.ragConfig.enableRagV2}
+                      onChange={(event) =>
+                        setConfigDraft((current) => ({
+                          ...current,
+                          ragConfig: {
+                            ...current.ragConfig,
+                            enableQueryRewrite: event.target.checked,
+                          },
+                        }))
+                      }
+                    />
+                    {t("settings.customerFaq.ragRewrite")}
+                  </label>
+                  <label>
+                    <input
+                      type="checkbox"
+                      aria-label={t("settings.customerFaq.ragClarification")}
+                      checked={configDraft.ragConfig.enableGroundedClarification}
+                      disabled={!configDraft.ragConfig.enableRagV2}
+                      onChange={(event) =>
+                        setConfigDraft((current) => ({
+                          ...current,
+                          ragConfig: {
+                            ...current.ragConfig,
+                            enableGroundedClarification: event.target.checked,
+                          },
+                        }))
+                      }
+                    />
+                    {t("settings.customerFaq.ragClarification")}
+                  </label>
+                </fieldset>
                 <Button
                   type="button"
                   disabled={Boolean(configBusy)}
@@ -2362,7 +2441,60 @@ export function CustomerFaqPage({
                         ? `低信心轉 ${config.fallbackModel}（low，門檻 ${config.escalationConfidence}）`
                         : "不升級"} · temperature {config.temperature} · FAQ{" "}
                       {config.retrievalLimit}
+                      {config.ragConfig.enableRagV2 ? " · RAG v2" : ""}
                     </p>
+                    {canEdit && config.status !== "archived" ? (
+                      <fieldset className="customer-service-rag-flags">
+                        <legend>{t("settings.customerFaq.ragTitle")}</legend>
+                        <label>
+                          <input
+                            type="checkbox"
+                            aria-label={t("settings.customerFaq.ragV2")}
+                            checked={config.ragConfig.enableRagV2}
+                            disabled={Boolean(configBusy)}
+                            onChange={(event) => {
+                              const enabled = event.target.checked;
+                              void saveRagFlags(config.id, {
+                                enableRagV2: enabled,
+                                enableQueryRewrite: enabled,
+                                enableGroundedClarification: enabled,
+                              });
+                            }}
+                          />
+                          {t("settings.customerFaq.ragV2")}
+                        </label>
+                        <label>
+                          <input
+                            type="checkbox"
+                            aria-label={t("settings.customerFaq.ragRewrite")}
+                            checked={config.ragConfig.enableQueryRewrite}
+                            disabled={Boolean(configBusy) || !config.ragConfig.enableRagV2}
+                            onChange={(event) =>
+                              void saveRagFlags(config.id, {
+                                ...config.ragConfig,
+                                enableQueryRewrite: event.target.checked,
+                              })
+                            }
+                          />
+                          {t("settings.customerFaq.ragRewrite")}
+                        </label>
+                        <label>
+                          <input
+                            type="checkbox"
+                            aria-label={t("settings.customerFaq.ragClarification")}
+                            checked={config.ragConfig.enableGroundedClarification}
+                            disabled={Boolean(configBusy) || !config.ragConfig.enableRagV2}
+                            onChange={(event) =>
+                              void saveRagFlags(config.id, {
+                                ...config.ragConfig,
+                                enableGroundedClarification: event.target.checked,
+                              })
+                            }
+                          />
+                          {t("settings.customerFaq.ragClarification")}
+                        </label>
+                      </fieldset>
+                    ) : null}
                     <small>
                       {latestRun
                         ? `評測：${latestRun.status} · 樣本 ${latestRun.sampleSize} · 一致率 ${formatRate(latestRun.metrics.agreement_rate)} · 意圖 ${formatRate(latestRun.metrics.intent_accuracy)} · 對話動作 ${formatRate(latestRun.metrics.dialog_action_accuracy)}${
