@@ -34,7 +34,7 @@ export type QuotePayment = {
 };
 
 export type QuoteDraft = {
-  /** Only used when a quote is copied; regular new quotes may be auto-numbered. */
+  /** Manual document number; when blank the database auto-numbers the document. */
   orderNumber?: string;
   channelId: string;
   quoteStatus: string;
@@ -258,6 +258,43 @@ export async function fetchQuoteEditorOptions(): Promise<QuoteEditorOptions> {
       typeName: tag.typeName,
     })),
   };
+}
+
+/**
+ * True when the manually typed number already belongs to another document.
+ * Prefers the canonical helper RPC; when it is unavailable the lookup falls
+ * back to the orders table so the editor still warns about duplicates. Any
+ * failure resolves to false and the database trigger remains the final guard.
+ */
+export async function checkOrderNumber(
+  orderNumber: string,
+  channelId?: string | null,
+): Promise<boolean> {
+  const value = orderNumber.trim();
+  if (!value) return false;
+  try {
+    const { data, error } = await supabase.rpc("order_number_exists", {
+      p_order_number: value,
+      p_channel_id: channelId || null,
+    });
+    if (!error) return data === true;
+  } catch {
+    // Fall through to the table lookup when the helper RPC is unavailable.
+  }
+  const stripped = value.replace(/^#+\s*/, "");
+  const candidates = Array.from(new Set([value, stripped, `#${stripped}`]));
+  try {
+    const { data, error } = await supabase
+      .from("orders")
+      .select("id")
+      .is("archived_at", null)
+      .in("order_number", candidates)
+      .limit(1);
+    if (error) return false;
+    return Array.isArray(data) && data.length > 0;
+  } catch {
+    return false;
+  }
 }
 
 export async function createQuote(input: QuoteDraft): Promise<CreatedQuote> {
@@ -1274,7 +1311,8 @@ export type QuoteSaveErrorKey =
   | "customerRequired"
   | "districtPermission"
   | "invalidLine"
-  | "paymentInvalid";
+  | "paymentInvalid"
+  | "numberExists";
 
 function errorText(cause: unknown) {
   if (!cause || typeof cause !== "object") {
@@ -1300,6 +1338,7 @@ const QUOTE_SAVE_ERROR_KEYS = new Set<QuoteSaveErrorKey>([
   "districtPermission",
   "invalidLine",
   "paymentInvalid",
+  "numberExists",
 ]);
 
 export function isQuoteSaveErrorKey(value: string | null | undefined): value is QuoteSaveErrorKey {
@@ -1346,6 +1385,7 @@ export function classifyQuoteSaveError(cause: unknown): QuoteSaveErrorKey {
   }
   if (text.includes("channel_required")) return "channelRequired";
   if (text.includes("customer_required")) return "customerRequired";
+  if (text.includes("order_number_exists")) return "numberExists";
   if (
     text.includes("district_create_not_allowed") ||
     text.includes("district_create_failed")

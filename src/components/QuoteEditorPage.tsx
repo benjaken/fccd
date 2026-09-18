@@ -84,6 +84,7 @@ import {
   quoteLineLabelRemarkRows,
   quoteLinePrintLabelName,
   classifyQuoteSaveError,
+  checkOrderNumber,
   isPersistableOrderPayment,
   isQuoteSaveErrorKey,
   quoteDraftForSave,
@@ -360,6 +361,7 @@ type Props = {
   loadOptions?: typeof fetchQuoteEditorOptions;
   createDistrict?: typeof createDeliveryDistrictOption;
   saveQuote?: typeof createQuote;
+  orderNumberExists?: typeof checkOrderNumber;
   loadSummary?: typeof fetchQuoteEditorSummary;
   loadLines?: typeof fetchQuoteLines;
   searchCatalog?: typeof searchQuoteCatalog;
@@ -403,6 +405,7 @@ export function QuoteEditorPage({
   loadOptions = fetchQuoteEditorOptions,
   createDistrict = createDeliveryDistrictOption,
   saveQuote = createQuote,
+  orderNumberExists = checkOrderNumber,
   createOrder = createOrderDocument,
   loadSummary = fetchQuoteEditorSummary,
   loadLines = fetchQuoteLines,
@@ -473,6 +476,7 @@ export function QuoteEditorPage({
   const [channelId, setChannelId] = useState("");
   const [lines, setLines] = useState<QuoteLine[]>([]);
   const editSessionTokenRef = useRef(crypto.randomUUID());
+  const orderNumberCheckIdRef = useRef(0);
   const editSessionActiveRef = useRef(false);
   const lastEditHeartbeatRef = useRef(0);
   const [loading, setLoading] = useState(true);
@@ -483,6 +487,7 @@ export function QuoteEditorPage({
   const [addonShopifyError, setAddonShopifyError] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [checkingOrderNumber, setCheckingOrderNumber] = useState(false);
   const [creatingDistrict, setCreatingDistrict] = useState(false);
   const [catalogSearch, setCatalogSearch] = useState("");
   const [catalogResults, setCatalogResults] = useState<QuoteCatalogItem[]>([]);
@@ -927,6 +932,38 @@ export function QuoteEditorPage({
   const patchDraft = (partial: Partial<QuoteDraft>) =>
     setDraft((current) => ({ ...current, ...partial }));
 
+  const verifyOrderNumber = async () => {
+    if (id) return;
+    const value = draft.orderNumber?.trim() ?? "";
+    const checkId = orderNumberCheckIdRef.current + 1;
+    orderNumberCheckIdRef.current = checkId;
+    if (!value) {
+      setCheckingOrderNumber(false);
+      setFieldErrors((current) => ({
+        ...current,
+        orderNumber: "",
+      }));
+      return;
+    }
+    setCheckingOrderNumber(true);
+    try {
+      const duplicate = await orderNumberExists(value, draft.channelId);
+      if (orderNumberCheckIdRef.current !== checkId) return;
+      setFieldErrors((current) => ({
+        ...current,
+        orderNumber: duplicate ? t("quoteEditor.validation.numberExists") : "",
+      }));
+      setError((current) => {
+        if (duplicate) return "numberExists";
+        return current === "numberExists" ? null : current;
+      });
+    } finally {
+      if (orderNumberCheckIdRef.current === checkId) {
+        setCheckingOrderNumber(false);
+      }
+    }
+  };
+
   const patchFinancials = (partial: Partial<typeof financials>) => {
     setFinancialsDirty(true);
     setFinancials((current) => ({ ...current, ...partial }));
@@ -1164,6 +1201,23 @@ export function QuoteEditorPage({
     if (activeQuote) {
       await saveAllChanges();
       return;
+    }
+
+    const manualNumber = draft.orderNumber?.trim() ?? "";
+    if (manualNumber) {
+      setSaving(true);
+      setError(null);
+      const duplicate = await orderNumberExists(manualNumber, draft.channelId);
+      setSaving(false);
+      if (duplicate) {
+        setFieldErrors((current) => ({
+          ...current,
+          orderNumber: t("quoteEditor.validation.numberExists"),
+        }));
+        setError("numberExists");
+        scrollToSection("details");
+        return;
+      }
     }
 
     setSaving(true);
@@ -2678,7 +2732,7 @@ export function QuoteEditorPage({
             <h1>
               {pendingEnquiry
                 ? (enquirySubmission?.referenceCode || t("quoteEditor.pendingEyebrow"))
-                : (activeQuote?.orderNumber || (isOrder ? t("details.orderTitle") : t("quoteEditor.title")))}
+                : (activeQuote?.orderNumber || draft.orderNumber?.trim() || (isOrder ? t("details.orderTitle") : t("quoteEditor.title")))}
             </h1>
           </div>
           <p>
@@ -2704,18 +2758,34 @@ export function QuoteEditorPage({
             <label className="quote-order-number-field">
               <span>{t("quoteEditor.fields.number")}{copyFrom ? " *" : ""}</span>
               <div className="quote-order-number-control">
-                {copyFrom ? (
+                {id ? (
+                  <input value={activeQuote?.orderNumber || t("quoteEditor.autoNumber")} disabled />
+                ) : (
                   <input
-                    required
+                    required={Boolean(copyFrom)}
                     aria-label={t("quoteEditor.fields.number")}
                     value={draft.orderNumber ?? ""}
-                    placeholder={t("quoteEditor.manualNumberPlaceholder")}
-                    onChange={(event) => patchDraft({ orderNumber: event.target.value })}
+                    placeholder={t(copyFrom ? "quoteEditor.manualNumberPlaceholder" : "quoteEditor.autoNumberPlaceholder")}
+                    onChange={(event) => {
+                      patchDraft({ orderNumber: event.target.value });
+                      if (fieldErrors.orderNumber) {
+                        setFieldErrors((current) => ({ ...current, orderNumber: "" }));
+                      }
+                      if (error === "numberExists") setError(null);
+                    }}
+                    onBlur={() => void verifyOrderNumber()}
                     aria-invalid={Boolean(fieldErrors.orderNumber)}
                   />
-                ) : (
-                  <input value={activeQuote?.orderNumber || t("quoteEditor.autoNumber")} disabled />
                 )}
+                {checkingOrderNumber ? (
+                  <span
+                    className="quote-order-number-status"
+                    role="status"
+                    aria-label={t("quoteEditor.checkingNumber")}
+                  >
+                    <LoaderCircle className="spin" aria-hidden="true" />
+                  </span>
+                ) : null}
                 {activeQuote && activeShopifyUrl ? (
                   <a
                     className="shopify-order-icon"

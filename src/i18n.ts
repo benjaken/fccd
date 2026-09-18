@@ -3109,6 +3109,8 @@ const resources = {
         deliverySection: "配送與備註",
         custom: "Custom",
         autoNumber: "儲存後自動產生",
+        autoNumberPlaceholder: "留空將自動產生單號",
+        checkingNumber: "正在檢查單號是否重複…",
         manualNumberPlaceholder: "請手動輸入複製後的報價單號",
         steps: { label: "建立報價表步驟", number: "步驟 {{number}}", enquiry: "客戶查詢資料", details: "報價資料", items: "加入貨品", payments: "收款記錄" },
         fields: {
@@ -3151,6 +3153,7 @@ const resources = {
           number: "請輸入報價單號。", brand: "請選擇品牌。", customer: "請輸入客人姓名。", company: "請輸入公司名稱。",
           contact: "請輸入聯絡電話。", email: "請輸入電郵地址。", shippingMethod: "請選擇運送方式。",
           district: "請選擇地區。", districtCreateFailed: "未能新增地區，請檢查權限後重試。", deliveryDate: "請選擇送貨日期。", deliveryTime: "請選擇或輸入送貨時間。",
+          numberExists: "該訂單號已存在。",
         },
         errors: {
           create: "未能儲存報價表，請確認資料後重試。",
@@ -3160,6 +3163,7 @@ const resources = {
           districtPermission: "未能儲存報價表，目前帳號無法新增運送地區。",
           line: "未能更新貨品，請重試。", invalidLine: "數量須為 0 或以上的整數，單價不可小於 0。",
           paymentInvalid: "未能儲存；請完整填寫收款日期、付款方式及金額（或刪除未完成的收款列）。",
+          numberExists: "該訂單號已存在，請改用其他單號。",
           convert: "未能轉成訂單，請確認報價資料後重試。",
         },
         items: {
@@ -9279,6 +9283,8 @@ const resources = {
         deliverySection: "Delivery and notes",
         custom: "Custom",
         autoNumber: "Generated after saving",
+        autoNumberPlaceholder: "Leave blank to auto-generate",
+        checkingNumber: "Checking whether the number already exists…",
         manualNumberPlaceholder: "Enter the copied quote number manually",
         steps: { label: "Quote creation steps", number: "Step {{number}}", enquiry: "Customer enquiry", details: "Quote details", items: "Add products", payments: "Payment records" },
         fields: {
@@ -9321,6 +9327,7 @@ const resources = {
           number: "Enter a quote number.", brand: "Choose a brand.", customer: "Enter a customer name.", company: "Enter a company name.",
           contact: "Enter a contact number.", email: "Enter an email address.", shippingMethod: "Choose a shipping method.",
           district: "Choose a district.", districtCreateFailed: "The district could not be added. Check your permissions and retry.", deliveryDate: "Choose a delivery date.", deliveryTime: "Choose or enter a delivery time.",
+          numberExists: "This order number already exists.",
         },
         errors: {
           create: "The quote could not be saved. Check the details and try again.",
@@ -9330,6 +9337,7 @@ const resources = {
           districtPermission: "The quote could not be saved because this account cannot create delivery districts.",
           line: "The product could not be updated. Please retry.", invalidLine: "Quantity must be a whole number of 0 or more and price cannot be negative.",
           paymentInvalid: "Could not save. Complete each payment date, method, and amount (or remove incomplete payment rows).",
+          numberExists: "This order number already exists. Enter a different number.",
           convert: "The quote could not be converted to an order. Check the quote details and retry.",
         },
         items: {
