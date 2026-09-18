@@ -422,6 +422,11 @@ describe("WATI order notifications", () => {
     expect(implementation).toContain("buildOrderNotificationContent");
     expect(implementation).toContain("shipping_methods(name,display_name,requires_address_check)");
     expect(implementation).toContain("formatNotificationDeliveryAddress");
+    expect(implementation).toContain('deliveryMethod === "pickup"');
+    expect(implementation).toContain("WATI_ORDER_CONFIRMATION_PICKUP_TEMPLATE_NAME");
+    expect(implementation).toContain("selfpick_order_confirmation_with_action2026");
+    expect(implementation).toContain('"pickup_order_confirmed"');
+    expect(implementation).toContain("Self-pick order confirmation 2026");
     expect(implementation).toContain('{ name: "address", value: address }');
     expect(implementation).toContain('fetch("https://api.resend.com/emails"');
     expect(implementation).toContain("settleEnabledNotificationRequests");
