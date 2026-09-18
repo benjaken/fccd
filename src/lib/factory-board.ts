@@ -10,6 +10,12 @@ import { formatFactoryOrderNumber } from "@/lib/factory-order-number"
 import { fetchActiveOrderEditIds } from "@/lib/order-edit-lock"
 import { productListDisplayName } from "@/lib/products"
 import {
+  factoryMenuCategory,
+  factoryMenuCategoryRank,
+  preferredFactoryMenuCategory,
+  type FactoryMenuCategory,
+} from "@/lib/factory-menu-category"
+import {
   fetchShopOrderRequests,
   formatShopOrderNumber,
   groupShopOrderRecords,
@@ -115,6 +121,7 @@ export type FactoryOrderLine = {
   requiresReprint?: boolean
   isAddon?: boolean
   isCancelled?: boolean
+  category?: FactoryMenuCategory
   changes?: FactoryOrderLineChange[]
 }
 
@@ -256,6 +263,7 @@ export type FactoryMenuRow = {
   label: string
   quantity: number
   typeSort?: number | null
+  category?: FactoryMenuCategory
   orders?: FactoryMenuOrder[]
 }
 
@@ -275,6 +283,7 @@ export type FactoryMultiDayMenuContribution = {
   label: string
   quantity: number
   typeSort?: number | null
+  category?: FactoryMenuCategory
 }
 
 export type FactoryMultiDayMenuOrder = {
@@ -289,6 +298,7 @@ export type FactoryMultiDayMenuRow = {
   label: string
   quantity: number
   typeSort?: number | null
+  category?: FactoryMenuCategory
   orders: FactoryMultiDayMenuOrder[]
 }
 
@@ -531,7 +541,12 @@ export function aggregateFactoryMultiDayMenuRows(
 ): FactoryMultiDayMenuRow[] {
   const rows = new Map<
     string,
-    { quantity: number; typeSort: number | null; orders: Map<string, FactoryMultiDayMenuOrder> }
+    {
+      quantity: number
+      typeSort: number | null
+      category: FactoryMenuCategory
+      orders: Map<string, FactoryMultiDayMenuOrder>
+    }
   >()
 
   for (const contribution of contributions) {
@@ -539,10 +554,12 @@ export function aggregateFactoryMultiDayMenuRows(
     const row = rows.get(contribution.label) ?? {
       quantity: 0,
       typeSort: null,
+      category: contribution.category ?? "unclassified",
       orders: new Map<string, FactoryMultiDayMenuOrder>(),
     }
     row.quantity += contribution.quantity
     row.typeSort = minimumFactoryTypeSort(row.typeSort, contribution.typeSort)
+    row.category = preferredFactoryMenuCategory(row.category, contribution.category)
     const order = row.orders.get(contribution.orderId) ?? {
       orderId: contribution.orderId,
       orderNumber: contribution.orderNumber,
@@ -560,6 +577,7 @@ export function aggregateFactoryMultiDayMenuRows(
       label,
       quantity: row.quantity,
       typeSort: row.typeSort,
+      category: row.category,
       orders: [...row.orders.values()].sort((left, right) =>
         `${left.deliveryDate}-${left.deliveryTime ?? ""}-${left.orderNumber ?? ""}`
           .localeCompare(
@@ -589,9 +607,12 @@ function factoryMenuTrailingRank(label: string): number {
 }
 
 export function compareFactoryMenuRows(
-  left: Pick<FactoryMenuRow, "label" | "typeSort">,
-  right: Pick<FactoryMenuRow, "label" | "typeSort">,
+  left: Pick<FactoryMenuRow, "label" | "typeSort" | "category">,
+  right: Pick<FactoryMenuRow, "label" | "typeSort" | "category">,
 ): number {
+  const category =
+    factoryMenuCategoryRank(left.category) - factoryMenuCategoryRank(right.category)
+  if (category !== 0) return category
   const trailing = factoryMenuTrailingRank(left.label) - factoryMenuTrailingRank(right.label)
   if (trailing !== 0) return trailing
   const leftSort = left.typeSort == null ? Number.NaN : Number(left.typeSort)
@@ -669,21 +690,29 @@ export async function fetchFactoryMenuRows(
   }
 
   const allowedIds: string[] = []
-  const orderMeta = new Map<string, { orderNumber: string | null; completionTime: string | null }>()
+  const orderMeta = new Map<
+    string,
+    { orderNumber: string | null; completionTime: string | null; brandName: string | null }
+  >()
   for (let index = 0; index < uniqueIds.length; index += PORTION_CHUNK_SIZE) {
     const chunk = uniqueIds.slice(index, index + PORTION_CHUNK_SIZE)
     const { data, error } = await supabase
       .from("orders")
-      .select("id, channel_id, order_number, ship_out_time")
+      .select("id, channel_id, order_number, ship_out_time, channels(name)")
       .in("id", chunk)
     if (error) throw error
     for (const row of data ?? []) {
       if (brandId !== ALL_BRAND_ID && (row.channel_id as string | null) !== brandId) continue
       const id = row.id as string
       allowedIds.push(id)
+      const channel = firstRelation(
+        (row as { channels?: { name?: string | null } | { name?: string | null }[] | null })
+          .channels,
+      )
       orderMeta.set(id, {
         orderNumber: (row.order_number as string | null) ?? null,
         completionTime: clockFromValue((row.ship_out_time as string | null) ?? null),
+        brandName: channel?.name?.trim() || null,
       })
     }
   }
@@ -713,7 +742,7 @@ export async function fetchFactoryMenuRows(
     const chunk = allowedIds.slice(index, index + PORTION_CHUNK_SIZE)
     const { data, error } = await supabase
       .from("order_lines")
-      .select("order_id, product_name_snapshot, content_snapshot, quantity, type_sort, products(name), packages(name)")
+      .select("order_id, product_name_snapshot, content_snapshot, quantity, type_sort, products(name, product_types(name)), packages(name)")
       .in("order_id", chunk)
       .eq("is_void", false)
     if (error) {
@@ -723,21 +752,37 @@ export async function fetchFactoryMenuRows(
       const quantity = Number(row.quantity ?? 0)
       if (!Number.isFinite(quantity) || quantity === 0) continue
       const catalog = firstRelation(
-        (row as { products?: { name?: string | null } | { name?: string | null }[] | null }).products,
+        (row as {
+          products?:
+            | { name?: string | null; product_types?: { name?: string | null } | { name?: string | null }[] | null }
+            | Array<{
+                name?: string | null
+                product_types?: { name?: string | null } | { name?: string | null }[] | null
+              }>
+            | null
+        }).products,
       )
       const pkg = firstRelation(
         (row as { packages?: { name?: string | null } | { name?: string | null }[] | null }).packages,
       )
+      const productType = firstRelation(catalog?.product_types)
       const label = resolveFactoryOrderLineDisplayName({
         catalogName: catalog?.name ?? pkg?.name,
         snapshotName: row.product_name_snapshot as string | null,
         content: row.content_snapshot as string | null,
       })
       if (!label) continue
+      const orderId = row.order_id as string
+      const meta = orderMeta.get(orderId)
+      const category = factoryMenuCategory({
+        productTypeName: productType?.name ?? null,
+        brandName: meta?.brandName ?? null,
+      })
       const current = totals.get(label) ?? {
         label,
         quantity: 0,
         typeSort: null,
+        category,
         orders: [],
         orderMap: new Map<string, FactoryMenuOrder>(),
       }
@@ -746,8 +791,7 @@ export async function fetchFactoryMenuRows(
         current.typeSort,
         row.type_sort == null ? null : Number(row.type_sort),
       )
-      const orderId = row.order_id as string
-      const meta = orderMeta.get(orderId)
+      current.category = preferredFactoryMenuCategory(current.category, category)
       const order = current.orderMap.get(orderId) ?? {
         orderId,
         orderNumber: meta?.orderNumber ?? null,
@@ -801,20 +845,24 @@ export async function fetchFactoryMultiDayMenu(
       .map((delivery) => [delivery.orderId, delivery]),
   )
   const brandByOrderId = new Map<string, string | null>()
+  const brandNameByOrderId = new Map<string, string | null>()
   const contributions: FactoryMultiDayMenuContribution[] = []
 
   for (let index = 0; index < orderIds.length; index += PORTION_CHUNK_SIZE) {
     const chunk = orderIds.slice(index, index + PORTION_CHUNK_SIZE)
     const { data, error } = await supabase
       .from("orders")
-      .select("id, channel_id")
+      .select("id, channel_id, channels(name)")
       .in("id", chunk)
     if (error) throw error
     for (const order of data ?? []) {
-      brandByOrderId.set(
-        order.id as string,
-        (order.channel_id as string | null) ?? null,
+      const id = order.id as string
+      brandByOrderId.set(id, (order.channel_id as string | null) ?? null)
+      const channel = firstRelation(
+        (order as { channels?: { name?: string | null } | { name?: string | null }[] | null })
+          .channels,
       )
+      brandNameByOrderId.set(id, channel?.name?.trim() || null)
     }
   }
 
@@ -822,7 +870,7 @@ export async function fetchFactoryMultiDayMenu(
     const chunk = orderIds.slice(index, index + PORTION_CHUNK_SIZE)
     const { data, error } = await supabase
       .from("order_lines")
-      .select("order_id, product_name_snapshot, content_snapshot, quantity, type_sort, products(name), packages(name)")
+      .select("order_id, product_name_snapshot, content_snapshot, quantity, type_sort, products(name, product_types(name)), packages(name)")
       .in("order_id", chunk)
       .eq("is_void", false)
     if (error) throw error
@@ -833,11 +881,20 @@ export async function fetchFactoryMultiDayMenu(
       const quantity = Number(line.quantity ?? 0)
       if (!Number.isFinite(quantity) || quantity === 0) continue
       const catalog = firstRelation(
-        (line as { products?: { name?: string | null } | { name?: string | null }[] | null }).products,
+        (line as {
+          products?:
+            | { name?: string | null; product_types?: { name?: string | null } | { name?: string | null }[] | null }
+            | Array<{
+                name?: string | null
+                product_types?: { name?: string | null } | { name?: string | null }[] | null
+              }>
+            | null
+        }).products,
       )
       const pkg = firstRelation(
         (line as { packages?: { name?: string | null } | { name?: string | null }[] | null }).packages,
       )
+      const productType = firstRelation(catalog?.product_types)
       const label = resolveFactoryOrderLineDisplayName({
         catalogName: catalog?.name ?? pkg?.name,
         snapshotName: line.product_name_snapshot as string | null,
@@ -853,6 +910,10 @@ export async function fetchFactoryMultiDayMenu(
         label,
         quantity,
         typeSort: line.type_sort == null ? null : Number(line.type_sort),
+        category: factoryMenuCategory({
+          productTypeName: productType?.name ?? null,
+          brandName: brandNameByOrderId.get(orderId) ?? null,
+        }),
       })
     }
   }
@@ -1062,7 +1123,7 @@ export async function fetchFactoryOrderJob(orderId: string): Promise<FactoryOrde
     supabase
       .from("order_lines")
       .select(
-        "id, product_id, product_name_snapshot, content_snapshot, quantity, new_quantity_text, remarks_1, remarks_2, label_remarks, is_printed, is_void, is_addon, bubble_modified_at, updated_at, type_sort, item_order, temporary_label_display_name, temporary_label_quantity_label, products(name), packages(name)",
+        "id, product_id, product_name_snapshot, content_snapshot, quantity, new_quantity_text, remarks_1, remarks_2, label_remarks, is_printed, is_void, is_addon, bubble_modified_at, updated_at, type_sort, item_order, temporary_label_display_name, temporary_label_quantity_label, products(name, product_types(name)), packages(name)",
       )
       .eq("order_id", orderId)
       .order("type_sort")
@@ -1184,15 +1245,28 @@ export async function fetchFactoryOrderJob(orderId: string): Promise<FactoryOrde
       ...allLines.filter((row) => row.is_void),
     ].map((row) => {
       const product = firstRelation(
-        (row as { products?: { name?: string | null } | { name?: string | null }[] | null })
-          .products,
+        (row as {
+          products?:
+            | { name?: string | null; product_types?: { name?: string | null } | { name?: string | null }[] | null }
+            | Array<{
+                name?: string | null
+                product_types?: { name?: string | null } | { name?: string | null }[] | null
+              }>
+            | null
+        }).products,
       )
       const pkg = firstRelation(
         (row as { packages?: { name?: string | null } | { name?: string | null }[] | null })
           .packages,
       )
+      const productType = firstRelation(product?.product_types)
+      const category = factoryMenuCategory({
+        productTypeName: productType?.name ?? null,
+        brandName: channel?.name?.trim() || null,
+      })
       return {
         id: row.id as string,
+        category,
         labelNames: resolvedFactoryOrderLineLabelNames(
           productLabelsByProductId.get((row.product_id as string | null) ?? "") ?? [],
           row.temporary_label_display_name as string | null,

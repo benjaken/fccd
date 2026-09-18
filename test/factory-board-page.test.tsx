@@ -1299,6 +1299,7 @@ describe("FactoryBoardPage", () => {
             label: "拿破崙肉丸意粉",
             quantity: 8,
             typeSort: 10,
+            category: "western",
             orders: [
               {
                 orderId: "order-1",
@@ -1334,6 +1335,8 @@ describe("FactoryBoardPage", () => {
     expect(summary).toHaveClass("factory-menu-summary-modal");
     expect(summary.querySelector("col.factory-menu-summary-dish-column")).toBeInTheDocument();
     expect(await within(summary).findByText("拿破崙肉丸意粉")).toBeInTheDocument();
+    expect(within(summary).getByText("西餐")).toBeInTheDocument();
+    expect(summary.querySelectorAll("tbody tr.factory-menu-category-row")).toHaveLength(1);
     expect(within(summary).getByText("菜式")).toBeInTheDocument();
     expect(within(summary).getByText("全日總數")).toBeInTheDocument();
     expect(within(summary).getByText("備料及出車時間一覽表")).toBeInTheDocument();
@@ -1355,7 +1358,9 @@ describe("FactoryBoardPage", () => {
     const printRoot = document.querySelector(".factory-menu-print-root");
     expect(printRoot).toHaveTextContent("日期: 2026年8月18日");
     expect(printRoot).toHaveTextContent("拿破崙肉丸意粉");
-    expect(printRoot?.querySelectorAll("tbody tr")).toHaveLength(1);
+    expect(printRoot).toHaveTextContent("西餐");
+    expect(printRoot?.querySelectorAll("tbody tr.factory-menu-category-row")).toHaveLength(1);
+    expect(printRoot?.querySelectorAll("tbody tr")).toHaveLength(2);
     print.mockRestore();
   });
 

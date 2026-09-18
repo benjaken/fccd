@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { ArrowLeft, Printer, TriangleAlert, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -17,6 +17,10 @@ import {
   type FactoryMultiDayMenuContribution,
   type FactoryMultiDayMenuRow,
 } from "@/lib/factory-board";
+import {
+  groupFactoryMenuRowsByCategory,
+  type FactoryMenuCategory,
+} from "@/lib/factory-menu-category";
 import { qzTrayClient, useQzTray, type QzTrayClient } from "@/lib/qz-tray";
 import { formatFactoryOrderNumber } from "@/lib/factory-order-number";
 import { fetchActiveOrderEditIds } from "@/lib/order-edit-lock";
@@ -55,6 +59,8 @@ export function FactoryMultiDayReportPage({
   qzClient?: QzTrayClient;
 }) {
   const { t, i18n } = useTranslation();
+  const categoryLabel = (category: FactoryMenuCategory) =>
+    t(`factoryBoard.menuCategories.${category}`);
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const startDate = params.get("start") ?? "";
@@ -121,9 +127,10 @@ export function FactoryMultiDayReportPage({
     }
     return next;
   }, [rows]);
-  const splitAt = Math.ceil(reportRows.length / 2);
-  const leftRows = reportRows.slice(0, splitAt);
-  const rightRows = reportRows.slice(splitAt);
+  const reportGroups = useMemo(
+    () => groupFactoryMenuRowsByCategory(reportRows),
+    [reportRows],
+  );
   const rangeLabels = factoryMultiDayRangeLabels(
     startDate,
     endDate,
@@ -210,13 +217,24 @@ export function FactoryMultiDayReportPage({
                 </tr>
               </thead>
               <tbody>
-                {leftRows.map((left, index) => {
-                  const right = rightRows[index];
+                {reportGroups.map((group) => {
+                  const leftGroupRows = group.rows.filter((_, index) => index % 2 === 0);
+                  const rightGroupRows = group.rows.filter((_, index) => index % 2 === 1);
                   return (
-                    <tr key={`${left.label}-${right?.label ?? ""}`}>
-                      <td>{left.label}</td><td>{formatFactoryQuantity(left.quantity)}</td><td>{orderCell(left)}</td>
-                      {right ? <><td>{right.label}</td><td>{formatFactoryQuantity(right.quantity)}</td><td>{orderCell(right)}</td></> : <td colSpan={3} />}
-                    </tr>
+                    <Fragment key={`group-${group.category}`}>
+                      <tr className="factory-menu-category-row">
+                        <th colSpan={6}>{categoryLabel(group.category)}</th>
+                      </tr>
+                      {leftGroupRows.map((left, index) => {
+                        const right = rightGroupRows[index];
+                        return (
+                          <tr key={`${left.label}-${right?.label ?? ""}`}>
+                            <td>{left.label}</td><td>{formatFactoryQuantity(left.quantity)}</td><td>{orderCell(left)}</td>
+                            {right ? <><td>{right.label}</td><td>{formatFactoryQuantity(right.quantity)}</td><td>{orderCell(right)}</td></> : <td colSpan={3} />}
+                          </tr>
+                        );
+                      })}
+                    </Fragment>
                   );
                 })}
               </tbody>
