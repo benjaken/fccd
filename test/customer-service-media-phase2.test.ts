@@ -5,6 +5,10 @@ const webhook = readFileSync(
   "supabase/functions/wati-customer-service/index.ts",
   "utf8",
 );
+const ragRuntime = readFileSync(
+  "supabase/functions/_shared/customer-service-rag-runtime.ts",
+  "utf8",
+);
 
 describe("customer service media phase 2 routing", () => {
   it("routes inbound images before falling back to handoff", () => {
@@ -41,8 +45,10 @@ describe("customer service media phase 2 routing", () => {
   });
 
   it("degrades hybrid retrieval when either side fails", () => {
-    expect(webhook).toContain("customer-service lexical retrieval failed; using vector only");
-    expect(webhook).toContain("customer-service vector retrieval failed; using lexical only");
+    expect(webhook).toContain("createCustomerServiceFaqRagDeps");
+    expect(ragRuntime).toContain('code:"lexical_error"');
+    expect(ragRuntime).toContain('code:"vector_error"');
+    expect(ragRuntime).toContain("CustomerServiceRetrievalError");
   });
 
   it("checks block dates for a menu image and asks for the date when unknown", () => {

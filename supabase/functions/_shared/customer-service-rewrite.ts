@@ -6,6 +6,7 @@ import {
   customerServiceAiConfig,
   type CustomerServiceAiConfig,
 } from "./customer-service-ai.ts";
+import { buildCustomerServiceSystemPrompt } from "./customer-service-prompts.ts";
 
 export type CustomerServiceQueryRewriteIntent =
   | "faq"
@@ -86,7 +87,7 @@ export async function rewriteCustomerServiceQuery({
   if (!query || !config.enabled || !config.endpoint || !config.apiKey || !config.model) {
     return null;
   }
-  const safeRecentMessages = sanitizeCustomerServiceRecentMessages(recentMessages, 10);
+  const safeRecentMessages = sanitizeCustomerServiceRecentMessages(recentMessages, 16);
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), config.timeoutMs);
   try {
@@ -107,16 +108,22 @@ export async function rewriteCustomerServiceQuery({
         messages: [
           {
             role: "system",
-            content: [
-              "You rewrite a Hong Kong WhatsApp customer-service question into one standalone retrieval query.",
-              "Use the recent conversation only to resolve pronouns, references and omitted subjects such as it, that, this, yesterday, the same one.",
-              "Never invent or assume business facts, prices, dates, policies or availability that the customer did not state.",
-              "Do not answer the question. Do not add meta instructions such as search the knowledge base.",
-              "Keep the customer's language; preserve concrete entities, dish names, brands and order numbers exactly.",
-              "If the reference cannot be resolved from the conversation, keep the original wording and set intent_hint to clarification.",
-              "intent_hint must be one of: faq, follow_up, clarification, other.",
-              "Return JSON only: {\"rewritten_query\":string,\"intent_hint\":string,\"used_context\":boolean}.",
-            ].join(" "),
+            content: buildCustomerServiceSystemPrompt({
+              stage: "rewrite",
+              taskInstructions: [
+                "You rewrite a Hong Kong WhatsApp customer-service question into one standalone retrieval query.",
+                "Use the recent conversation only to resolve pronouns, references and omitted subjects such as it, that, this, yesterday, the same one.",
+                "Never invent or assume business facts, prices, dates, policies or availability that the customer did not state.",
+                "Do not answer the question. Do not add meta instructions such as search the knowledge base.",
+                "Keep the customer's language; preserve concrete entities, dish names, brands and order numbers exactly.",
+                "If the reference cannot be resolved from the conversation, keep the original wording and set intent_hint to clarification.",
+                "intent_hint must be one of: faq, follow_up, clarification, other.",
+              ],
+              outputInstructions: [
+                "Return JSON only: {\"rewritten_query\":string,\"intent_hint\":string,\"used_context\":boolean}.",
+              ],
+              // Global answer-style guidance must not turn a rewrite into an answer.
+            }),
           },
           {
             role: "user",

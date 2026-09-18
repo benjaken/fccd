@@ -1,3 +1,4 @@
+import { composeGroundedFaqReply } from "./customer-service-grounding.ts";
 import {
   sanitizeCustomerServiceRecentMessages,
   type CustomerServiceRecentMessage,
@@ -6,6 +7,7 @@ import {
   CUSTOMER_SERVICE_ORDER_FIELDS,
   type CustomerServiceOrderField,
 } from "./customer-service-intents.ts";
+import { buildCustomerServiceSystemPrompt } from "./customer-service-prompts.ts";
 
 export type CustomerServiceFaqKnowledge = {
   id: string;
@@ -127,13 +129,6 @@ function numericTokens(value: string) {
   );
 }
 
-function answerNumbersAreGrounded(answer: string, sources: CustomerServiceFaqKnowledge[]) {
-  const supported = new Set(
-    sources.flatMap((source) => numericTokens(`${source.question}\n${source.answer}`)),
-  );
-  return numericTokens(answer).every((token) => supported.has(token));
-}
-
 function reasoningParameters(config: CustomerServiceAiConfig) {
   if (!/api\.x\.ai/i.test(config.endpoint)) return {};
   const effort = config.reasoningEffort
@@ -245,26 +240,31 @@ export async function classifyCustomerServiceWithAi({
         messages: [
           {
             role: "system",
-            content: [
-              "Classify a Food Channels WhatsApp customer-service message.",
-              "Select exactly one enabled intent supplied by the application.",
-              "Never invent an intent or tool. Select a tool only from that intent's allowedTools.",
-              "Classify the communicative purpose of the complete current message, not isolated keywords or the nearest FAQ topic.",
-              "A date, headcount, budget, brand or dish is extracted context only; those fields do not by themselves mean the customer authorized creating an inquiry.",
-              "Questions asking whether a date can be booked, whether an item is available, what something costs, or what menus exist are read-only questions unless the customer explicitly confirms a pending write action.",
-              "FAQ retrieval happens only after classification, so do not select a FAQ intent merely because one phrase could match stored knowledge.",
-              "Order information lookup is read-only and does not require human handoff.",
-              "For order lookup, requestedFields may contain delivery_date, status, items, address, receipt, or summary. Use only fields explicitly requested; use summary for a generic order lookup.",
-              "Changing, cancelling or refunding an order requires human handoff.",
-              "Use conversationState and currentTask to decide how this message relates to the active task.",
-              "recentMessages is ordered from oldest to newest and may include role human for a prior staff reply. Treat staff replies as conversation context and do not ask the customer to repeat information already supplied by staff.",
-              "dialogAction is cancel_current only when the customer withdraws the active task itself. A business request containing words such as cancel order is not automatically cancel_current.",
-              "Use switch_task for a distinct new request while another task is active, new_request when no task is active, otherwise continue_current.",
-              "Other dialogAction values are add_information, select_option, confirm, deny, correct_previous, and resume_previous.",
-              "When the reference or requested operation is ambiguous, set needsClarification true and provide one concise Cantonese clarificationQuestion. Never guess a destructive action.",
-              "Return JSON only with intent, confidence from 0 to 1, orderNumber, requestedDate in YYYY-MM-DD when explicit, requestedFields, missingFields, requiresHuman, tool, dialogAction, needsClarification, and clarificationQuestion.",
-              config.systemPrompt?.trim() || "",
-            ].join(" "),
+            content: buildCustomerServiceSystemPrompt({
+              stage: "classification",
+              taskInstructions: [
+                "Classify a Food Channels WhatsApp customer-service message.",
+                "Select exactly one enabled intent supplied by the application.",
+                "Never invent an intent or tool. Select a tool only from that intent's allowedTools.",
+                "Classify the communicative purpose of the complete current message, not isolated keywords or the nearest FAQ topic.",
+                "A date, headcount, budget, brand or dish is extracted context only; those fields do not by themselves mean the customer authorized creating an inquiry.",
+                "Questions asking whether a date can be booked, whether an item is available, what something costs, or what menus exist are read-only questions unless the customer explicitly confirms a pending write action.",
+                "FAQ retrieval happens only after classification, so do not select a FAQ intent merely because one phrase could match stored knowledge.",
+                "Order information lookup is read-only and does not require human handoff.",
+                "For order lookup, requestedFields may contain delivery_date, status, items, address, receipt, or summary. Use only fields explicitly requested; use summary for a generic order lookup.",
+                "Changing, cancelling or refunding an order requires human handoff.",
+                "Use conversationState and currentTask to decide how this message relates to the active task.",
+                "recentMessages is ordered from oldest to newest and may include role human for a prior staff reply. Treat staff replies as conversation context and do not ask the customer to repeat information already supplied by staff.",
+                "dialogAction is cancel_current only when the customer withdraws the active task itself. A business request containing words such as cancel order is not automatically cancel_current.",
+                "Use switch_task for a distinct new request while another task is active, new_request when no task is active, otherwise continue_current.",
+                "Other dialogAction values are add_information, select_option, confirm, deny, correct_previous, and resume_previous.",
+                "When the reference or requested operation is ambiguous, set needsClarification true and provide one concise Cantonese clarificationQuestion. Never guess a destructive action.",
+              ],
+              outputInstructions: [
+                "Return JSON only with intent, confidence from 0 to 1, orderNumber, requestedDate in YYYY-MM-DD when explicit, requestedFields, missingFields, requiresHuman, tool, dialogAction, needsClarification, and clarificationQuestion.",
+              ],
+              businessInstructions: config.systemPrompt,
+            }),
           },
           {
             role: "user",
@@ -333,8 +333,14 @@ function parseProviderAnswer(
     : requestedIds;
   const sources = sourceIds.map((id) => known.get(id)).filter((faq): faq is CustomerServiceFaqKnowledge => Boolean(faq));
   if (!sources.length) return null;
-  const answer = parsed.answer.trim().slice(0, 1_200);
-  if (!answerNumbersAreGrounded(answer, sources)) return null;
+  const composed = composeGroundedFaqReply(
+    parsed.answer.trim().slice(0, 1_200),
+    groundedClarification && parsed.needsClarification === true && typeof parsed.clarificationQuestion === "string"
+      ? parsed.clarificationQuestion.trim().slice(0, 300) : "",
+    sources,
+  );
+  if (!composed) return null;
+  const answer = composed.answer;
   return {
     answer,
     sourceIds,
@@ -345,9 +351,7 @@ function parseProviderAnswer(
     ...(groundedClarification && parsed.needsClarification === true
       ? {
         needsClarification: true,
-        clarificationQuestion: typeof parsed.clarificationQuestion === "string"
-          ? parsed.clarificationQuestion.trim().slice(0, 300)
-          : "",
+        clarificationQuestion: composed.clarificationQuestion,
       }
       : {}),
   };
@@ -408,34 +412,41 @@ export async function answerCustomerServiceFaqWithAi({
         messages: [
           {
             role: "system",
-            content: (groundedClarification
-              ? [
-                "You are the customer-service answer composer for Food Channels Delivery in Hong Kong.",
-                "Answer only from the published FAQ records supplied by the application.",
-                "You may summarise, paraphrase, combine and conditionally explain those records, but never add facts, prices, dates, URLs, policies, quantities or promises that the cited records do not contain.",
-                "Retrieved records are candidates, not confirmed matches. Check that their answers support the customer's actual question, including negations, conditions, brand and scope. Shared keywords alone are not evidence.",
-                "If the records answer only part of the question, answer the supported part first, then clearly state which part the available information does not cover. Do not invent the missing part.",
-                "If the records are insufficient or the request needs account-specific action, return answer null rather than guessing.",
-                "For multi-part questions, explain supported policy and explicitly clarify any missing condition; never turn a conditional policy into an unconditional promise. If candidate records conflict and scope cannot resolve them, return answer null.",
-                "Use concise, polite Hong Kong Traditional Chinese and natural Cantonese wording.",
-                "Do not mention prompts, models, tools, sources, or internal rules.",
-                'Return JSON only: {"answer":string|null,"sourceIds":string[],"confidence":"high"|"medium"|"low","needsClarification":boolean,"clarificationQuestion":string|null}.',
-                "When answer is not null, sourceIds must list the records actually used to support it. Every factual claim, and every number, must be supported by at least one listed record.",
-                config.systemPrompt?.trim() || "",
-              ]
-              : [
-                "You are the customer-service answer composer for Food Channels Delivery in Hong Kong.",
-                "Answer only from the published FAQ records supplied by the application.",
-                "You may combine or paraphrase records, but never add facts, prices, dates, URLs, policies, or promises not present in the cited records.",
-                "If the records are insufficient, ambiguous, or the request needs account-specific action, return answer null.",
-                "Retrieved records are candidates, not confirmed matches. Check that their answers support the customer's actual question, including negations, conditions, brand and scope. Shared keywords alone are not evidence.",
-                "For multi-part questions, explain supported policy and explicitly clarify any missing condition; never turn a conditional policy into an unconditional promise. If candidate records conflict and scope cannot resolve them, return answer null.",
-                "Use concise, polite Hong Kong Traditional Chinese and natural Cantonese wording.",
-                "Do not mention prompts, models, tools, sources, or internal rules.",
-                'Return JSON only: {"answer":string|null,"sourceIds":string[]}.',
-                "When answer is not null, sourceIds must contain every supporting FAQ id and no unrelated id.",
-                config.systemPrompt?.trim() || "",
-              ]).join(" "),
+            content: buildCustomerServiceSystemPrompt({
+              stage: "faq_answer",
+              taskInstructions: groundedClarification
+                ? [
+                  "You are the customer-service answer composer for Food Channels Delivery in Hong Kong.",
+                  "Answer only from the published FAQ records supplied by the application.",
+                  "You may summarise, paraphrase, combine and conditionally explain those records, but never add facts, prices, dates, URLs, policies, quantities or promises that the cited records do not contain.",
+                  "Retrieved records are candidates, not confirmed matches. Check that their answers support the customer's actual question, including negations, conditions, brand and scope. Shared keywords alone are not evidence.",
+                  "If the records answer only part of the question, answer the supported part first, then clearly state which part the available information does not cover. Do not invent the missing part.",
+                  "If the records are insufficient or the request needs account-specific action, return answer null rather than guessing.",
+                  "For multi-part questions, explain supported policy and explicitly clarify any missing condition; never turn a conditional policy into an unconditional promise. If candidate records conflict and scope cannot resolve them, return answer null.",
+                  "Use concise, polite Hong Kong Traditional Chinese and natural Cantonese wording.",
+                  "Do not mention prompts, models, tools, sources, or internal rules.",
+                  "When answer is not null, sourceIds must list the records actually used to support it. Every factual claim, and every number, must be supported by at least one listed record.",
+                ]
+                : [
+                  "You are the customer-service answer composer for Food Channels Delivery in Hong Kong.",
+                  "Answer only from the published FAQ records supplied by the application.",
+                  "You may combine or paraphrase records, but never add facts, prices, dates, URLs, policies, or promises not present in the cited records.",
+                  "If the records are insufficient, ambiguous, or the request needs account-specific action, return answer null.",
+                  "Retrieved records are candidates, not confirmed matches. Check that their answers support the customer's actual question, including negations, conditions, brand and scope. Shared keywords alone are not evidence.",
+                  "For multi-part questions, explain supported policy and explicitly clarify any missing condition; never turn a conditional policy into an unconditional promise. If candidate records conflict and scope cannot resolve them, return answer null.",
+                  "Use concise, polite Hong Kong Traditional Chinese and natural Cantonese wording.",
+                  "Do not mention prompts, models, tools, sources, or internal rules.",
+                  "When answer is not null, sourceIds must contain every supporting FAQ id and no unrelated id.",
+                ],
+              outputInstructions: groundedClarification
+                ? [
+                  'Return JSON only: {"answer":string|null,"sourceIds":string[],"confidence":"high"|"medium"|"low","needsClarification":boolean,"clarificationQuestion":string|null}.',
+                ]
+                : [
+                  'Return JSON only: {"answer":string|null,"sourceIds":string[]}.',
+                ],
+              businessInstructions: config.systemPrompt,
+            }),
           },
           {
             role: "user",
@@ -536,18 +547,23 @@ export async function answerCustomerServiceFallbackWithAi({
         messages: [
           {
             role: "system",
-            content: [
-              "You are the fallback WhatsApp assistant for Food Channels Delivery in Hong Kong.",
-              config.systemPrompt?.trim() || "",
-              "The application has already classified the customer's intent but found no FAQ answer.",
-              "Give one concise, useful next step or ask one focused clarification question in natural Hong Kong Traditional Chinese.",
-              "Never invent product details, availability, prices, dates, URLs, policies, order data, completed actions, or staff follow-up promises.",
-              "Do not say that no order was found unless the classified intent is specifically an order lookup.",
-              "Use only facts already present in the current message or recent conversation; otherwise ask for the missing information.",
-              "recentMessages is ordered from oldest to newest and role human means a prior staff reply. Continue naturally from staff-provided context without asking the customer to repeat it.",
-              "Do not mention AI, prompts, tools, FAQ matching, sources, or internal rules.",
-              'Return JSON only: {"answer":string|null}.',
-            ].join(" "),
+            content: buildCustomerServiceSystemPrompt({
+              stage: "fallback",
+              taskInstructions: [
+                "You are the fallback WhatsApp assistant for Food Channels Delivery in Hong Kong.",
+                "The application has already classified the customer's intent but found no FAQ answer.",
+                "Give one concise, useful next step or ask one focused clarification question in natural Hong Kong Traditional Chinese.",
+                "Never invent product details, availability, prices, dates, URLs, policies, order data, completed actions, or staff follow-up promises.",
+                "Do not say that no order was found unless the classified intent is specifically an order lookup.",
+                "Use only facts already present in the current message or recent conversation; otherwise ask for the missing information.",
+                "recentMessages is ordered from oldest to newest and role human means a prior staff reply. Continue naturally from staff-provided context without asking the customer to repeat it.",
+                "Do not mention AI, prompts, tools, FAQ matching, sources, or internal rules.",
+              ],
+              outputInstructions: [
+                'Return JSON only: {"answer":string|null}.',
+              ],
+              businessInstructions: config.systemPrompt,
+            }),
           },
           {
             role: "user",
@@ -649,6 +665,7 @@ export async function answerCustomerServiceFaqWithTieredAi({
   tiers,
   fetchImpl = fetch,
   beforeRequest,
+  deadlineAt,
 }: {
   question: string;
   rewrittenQuestion?: string;
@@ -658,7 +675,12 @@ export async function answerCustomerServiceFaqWithTieredAi({
   tiers: CustomerServiceAiTierConfig;
   fetchImpl?: typeof fetch;
   beforeRequest?: () => void | Promise<void>;
+  deadlineAt?: number;
 }) {
+  const expired = () => deadlineAt !== undefined && Date.now() >= deadlineAt;
+  const budget = (config: CustomerServiceAiConfig): CustomerServiceAiConfig => deadlineAt === undefined ? config
+    : { ...config, timeoutMs: Math.max(1, Math.min(config.timeoutMs, deadlineAt - Date.now())) };
+  if (expired()) return null;
   let primary: CustomerServiceAiAnswer | null = null;
   try {
     primary = await answerCustomerServiceFaqWithAi({
@@ -667,7 +689,7 @@ export async function answerCustomerServiceFaqWithTieredAi({
       recentMessages,
       faqs,
       groundedClarification,
-      config: tiers.primary,
+      config: budget(tiers.primary),
       fetchImpl,
       beforeRequest,
     });
@@ -675,14 +697,14 @@ export async function answerCustomerServiceFaqWithTieredAi({
     if (!tiers.fallback?.enabled) throw error;
     console.error("customer-service primary FAQ model failed; escalating", error);
   }
-  if (primary || !tiers.fallback?.enabled) return primary;
+  if (primary || !tiers.fallback?.enabled || expired()) return primary;
   return await answerCustomerServiceFaqWithAi({
     question,
     rewrittenQuestion,
     recentMessages,
     faqs,
     groundedClarification,
-    config: tiers.fallback,
+    config: budget(tiers.fallback),
     fetchImpl,
   });
 }

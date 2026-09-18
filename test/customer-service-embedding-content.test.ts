@@ -12,7 +12,7 @@ describe("customer-service FAQ embedding content", () => {
       aliases: ["點樣退錢", "可唔可以退返錢"],
       answer: "請提供訂單號，一般 7 個工作天內處理。",
     });
-    expect(text).toBe("退款流程\n點樣退錢\n可唔可以退返錢");
+    expect(text).toBe("退款流程\n可唔可以退返錢\n點樣退錢");
     expect(text).not.toContain("7 個工作天");
   });
 

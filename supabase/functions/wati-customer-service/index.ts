@@ -1,8 +1,8 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { createCustomerServiceFaqRagDeps } from "../_shared/customer-service-rag-runtime.ts";
 
 import { EMAIL_FROM } from "../_shared/email-sender.ts";
 import {
-  answerCustomerServiceFaqWithTieredAi,
   answerCustomerServiceFallbackWithTieredAi,
   classifyCustomerServiceWithTieredAi,
   customerServiceAiConfig,
@@ -15,16 +15,10 @@ import {
   sanitizeCustomerServiceRecentMessages,
   type CustomerServiceRecentMessage,
 } from "../_shared/customer-service-context.ts";
-import { rewriteCustomerServiceQuery } from "../_shared/customer-service-rewrite.ts";
 import {
   customerServiceRagConfig,
   type CustomerServiceRagConfig,
 } from "../_shared/customer-service-rag-config.ts";
-import { embedCustomerServiceQuery } from "../_shared/customer-service-embedding.ts";
-import {
-  fuseCustomerFaqCandidates,
-  type CustomerServiceFaqCandidate,
-} from "../_shared/customer-service-retrieval.ts";
 import {
   customerServiceCatalogItemLinks,
   customerServiceCatalogSearchAnchor,
@@ -1699,68 +1693,6 @@ async function processOutboundRetries(request: Request) {
   return jsonResponse({ ok: true, claimed: messages.length, sent, failed });
 }
 
-/**
- * Hybrid FAQ retrieval: lexical RPC and semantic pgvector RPC run in parallel,
- * then candidates are fused with reciprocal rank fusion. A vector outage
- * degrades to lexical-only rather than failing the turn.
- */
-async function searchCustomerFaqsHybrid(
-  admin: AdminClient,
-  query: string,
-  ragConfig: CustomerServiceRagConfig,
-): Promise<Array<{ id: string; category: string; question: string; answer: string }>> {
-  const lexicalPromise = (async () => {
-    try {
-      const { data, error } = await admin.rpc("search_published_customer_faqs", {
-        p_query: query,
-        p_limit: ragConfig.lexicalTopK,
-      });
-      if (error) throw error;
-      return (data ?? []) as CustomerServiceFaqCandidate[];
-    } catch (error) {
-      console.error(
-        "customer-service lexical retrieval failed; using vector only",
-        error instanceof Error ? error.message.slice(0, 200) : String(error),
-      );
-      return [];
-    }
-  })();
-  const vectorPromise = (async () => {
-    try {
-      const embedding = await embedCustomerServiceQuery(query);
-      if (!embedding) return [];
-      const { data, error } = await admin.rpc(
-        "search_published_customer_faqs_by_vector",
-        {
-          p_query_embedding: JSON.stringify(embedding),
-          p_limit: ragConfig.vectorTopK,
-          p_threshold: ragConfig.vectorThreshold,
-        },
-      );
-      if (error) throw error;
-      return (data ?? []) as CustomerServiceFaqCandidate[];
-    } catch (error) {
-      console.error(
-        "customer-service vector retrieval failed; using lexical only",
-        error instanceof Error ? error.message.slice(0, 200) : String(error),
-      );
-      return [];
-    }
-  })();
-  const [lexical, vector] = await Promise.all([lexicalPromise, vectorPromise]);
-  return fuseCustomerFaqCandidates(lexical, vector, {
-    rrfK: ragConfig.rrfK,
-    vectorWeight: ragConfig.vectorWeight,
-    lexicalWeight: ragConfig.lexicalWeight,
-    limit: ragConfig.finalTopK,
-  }).map(({ id, category, question, answer }) => ({
-    id,
-    category: category || "general",
-    question,
-    answer,
-  }));
-}
-
 function createBotDeps(
   admin: AdminClient,
   {
@@ -1787,20 +1719,13 @@ function createBotDeps(
     workflowAutoResume: Object.fromEntries(
       workflowPolicies.map((policy) => [policy.goalKey, policy.autoResume]),
     ),
-    ...(ragConfig.enableQueryRewrite
-      ? {
-        async rewriteQuery(query: string) {
-          return await rewriteCustomerServiceQuery({
-            question: query,
-            recentMessages: sanitizeCustomerServiceRecentMessages(
-              recentMessages,
-              ragConfig.contextRounds * 2,
-            ),
-            config: tiers.primary,
-          });
-        },
-      }
-      : {}),
+    ...createCustomerServiceFaqRagDeps({
+      db: admin,
+      ragConfig,
+      tiers,
+      recentMessages,
+      legacyLimit: activeConfig?.retrieval_limit ?? 12,
+    }),
     async lookupOrders(phone: string) {
       const { data, error } = await admin.rpc(
         "customer_service_lookup_orders",
@@ -1880,25 +1805,6 @@ function createBotDeps(
       )?.[0];
       if (!row) throw new Error("inquiry_write_failed");
       return row;
-    },
-    async searchFaqs(query: string) {
-      if (ragConfig.enableRagV2) {
-        return await searchCustomerFaqsHybrid(admin, query, ragConfig);
-      }
-      const { data, error } = await admin.rpc(
-        "search_published_customer_faqs",
-        {
-          p_query: query,
-          p_limit: activeConfig?.retrieval_limit ?? 12,
-        },
-      );
-      if (error) throw error;
-      return (data ?? []) as Array<{
-        id: string;
-        category: string;
-        question: string;
-        answer: string;
-      }>;
     },
     async checkDeliveryDateAvailability(date: string) {
       const start = new Date(`${date}T00:00:00+08:00`);
@@ -2142,33 +2048,6 @@ function createBotDeps(
           ),
         };
       });
-    },
-    async answerFaqWithModel(
-      query: string,
-      candidates: Array<{
-        id: string;
-        category?: string;
-        question: string;
-        answer: string;
-      }>,
-      rewrittenQuery?: string,
-    ) {
-      if (!candidates.length) return null;
-      const result = await answerCustomerServiceFaqWithTieredAi({
-        question: query,
-        rewrittenQuestion: rewrittenQuery ?? "",
-        recentMessages: sanitizeCustomerServiceRecentMessages(
-          recentMessages,
-          ragConfig.contextRounds * 2,
-        ),
-        faqs: candidates.map((candidate) => ({
-          ...candidate,
-          category: candidate.category || "general",
-        })),
-        groundedClarification: ragConfig.enableGroundedClarification,
-        tiers,
-      });
-      return result ?? null;
     },
     async answerWithoutFaqWithModel(input: {
       query: string;

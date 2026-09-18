@@ -61,7 +61,8 @@ describe("customer-service RAG phase 1 retrieval rewrite", () => {
     const result = await run("點樣退錢？");
 
     expect(result.reply).toContain(faq.answer);
-    expect(result.reply).toContain("你想退全數定部分金額？");
+    expect(result.reply).toContain("請問你想查詢哪一方面？");
+    expect(result.reply).not.toContain("你想退全數定部分金額？");
   });
 
   it("keeps the original query when rewrite asks for clarification", async () => {

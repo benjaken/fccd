@@ -1,5 +1,4 @@
 export type CustomerServiceEmbeddingApiStyle = "openai" | "ark_multimodal";
-
 export type CustomerServiceEmbeddingConfig = {
   enabled: boolean;
   apiStyle: CustomerServiceEmbeddingApiStyle;
@@ -7,210 +6,182 @@ export type CustomerServiceEmbeddingConfig = {
   apiKey: string;
   model: string;
   dimensions: number;
-  /** Send the `dimensions` field. Some providers reject it; disable when needed. */
   sendDimensions: boolean;
   timeoutMs: number;
   batchSize: number;
+  /** Bounded concurrency for independent Ark samples. */
+  concurrency?: number;
+  /** Retry transient errors only; real-time query embedding overrides to zero. */
+  maxRetries?: number;
 };
-
-/** Matches the pgvector column and Doubao 1024-d output. */
 export const CUSTOMER_SERVICE_EMBEDDING_DIMENSIONS = 1024;
+export const CUSTOMER_SERVICE_EMBEDDING_INPUT_VERSION = "faq-question-alias-v2";
+const MAX_INPUT_CHARS = 6_000;
 
-function firstEnv(...names: string[]) {
+function env(...names: string[]): string {
   for (const name of names) {
     const value = Deno.env.get(name)?.trim();
     if (value) return value;
   }
   return "";
 }
-
-function boolEnv(name: string, fallback: boolean) {
-  const value = Deno.env.get(name)?.trim().toLowerCase();
-  if (value === "true") return true;
-  if (value === "false") return false;
-  return fallback;
+function flag(name: string, fallback: boolean): boolean {
+  const value = env(name).toLowerCase();
+  return value === "true" ? true : value === "false" ? false : fallback;
 }
-
-function integerEnv(name: string, fallback: number, min: number, max: number) {
-  const value = Number(Deno.env.get(name)?.trim());
-  if (!Number.isFinite(value) || value <= 0) return fallback;
-  return Math.min(Math.max(value, min), max);
+function integer(name: string, fallback: number, min: number, max: number): number {
+  const text = env(name);
+  const n = text ? Number(text) : NaN;
+  return Number.isFinite(n) ? Math.min(max, Math.max(min, Math.trunc(n))) : fallback;
 }
-
-/** Kept conservative for CJK input across providers. */
-const MAX_EMBEDDING_INPUT_CHARS = 6_000;
-
-const ARK_MULTIMODAL_ENDPOINT = "https://ark.cn-beijing.volces.com/api/v3/embeddings/multimodal";
-const OPENAI_ENDPOINT = "https://api.openai.com/v1/embeddings";
-
 export function customerServiceEmbeddingConfig(): CustomerServiceEmbeddingConfig {
-  const dedicatedKey = firstEnv(
-    "CUSTOMER_SERVICE_EMBEDDING_API_KEY",
-    "ARK_API_KEY",
-  );
-  const apiKey = dedicatedKey || firstEnv("OPENAI_API_KEY");
-  const model = firstEnv(
-    "CUSTOMER_SERVICE_EMBEDDING_MODEL",
-    "ARK_EMBEDDING_MODEL",
-    "OPENAI_EMBEDDING_MODEL",
-  ) || "text-embedding-3-small";
-  const requestedStyle = firstEnv("CUSTOMER_SERVICE_EMBEDDING_API_STYLE").toLowerCase();
-  const apiStyle: CustomerServiceEmbeddingApiStyle = requestedStyle === "ark_multimodal"
-    ? "ark_multimodal"
-    : requestedStyle === "openai"
-    ? "openai"
-    : /^doubao/i.test(model)
-    ? "ark_multimodal"
-    : "openai";
-  const endpoint = firstEnv(
-    "CUSTOMER_SERVICE_EMBEDDING_ENDPOINT",
-    "ARK_EMBEDDING_ENDPOINT",
-    "OPENAI_EMBEDDING_ENDPOINT",
-  ) || (apiStyle === "ark_multimodal" ? ARK_MULTIMODAL_ENDPOINT : OPENAI_ENDPOINT);
+  const dedicatedKey = env("CUSTOMER_SERVICE_EMBEDDING_API_KEY", "ARK_API_KEY");
+  const model = env("CUSTOMER_SERVICE_EMBEDDING_MODEL", "ARK_EMBEDDING_MODEL", "OPENAI_EMBEDDING_MODEL") || "text-embedding-3-small";
+  const style = env("CUSTOMER_SERVICE_EMBEDDING_API_STYLE").toLowerCase();
+  const apiStyle = style === "ark_multimodal" || (!style && /^doubao/i.test(model)) ? "ark_multimodal" : "openai";
   return {
-    enabled: boolEnv("CUSTOMER_SERVICE_EMBEDDING_ENABLED", dedicatedKey !== ""),
+    enabled: flag("CUSTOMER_SERVICE_EMBEDDING_ENABLED", Boolean(dedicatedKey)),
     apiStyle,
-    endpoint,
-    apiKey,
+    endpoint: env("CUSTOMER_SERVICE_EMBEDDING_ENDPOINT", "ARK_EMBEDDING_ENDPOINT", "OPENAI_EMBEDDING_ENDPOINT") ||
+      (apiStyle === "ark_multimodal" ? "https://ark.cn-beijing.volces.com/api/v3/embeddings/multimodal" : "https://api.openai.com/v1/embeddings"),
+    apiKey: dedicatedKey || env("OPENAI_API_KEY"),
     model,
-    dimensions: integerEnv(
-      "CUSTOMER_SERVICE_EMBEDDING_DIMENSIONS",
-      CUSTOMER_SERVICE_EMBEDDING_DIMENSIONS,
-      1,
-      8192,
-    ),
-    sendDimensions: boolEnv("CUSTOMER_SERVICE_EMBEDDING_SEND_DIMENSIONS", true),
-    timeoutMs: integerEnv("CUSTOMER_SERVICE_EMBEDDING_TIMEOUT_MS", 12_000, 2_000, 30_000),
-    batchSize: integerEnv(
-      "CUSTOMER_SERVICE_EMBEDDING_BATCH_SIZE",
-      apiStyle === "ark_multimodal" ? 10 : 64,
-      1,
-      128,
-    ),
+    dimensions: integer("CUSTOMER_SERVICE_EMBEDDING_DIMENSIONS", CUSTOMER_SERVICE_EMBEDDING_DIMENSIONS, 1, 8192),
+    sendDimensions: flag("CUSTOMER_SERVICE_EMBEDDING_SEND_DIMENSIONS", true),
+    timeoutMs: integer("CUSTOMER_SERVICE_EMBEDDING_TIMEOUT_MS", 12_000, 2_000, 30_000),
+    // Ark's input parts belong to ONE sample, not multiple independent FAQs.
+    batchSize: apiStyle === "ark_multimodal" ? 1 : integer("CUSTOMER_SERVICE_EMBEDDING_BATCH_SIZE", 32, 1, 128),
+    concurrency: integer("CUSTOMER_SERVICE_EMBEDDING_CONCURRENCY", 3, 1, 5),
+    maxRetries: integer("CUSTOMER_SERVICE_EMBEDDING_MAX_RETRIES", 1, 0, 2),
   };
 }
 
-function cleanInput(value: string) {
-  return value.replace(/\s+/g, " ").trim().slice(0, MAX_EMBEDDING_INPUT_CHARS);
-}
-
-function embeddingRequestBody(texts: string[], config: CustomerServiceEmbeddingConfig) {
-  const dimensionField = config.dimensions && config.sendDimensions
-    ? { dimensions: config.dimensions }
-    : {};
-  if (config.apiStyle === "ark_multimodal") {
-    return {
-      model: config.model,
-      encoding_format: "float",
-      input: texts.map((text) => ({ type: "text", text })),
-      ...dimensionField,
-    };
+export class CustomerServiceEmbeddingError extends Error {
+  readonly code: string;
+  readonly retryable: boolean;
+  constructor(code: string, retryable = false) {
+    super(code);
+    this.name = "CustomerServiceEmbeddingError";
+    this.code = code;
+    this.retryable = retryable;
   }
-  return { model: config.model, input: texts, ...dimensionField };
+}
+function cleanInput(text: string): string {
+  return text.replace(/\s+/g, " ").trim().slice(0, MAX_INPUT_CHARS);
+}
+/** Credentials are intentionally excluded. Endpoint/model/config changes isolate indexes. */
+export async function customerServiceEmbeddingProfile(config: CustomerServiceEmbeddingConfig): Promise<string> {
+  const bytes = new TextEncoder().encode(JSON.stringify([
+    config.apiStyle, config.endpoint, config.model, config.dimensions,
+    config.sendDimensions, CUSTOMER_SERVICE_EMBEDDING_INPUT_VERSION,
+  ]));
+  return Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", bytes)), (b) => b.toString(16).padStart(2, "0")).join("");
 }
 
 function extractEmbeddings(payload: unknown, expected: number, dimensions: number): number[][] {
-  const container = payload as {
-    data?: unknown;
-    embeddings?: unknown;
-  };
-  let rows: Array<{ embedding?: unknown; index?: unknown }> = [];
-  if (Array.isArray(container?.data)) {
-    rows = container.data as Array<{ embedding?: unknown; index?: unknown }>;
-  } else if (
-    container?.data && typeof container.data === "object" &&
-    Array.isArray((container.data as { embedding?: unknown }).embedding)
-  ) {
-    rows = [container.data as { embedding?: unknown; index?: unknown }];
-  } else if (Array.isArray(container?.embeddings)) {
-    rows = (container.embeddings as unknown[]).map((embedding) => ({ embedding }));
+  const data = payload as { data?: unknown; embeddings?: unknown } | null;
+  let rows: Array<{ embedding?: unknown; index?: unknown }>;
+  if (Array.isArray(data?.data)) rows = data.data;
+  else if (data?.data && typeof data.data === "object" && "embedding" in data.data) rows = [data.data];
+  else if (Array.isArray(data?.embeddings)) rows = data.embeddings.map((embedding) => ({ embedding }));
+  else rows = [];
+  if (rows.length !== expected) throw new CustomerServiceEmbeddingError("customer_service_embedding_count_mismatch");
+  if (rows.some((row) => !row || typeof row !== "object")) throw new CustomerServiceEmbeddingError("customer_service_embedding_invalid_row");
+  if (rows.some((row) => row.index !== undefined)) {
+    const indices = rows.map((row) => row.index);
+    if (new Set(indices).size !== expected || indices.some((i) => typeof i !== "number" || !Number.isInteger(i) || i < 0 || i >= expected)) {
+      throw new CustomerServiceEmbeddingError("customer_service_embedding_index_mismatch");
+    }
+    rows.sort((a, b) => Number(a.index) - Number(b.index));
   }
-  if (rows.length !== expected) {
-    throw new Error("customer_service_embedding_count_mismatch");
-  }
-  return rows
-    .sort((left, right) => Number(left.index ?? 0) - Number(right.index ?? 0))
-    .map((row) => {
-      const embedding = Array.isArray(row.embedding)
-        ? row.embedding.filter((value): value is number => typeof value === "number")
-        : [];
-      if (dimensions && embedding.length !== dimensions) {
-        throw new Error("customer_service_embedding_dimension_mismatch");
+  return rows.map((row) => {
+    if (!Array.isArray(row.embedding) || row.embedding.length !== dimensions) {
+      throw new CustomerServiceEmbeddingError("customer_service_embedding_dimension_mismatch");
+    }
+    if (row.embedding.some((n) => typeof n !== "number" || !Number.isFinite(n)) || !row.embedding.some((n) => n !== 0)) {
+      throw new CustomerServiceEmbeddingError("customer_service_embedding_invalid_vector");
+    }
+    return row.embedding as number[];
+  });
+}
+
+type EmbedOptions = {
+  config?: CustomerServiceEmbeddingConfig;
+  fetchImpl?: typeof fetch;
+  /** Whole operation budget, including retries. */
+  deadlineAt?: number;
+};
+async function embedBatch(texts: string[], config: CustomerServiceEmbeddingConfig, fetchImpl: typeof fetch, deadlineAt: number): Promise<number[][]> {
+  const retries = Math.min(2, Math.max(0, Math.trunc(config.maxRetries ?? 0)));
+  for (let attempt = 0; ; attempt += 1) {
+    const remaining = deadlineAt - Date.now();
+    if (remaining <= 0) throw new CustomerServiceEmbeddingError("customer_service_embedding_deadline");
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), Math.min(config.timeoutMs, remaining));
+    let failure: CustomerServiceEmbeddingError;
+    try {
+      const dimensions = config.sendDimensions ? { dimensions: config.dimensions } : {};
+      const body = config.apiStyle === "ark_multimodal"
+        ? { model: config.model, encoding_format: "float", input: [{ type: "text", text: texts[0] }], ...dimensions }
+        : { model: config.model, input: texts, ...dimensions };
+      const response = await fetchImpl(config.endpoint, {
+        method: "POST", signal: controller.signal,
+        headers: { Authorization: `Bearer ${config.apiKey.replace(/^Bearer\s+/i, "")}`, "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (!response.ok) {
+        // Do not copy provider response bodies/credentials/customer data into logs.
+        throw new CustomerServiceEmbeddingError(`customer_service_embedding_${response.status}`, response.status === 429 || response.status >= 500);
       }
-      return embedding;
-    });
-}
-
-async function embedBatch(
-  texts: string[],
-  config: CustomerServiceEmbeddingConfig,
-  fetchImpl: typeof fetch,
-): Promise<number[][]> {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), config.timeoutMs);
-  try {
-    const response = await fetchImpl(config.endpoint, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${config.apiKey.replace(/^Bearer\s+/i, "")}`,
-        "Content-Type": "application/json",
-      },
-      signal: controller.signal,
-      body: JSON.stringify(embeddingRequestBody(texts, config)),
-    });
-    if (!response.ok) {
-      const detail = (await response.text().catch(() => "")).replace(/\s+/g, " ").slice(0, 200);
-      throw new Error(`customer_service_embedding_${response.status}${detail ? `:${detail}` : ""}`);
-    }
-    return extractEmbeddings(await response.json(), texts.length, config.dimensions);
-  } catch (error) {
-    if (error instanceof Error && error.name === "AbortError") {
-      throw new Error("customer_service_embedding_timeout");
-    }
-    throw error;
-  } finally {
-    clearTimeout(timeout);
+      return extractEmbeddings(await response.json(), texts.length, config.dimensions);
+    } catch (error) {
+      failure = error instanceof CustomerServiceEmbeddingError ? error
+        : new CustomerServiceEmbeddingError(error instanceof Error && error.name === "AbortError"
+          ? "customer_service_embedding_timeout" : "customer_service_embedding_transport_error", true);
+    } finally { clearTimeout(timeout); }
+    if (!failure.retryable || attempt >= retries) throw failure;
+    const delay = Math.min(1_000, 200 * 2 ** attempt);
+    if (Date.now() + delay >= deadlineAt) throw new CustomerServiceEmbeddingError("customer_service_embedding_deadline");
+    await new Promise((resolve) => setTimeout(resolve, delay));
   }
 }
 
-/** Embeds texts in provider batches. Throws so callers can decide how to degrade. */
-export async function embedCustomerServiceTexts(
-  texts: string[],
-  {
-    config = customerServiceEmbeddingConfig(),
-    fetchImpl = fetch,
-  }: { config?: CustomerServiceEmbeddingConfig; fetchImpl?: typeof fetch } = {},
-): Promise<number[][]> {
+export async function embedCustomerServiceTexts(texts: string[], options: EmbedOptions = {}): Promise<number[][]> {
+  const config = options.config ?? customerServiceEmbeddingConfig();
+  const fetchImpl = options.fetchImpl ?? fetch;
+  if (!texts.length) return [];
+  if (!config.enabled || !config.apiKey || !config.endpoint || !config.model) throw new CustomerServiceEmbeddingError("customer_service_embedding_not_configured");
+  if (!Number.isInteger(config.dimensions) || config.dimensions < 1) throw new CustomerServiceEmbeddingError("customer_service_embedding_dimension_mismatch");
   const inputs = texts.map(cleanInput);
-  if (!inputs.length) return [];
-  if (!config.enabled || !config.apiKey || !config.endpoint || !config.model) {
-    throw new Error("customer_service_embedding_not_configured");
-  }
-  const embeddings: number[][] = [];
-  for (let start = 0; start < inputs.length; start += config.batchSize) {
-    embeddings.push(...await embedBatch(inputs.slice(start, start + config.batchSize), config, fetchImpl));
-  }
-  return embeddings;
+  if (inputs.some((text) => !text)) throw new CustomerServiceEmbeddingError("customer_service_embedding_empty_input");
+  const size = config.apiStyle === "ark_multimodal" ? 1 : Math.max(1, Math.min(128, Math.trunc(config.batchSize) || 1));
+  const batches = Array.from({ length: Math.ceil(inputs.length / size) }, (_, i) => inputs.slice(i * size, (i + 1) * size));
+  const output: number[][][] = new Array(batches.length);
+  const deadlineAt = options.deadlineAt ?? Date.now() + 45_000;
+  let next = 0;
+  let failure: unknown;
+  const concurrency = config.apiStyle === "ark_multimodal" ? Math.min(5, Math.max(1, config.concurrency ?? 3)) : 1;
+  await Promise.all(Array.from({ length: Math.min(concurrency, batches.length) }, async () => {
+    while (!failure) {
+      const index = next++;
+      if (index >= batches.length) return;
+      try { output[index] = await embedBatch(batches[index], config, fetchImpl, deadlineAt); }
+      catch (error) { failure = error; }
+    }
+  }));
+  if (failure) throw failure;
+  return output.flat();
 }
 
-/**
- * Best-effort query embedding for retrieval. Returns null instead of throwing so
- * a provider outage can never break the WhatsApp reply path.
- */
-export async function embedCustomerServiceQuery(
-  query: string,
-  options: { config?: CustomerServiceEmbeddingConfig; fetchImpl?: typeof fetch } = {},
-): Promise<number[] | null> {
-  const text = cleanInput(query);
-  if (!text) return null;
+/** Legacy-compatible best-effort wrapper. New retrieval uses the throwing API for diagnostics. */
+export async function embedCustomerServiceQuery(query: string, options: EmbedOptions = {}): Promise<number[] | null> {
+  if (!cleanInput(query)) return null;
   try {
-    const [embedding] = await embedCustomerServiceTexts([text], options);
-    return embedding ?? null;
+    const config = options.config ?? customerServiceEmbeddingConfig();
+    const [vector] = await embedCustomerServiceTexts([query], { ...options, config: { ...config, maxRetries: 0 } });
+    return vector ?? null;
   } catch (error) {
-    console.error(
-      "customer-service query embedding failed",
-      error instanceof Error ? error.message.slice(0, 200) : String(error),
-    );
+    console.error("customer-service query embedding failed", error instanceof CustomerServiceEmbeddingError ? error.code : "embedding_error");
     return null;
   }
 }

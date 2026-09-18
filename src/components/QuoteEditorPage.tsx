@@ -460,6 +460,9 @@ export function QuoteEditorPage({
   const { id = "" } = useParams();
   const [searchParams] = useSearchParams();
   const copyFrom = id ? "" : searchParams.get("copyFrom") ?? "";
+  const orderNumberPlaceholder = copyFrom
+    ? t("quoteEditor.manualNumberPlaceholder")
+    : t("quoteEditor.autoNumberPlaceholder");
   const sourceId = id || copyFrom;
   const isOrder = documentType === "order";
   const listPath = isOrder ? "/orders" : "/quotes";
@@ -2765,7 +2768,7 @@ export function QuoteEditorPage({
                     required={Boolean(copyFrom)}
                     aria-label={t("quoteEditor.fields.number")}
                     value={draft.orderNumber ?? ""}
-                    placeholder={t(copyFrom ? "quoteEditor.manualNumberPlaceholder" : "quoteEditor.autoNumberPlaceholder")}
+                    placeholder={orderNumberPlaceholder}
                     onChange={(event) => {
                       patchDraft({ orderNumber: event.target.value });
                       if (fieldErrors.orderNumber) {

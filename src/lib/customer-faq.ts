@@ -495,13 +495,20 @@ export async function fetchCustomerFaqs({
   };
 }
 
-async function refreshCustomerFaqEmbeddings() {
+export async function refreshCustomerFaqEmbeddings() {
   try {
-    await supabase.functions.invoke("customer-service-faq-embed", {
-      body: { limit: 50 },
+    const { data, error } = await supabase.functions.invoke("customer-service-faq-embed", {
+      body: { limit: 20 },
     });
+    if (error || !data || data.ok !== true) {
+      console.warn("customer-service embedding refresh incomplete; inspect embedding status and retry");
+      return { ok: false, code: "embedding_refresh_incomplete" };
+    }
+    // Saving a FAQ and finishing ALL pending embeddings are separate outcomes.
+    return { ok: true, ...data };
   } catch {
-    return;
+    console.warn("customer-service embedding refresh invocation failed");
+    return { ok: false, code: "embedding_refresh_failed" };
   }
 }
 

@@ -1,3 +1,4 @@
+import { composeGroundedFaqReply } from "./customer-service-grounding.ts";
 import {
   classifyCustomerServiceMessage,
   customerServiceBrandIdentityName,
@@ -1566,7 +1567,17 @@ async function replySingleFaq(
       );
     }
   }
-  const hits = await deps.searchFaqs(lookupQuery);
+  let hits: CustomerServiceFaqHit[];
+  try {
+    hits = await deps.searchFaqs(lookupQuery);
+  } catch {
+    // A retrieval outage is not evidence that a policy does not exist.
+    return {
+      reply: "唔好意思，暫時未能查到相關資料，請稍後再試。",
+      conversation, wroteInquiry: false, notified: false,
+      usedModel: classified.usedModel, failureReason: "retrieval_error",
+    };
+  }
   const approvedHits = hits.filter((hit) => strongPublishedFaqMatch(lookupQuery, hit));
   // Text rules remain a fast path, not an allow-list for newly published knowledge.
   // Weak candidates may only produce a cited model answer, never a raw fallback.
@@ -1591,12 +1602,16 @@ async function replySingleFaq(
         typeof modelAnswer === "object" && modelAnswer?.needsClarification
           ? modelAnswer.clarificationQuestion?.trim() ?? ""
           : "";
-      const answer = rawAnswer && clarification && !rawAnswer.includes(clarification)
-        ? `${rawAnswer}\n${clarification}`
-        : rawAnswer;
+
       const returnedSourceIds = typeof modelAnswer === "object" && modelAnswer ? modelAnswer.sourceIds : [];
       const citedIds = returnedSourceIds.filter((id) => modelCandidates.some((hit) => hit.id === id));
       const validFallbackSources = citedIds.length > 0 && citedIds.length === returnedSourceIds.length;
+      // Validate every field after composition, even for a custom/mock answer adapter.
+      const groundingSources = citedIds.length
+        ? modelCandidates.filter((hit) => citedIds.includes(hit.id)) : approvedHits;
+      const composed = rawAnswer
+        ? composeGroundedFaqReply(rawAnswer, clarification, groundingSources) : null;
+      const answer = composed?.answer;
       if (answer && (approvedHits.length > 0 || validFallbackSources)) {
         const excludeIds = citedIds.length
           ? citedIds
@@ -1676,7 +1691,9 @@ async function replyFaq(
     usedModel: turns.some((turn) => turn.usedModel),
     faqSourceIds: turns.flatMap((turn) => turn.faqSourceIds ?? []),
     relatedFaqs: turns.flatMap((turn) => turn.relatedFaqs ?? []).slice(0, 3),
-    failureReason: unanswered.length === turns.length
+    failureReason: turns.some((turn) => turn.failureReason === "retrieval_error")
+      ? answered.length ? "faq_partially_answered" : "retrieval_error"
+      : unanswered.length === turns.length
       ? "faq_not_found"
       : answered.length < turns.length
       ? "faq_partially_answered"
@@ -2599,3 +2616,6 @@ export async function handleCustomerServiceTurn({
     toolKeys: [...(faqTurn.toolKeys ?? []), "queue_handoff"],
   });
 }
+
+// Read-only FAQ entry point shared with the evaluation endpoint.
+export { replyFaq as answerCustomerServiceFaqForEvaluation };

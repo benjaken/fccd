@@ -3101,7 +3101,7 @@
 .customer-faq-trace-trigger {
   display: inline-flex; min-height: 24px; align-items: center; gap: 4px;
   margin: -5px 3px -4px 0; padding: 2px 7px; border: 0; border-radius: 999px;
-  background: transparent; color: var(--muted-foreground); font: inherit; font-size: 11px; font-weight: 700; line-height: 1; cursor: pointer;
+  background: transparent; color: var(--muted-foreground); font: inherit; font-size: 12px; font-weight: 700; line-height: 1; cursor: pointer;
 }
 .customer-faq-trace-trigger:hover,
 .customer-faq-trace-trigger:focus-visible,
@@ -3128,7 +3128,7 @@
 .customer-faq-trace-popover > header svg { width: 17px; height: 17px; color: var(--primary); }
 .customer-faq-trace-popover > header strong { font-size: 14px; font-weight: 750; }
 .customer-faq-trace-popover > header > span {
-  flex: 0 0 auto; color: var(--muted-foreground); font-size: 11px; font-variant-numeric: tabular-nums;
+  flex: 0 0 auto; color: var(--muted-foreground); font-size: 12px; font-variant-numeric: tabular-nums;
 }
 .customer-faq-trace-popover ol {
   display: grid; gap: 0; margin: 0; padding: 6px 10px 10px; list-style: none;
@@ -3166,11 +3166,11 @@
   margin-top: 2px; color: var(--muted-foreground); font-size: 12px; line-height: 1.4;
 }
 .customer-faq-trace-popover li small {
-  margin-top: 3px; color: var(--muted-foreground); opacity: .82; font-size: 11px; line-height: 1.4;
+  margin-top: 3px; color: var(--muted-foreground); opacity: .82; font-size: 12px; line-height: 1.4;
 }
 .customer-faq-trace-stage {
   padding-top: 2px; color: var(--muted-foreground); font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
-  font-size: 10px; font-variant-numeric: tabular-nums;
+  font-size: 12px; font-variant-numeric: tabular-nums;
 }
 .customer-faq-trace-failure {
   display: flex; align-items: flex-start; gap: 7px; margin: 10px 10px 0;

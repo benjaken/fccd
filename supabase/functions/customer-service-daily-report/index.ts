@@ -74,23 +74,16 @@ async function refreshPendingFaqEmbeddings() {
   try {
     const response = await fetch(url, {
       method: "POST",
-      headers: {
-        Authorization: `Bearer ${serviceRoleKey()}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ limit: 250 }),
+      signal: AbortSignal.timeout(48_000),
+      headers: { Authorization: `Bearer ${serviceRoleKey()}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ limit: 20 }),
     });
-    if (!response.ok) {
-      console.error(
-        "customer-service faq embed after learning failed",
-        (await response.text().catch(() => "")).slice(0, 200),
-      );
+    const result = await response.json().catch(() => null);
+    if (!response.ok || result?.ok !== true) {
+      console.error("customer-service faq embedding refresh incomplete; inspect pending/failed rows");
     }
-  } catch (error) {
-    console.error(
-      "customer-service faq embed after learning failed",
-      error instanceof Error ? error.message.slice(0, 200) : String(error),
-    );
+  } catch {
+    console.error("customer-service faq embedding refresh invocation failed");
   }
 }
 
