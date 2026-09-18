@@ -97,6 +97,7 @@ Deno.serve(async (request) => {
       order.shipping_address_snapshot,
       deliveryMethod,
     );
+    const isPickup = deliveryMethod === "pickup";
     const commonParameters = [
       { name: "name", value: name }, { name: "order_number", value: order.order_number || "-" },
       { name: "date", value: displayDate(deliveryDate) }, { name: "time", value: order.delivery_time?.trim() || "-" },
@@ -109,13 +110,22 @@ Deno.serve(async (request) => {
         : null,
       Deno.env.get("WATI_SHOP_NAME")?.trim(),
     );
-    const parameters = includesAddonLink
-      ? [...commonParameters, { name: "ao_deadline", value: displayDate(previousDate(deliveryDate)) }, { name: "ao_link", value: addonLink() }, { name: "shop_name", value: shopName }]
-      : [...commonParameters, { name: "shop_name", value: shopName }];
-    const templateName = includesAddonLink
-      ? Deno.env.get("WATI_ORDER_CONFIRMATION_ADDON_TEMPLATE_NAME")?.trim() || "order_confirm_with_action_and_aolink"
-      : Deno.env.get("WATI_ORDER_CONFIRMATION_TEMPLATE_NAME")?.trim() || "order_confirm_with_action";
-    const notification = buildOrderNotificationContent("delivery_order_confirmed", {
+    const parameters = isPickup
+      ? commonParameters.filter((parameter) => parameter.name !== "address")
+      : includesAddonLink
+        ? [...commonParameters, { name: "ao_deadline", value: displayDate(previousDate(deliveryDate)) }, { name: "ao_link", value: addonLink() }, { name: "shop_name", value: shopName }]
+        : [...commonParameters, { name: "shop_name", value: shopName }];
+    const templateName = isPickup
+      ? Deno.env.get("WATI_ORDER_CONFIRMATION_PICKUP_TEMPLATE_NAME")?.trim() || "selfpick_order_confirmation_with_action2026"
+      : includesAddonLink
+        ? Deno.env.get("WATI_ORDER_CONFIRMATION_ADDON_TEMPLATE_NAME")?.trim() || "order_confirm_with_action_and_aolink"
+        : Deno.env.get("WATI_ORDER_CONFIRMATION_TEMPLATE_NAME")?.trim() || "order_confirm_with_action";
+    const broadcastName = isPickup
+      ? "Self-pick order confirmation 2026"
+      : includesAddonLink
+        ? "Confirmed Delivery message with AO"
+        : "Confirmed Delivery message";
+    const notification = buildOrderNotificationContent(isPickup ? "pickup_order_confirmed" : "delivery_order_confirmed", {
       name,
       order_number: order.order_number || "-",
       date: displayDate(deliveryDate),
@@ -145,11 +155,7 @@ Deno.serve(async (request) => {
             },
             body: JSON.stringify({
               template_name: templateName,
-              broadcast_name: applyDevelopNotificationMarker(
-                includesAddonLink
-                  ? "Confirmed Delivery message with AO"
-                  : "Confirmed Delivery message",
-              ),
+              broadcast_name: applyDevelopNotificationMarker(broadcastName),
               channel_number: requiredEnv("WATI_CHANNEL_NUMBER"),
               parameters,
             }),
