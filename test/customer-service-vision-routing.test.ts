@@ -95,6 +95,34 @@ describe("customer service media routing", () => {
     ).toEqual({ action: "handoff" });
   });
 
+  it("does not treat a product SKU as an order number", () => {
+    expect(
+      decideCustomerServiceMediaRoute(
+        vision({
+          mediaKind: "order_screenshot",
+          needsHuman: true,
+          confidence: 0.92,
+          entities: { orderNumber: "CC0012-1", productNames: ["椒鹽鮮魷"] },
+          extractedText: "CC0012-1 椒鹽鮮魷 加入購物車",
+        }),
+      ),
+    ).toEqual({ action: "menu" });
+  });
+
+  it("does not recover a short letter-digit code from a menu as an order", () => {
+    expect(
+      decideCustomerServiceMediaRoute(
+        vision({
+          mediaKind: "order_screenshot",
+          needsHuman: true,
+          confidence: 0.9,
+          entities: { orderNumber: "P 2", productNames: ["派對套餐"] },
+          extractedText: "Set P 2人餐牌",
+        }),
+      ),
+    ).toEqual({ action: "menu" });
+  });
+
   it("hands off payment, complaint, address and unclear images", () => {
     for (const mediaKind of [
       "payment_proof",

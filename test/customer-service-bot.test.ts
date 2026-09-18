@@ -426,7 +426,12 @@ describe("customer-service intents", () => {
       );
     }
     expect(normalizeCustomerServiceOrderNumber(" # B - 1550c ")).toBe("B1550C");
+    expect(extractOrderNumber("B#1462UB 幾時送")).toBe("B#1462UB");
     expect(extractOrderNumber("2026-09-10 80人到會")).toBe("");
+    expect(extractOrderNumber("CC0012-1 椒鹽鮮魷")).toBe("");
+    expect(extractOrderNumber("ECO006-1 加入購物車")).toBe("");
+    expect(extractOrderNumber("Set P 2人餐牌")).toBe("");
+    expect(extractOrderNumber("L 8 套餐")).toBe("");
   });
 });
 

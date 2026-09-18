@@ -1,5 +1,8 @@
-import { extractOrderNumber } from "./customer-service-intents.ts";
-import type { CustomerServiceVisionResult } from "./customer-service-vision.ts";
+import {
+  customerServiceVisionOrderNumber,
+  sanitizeCustomerServiceVisionResult,
+  type CustomerServiceVisionResult,
+} from "./customer-service-vision.ts";
 
 /**
  * Phase 2 media routing.
@@ -24,18 +27,18 @@ export function decideCustomerServiceMediaRoute(
   vision: CustomerServiceVisionResult | null,
 ): CustomerServiceMediaRoute {
   if (!vision) return { action: "handoff" };
+  const sanitized = sanitizeCustomerServiceVisionResult(vision);
 
   if (
-    vision.mediaKind === "menu_product" &&
-    !vision.needsHuman &&
-    vision.confidence >= CUSTOMER_SERVICE_MENU_IMAGE_MIN_CONFIDENCE
+    sanitized.mediaKind === "menu_product" &&
+    !sanitized.needsHuman &&
+    sanitized.confidence >= CUSTOMER_SERVICE_MENU_IMAGE_MIN_CONFIDENCE
   ) {
     return { action: "menu" };
   }
 
-  if (vision.mediaKind === "order_screenshot") {
-    const entityOrderNumber = vision.entities?.orderNumber?.trim() ?? "";
-    const orderNumber = entityOrderNumber || extractOrderNumber(vision.extractedText ?? "");
+  if (sanitized.mediaKind === "order_screenshot") {
+    const orderNumber = customerServiceVisionOrderNumber(sanitized);
     if (orderNumber) return { action: "order", orderNumber };
   }
 

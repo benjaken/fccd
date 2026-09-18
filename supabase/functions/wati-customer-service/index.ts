@@ -104,7 +104,8 @@ import {
 } from "../_shared/customer-service-order-intake.ts";
 import {
   buildInboundMediaHandoffSummary,
-  isTrustedWatiMediaUrl,
+  downloadTrustedInboundMedia,
+  isTrustedInboundImageUrl,
   mediaStoragePath,
 } from "../_shared/customer-service-media.ts";
 import {
@@ -2809,43 +2810,61 @@ async function mirrorInboundMedia(
   admin: AdminClient,
   event: Pick<WatiInboundEvent, "id" | "waId" | "mediaUrl">,
 ) {
-  if (!isTrustedWatiMediaUrl(event.mediaUrl)) return null;
-  const token = env("WATI_API_TOKEN") || env("WATI_ACCESS_TOKEN");
-  if (!token) return null;
+  if (!isTrustedInboundImageUrl(event.mediaUrl)) {
+    let host = "";
+    let path = "";
+    try {
+      const parsed = new URL(event.mediaUrl || "");
+      host = parsed.hostname;
+      path = parsed.pathname;
+    } catch {
+      // The URL is only used for diagnostics.
+    }
+    console.error("customer_service_media_untrusted_url", {
+      providerMessageId: event.id,
+      host,
+      path,
+      hasMediaUrl: Boolean(event.mediaUrl),
+    });
+    return null;
+  }
   try {
-    const response = await fetch(event.mediaUrl!, {
-      headers: { Authorization: `Bearer ${token.replace(/^Bearer\s+/i, "")}` },
+    const downloaded = await downloadTrustedInboundMedia(event.mediaUrl, {
+      tokens: [env("WATI_ACCESS_TOKEN"), env("WATI_API_TOKEN")],
+      maxBytes: CUSTOMER_SERVICE_MEDIA_MAX_BYTES,
     });
-    if (!response.ok) throw new Error(`wati_media_download_failed:${response.status}`);
-    const declaredSize = Number(response.headers.get("content-length") || 0);
-    if (declaredSize > CUSTOMER_SERVICE_MEDIA_MAX_BYTES) {
-      throw new Error("wati_media_too_large");
+    let signedUrl: string | null = null;
+    try {
+      const path = mediaStoragePath({
+        environment: deploymentEnvironment(),
+        phone: event.waId,
+        messageId: event.id,
+        mediaUrl: event.mediaUrl,
+        contentType: downloaded.contentType,
+      });
+      const { error: uploadError } = await admin.storage
+        .from(CUSTOMER_SERVICE_MEDIA_BUCKET)
+        .upload(path, downloaded.bytes, {
+          contentType: downloaded.contentType,
+          upsert: true,
+        });
+      if (uploadError) throw uploadError;
+      const { data, error: signedUrlError } = await admin.storage
+        .from(CUSTOMER_SERVICE_MEDIA_BUCKET)
+        .createSignedUrl(path, 60 * 60 * 24 * 30);
+      if (signedUrlError) throw signedUrlError;
+      signedUrl = data.signedUrl;
+    } catch (error) {
+      console.error("customer_service_media_upload_failed", {
+        providerMessageId: event.id,
+        error: error instanceof Error ? error.message : String(error),
+      });
     }
-    const contentType = (response.headers.get("content-type") || "application/octet-stream")
-      .split(";", 1)[0].trim().toLowerCase();
-    if (!contentType.startsWith("image/") && !contentType.startsWith("audio/")) {
-      throw new Error(`wati_media_type_not_allowed:${contentType}`);
-    }
-    const body = await response.arrayBuffer();
-    if (body.byteLength > CUSTOMER_SERVICE_MEDIA_MAX_BYTES) {
-      throw new Error("wati_media_too_large");
-    }
-    const path = mediaStoragePath({
-      environment: deploymentEnvironment(),
-      phone: event.waId,
-      messageId: event.id,
-      mediaUrl: event.mediaUrl!,
-      contentType,
-    });
-    const { error: uploadError } = await admin.storage
-      .from(CUSTOMER_SERVICE_MEDIA_BUCKET)
-      .upload(path, body, { contentType, upsert: true });
-    if (uploadError) throw uploadError;
-    const { data, error: signedUrlError } = await admin.storage
-      .from(CUSTOMER_SERVICE_MEDIA_BUCKET)
-      .createSignedUrl(path, 60 * 60 * 24 * 30);
-    if (signedUrlError) throw signedUrlError;
-    return data.signedUrl;
+    return {
+      signedUrl,
+      dataUrl: downloaded.dataUrl,
+      contentType: downloaded.contentType,
+    };
   } catch (error) {
     console.error("customer_service_media_mirror_failed", {
       providerMessageId: event.id,
@@ -3310,20 +3329,24 @@ async function handleInboundMedia(
   const conversation = await loadConversation(admin, event.waId);
   if (conversation.state === "human_owned") return "handoff";
   const label = mediaTypeLabel(event.type);
-  const attachmentUrl = await mirrorInboundMedia(admin, event);
-  const mediaText = `[${label}]${event.caption ? ` ${event.caption}` : ""}`;
+  const mirrored = await mirrorInboundMedia(admin, event);
+  const attachmentUrl = mirrored?.signedUrl ?? null;
+  const inboundCaption = event.caption?.trim()
+    || (!/^https?:\/\//i.test(event.text) ? event.text.trim() : "");
+  const mediaText = `[${label}]${inboundCaption ? ` ${inboundCaption}` : ""}`;
   let vision: CustomerServiceVisionResult | null = null;
   let visionFailureReason = "";
-  if (event.type === "image" && attachmentUrl) {
+  const imageForVision = mirrored?.dataUrl || attachmentUrl || "";
+  if (event.type === "image" && imageForVision) {
     try {
       vision = await analyzeCustomerServiceImage({
-        imageUrl: attachmentUrl,
-        caption: event.caption,
+        imageUrl: imageForVision,
+        caption: inboundCaption,
         providerMessageId: event.id,
       });
       if (!vision) {
         visionFailureReason =
-          customerServiceVisionUnavailableReason(attachmentUrl);
+          customerServiceVisionUnavailableReason(imageForVision);
       }
     } catch (error) {
       visionFailureReason =
@@ -3347,7 +3370,7 @@ async function handleInboundMedia(
   // the dish names resolve, otherwise with the brand menu links, so it does not
   // consume a human.
   if (route.action === "menu") {
-    const menuText = customerServiceMenuImageText(event.caption, vision);
+    const menuText = customerServiceMenuImageText(inboundCaption, vision);
     const brand = customerServiceMenuImageBrand(menuText);
     const productReply = await loadCustomerServiceMenuSkuReply(
       admin,
@@ -3360,7 +3383,7 @@ async function handleInboundMedia(
     );
     const menuResolution = await resolveCustomerServiceMenuImageReply(admin, {
       conversation,
-      text: menuText || event.caption || "",
+      text: menuText || inboundCaption || "",
       brand,
       productReply,
       dryRun: false,
@@ -3407,7 +3430,7 @@ async function handleInboundMedia(
   // requests fall through to the normal order handoff.
   if (route.action === "order") {
     const orderNumber = route.orderNumber;
-    const text = event.caption?.trim() || orderNumber;
+    const text = inboundCaption || orderNumber;
     const prepared = await prepareCustomerServiceTurn(admin, {
       phone: event.waId,
       text,
@@ -3436,7 +3459,7 @@ async function handleInboundMedia(
     summary: [
       buildInboundMediaHandoffSummary({
         label,
-        caption: event.caption,
+        caption: inboundCaption,
         originalUrl: event.mediaUrl,
         attachmentUrl,
       }),

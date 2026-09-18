@@ -2,8 +2,12 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildInboundMediaHandoffSummary,
+  downloadTrustedInboundMedia,
+  isTrustedInboundImageUrl,
   isTrustedWatiMediaUrl,
   mediaStoragePath,
+  resolveInboundMediaContentType,
+  sniffMediaContentType,
 } from "../supabase/functions/_shared/customer-service-media";
 
 describe("customer service inbound media", () => {
@@ -36,7 +40,17 @@ describe("customer service inbound media", () => {
 
   it("only accepts WATI file endpoints and builds stable private paths", () => {
     expect(isTrustedWatiMediaUrl(protectedUrl)).toBe(true);
+    expect(isTrustedWatiMediaUrl(
+      "https://live-mt-server.wati.io/api/file/showFile?fileName=data/images/a.jpg",
+    )).toBe(true);
+    expect(isTrustedWatiMediaUrl(
+      "https://live-mt-server.wati.io/2552/api/v1/file/showFile/?fileName=a.jpg",
+    )).toBe(true);
     expect(isTrustedWatiMediaUrl("https://example.com/file.jpg")).toBe(false);
+    expect(isTrustedInboundImageUrl(
+      "https://cdn.shopify.com/s/files/1/0339/0642/5994/files/58.jpg",
+    )).toBe(true);
+    expect(isTrustedInboundImageUrl("https://example.com/file.jpg")).toBe(false);
     expect(mediaStoragePath({
       environment: "production",
       phone: "+852 9123 4567",
@@ -44,5 +58,54 @@ describe("customer service inbound media", () => {
       mediaUrl: protectedUrl,
       contentType: "image/jpeg",
     })).toBe("production/85291234567/msg_123.jpg");
+  });
+
+  it("treats octet-stream JPEG bytes as an image", () => {
+    const jpeg = new Uint8Array([0xff, 0xd8, 0xff, 0xd9]);
+    expect(sniffMediaContentType(jpeg)).toBe("image/jpeg");
+    expect(resolveInboundMediaContentType("application/octet-stream", jpeg))
+      .toBe("image/jpeg");
+  });
+
+  it("downloads WATI files after an unauthorized token, sniffing the body", async () => {
+    const jpeg = new Uint8Array([0xff, 0xd8, 0xff, 0xd9]);
+    const fetchImpl = async (_url: string, init?: RequestInit) => {
+      const token = String(
+        new Headers(init?.headers).get("authorization") || "",
+      );
+      if (token.includes("bad-token")) {
+        return new Response("denied", { status: 401 });
+      }
+      return new Response(jpeg, {
+        status: 200,
+        headers: { "content-type": "application/octet-stream" },
+      });
+    };
+
+    const downloaded = await downloadTrustedInboundMedia(protectedUrl, {
+      tokens: ["bad-token", "good-token"],
+      maxBytes: 1024,
+      fetchImpl: fetchImpl as typeof fetch,
+    });
+
+    expect(downloaded.contentType).toBe("image/jpeg");
+    expect(downloaded.dataUrl).toMatch(/^data:image\/jpeg;base64,/);
+  });
+
+  it("downloads Shopify catalog images without a WATI token", async () => {
+    const jpeg = new Uint8Array([0xff, 0xd8, 0xff, 0xd9]);
+    const fetchImpl = async (_url: string, init?: RequestInit) => {
+      expect(new Headers(init?.headers).get("authorization")).toBeNull();
+      return new Response(jpeg, {
+        status: 200,
+        headers: { "content-type": "image/jpeg" },
+      });
+    };
+
+    const downloaded = await downloadTrustedInboundMedia(
+      "https://cdn.shopify.com/s/files/1/0339/0642/5994/files/58.jpg",
+      { tokens: [], maxBytes: 1024, fetchImpl: fetchImpl as typeof fetch },
+    );
+    expect(downloaded.contentType).toBe("image/jpeg");
   });
 });

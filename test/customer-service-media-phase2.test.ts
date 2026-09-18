@@ -67,4 +67,11 @@ describe("customer service media phase 2 routing", () => {
     expect(webhook).toContain("queued: true");
     expect(webhook).not.toContain("handoff: route === \"handoff\"");
   });
+
+  it("runs vision from downloaded image bytes even if storage mirroring fails", () => {
+    expect(webhook).toContain("downloadTrustedInboundMedia");
+    expect(webhook).toContain("mirrored?.dataUrl");
+    expect(webhook).toContain("customer_service_media_upload_failed");
+    expect(webhook).toContain("customer_service_media_untrusted_url");
+  });
 });

@@ -90,16 +90,18 @@ const GREETING = /^(test+|hi+|hello+|hey+|哈囉|你好|在嗎|ping|ok)$/i;
 const FAQ =
   /運費|送貨費|免運|自取|荃灣|地面交收|上門|餐具|早餐|積分|生日|註冊|付款|轉數快|收據|發票|打風|8\s*號|黑雨|落單|加熱|即食|廚師上門|侍應|擺盤|素食|走蒜|走蔥/;
 
-// Current and legacy customer-facing references include:
-// B/P/K/E/L/D/R-1234, B-1550C, FC-prefixed web references,
-// R/202608/88 (or its spaced-hyphen form), and legacy #6918 numbers.
-// Keep the patterns structured so dates, phone numbers and headcounts are not
-// picked out of normal sentences as order references.
+// Customer-facing order numbers only. Do not treat SKUs, prices, dates,
+// headcounts or product codes as an order reference.
+//   B/P/K/E/L/D/R-1234, B-1550C, B#1462UB
+//   FC-prefixed web numbers such as FCO2026090401
+//   R/202608/88 or R - 202609 - 4
+//   Catering #6918
 const ORDER_NUMBER_PATTERNS = [
   /\bR\s*(?:\/|-)\s*\d{6}\s*(?:\/|-)\s*\d+\b/i,
   /\bFC[A-Z]{0,4}\d{6,}[A-Z0-9]*\b/i,
-  /\b[BPKELDR]\s*-?\s*\d+[A-Z]*\b/i,
-  /#\s*\d{3,10}\b/,
+  /\b[BPKELDR]#\s*\d{3,}[A-Z]{0,4}\b/i,
+  /\b[BPKELDR]\s*-?\s*\d{3,}[A-Z]{0,4}\b/i,
+  /#\s*\d{4,10}\b/,
 ] as const;
 
 export function normalizeCustomerServiceOrderNumber(value: string | null | undefined) {
