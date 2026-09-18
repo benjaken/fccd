@@ -94,6 +94,10 @@ import {
   isTrustedWatiMediaUrl,
   mediaStoragePath,
 } from "../_shared/customer-service-media.ts";
+import {
+  analyzeCustomerServiceImage,
+  type CustomerServiceVisionResult,
+} from "../_shared/customer-service-vision.ts";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -2557,21 +2561,90 @@ async function mirrorInboundMedia(
   }
 }
 
+function visionInternalSummary(vision: CustomerServiceVisionResult | null) {
+  if (!vision) return "圖片未能完成自動分析。";
+  const lines = [
+    `圖片分類：${vision.mediaKind}`,
+    `分析信心：${vision.confidence.toFixed(2)}`,
+  ];
+  if (vision.summary) lines.push(`分析摘要：${vision.summary}`);
+  if (vision.extractedText) {
+    lines.push(`圖片文字：${vision.extractedText.slice(0, 800)}`);
+  }
+  if (vision.entities.orderNumber) {
+    lines.push(`識別到訂單編號：${vision.entities.orderNumber}`);
+  }
+  if (vision.entities.productNames?.length) {
+    lines.push(
+      `識別到產品：${vision.entities.productNames.join("、").slice(0, 500)}`,
+    );
+  }
+  return lines.join("\n").slice(0, 1_500);
+}
+
+function visionCustomerReply(
+  vision: CustomerServiceVisionResult | null,
+  label: string,
+) {
+  if (!vision) {
+    return `已收到你嘅${label}，暫時未能自動睇清楚，會交由客服同事查看，稍後回覆你。`;
+  }
+  if (vision.mediaKind === "menu_product" && !vision.needsHuman) {
+    return "已收到你嘅圖片，初步識別到可能係菜單或套餐資料，會交由客服同事核對後回覆你。";
+  }
+  if (vision.mediaKind === "order_screenshot") {
+    return "已收到你嘅訂單圖片。為保障訂單私隱，會交由客服同事核對後回覆你。";
+  }
+  if (vision.mediaKind === "payment_proof") {
+    return "已收到你嘅付款圖片，付款狀態需要由客服同事核對，稍後回覆你。";
+  }
+  if (vision.mediaKind === "food_complaint") {
+    return "已收到你提供嘅圖片，會交由客服同事盡快查看及跟進。";
+  }
+  return `已收到你嘅${label}，會交由客服同事查看，稍後回覆你。`;
+}
+
 async function handleInboundMedia(admin: AdminClient, event: WatiInboundEvent) {
   const conversation = await loadConversation(admin, event.waId);
   if (conversation.state === "human_owned") return;
   const label = mediaTypeLabel(event.type);
   const attachmentUrl = await mirrorInboundMedia(admin, event);
+  let vision: CustomerServiceVisionResult | null = null;
+  if (event.type === "image" && attachmentUrl) {
+    try {
+      vision = await analyzeCustomerServiceImage({
+        imageUrl: attachmentUrl,
+        caption: event.caption,
+        providerMessageId: event.id,
+      });
+    } catch (error) {
+      console.error("customer_service_vision_failed", {
+        providerMessageId: event.id,
+        error:
+          error instanceof Error
+            ? error.message.slice(0, 300)
+            : String(error),
+      });
+    }
+  }
+  // Phase 1 only enriches the handoff with vision results. It does not yet
+  // auto-answer from an image because product identity and prices still need
+  // a trusted knowledge lookup in the next phase.
   await queueInternalHandoff(admin, {
     phone: event.waId,
     quoteId: conversation.selected_order_id,
     orderNumber: null,
-    summary: buildInboundMediaHandoffSummary({
-      label,
-      caption: event.caption,
-      originalUrl: event.mediaUrl,
-      attachmentUrl,
-    }),
+    summary: [
+      buildInboundMediaHandoffSummary({
+        label,
+        caption: event.caption,
+        originalUrl: event.mediaUrl,
+        attachmentUrl,
+      }),
+      visionInternalSummary(vision),
+    ]
+      .join("\n")
+      .slice(0, 2_000),
     kind: "order_handoff",
   });
   const nextConversation: CustomerServiceConversation = {
@@ -2584,7 +2657,7 @@ async function handleInboundMedia(admin: AdminClient, event: WatiInboundEvent) {
     handoff_urgent: false,
     handoff_quote_id: null,
   };
-  const reply = `已收到你嘅${label}，呢類訊息會交由客服同事查看，稍後回覆你。`;
+  const reply = visionCustomerReply(vision, label);
   await persistCustomerServiceTurn(admin, {
     providerMessageId: event.id,
     phone: event.waId,
@@ -2599,7 +2672,10 @@ async function handleInboundMedia(admin: AdminClient, event: WatiInboundEvent) {
         notified: false,
         queuedHandoff: true,
         usedModel: false,
-        intentKey: "media_handoff",
+        intentKey:
+          vision?.mediaKind === "menu_product"
+            ? "media_vision"
+            : "media_handoff",
         toolKeys: ["queue_handoff"],
         failureReason: null,
         dialogAction: "new_request",
@@ -2745,6 +2821,11 @@ Deno.serve(async (request) => {
     )
   ) {
     return jsonResponse({ error: "channel_mismatch" }, 403);
+  }
+  // WhatsApp reactions (e.g. a customer tapping 🙏 on a message) arrive with
+  // type "reaction". They are not customer turns, so never auto-reply to them.
+  if (event.type === "reaction") {
+    return jsonResponse({ ok: true, ignored: "reaction" });
   }
 
   try {
