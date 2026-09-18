@@ -16,7 +16,18 @@ describe("customer-service backend conversation preview", () => {
     expect(source).toContain("replyTemplates: runtime.replyTemplates");
     expect(source).toContain("if (dryRun) return;");
     expect(source).toContain('order_number: "PREVIEW"');
-    expect(source).toContain("classify: createCustomerServiceClassifier");
+    expect(source).toContain("const baseClassify = createCustomerServiceClassifier(");
+  });
+
+  it("accepts a preview image and runs vision analysis plus media routing", () => {
+    expect(source).toContain("function parsePreviewImage");
+    expect(source).toContain('const PREVIEW_IMAGE_PREFIX = "data:image/"');
+    expect(source).toContain("analyzeCustomerServiceImage");
+    expect(source).toContain("decideCustomerServiceMediaRoute");
+    expect(source).toContain('mediaRoute?.action === "menu"');
+    expect(source).toContain('mediaRoute?.action === "order"');
+    expect(source).toContain("media_route: mediaRoute?.action ?? null");
+    expect(source).toContain("vision: vision");
   });
 
   it("returns conversation state and AI or handoff evidence to the UI", () => {

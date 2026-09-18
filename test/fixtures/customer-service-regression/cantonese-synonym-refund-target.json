@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "id": "cantonese-synonym-refund-target",
+  "title": "粵語同義「點樣退錢」→ 退款流程（待語義檢索）",
+  "status": "draft",
+  "clock": "2026-09-15T07:00:00.000Z",
+  "source": {
+    "kind": "target_gap",
+    "reference": "PRD FR-03/FR-04 acceptance case A"
+  },
+  "world": {
+    "faqs": [
+      {
+        "id": "fixture-refund",
+        "question": "退款流程",
+        "answer": "如需退款，請提供訂單號，一般 7 個工作天內處理。"
+      }
+    ]
+  },
+  "turns": [
+    {
+      "customer": "點樣退錢？",
+      "referenceReplies": [],
+      "expect": null
+    }
+  ]
+}

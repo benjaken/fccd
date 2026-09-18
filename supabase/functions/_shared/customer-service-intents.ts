@@ -361,24 +361,60 @@ export function isDeliveryAvailabilityQuestion(text: string) {
   return delivery && (availability || (datedBooking && !isDetailedOrder) || /係咪|系咪|是不是/.test(body));
 }
 
+/**
+ * "為何 9 月 20 日沒得送貨？" style questions ask for the block-date reason.
+ * They must route to the intake check so the rule's own message can explain why,
+ * even when the AI classifier is in use.
+ */
+export function isBlockedDateReasonQuestion(text: string) {
+  const body = text.trim();
+  if (!body) return false;
+  const asksWhy = /(?:為何|为什么|為什麼|點解|点解|因何|why)/i.test(body);
+  const unavailable =
+    /(?:沒得送|没得送|冇得送|無得送|无得送|唔送|不送|停送|暫停|暂停|不能送|唔可以送|唔可以|停單|停单|封鎖|封锁|block)/i
+      .test(body);
+  return asksWhy && unavailable && Boolean(resolveCustomerServiceDeliveryDate(body));
+}
+
 export function customerServiceMenuFaqQuery(value: string) {
   const text = value.trim();
-  if (/(?:飯盒|便當|便当|餐盒|meal\s*box|lunch\s*box|lunchbox|hklunchbox|hk\s*lunch\s*box)/i.test(text)) {
-    return "HK Lunch Box 有冇餐牌可以睇？";
+  // Explicit brand names must win over generic category wording. Otherwise an
+  // image/message that names a brand but also mentions packaging (for example a
+  // Catering menu that shows 飯盒) would be answered with the wrong brand.
+  if (/(?:food\s*channels?\s*catering|fc\s*catering|\bfcc\b)/i.test(text)) {
+    return "Food Channels Catering 有冇餐牌可以睇？";
   }
-  if (/(?:hk\s*party\s*food|party\s*food|派對小食|派对小食|派對套餐|派对套餐|一口小食|canap[eé])/i.test(text)) {
-    return "HK Party Food 有冇餐牌可以睇？";
-  }
-  if (/(?:food\s*channels?\s*express|fc\s*express|即日到會|即日到会)/i.test(text)) {
+  if (/(?:food\s*channels?\s*express|fc\s*express)/i.test(text)) {
     return "Food Channels Express 有冇餐牌可以睇？";
   }
-  if (/(?:food\s*channels?\s*kitchen|fc\s*kitchen|桂花[‧·・．.]?八月|高級中菜|高级中菜)/i.test(text)) {
+  if (/(?:food\s*channels?\s*kitchen|fc\s*kitchen|桂花[‧·・．.]?八月)/i.test(text)) {
     return "Food Channels Kitchen 有冇餐牌可以睇？";
   }
-  if (/(?:food\s*channels?\s*cuisine|fc\s*cuisine|福滿樓|福满楼|養生中菜|养生中菜)/i.test(text)) {
+  if (/(?:food\s*channels?\s*cuisine|fc\s*cuisine|福滿樓|福满楼)/i.test(text)) {
     return "Food Channels Cuisine 有冇餐牌可以睇？";
   }
-  if (/(?:food\s*channels?\s*catering|fc\s*catering|fcc|到會|到会|自助餐)/i.test(text)) {
+  if (/(?:hk\s*party\s*food|hkpartyfood)/i.test(text)) {
+    return "HK Party Food 有冇餐牌可以睇？";
+  }
+  if (/(?:hk\s*lunch\s*box|hklunchbox)/i.test(text)) {
+    return "HK Lunch Box 有冇餐牌可以睇？";
+  }
+  if (/(?:飯盒|便當|便当|餐盒|meal\s*box|lunch\s*box|lunchbox)/i.test(text)) {
+    return "HK Lunch Box 有冇餐牌可以睇？";
+  }
+  if (/(?:party\s*food|派對小食|派对小食|派對套餐|派对套餐|一口小食|canap[eé])/i.test(text)) {
+    return "HK Party Food 有冇餐牌可以睇？";
+  }
+  if (/(?:即日到會|即日到会)/i.test(text)) {
+    return "Food Channels Express 有冇餐牌可以睇？";
+  }
+  if (/(?:高級中菜|高级中菜)/i.test(text)) {
+    return "Food Channels Kitchen 有冇餐牌可以睇？";
+  }
+  if (/(?:養生中菜|养生中菜)/i.test(text)) {
+    return "Food Channels Cuisine 有冇餐牌可以睇？";
+  }
+  if (/(?:到會|到会|自助餐)/i.test(text)) {
     return "Food Channels Catering 有冇餐牌可以睇？";
   }
   return "有冇餐牌可以睇？";

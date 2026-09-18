@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "id": "blocked-date-reason",
+  "title": "追問為何指定日期沒得送貨",
+  "status": "approved",
+  "clock": "2026-09-15T07:00:00.000Z",
+  "source": {
+    "kind": "synthetic",
+    "reference": "block date reason branch"
+  },
+  "world": {
+    "rules": [
+      {
+        "id": "peak-dates",
+        "name": "繁忙日期只提供指定產品",
+        "startsOn": "2026-09-19",
+        "endsOn": "2026-09-20",
+        "startTime": null,
+        "endTime": null,
+        "handling": "allow_only",
+        "customerMessage": "9月19至20日及25至27日只提供中秋套餐及中秋單點。",
+        "channels": [
+          {
+            "channelId": "catering",
+            "name": "Catering",
+            "aliases": ["FCC"],
+            "terms": ["中秋套餐", "中秋單點"]
+          }
+        ]
+      }
+    ]
+  },
+  "turns": [
+    {
+      "customer": "為何9月20日沒得送貨？",
+      "expect": {
+        "effects": {
+          "writeInquiry": 0,
+          "queueHandoff": 0
+        },
+        "replyContains": ["只提供中秋套餐及中秋單點"],
+        "replyExcludes": ["暫停接受送貨預訂", "undefined"],
+        "intent": "delivery_availability",
+        "intakeDate": "2026-09-20",
+        "state": "collecting",
+        "pendingRequest": "特別接單安排人工覆核"
+      }
+    }
+  ]
+}

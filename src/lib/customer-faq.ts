@@ -100,6 +100,15 @@ export type CustomerServiceTraceStep = {
   params: Record<string, string | number | boolean | null>;
 };
 
+export type CustomerServiceVisionPreview = {
+  mediaKind: string;
+  confidence: number;
+  needsHuman: boolean;
+  orderNumber: string | null;
+  summary: string;
+  extractedText: string;
+};
+
 export type CustomerServicePreviewResult = {
   reply: string | null;
   conversation: CustomerServicePreviewConversation;
@@ -112,6 +121,8 @@ export type CustomerServicePreviewResult = {
   toolKeys?: string[];
   relatedFaqs?: RelatedFaqSuggestion[];
   failureReason?: string | null;
+  mediaRoute?: string | null;
+  vision?: CustomerServiceVisionPreview | null;
   trace?: CustomerServiceTraceStep[];
 };
 
@@ -557,6 +568,7 @@ export async function searchPublishedCustomerFaqs(
 export async function previewCustomerServiceTurn(input: {
   text: string;
   phone?: string;
+  image?: string;
   conversation?: CustomerServicePreviewConversation | null;
 }): Promise<CustomerServicePreviewResult> {
   const { data, error } = await supabase.functions.invoke(
@@ -566,6 +578,7 @@ export async function previewCustomerServiceTurn(input: {
         mode: "preview",
         text: input.text.trim(),
         phone: input.phone?.trim() || undefined,
+        image: input.image || undefined,
         conversation: input.conversation ?? undefined,
       },
     },
@@ -583,6 +596,8 @@ export async function previewCustomerServiceTurn(input: {
     tool_keys?: unknown;
     related_faqs?: unknown;
     failure_reason?: unknown;
+    media_route?: unknown;
+    vision?: unknown;
     trace?: unknown;
   } | null;
   if (!payload?.conversation)
@@ -618,7 +633,27 @@ export async function previewCustomerServiceTurn(input: {
     relatedFaqs,
     failureReason:
       typeof payload.failure_reason === "string" ? payload.failure_reason : null,
+    mediaRoute:
+      typeof payload.media_route === "string" ? payload.media_route : null,
+    vision: parseCustomerServiceVisionPreview(payload.vision),
     trace: parseCustomerServiceTrace(payload.trace),
+  };
+}
+
+function parseCustomerServiceVisionPreview(
+  value: unknown,
+): CustomerServiceVisionPreview | null {
+  if (!value || typeof value !== "object") return null;
+  const row = value as Record<string, unknown>;
+  if (typeof row.media_kind !== "string") return null;
+  return {
+    mediaKind: row.media_kind,
+    confidence: typeof row.confidence === "number" ? row.confidence : 0,
+    needsHuman: Boolean(row.needs_human),
+    orderNumber: typeof row.order_number === "string" ? row.order_number : null,
+    summary: typeof row.summary === "string" ? row.summary : "",
+    extractedText:
+      typeof row.extracted_text === "string" ? row.extracted_text : "",
   };
 }
 

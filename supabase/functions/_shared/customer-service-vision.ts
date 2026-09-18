@@ -16,6 +16,7 @@ export type CustomerServiceVisionResult = {
   extractedText: string;
   entities: {
     orderNumber?: string | null;
+    productCode?: string | null;
     productNames?: string[];
     prices?: string[];
     dates?: string[];
@@ -34,35 +35,62 @@ type VisionConfig = {
   model: string;
   timeoutMs: number;
   maxBytes: number;
+  fastMode: boolean;
+  reasoningEffort: string;
 };
 
 function env(name: string) {
   return Deno.env.get(name)?.trim() || "";
 }
 
+function firstEnv(...names: string[]) {
+  for (const name of names) {
+    const value = env(name);
+    if (value) return value;
+  }
+  return "";
+}
+
 function config(): VisionConfig {
   const explicitEnabled = env("CUSTOMER_SERVICE_VISION_ENABLED");
+  // An explicit vision flag always wins. Otherwise vision inherits the same
+  // enable flags and credentials as the customer-service AI, so enabling the
+  // bot's text AI (through any of its supported flags) does not silently leave
+  // image analysis switched off.
+  const enabled = explicitEnabled
+    ? explicitEnabled.toLowerCase() === "true"
+    : firstEnv(
+      "CUSTOMER_SERVICE_AI_ENABLED",
+      "ADDRESS_TRANSLATION_AI_ENABLED",
+      "REPORT_AI_ENABLED",
+      "SUPPLIER_QUOTE_AI_ENABLED",
+    ).toLowerCase() === "true";
   const endpoint =
     env("CUSTOMER_SERVICE_VISION_ENDPOINT") || "https://api.x.ai/v1/responses";
   return {
-    enabled: explicitEnabled
-      ? explicitEnabled.toLowerCase() === "true"
-      : env("CUSTOMER_SERVICE_AI_ENABLED").toLowerCase() === "true",
+    enabled,
     endpoint,
-    apiKey:
-      env("CUSTOMER_SERVICE_VISION_API_KEY") ||
-      env("XAI_API_KEY") ||
-      env("CUSTOMER_SERVICE_AI_API_KEY"),
-    model:
-      env("CUSTOMER_SERVICE_VISION_MODEL") ||
-      env("CUSTOMER_SERVICE_AI_MODEL") ||
-      "grok-4.6",
+    apiKey: firstEnv(
+      "CUSTOMER_SERVICE_VISION_API_KEY",
+      "XAI_API_KEY",
+      "CUSTOMER_SERVICE_AI_API_KEY",
+      "REPORT_AI_API_KEY",
+      "SUPPLIER_QUOTE_AI_API_KEY",
+      "ADDRESS_TRANSLATION_AI_API_KEY",
+    ),
+    model: firstEnv(
+      "CUSTOMER_SERVICE_VISION_MODEL",
+      "CUSTOMER_SERVICE_AI_MODEL",
+      "REPORT_AI_MODEL",
+      "SUPPLIER_QUOTE_AI_MODEL",
+      "ADDRESS_TRANSLATION_AI_MODEL",
+    ) || "grok-4.6",
     timeoutMs: Math.min(
       Math.max(
-        Number(env("CUSTOMER_SERVICE_VISION_TIMEOUT_MS")) || 15_000,
-        3_000,
+        Number(env("CUSTOMER_SERVICE_VISION_TIMEOUT_MS")) || 30_000,
+        5_000,
       ),
-      30_000,
+      60_000,
     ),
     maxBytes: Math.min(
       Math.max(
@@ -71,7 +99,26 @@ function config(): VisionConfig {
       ),
       10 * 1024 * 1024,
     ),
+    // Fast mode keeps image detail and output small so a slow vision model
+    // cannot blow past the request timeout. Set CUSTOMER_SERVICE_VISION_FAST=false
+    // to fall back to high-detail analysis.
+    fastMode:
+      firstEnv("CUSTOMER_SERVICE_VISION_FAST").toLowerCase() !== "false",
+    reasoningEffort: firstEnv("CUSTOMER_SERVICE_VISION_REASONING_EFFORT"),
   };
+}
+
+/**
+ * Explains why `analyzeCustomerServiceImage` returned null for config/input
+ * reasons (a provider error is surfaced by its thrown message instead).
+ */
+export function customerServiceVisionUnavailableReason(imageUrl?: string) {
+  const settings = config();
+  if (!settings.enabled) return "disabled";
+  if (!settings.endpoint) return "endpoint_missing";
+  if (!settings.apiKey) return "api_key_missing";
+  if (!imageUrl) return "image_url_missing";
+  return "provider_error";
 }
 
 function normalizeKind(
@@ -135,13 +182,27 @@ export async function analyzeCustomerServiceImage(
   input: CustomerServiceVisionInput,
 ): Promise<CustomerServiceVisionResult | null> {
   const settings = config();
-  if (
-    !settings.enabled ||
-    !settings.endpoint ||
-    !settings.apiKey ||
-    !input.imageUrl
-  )
+  const unavailableReason = !settings.enabled
+    ? "disabled"
+    : !settings.endpoint
+    ? "endpoint_missing"
+    : !settings.apiKey
+    ? "api_key_missing"
+    : !input.imageUrl
+    ? "image_url_missing"
+    : "";
+  if (unavailableReason) {
+    console.error("customer_service_vision_skipped", {
+      providerMessageId: input.providerMessageId ?? null,
+      reason: unavailableReason,
+      enabled: settings.enabled,
+      hasEndpoint: Boolean(settings.endpoint),
+      hasApiKey: Boolean(settings.apiKey),
+      hasImageUrl: Boolean(input.imageUrl),
+      model: settings.model,
+    });
     return null;
+  }
   const image = await fetchImage(input.imageUrl, settings.maxBytes);
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), settings.timeoutMs);
@@ -157,7 +218,10 @@ export async function analyzeCustomerServiceImage(
         model: settings.model,
         store: false,
         temperature: 0,
-        max_output_tokens: 500,
+        max_output_tokens: settings.fastMode ? 400 : 500,
+        ...(settings.reasoningEffort
+          ? { reasoning_effort: settings.reasoningEffort }
+          : {}),
         text: { format: { type: "json_object" } },
         input: [
           {
@@ -170,6 +234,7 @@ export async function analyzeCustomerServiceImage(
                   "Read visible text but do not invent text, prices, order status, payment success, or business policies.",
                   "Classify the image as menu_product, order_screenshot, payment_proof, food_complaint, address_document, other, or unclear.",
                   "Any order, payment, address, or complaint image must set needsHuman true.",
+                  "When the image shows a product page or menu item, copy the exact product name and, when present, the exact product code / SKU / 產品編號 (for example CC0012-1) into entities.productNames and entities.productCode.",
                   "Return JSON only with mediaKind, extractedText, entities, summary, confidence, needsHuman, and reason.",
                   "Keep extractedText and summary concise. Do not reveal sensitive data in summary beyond what is needed for internal handling.",
                 ].join(" "),
@@ -183,7 +248,7 @@ export async function analyzeCustomerServiceImage(
                 type: "input_text",
                 text: `Customer caption: ${(input.caption || "").trim().slice(0, 500)}`,
               },
-              { type: "input_image", image_url: image.dataUrl, detail: "high" },
+              { type: "input_image", image_url: image.dataUrl, detail: settings.fastMode ? "auto" : "high" },
             ],
           },
         ],
@@ -211,7 +276,14 @@ export async function analyzeCustomerServiceImage(
       payload.choices?.[0]?.message?.content ||
       ""
     ).trim();
-    if (!content) return null;
+    if (!content) {
+      console.error("customer_service_vision_skipped", {
+        providerMessageId: input.providerMessageId ?? null,
+        reason: "empty_response",
+        model: settings.model,
+      });
+      return null;
+    }
     const parsed = parseJson(content);
     const mediaKind = normalizeKind(parsed.mediaKind);
     const confidence = Math.min(1, Math.max(0, Number(parsed.confidence) || 0));
@@ -224,6 +296,7 @@ export async function analyzeCustomerServiceImage(
       extractedText: cleanText(parsed.extractedText, 2_000),
       entities: {
         orderNumber: cleanText(entities.orderNumber, 100) || null,
+        productCode: cleanText(entities.productCode, 100) || null,
         productNames: Array.isArray(entities.productNames)
           ? entities.productNames
               .filter((item): item is string => typeof item === "string")
@@ -255,6 +328,11 @@ export async function analyzeCustomerServiceImage(
       model: settings.model,
     };
     return result;
+  } catch (error) {
+    if (controller.signal.aborted) {
+      throw new Error(`vision_timeout:${settings.timeoutMs}`);
+    }
+    throw error;
   } finally {
     clearTimeout(timeout);
   }

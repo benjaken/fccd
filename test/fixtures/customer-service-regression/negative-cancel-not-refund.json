@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "id": "negative-cancel-not-refund",
+  "title": "取消未付款訂單不應誤用退款 FAQ",
+  "status": "approved",
+  "clock": "2026-09-15T07:00:00.000Z",
+  "source": {
+    "kind": "target_baseline",
+    "reference": "PRD FR-06 case C / similar but wrong FAQ"
+  },
+  "world": {
+    "faqs": [
+      {
+        "id": "fixture-refund",
+        "question": "退款流程",
+        "answer": "如需退款，請提供訂單號，一般 7 個工作天內處理。"
+      }
+    ]
+  },
+  "turns": [
+    {
+      "customer": "我未付款，想取消張單",
+      "recordedClassification": {
+        "intent": "search_faq",
+        "configuredIntentKey": "search_faq",
+        "dialogAction": "new_request"
+      },
+      "expect": {
+        "effects": {
+          "writeInquiry": 0,
+          "queueHandoff": 1
+        },
+        "replyExcludes": [
+          "7 個工作天"
+        ],
+        "failureReason": "faq_not_found"
+      }
+    }
+  ]
+}

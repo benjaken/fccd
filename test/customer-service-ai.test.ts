@@ -289,4 +289,80 @@ describe("customer-service grounded AI", () => {
       fetchImpl: fetchMock,
     })).resolves.toMatchObject({ sourceIds: ["free-delivery"] });
   });
+
+  it("keeps the strict source contract by default", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      choices: [{ message: { content: JSON.stringify({
+        answer: "新界地面交收運費係 HK$50。",
+        sourceIds: ["delivery", "ghost"],
+      }) } }],
+    }), { status: 200 }));
+    await expect(answerCustomerServiceFaqWithAi({
+      question: "新界運費？",
+      faqs,
+      config,
+      fetchImpl: fetchMock,
+    })).resolves.toBeNull();
+  });
+
+  it("drops unknown source ids and keeps a grounded answer in clarification mode", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      choices: [{ message: { content: JSON.stringify({
+        answer: "新界地面交收運費係 HK$50。",
+        sourceIds: ["delivery", "ghost"],
+        confidence: "high",
+        needsClarification: false,
+      }) } }],
+    }), { status: 200 }));
+    await expect(answerCustomerServiceFaqWithAi({
+      question: "新界運費？",
+      faqs,
+      groundedClarification: true,
+      config,
+      fetchImpl: fetchMock,
+    })).resolves.toMatchObject({ sourceIds: ["delivery"], confidence: "high" });
+  });
+
+  it("still rejects an answer whose numbers are not grounded, even in clarification mode", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      choices: [{ message: { content: JSON.stringify({
+        answer: "運費係 HK$999。",
+        sourceIds: ["delivery"],
+      }) } }],
+    }), { status: 200 }));
+    await expect(answerCustomerServiceFaqWithAi({
+      question: "運費？",
+      faqs,
+      groundedClarification: true,
+      config,
+      fetchImpl: fetchMock,
+    })).resolves.toBeNull();
+  });
+
+  it("sends recent conversation and the rewritten question to the answer composer", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      choices: [{ message: { content: JSON.stringify({
+        answer: "新界地面交收運費係 HK$50。",
+        sourceIds: ["delivery"],
+      }) } }],
+    }), { status: 200 }));
+
+    await answerCustomerServiceFaqWithAi({
+      question: "咁星期日呢？",
+      rewrittenQuestion: "新界星期日送貨運費多少",
+      recentMessages: [
+        { role: "customer", text: "新界送貨幾錢？" },
+        { role: "assistant", text: "新界地面交收 HK$50。" },
+      ],
+      faqs,
+      config,
+      fetchImpl: fetchMock,
+    });
+
+    const request = JSON.parse(fetchMock.mock.calls[0][1].body as string);
+    const user = JSON.parse(request.messages[1].content);
+    expect(user.rewrittenQuestion).toBe("新界星期日送貨運費多少");
+    expect(user.recentMessages).toHaveLength(2);
+    expect(request.messages[0].content).toContain("published FAQ records");
+  });
 });

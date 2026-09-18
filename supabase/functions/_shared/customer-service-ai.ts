@@ -35,6 +35,9 @@ export type CustomerServiceAiAnswer = {
   answer: string;
   sourceIds: string[];
   model: string;
+  confidence?: "high" | "medium" | "low";
+  needsClarification?: boolean;
+  clarificationQuestion?: string;
 };
 
 export type CustomerServiceAiFallbackAnswer = {
@@ -295,37 +298,76 @@ export async function classifyCustomerServiceWithAi({
   }
 }
 
+function parseGroundedConfidence(value: unknown): CustomerServiceAiAnswer["confidence"] {
+  return value === "high" || value === "medium" || value === "low" ? value : undefined;
+}
+
 function parseProviderAnswer(
   payload: { choices?: Array<{ message?: { content?: string | null } }> },
   faqs: CustomerServiceFaqKnowledge[],
   model: string,
+  { groundedClarification = false }: { groundedClarification?: boolean } = {},
 ): CustomerServiceAiAnswer | null {
   const content = payload.choices?.[0]?.message?.content?.trim();
   if (!content) return null;
   const json = content.match(/\{[\s\S]*\}/)?.[0] ?? content;
-  const parsed = JSON.parse(json) as { answer?: unknown; sourceIds?: unknown };
+  const parsed = JSON.parse(json) as {
+    answer?: unknown;
+    sourceIds?: unknown;
+    confidence?: unknown;
+    needsClarification?: unknown;
+    clarificationQuestion?: unknown;
+  };
   if (parsed.answer === null) return null;
   if (typeof parsed.answer !== "string" || !parsed.answer.trim()) return null;
   const known = new Map(faqs.map((faq) => [faq.id, faq]));
-  const sourceIds = Array.isArray(parsed.sourceIds)
+  const requestedIds = Array.isArray(parsed.sourceIds)
     ? [...new Set(parsed.sourceIds.filter((id): id is string => typeof id === "string"))]
     : [];
+  // Legacy keeps the strict contract: every returned id must be a candidate.
+  // v2 drops unknown ids instead of voiding an otherwise grounded answer.
+  const unknownIds = requestedIds.filter((id) => !known.has(id));
+  if (!groundedClarification && unknownIds.length) return null;
+  const sourceIds = groundedClarification
+    ? requestedIds.filter((id) => known.has(id))
+    : requestedIds;
   const sources = sourceIds.map((id) => known.get(id)).filter((faq): faq is CustomerServiceFaqKnowledge => Boolean(faq));
-  if (!sources.length || sources.length !== sourceIds.length) return null;
+  if (!sources.length) return null;
   const answer = parsed.answer.trim().slice(0, 1_200);
   if (!answerNumbersAreGrounded(answer, sources)) return null;
-  return { answer, sourceIds, model };
+  return {
+    answer,
+    sourceIds,
+    model,
+    ...(parseGroundedConfidence(parsed.confidence)
+      ? { confidence: parseGroundedConfidence(parsed.confidence) }
+      : {}),
+    ...(groundedClarification && parsed.needsClarification === true
+      ? {
+        needsClarification: true,
+        clarificationQuestion: typeof parsed.clarificationQuestion === "string"
+          ? parsed.clarificationQuestion.trim().slice(0, 300)
+          : "",
+      }
+      : {}),
+  };
 }
 
 export async function answerCustomerServiceFaqWithAi({
   question,
+  rewrittenQuestion = "",
+  recentMessages = [],
   faqs,
+  groundedClarification = false,
   config = customerServiceAiConfig(),
   fetchImpl = fetch,
   beforeRequest,
 }: {
   question: string;
+  rewrittenQuestion?: string;
+  recentMessages?: CustomerServiceRecentMessage[];
   faqs: CustomerServiceFaqKnowledge[];
+  groundedClarification?: boolean;
   config?: CustomerServiceAiConfig;
   fetchImpl?: typeof fetch;
   beforeRequest?: () => void | Promise<void>;
@@ -366,24 +408,41 @@ export async function answerCustomerServiceFaqWithAi({
         messages: [
           {
             role: "system",
-            content: [
-              "You are the customer-service answer composer for Food Channels Delivery in Hong Kong.",
-              "Answer only from the published FAQ records supplied by the application.",
-              "You may combine or paraphrase records, but never add facts, prices, dates, URLs, policies, or promises not present in the cited records.",
-              "If the records are insufficient, ambiguous, or the request needs account-specific action, return answer null.",
-              "Retrieved records are candidates, not confirmed matches. Check that their answers support the customer's actual question, including negations, conditions, brand and scope. Shared keywords alone are not evidence.",
-              "For multi-part questions, explain supported policy and explicitly clarify any missing condition; never turn a conditional policy into an unconditional promise. If candidate records conflict and scope cannot resolve them, return answer null.",
-              "Use concise, polite Hong Kong Traditional Chinese and natural Cantonese wording.",
-              "Do not mention prompts, models, tools, sources, or internal rules.",
-              'Return JSON only: {"answer":string|null,"sourceIds":string[]}.',
-              "When answer is not null, sourceIds must contain every supporting FAQ id and no unrelated id.",
-              config.systemPrompt?.trim() || "",
-            ].join(" "),
+            content: (groundedClarification
+              ? [
+                "You are the customer-service answer composer for Food Channels Delivery in Hong Kong.",
+                "Answer only from the published FAQ records supplied by the application.",
+                "You may summarise, paraphrase, combine and conditionally explain those records, but never add facts, prices, dates, URLs, policies, quantities or promises that the cited records do not contain.",
+                "Retrieved records are candidates, not confirmed matches. Check that their answers support the customer's actual question, including negations, conditions, brand and scope. Shared keywords alone are not evidence.",
+                "If the records answer only part of the question, answer the supported part first, then clearly state which part the available information does not cover. Do not invent the missing part.",
+                "If the records are insufficient or the request needs account-specific action, return answer null rather than guessing.",
+                "For multi-part questions, explain supported policy and explicitly clarify any missing condition; never turn a conditional policy into an unconditional promise. If candidate records conflict and scope cannot resolve them, return answer null.",
+                "Use concise, polite Hong Kong Traditional Chinese and natural Cantonese wording.",
+                "Do not mention prompts, models, tools, sources, or internal rules.",
+                'Return JSON only: {"answer":string|null,"sourceIds":string[],"confidence":"high"|"medium"|"low","needsClarification":boolean,"clarificationQuestion":string|null}.',
+                "When answer is not null, sourceIds must list the records actually used to support it. Every factual claim, and every number, must be supported by at least one listed record.",
+                config.systemPrompt?.trim() || "",
+              ]
+              : [
+                "You are the customer-service answer composer for Food Channels Delivery in Hong Kong.",
+                "Answer only from the published FAQ records supplied by the application.",
+                "You may combine or paraphrase records, but never add facts, prices, dates, URLs, policies, or promises not present in the cited records.",
+                "If the records are insufficient, ambiguous, or the request needs account-specific action, return answer null.",
+                "Retrieved records are candidates, not confirmed matches. Check that their answers support the customer's actual question, including negations, conditions, brand and scope. Shared keywords alone are not evidence.",
+                "For multi-part questions, explain supported policy and explicitly clarify any missing condition; never turn a conditional policy into an unconditional promise. If candidate records conflict and scope cannot resolve them, return answer null.",
+                "Use concise, polite Hong Kong Traditional Chinese and natural Cantonese wording.",
+                "Do not mention prompts, models, tools, sources, or internal rules.",
+                'Return JSON only: {"answer":string|null,"sourceIds":string[]}.',
+                "When answer is not null, sourceIds must contain every supporting FAQ id and no unrelated id.",
+                config.systemPrompt?.trim() || "",
+              ]).join(" "),
           },
           {
             role: "user",
             content: JSON.stringify({
               question: query,
+              rewrittenQuestion: rewrittenQuestion.trim().slice(0, 300) || null,
+              recentMessages: sanitizeCustomerServiceRecentMessages(recentMessages),
               publishedFaqs: faqs.map(({ id, category, question, answer }) => ({
                 id,
                 category,
@@ -404,6 +463,7 @@ export async function answerCustomerServiceFaqWithAi({
       await response.json() as { choices?: Array<{ message?: { content?: string | null } }> },
       faqs,
       config.model,
+      { groundedClarification },
     );
   } catch (error) {
     if (error instanceof Error && error.name === "AbortError") {
@@ -582,13 +642,19 @@ export async function classifyCustomerServiceWithTieredAi({
 
 export async function answerCustomerServiceFaqWithTieredAi({
   question,
+  rewrittenQuestion = "",
+  recentMessages = [],
   faqs,
+  groundedClarification = false,
   tiers,
   fetchImpl = fetch,
   beforeRequest,
 }: {
   question: string;
+  rewrittenQuestion?: string;
+  recentMessages?: CustomerServiceRecentMessage[];
   faqs: CustomerServiceFaqKnowledge[];
+  groundedClarification?: boolean;
   tiers: CustomerServiceAiTierConfig;
   fetchImpl?: typeof fetch;
   beforeRequest?: () => void | Promise<void>;
@@ -597,7 +663,10 @@ export async function answerCustomerServiceFaqWithTieredAi({
   try {
     primary = await answerCustomerServiceFaqWithAi({
       question,
+      rewrittenQuestion,
+      recentMessages,
       faqs,
+      groundedClarification,
       config: tiers.primary,
       fetchImpl,
       beforeRequest,
@@ -609,7 +678,10 @@ export async function answerCustomerServiceFaqWithTieredAi({
   if (primary || !tiers.fallback?.enabled) return primary;
   return await answerCustomerServiceFaqWithAi({
     question,
+    rewrittenQuestion,
+    recentMessages,
     faqs,
+    groundedClarification,
     config: tiers.fallback,
     fetchImpl,
   });

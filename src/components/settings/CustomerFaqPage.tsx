@@ -3,6 +3,7 @@ import {
   useEffect,
   useRef,
   useState,
+  type ChangeEvent,
   type FormEvent,
   type ReactNode,
 } from "react";
@@ -16,6 +17,7 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
+  ImagePlus,
   MessageCircleMore,
   ListTree,
   Minus,
@@ -166,6 +168,39 @@ const EMPTY_DRAFT: CustomerFaqWriteInput = {
   sortOrder: 0,
 };
 
+const PREVIEW_IMAGE_MAX_EDGE = 1280;
+const PREVIEW_IMAGE_MAX_SOURCE_BYTES = 12 * 1024 * 1024;
+
+/** Downscale a picked image to a small JPEG data URL for the preview request. */
+async function fileToPreviewImageDataUrl(file: File): Promise<string> {
+  const source = await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () =>
+      typeof reader.result === "string"
+        ? resolve(reader.result)
+        : reject(new Error("image_read_failed"));
+    reader.onerror = () => reject(new Error("image_read_failed"));
+    reader.readAsDataURL(file);
+  });
+  const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+    const element = new Image();
+    element.onload = () => resolve(element);
+    element.onerror = () => reject(new Error("image_decode_failed"));
+    element.src = source;
+  });
+  const scale = Math.min(
+    1,
+    PREVIEW_IMAGE_MAX_EDGE / Math.max(image.width, image.height),
+  );
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, Math.round(image.width * scale));
+  canvas.height = Math.max(1, Math.round(image.height * scale));
+  const context = canvas.getContext("2d");
+  if (!context) return source;
+  context.drawImage(image, 0, 0, canvas.width, canvas.height);
+  return canvas.toDataURL("image/jpeg", 0.8);
+}
+
 const DEFAULT_PREVIEW_PHONE = "86 138 2874 7224";
 
 function AutoReplyScheduleEditor({
@@ -270,6 +305,7 @@ type PreviewMessage = {
   id: number;
   role: "user" | "assistant" | "system";
   text: string;
+  imageUrl?: string;
   usedModel?: boolean;
   humanHandoff?: boolean;
   simulatedWrite?: boolean;
@@ -312,6 +348,8 @@ const TRACE_STAGE_NAMES = [
   "classify",
   "pilot",
   "route",
+  "vision",
+  "media_route",
   "reply",
   "effects",
   "result",
@@ -547,6 +585,7 @@ export function CustomerFaqPage({
   previewTurn?: (input: {
     text: string;
     phone?: string;
+    image?: string;
     conversation?: CustomerServicePreviewConversation | null;
   }) => Promise<CustomerServicePreviewResult>;
   loadLogic?: typeof fetchCustomerServiceLogic;
@@ -586,8 +625,11 @@ export function CustomerFaqPage({
     useState<CustomerServicePreviewConversation | null>(null);
   const [previewing, setPreviewing] = useState(false);
   const [previewError, setPreviewError] = useState("");
+  const [previewImage, setPreviewImage] = useState("");
+  const [previewImageError, setPreviewImageError] = useState("");
   const previewChatRef = useRef<HTMLDivElement>(null);
   const previewInputRef = useRef<HTMLInputElement>(null);
+  const previewFileInputRef = useRef<HTMLInputElement>(null);
   const isMobileFaq = useMediaQuery("(max-width: 760px)");
   const [mobileChatOpen, setMobileChatOpen] = useState(false);
   const [logicOpen, setLogicOpen] = useState(false);
@@ -800,21 +842,50 @@ export function CustomerFaqPage({
     }
   };
 
-  const sendPreviewText = async (rawText: string) => {
+  const selectPreviewImage = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    setPreviewImageError("");
+    if (!file.type.startsWith("image/")) {
+      setPreviewImageError(t("settings.customerFaq.previewImageError"));
+      return;
+    }
+    if (file.size > PREVIEW_IMAGE_MAX_SOURCE_BYTES) {
+      setPreviewImageError(t("settings.customerFaq.previewImageError"));
+      return;
+    }
+    try {
+      setPreviewImage(await fileToPreviewImageDataUrl(file));
+    } catch {
+      setPreviewImageError(t("settings.customerFaq.previewImageError"));
+    }
+  };
+
+  const sendPreviewText = async (rawText: string, image?: string) => {
     const text = rawText.trim();
-    if (!text || previewing) return;
+    const pendingImage = image ?? "";
+    if ((!text && !pendingImage) || previewing) return;
     const messageId = Date.now();
     const stateBefore = previewConversation?.state ?? "identifying";
     setPreviewMessages((current) => [
       ...current,
-      { id: messageId, role: "user", text },
+      {
+        id: messageId,
+        role: "user",
+        text: text || t("settings.customerFaq.previewImageReady"),
+        imageUrl: pendingImage || undefined,
+      },
     ]);
     setPreviewQuery("");
+    setPreviewImage("");
+    setPreviewImageError("");
     setPreviewing(true);
     setPreviewError("");
     try {
       const result = await previewTurn({
         text,
+        image: pendingImage || undefined,
         phone: previewPhone.replace(/\D/g, "") || undefined,
         conversation: previewConversation,
       });
@@ -855,7 +926,7 @@ export function CustomerFaqPage({
 
   const runPreview = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    await sendPreviewText(previewQuery);
+    await sendPreviewText(previewQuery, previewImage);
   };
 
   const resetPreview = () => {
@@ -863,6 +934,8 @@ export function CustomerFaqPage({
     setPreviewConversation(null);
     setPreviewError("");
     setPreviewQuery("");
+    setPreviewImage("");
+    setPreviewImageError("");
   };
 
   const changePreviewPhone = (value: string) => {
@@ -872,6 +945,8 @@ export function CustomerFaqPage({
     setPreviewConversation(null);
     setPreviewError("");
     setPreviewQuery("");
+    setPreviewImage("");
+    setPreviewImageError("");
   };
 
   const openLogic = async () => {
@@ -1577,6 +1652,13 @@ export function CustomerFaqPage({
                       className={`customer-faq-chat-message ${message.role}`}
                     >
                       <div>
+                        {message.imageUrl ? (
+                          <img
+                            className="customer-faq-chat-message-image"
+                            src={message.imageUrl}
+                            alt={t("settings.customerFaq.previewImageReady")}
+                          />
+                        ) : null}
                         <p>{renderCustomerFaqChatText(message.text)}</p>
                         <footer>
                           {message.role !== "user" ? (
@@ -1653,10 +1735,45 @@ export function CustomerFaqPage({
                   </article>
                 ) : null}
               </div>
+              {previewImage ? (
+                <div className="customer-faq-chat-attachment">
+                  <img
+                    src={previewImage}
+                    alt={t("settings.customerFaq.previewImageReady")}
+                  />
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    aria-label={t("settings.customerFaq.previewRemoveImage")}
+                    onClick={() => setPreviewImage("")}
+                  >
+                    <X />
+                  </Button>
+                </div>
+              ) : null}
+              {previewImageError ? <p role="alert">{previewImageError}</p> : null}
               <form
                 className="customer-faq-chat-composer"
                 onSubmit={(event) => void runPreview(event)}
               >
+                <input
+                  ref={previewFileInputRef}
+                  type="file"
+                  accept="image/*"
+                  hidden
+                  onChange={(event) => void selectPreviewImage(event)}
+                />
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="ghost"
+                  aria-label={t("settings.customerFaq.previewAttachImage")}
+                  disabled={previewing}
+                  onClick={() => previewFileInputRef.current?.click()}
+                >
+                  <ImagePlus />
+                </Button>
                 <Button
                   type="button"
                   size="icon"
@@ -1683,7 +1800,7 @@ export function CustomerFaqPage({
                   type="submit"
                   size="icon"
                   className="customer-faq-chat-send"
-                  disabled={previewing || !previewQuery.trim()}
+                  disabled={previewing || (!previewQuery.trim() && !previewImage)}
                   aria-label={t("settings.customerFaq.previewAction")}
                 >
                   <Send />

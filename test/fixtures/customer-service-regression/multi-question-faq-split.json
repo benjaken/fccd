@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "id": "multi-question-faq-split",
+  "title": "一條訊息多個問題逐題命中並編號回覆",
+  "status": "approved",
+  "clock": "2026-09-15T07:00:00.000Z",
+  "source": {
+    "kind": "target_baseline",
+    "reference": "PRD FR-10 / splitCustomerServiceFaqQuestions"
+  },
+  "world": {
+    "faqs": [
+      {
+        "id": "fixture-shipping",
+        "question": "運費幾多",
+        "answer": "測試地區運費 HK$50。"
+      },
+      {
+        "id": "fixture-menu",
+        "question": "有冇餐牌可以睇",
+        "answer": "可以瀏覽我哋網站嘅餐牌。"
+      }
+    ]
+  },
+  "turns": [
+    {
+      "customer": "運費幾多？同埋有冇餐牌？",
+      "recordedClassification": {
+        "intent": "search_faq",
+        "configuredIntentKey": "search_faq",
+        "dialogAction": "new_request"
+      },
+      "expect": {
+        "effects": {
+          "writeInquiry": 0,
+          "queueHandoff": 0
+        },
+        "replyContains": [
+          "HK$50",
+          "餐牌"
+        ],
+        "replyExcludes": [
+          "undefined",
+          "NaN"
+        ]
+      }
+    }
+  ]
+}

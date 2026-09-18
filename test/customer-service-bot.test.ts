@@ -15,6 +15,8 @@ import {
   extractOrderNumber,
   isCustomerServiceEmojiAcknowledgement,
   isCustomerServiceThanks,
+  isBlockedDateReasonQuestion,
+  isDeliveryAvailabilityQuestion,
   isHongKongCalendarDateToday,
   isOrderConfirmationAcknowledgement,
   isProductQualityComplaint,
@@ -127,6 +129,14 @@ describe("customer-service intents", () => {
     expect(isSameDayOrderDemand("有冇餐牌可以睇？")).toBe(false);
     expect(isSameDayOrderDemand("我想改地址")).toBe(false);
     expect(isHongKongCalendarDateToday("2099-01-01")).toBe(false);
+  });
+
+  it("routes why-blocked date questions to the intake check", () => {
+    expect(isBlockedDateReasonQuestion("為何9月20日沒得送貨？")).toBe(true);
+    expect(isBlockedDateReasonQuestion("點解9月20號唔送貨？")).toBe(true);
+    expect(isDeliveryAvailabilityQuestion("請問9月20日可以送貨嗎？")).toBe(true);
+    expect(isBlockedDateReasonQuestion("9月20日有咩套餐？")).toBe(false);
+    expect(isBlockedDateReasonQuestion("為何未有回覆？")).toBe(false);
   });
 
   it("classifies a dated can-you-deliver question before menu browsing", () => {
@@ -350,6 +360,12 @@ describe("customer-service intents", () => {
     );
     expect(customerServiceMenuFaqQuery("想睇即日到會餐牌")).toBe(
       "Food Channels Express 有冇餐牌可以睇？",
+    );
+    expect(
+      customerServiceMenuFaqQuery("Food Channels Catering 到會套餐，附飯盒包裝"),
+    ).toBe("Food Channels Catering 有冇餐牌可以睇？");
+    expect(customerServiceMenuFaqQuery("HK Lunch Box 飯盒餐牌")).toBe(
+      "HK Lunch Box 有冇餐牌可以睇？",
     );
     expect(customerServiceSeasonalMenuFaqQuery("客問FCC中秋menu")).toBe(
       "Food Channels Catering 2026中秋餐牌",

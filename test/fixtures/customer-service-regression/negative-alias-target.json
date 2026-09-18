@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "id": "negative-alias-target",
+  "title": "反例問「我唔係要退款，我要換貨」需 Negative Alias",
+  "status": "draft",
+  "clock": "2026-09-15T07:00:00.000Z",
+  "source": {
+    "kind": "target_gap",
+    "reference": "PRD FR-06 negative alias"
+  },
+  "world": {
+    "faqs": [
+      {
+        "id": "fixture-refund",
+        "question": "退款流程",
+        "answer": "如需退款，請提供訂單號，一般 7 個工作天內處理。"
+      }
+    ]
+  },
+  "turns": [
+    {
+      "customer": "我唔係要退款，我要換貨",
+      "referenceReplies": [],
+      "expect": null
+    }
+  ]
+}

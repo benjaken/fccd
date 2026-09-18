@@ -14,6 +14,7 @@ import {
   isCustomerServiceGreeting,
   isCustomerServiceEmojiAcknowledgement,
   isCustomerServiceThanks,
+  isBlockedDateReasonQuestion,
   isDeliveryAvailabilityQuestion,
   isHongKongCalendarDateToday,
   isMenuInformationRequest,
@@ -209,6 +210,16 @@ export type CustomerServiceBotDeps = {
     anotherEvent: boolean,
   ) => Promise<CustomerServiceInquiryWrite>;
   searchFaqs: (query: string) => Promise<CustomerServiceFaqHit[]>;
+  /**
+   * Optional query rewrite (coreference resolution) applied before FAQ
+   * retrieval. Returning null leaves the original query untouched.
+   */
+  rewriteQuery?: (query: string) => Promise<{
+    rewrittenQuery: string;
+    intentHint: string;
+    usedContext: boolean;
+    model: string;
+  } | null>;
   searchCatalog?: (query: string) => Promise<CustomerServiceCatalogHit[]>;
   checkDeliveryDateAvailability?: (
     date: string,
@@ -335,7 +346,7 @@ function normalizedFaqText(value: string) {
     .replace(/^(請問|想問|我想問|可唔可以問)/, "");
 }
 
-function orderIntakeAvailabilityReply(
+export function orderIntakeAvailabilityReply(
   date: string,
   availability: CustomerServiceOrderIntakeAvailability,
   deliveryTime?: string | null,
@@ -1530,11 +1541,27 @@ async function replySingleFaq(
   conversation: CustomerServiceConversation,
   query: string,
 ): Promise<BotTurn> {
-  const hits = await deps.searchFaqs(query);
-  const approvedHits = hits.filter((hit) => strongPublishedFaqMatch(query, hit));
+  // Query rewrite only affects retrieval quality; the customer's original
+  // wording is kept for anything that reaches the customer.
+  let lookupQuery = query;
+  if (deps.rewriteQuery) {
+    try {
+      const rewritten = await deps.rewriteQuery(query);
+      if (rewritten?.rewrittenQuery?.trim() && rewritten.intentHint !== "clarification") {
+        lookupQuery = rewritten.rewrittenQuery.trim();
+      }
+    } catch (error) {
+      console.error(
+        "customer-service query rewrite failed",
+        error instanceof Error ? error.message.slice(0, 200) : String(error),
+      );
+    }
+  }
+  const hits = await deps.searchFaqs(lookupQuery);
+  const approvedHits = hits.filter((hit) => strongPublishedFaqMatch(lookupQuery, hit));
   // Text rules remain a fast path, not an allow-list for newly published knowledge.
   // Weak candidates may only produce a cited model answer, never a raw fallback.
-  const normalizedQuery = normalizedFaqText(query);
+  const normalizedQuery = normalizedFaqText(lookupQuery);
   const genericQuery = FAQ_MODEL_FALLBACK_GENERIC_QUERIES.has(normalizedQuery.toLowerCase());
   const modelCandidates = approvedHits.length ? approvedHits : genericQuery ? [] : hits.filter((hit) => {
     const question = normalizedFaqText(hit.question);
@@ -1545,7 +1572,7 @@ async function replySingleFaq(
   });
   if (deps.answerFaqWithModel && modelCandidates.length) {
     try {
-      const modelAnswer = await deps.answerFaqWithModel(query, modelCandidates);
+      const modelAnswer = await deps.answerFaqWithModel(lookupQuery, modelCandidates);
       const answer =
         typeof modelAnswer === "string" ? modelAnswer : modelAnswer?.answer;
       const returnedSourceIds = typeof modelAnswer === "object" && modelAnswer ? modelAnswer.sourceIds : [];
@@ -2216,6 +2243,7 @@ export async function handleCustomerServiceTurn({
   if (
     classified.configuredIntentKey === "delivery_availability" ||
     (!classified.usedModel && isDeliveryAvailabilityQuestion(text)) ||
+    isBlockedDateReasonQuestion(text) ||
     (conversation.pending_request === "availability:date" && canContinueAvailability && Boolean(resolveCustomerServiceDeliveryDate(text)))
   ) {
     const requestedDate = resolveCustomerServiceDeliveryDate(text);

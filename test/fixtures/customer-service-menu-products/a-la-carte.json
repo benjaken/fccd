@@ -1,0 +1,157 @@
+{
+  "description": "菜單圖片／文字辨識出的單點菜式 → Shopify 產品配對回歸案例。每案固定 terms（辨識菜名）、brand（圖片判斷到的品牌）及 catalog hits（模擬 search_order_intake_catalog 回傳），驗證配對、品牌過濾及回覆格式。",
+  "cases": [
+    {
+      "id": "catering-a-la-carte-squid",
+      "description": "Catering 單點菜式命中同品牌產品",
+      "terms": ["椒鹽鮮魷"],
+      "brand": "Food Channels Catering",
+      "hits": [
+        {
+          "name": "椒鹽鮮魷",
+          "product_url": "https://foodchannels-catering.com/products/salt-pepper-squid"
+        }
+      ],
+      "expect": {
+        "matchCount": 1,
+        "names": ["椒鹽鮮魷"],
+        "urlContains": [
+          "https://foodchannels-catering.com/products/salt-pepper-squid"
+        ],
+        "replyContains": [
+          "椒鹽鮮魷",
+          "https://foodchannels-catering.com/products/salt-pepper-squid",
+          "Food Channels Catering",
+          "實際供應以網站當日顯示為準"
+        ]
+      }
+    },
+    {
+      "id": "lunchbox-a-la-carte-braised-pork",
+      "description": "HK Lunch Box 單點菜式命中同品牌產品",
+      "terms": ["蜜汁叉燒"],
+      "brand": "HK Lunch Box",
+      "hits": [
+        {
+          "name": "蜜汁叉燒",
+          "product_url": "https://hklunchbox.com/products/char-siu"
+        }
+      ],
+      "expect": {
+        "matchCount": 1,
+        "names": ["蜜汁叉燒"],
+        "urlContains": ["https://hklunchbox.com/products/char-siu"],
+        "replyContains": ["蜜汁叉燒", "https://hklunchbox.com/products/char-siu"]
+      }
+    },
+    {
+      "id": "party-food-a-la-carte-canape",
+      "description": "HK Party Food 一口小食命中同品牌產品",
+      "terms": ["煙三文魚一口小食"],
+      "brand": "HK Party Food",
+      "hits": [
+        {
+          "name": "煙三文魚一口小食",
+          "product_url": "https://www.hkpartyfood.com/products/smoked-salmon-canape"
+        }
+      ],
+      "expect": {
+        "matchCount": 1,
+        "names": ["煙三文魚一口小食"],
+        "urlContains": [
+          "https://www.hkpartyfood.com/products/smoked-salmon-canape"
+        ],
+        "replyContains": ["煙三文魚一口小食"]
+      }
+    },
+    {
+      "id": "rejects-cross-brand-product",
+      "description": "Catering 圖片不得連到 Lunch Box 的相似菜式",
+      "terms": ["椒鹽鮮魷"],
+      "brand": "Food Channels Catering",
+      "hits": [
+        {
+          "name": "椒鹽鮮魷飯盒",
+          "product_url": "https://hklunchbox.com/products/salt-pepper-squid"
+        }
+      ],
+      "expect": {
+        "matchCount": 0
+      }
+    },
+    {
+      "id": "rejects-short-term",
+      "description": "單字菜名信心不足，不配對",
+      "terms": ["魷"],
+      "brand": "Food Channels Catering",
+      "hits": [
+        {
+          "name": "椒鹽鮮魷",
+          "product_url": "https://foodchannels-catering.com/products/salt-pepper-squid"
+        }
+      ],
+      "expect": {
+        "matchCount": 0
+      }
+    },
+    {
+      "id": "rejects-unmatched-product",
+      "description": "菜名與產品名稱不符時不配對，交由品牌餐牌 fallback",
+      "terms": ["龍蝦伊麵"],
+      "brand": "Food Channels Catering",
+      "hits": [
+        {
+          "name": "椒鹽鮮魷",
+          "product_url": "https://foodchannels-catering.com/products/salt-pepper-squid"
+        }
+      ],
+      "expect": {
+        "matchCount": 0
+      }
+    },
+    {
+      "id": "no-brand-allows-any-domain",
+      "description": "未判斷到品牌時仍可用菜名配對",
+      "terms": ["椒鹽鮮魷"],
+      "brand": "",
+      "hits": [
+        {
+          "name": "椒鹽鮮魷",
+          "product_url": "https://foodchannels-catering.com/products/salt-pepper-squid"
+        }
+      ],
+      "expect": {
+        "matchCount": 1,
+        "names": ["椒鹽鮮魷"]
+      }
+    },
+    {
+      "id": "limits-to-three-products",
+      "description": "同名多個產品時最多回三個",
+      "terms": ["到會拼盤"],
+      "brand": "Food Channels Catering",
+      "hits": [
+        {
+          "name": "到會拼盤 A",
+          "product_url": "https://foodchannels-catering.com/products/platter-a"
+        },
+        {
+          "name": "到會拼盤 B",
+          "product_url": "https://foodchannels-catering.com/products/platter-b"
+        },
+        {
+          "name": "到會拼盤 C",
+          "product_url": "https://foodchannels-catering.com/products/platter-c"
+        },
+        {
+          "name": "到會拼盤 D",
+          "product_url": "https://foodchannels-catering.com/products/platter-d"
+        }
+      ],
+      "expect": {
+        "matchCount": 3,
+        "names": ["到會拼盤 A", "到會拼盤 B", "到會拼盤 C"]
+      }
+    }
+  ]
+}
