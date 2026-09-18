@@ -2746,6 +2746,11 @@ Deno.serve(async (request) => {
   ) {
     return jsonResponse({ error: "channel_mismatch" }, 403);
   }
+  // WhatsApp reactions (e.g. a customer tapping ?? on a message) arrive with
+  // type "reaction". They are not customer turns, so never auto-reply to them.
+  if (event.type === "reaction") {
+    return jsonResponse({ ok: true, ignored: "reaction" });
+  }
 
   try {
     const admin = createAdminClient();

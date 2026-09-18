@@ -42,4 +42,9 @@ describe("customer service P1/P2 quality controls", () => {
     expect(learning).toContain("evaluationOutcome.get(turn.id) === \"success\"");
     expect(learning).toContain("!evidenceTurnIds.length && !evidenceMessageIds.length");
   });
+
+  it("ignores WhatsApp reaction events instead of treating them as customer turns", () => {
+    expect(webhook).toContain('event.type === "reaction"');
+    expect(webhook).toContain('ignored: "reaction"');
+  });
 });
