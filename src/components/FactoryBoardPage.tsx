@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import {
   ArrowLeft,
@@ -51,6 +51,10 @@ import {
   type FactoryMultiDayMenuContribution,
   type FactoryOrderJob,
 } from "@/lib/factory-board";
+import {
+  groupFactoryMenuRowsByCategory,
+  type FactoryMenuCategory,
+} from "@/lib/factory-menu-category";
 import { qzTrayClient, useQzTray, type QzTrayClient } from "@/lib/qz-tray";
 import {
   fetchFactoryLabelCommand,
@@ -183,6 +187,8 @@ export function FactoryBoardPage({
   subscribeEditPresence?: ActiveOrderEditPresenceSubscriber;
 }) {
   const { t, i18n } = useTranslation();
+  const categoryLabel = (category: FactoryMenuCategory) =>
+    t(`factoryBoard.menuCategories.${category}`);
   const qz = useQzTray({ client: qzClient, autoConnect: false });
   const isMobileBoard = useMediaQuery("(max-width: 760px)");
   const visibleDayCount = isMobileBoard ? 1 : 3;
@@ -289,6 +295,14 @@ export function FactoryBoardPage({
   const sortedMenuRows = useMemo(
     () => [...menuRows].sort(compareFactoryMenuRows),
     [menuRows],
+  );
+  const menuCategoryGroups = useMemo(
+    () => groupFactoryMenuRowsByCategory(sortedMenuRows),
+    [sortedMenuRows],
+  );
+  const multiDayCategoryGroups = useMemo(
+    () => groupFactoryMenuRowsByCategory(aggregatedMultiDayRows),
+    [aggregatedMultiDayRows],
   );
   const menuOrderIds = useMemo(
     () => [...new Set(menuRows.flatMap((row) => (row.orders ?? []).map((order) => order.orderId)))],
@@ -944,23 +958,30 @@ export function FactoryBoardPage({
                   </tr>
                 </thead>
                 <tbody>
-                  {aggregatedMultiDayRows.map((row) => (
-                    <tr key={row.label}>
-                      <td>{row.label}</td>
-                      <td>{formatPortions(row.quantity)}</td>
-                      <td>
-                        <div className="factory-multi-day-orders">
-                          {row.orders.map((order) => (
-                            <span key={order.orderId}>
-                              {order.deliveryDate.slice(5).replace("-", "/")}
-                              {order.deliveryTime ? ` ${order.deliveryTime}` : ""}
-                              {` · ${formatFactoryOrderNumber(order.orderNumber, order.orderId)}`}
-                              {` × ${formatPortions(order.quantity)}`}
-                            </span>
-                          ))}
-                        </div>
-                      </td>
-                    </tr>
+                  {multiDayCategoryGroups.map((group) => (
+                    <Fragment key={`multi-day-${group.category}`}>
+                      <tr className="factory-menu-category-row">
+                        <th colSpan={3}>{categoryLabel(group.category)}</th>
+                      </tr>
+                      {group.rows.map((row) => (
+                        <tr key={row.label}>
+                          <td>{row.label}</td>
+                          <td>{formatPortions(row.quantity)}</td>
+                          <td>
+                            <div className="factory-multi-day-orders">
+                              {row.orders.map((order) => (
+                                <span key={order.orderId}>
+                                  {order.deliveryDate.slice(5).replace("-", "/")}
+                                  {order.deliveryTime ? ` ${order.deliveryTime}` : ""}
+                                  {` · ${formatFactoryOrderNumber(order.orderNumber, order.orderId)}`}
+                                  {` × ${formatPortions(order.quantity)}`}
+                                </span>
+                              ))}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </Fragment>
                   ))}
                 </tbody>
               </table>
@@ -1458,27 +1479,36 @@ export function FactoryBoardPage({
                 </tr>
               </thead>
               <tbody>
-                {sortedMenuRows.map((row) => (
-                  <tr key={row.label}>
-                    <td>{row.label}</td>
-                    <td>{row.quantity}</td>
-                    {menuCompletionColumns.map((column) => {
-                      const quantity = (row.orders ?? []).reduce((total, order) => {
-                        const match = /^(\d{1,2})/.exec(order.completionTime ?? "");
-                        return match && Number(match[1]) === column.hour
-                          ? total + order.quantity
-                          : total;
-                      }, 0);
-                      return (
-                        <td
-                          className={cn(quantity > 0 && "has-data")}
-                          key={`${row.label}-${column.hour}`}
-                        >
-                          {quantity || ""}
-                        </td>
-                      );
-                    })}
-                  </tr>
+                {menuCategoryGroups.map((group) => (
+                  <Fragment key={`menu-${group.category}`}>
+                    <tr className="factory-menu-category-row">
+                      <th colSpan={2 + menuCompletionColumns.length}>
+                        {categoryLabel(group.category)}
+                      </th>
+                    </tr>
+                    {group.rows.map((row) => (
+                      <tr key={row.label}>
+                        <td>{row.label}</td>
+                        <td>{row.quantity}</td>
+                        {menuCompletionColumns.map((column) => {
+                          const quantity = (row.orders ?? []).reduce((total, order) => {
+                            const match = /^(\d{1,2})/.exec(order.completionTime ?? "");
+                            return match && Number(match[1]) === column.hour
+                              ? total + order.quantity
+                              : total;
+                          }, 0);
+                          return (
+                            <td
+                              className={cn(quantity > 0 && "has-data")}
+                              key={`${row.label}-${column.hour}`}
+                            >
+                              {quantity || ""}
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    ))}
+                  </Fragment>
                 ))}
               </tbody>
             </table>
@@ -1503,11 +1533,18 @@ export function FactoryBoardPage({
               </tr>
             </thead>
             <tbody>
-              {sortedMenuRows.map((row) => (
-                <tr key={`print-${row.label}`}>
-                  <td>{row.label}</td>
-                  <td>{row.quantity}</td>
-                </tr>
+              {menuCategoryGroups.map((group) => (
+                <Fragment key={`print-${group.category}`}>
+                  <tr className="factory-menu-category-row">
+                    <th colSpan={2}>{categoryLabel(group.category)}</th>
+                  </tr>
+                  {group.rows.map((row) => (
+                    <tr key={`print-${row.label}`}>
+                      <td>{row.label}</td>
+                      <td>{row.quantity}</td>
+                    </tr>
+                  ))}
+                </Fragment>
               ))}
             </tbody>
           </table>

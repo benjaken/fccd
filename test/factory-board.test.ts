@@ -25,6 +25,11 @@ import {
   mapFactoryMeatOrder,
   mapFactoryShopOrders,
 } from "@/lib/factory-board";
+import {
+  factoryMenuCategory,
+  groupFactoryMenuRowsByCategory,
+  preferredFactoryMenuCategory,
+} from "@/lib/factory-menu-category";
 import type { DeliveryListItem } from "@/lib/deliveries";
 import type { ShopOrderRequest } from "@/lib/shop-orders";
 
@@ -441,5 +446,75 @@ describe("factory board helpers", () => {
     expect(html).toContain("走醬 &amp; 分開");
     expect(html).toContain("× 5");
     expect(html).toContain("B-1540");
+  });
+});
+
+describe("factory menu categories", () => {
+  it("classifies dishes by brand and product type", () => {
+    expect(factoryMenuCategory({ brandName: "Cuisine" })).toBe("chinese");
+    expect(factoryMenuCategory({ brandName: "Kitchen" })).toBe("chinese");
+    expect(factoryMenuCategory({ brandName: "Catering" })).toBe("fusion");
+    expect(factoryMenuCategory({ brandName: "HK lunch box" })).toBe("fusion");
+    expect(factoryMenuCategory({ brandName: "Express" })).toBe("fusion");
+    expect(factoryMenuCategory({ brandName: "Delivery" })).toBe("unclassified");
+  });
+
+  it("prefers tea and western dish types over the brand", () => {
+    expect(
+      factoryMenuCategory({ productTypeName: "甜品", brandName: "Kitchen" }),
+    ).toBe("tea");
+    expect(
+      factoryMenuCategory({ productTypeName: "分享小食-C", brandName: "Catering" }),
+    ).toBe("tea");
+    expect(
+      factoryMenuCategory({ productTypeName: "西式熱盤", brandName: "Catering" }),
+    ).toBe("western");
+    expect(
+      factoryMenuCategory({ productTypeName: "三文治/包類", brandName: "Express" }),
+    ).toBe("western");
+    expect(
+      factoryMenuCategory({ productTypeName: "沙律 ", brandName: "Cuisine" }),
+    ).toBe("western");
+    expect(
+      factoryMenuCategory({ productTypeName: "中式小菜", brandName: "Catering" }),
+    ).toBe("fusion");
+  });
+
+  it("keeps the canonical category when merging contributions", () => {
+    expect(preferredFactoryMenuCategory("fusion", "tea")).toBe("tea");
+    expect(preferredFactoryMenuCategory("tea", "fusion")).toBe("tea");
+    expect(preferredFactoryMenuCategory(null, "chinese")).toBe("chinese");
+    expect(preferredFactoryMenuCategory("chinese", null)).toBe("chinese");
+  });
+
+  it("groups adjacent rows by category", () => {
+    const groups = groupFactoryMenuRowsByCategory([
+      { label: "A", category: "chinese" as const },
+      { label: "B", category: "chinese" as const },
+      { label: "C", category: "tea" as const },
+      { label: "D" },
+    ]);
+    expect(groups.map((group) => group.category)).toEqual([
+      "chinese",
+      "tea",
+      "unclassified",
+    ]);
+    expect(groups[0]?.rows.map((row) => row.label)).toEqual(["A", "B"]);
+  });
+
+  it("sorts menu rows so the same category stays together", () => {
+    const rows = [
+      { label: "甜品", typeSort: 1, category: "tea" as const },
+      { label: "中式小菜", typeSort: 9, category: "chinese" as const },
+      { label: "西式熱盤", typeSort: 8, category: "western" as const },
+      { label: "便當", typeSort: 13, category: "fusion" as const },
+    ].sort(compareFactoryMenuRows);
+
+    expect(rows.map((row) => row.category)).toEqual([
+      "chinese",
+      "western",
+      "fusion",
+      "tea",
+    ]);
   });
 });

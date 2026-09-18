@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { ArrowLeft, CheckCircle2, Printer, ShoppingCart, TriangleAlert } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
@@ -21,6 +21,11 @@ import {
   fetchFactoryLabelCommand,
   type FactoryLabelCommandLoader,
 } from "@/lib/factory-label";
+import {
+  factoryMenuCategoryRank,
+  groupFactoryMenuRowsByCategory,
+  type FactoryMenuCategory,
+} from "@/lib/factory-menu-category";
 import { useQzTray } from "@/lib/qz-tray";
 import { formatDeliveryAddress } from "@/lib/delivery-address";
 import { printPdf } from "@/lib/print-pdf";
@@ -131,6 +136,8 @@ export function FactoryOrderJobView({
   qz: ReturnType<typeof useQzTray>;
 }) {
   const { t, i18n } = useTranslation();
+  const categoryLabel = (category: FactoryMenuCategory) =>
+    t(`factoryBoard.menuCategories.${category}`);
   const [assignedFleetId, setAssignedFleetId] = useState(item.motorcadeId ?? "");
   const [selectedFleetId, setSelectedFleetId] = useState(item.motorcadeId ?? "");
   const [assignOpen, setAssignOpen] = useState(false);
@@ -170,6 +177,13 @@ export function FactoryOrderJobView({
   const displayLines = job?.lines.filter(
     (line) => line.isCancelled || line.label.trim().length > 0,
   ) ?? [];
+  const lineCategoryGroups = groupFactoryMenuRowsByCategory(
+    [...displayLines].sort(
+      (left, right) =>
+        factoryMenuCategoryRank(left.category) -
+        factoryMenuCategoryRank(right.category),
+    ),
+  );
   const printableLines = displayLines.filter((line) => !line.isCancelled);
   const totalLabelCount = factoryOrderLabelCount(printableLines);
   const printBlocked = Boolean(job?.isBeingEdited);
@@ -435,7 +449,12 @@ export function FactoryOrderJobView({
           ) : !displayLines.length ? (
             <p className="factory-day-state">{t("factoryBoard.emptyLines")}</p>
           ) : (
-            displayLines.map((line) => (
+            lineCategoryGroups.map((group) => (
+              <Fragment key={group.category}>
+                <p className="factory-order-line-category">
+                  {categoryLabel(group.category)}
+                </p>
+                {group.rows.map((line) => (
               <button
                 type="button"
                 className={`factory-order-line${line.isCancelled ? " is-cancelled" : ""}`}
@@ -484,6 +503,8 @@ export function FactoryOrderJobView({
                   ))}
                 </div>
               </button>
+                ))}
+              </Fragment>
             ))
           )}
         </div>

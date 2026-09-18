@@ -4479,6 +4479,40 @@ button.factory-job-card:focus-visible {
   overflow-wrap: anywhere;
 }
 
+.factory-menu-category-row th {
+  background: #1f2937;
+  color: #ffffff;
+  font-size: 20px;
+  font-weight: 800;
+  text-align: left;
+  letter-spacing: 0.08em;
+}
+
+.factory-menu-summary-table .factory-menu-category-row th,
+.factory-menu-print-table .factory-menu-category-row th,
+.factory-multi-day-table .factory-menu-category-row th {
+  width: auto;
+  text-align: left;
+}
+
+.factory-multi-day-table .factory-menu-category-row th,
+.factory-multi-day-table .factory-menu-category-row th:first-child {
+  width: auto;
+  font-weight: 800;
+}
+
+.factory-order-line-category {
+  grid-column: 1 / -1;
+  margin: 4px 0 0;
+  padding: 6px 12px;
+  border-radius: 6px;
+  background: #1f2937;
+  color: #ffffff;
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
 .factory-menu-print-root {
   display: none;
 }
@@ -4573,6 +4607,14 @@ button.factory-job-card:focus-visible {
   .factory-menu-print-table th:last-child,
   .factory-menu-print-table td:last-child {
     width: 34%;
+  }
+
+  .factory-menu-print-table .factory-menu-category-row th {
+    width: 100% !important;
+    background: #e5e5e5 !important;
+    color: #000000 !important;
+    font-size: 18pt;
+    text-align: left;
   }
 }
 
