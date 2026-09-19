@@ -573,6 +573,35 @@ export function matchShopifyDistrictName(
   return best;
 }
 
+export const PICKUP_DISTRICT_NAME = "門市自取";
+
+/** Shipping method names that mean the customer collects the order in person. */
+export function isPickupShippingMethodName(
+  name: string | null | undefined,
+): boolean {
+  return /(自取|pickup)/i.test(String(name ?? "").trim());
+}
+
+export function resolvePickupDistrictId(
+  districts: Array<{
+    id: string;
+    name: string | null;
+    driver_team_id?: string | null;
+    created_at?: string | null;
+  }>,
+): string | null {
+  const needle = normalizeDistrictLabel(PICKUP_DISTRICT_NAME);
+  return districts
+    .filter((district) => normalizeDistrictLabel(district.name) === needle)
+    .sort((left, right) => {
+      const leftTeam = left.driver_team_id ? 1 : 0;
+      const rightTeam = right.driver_team_id ? 1 : 0;
+      if (leftTeam !== rightTeam) return leftTeam - rightTeam;
+      return String(left.created_at ?? "").localeCompare(String(right.created_at ?? "")) ||
+        left.id.localeCompare(right.id);
+    })[0]?.id ?? null;
+}
+
 export function resolveShopifyDistrictId(
   sources: ShopifyDistrictSources,
   districts: Array<{

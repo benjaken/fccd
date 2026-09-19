@@ -24,6 +24,8 @@ import {
   replaceShopifyLunchBoxAggregate,
   resolveShopifyShippingMethodId,
   resolveShopifyDistrictId,
+  resolvePickupDistrictId,
+  isPickupShippingMethodName,
   matchShopifyDistrictName,
   mappedShopifyCityName,
   shopifyLineRemarksSnapshot,
@@ -540,6 +542,19 @@ describe("Shopify district mapping", () => {
       address2: null,
       noteDistrict: null,
     }, districts)).toBe("tbc");
+  });
+
+  it("keeps self-pick orders on the 門市自取 district", () => {
+    const withPickup = [
+      ...districts,
+      { id: "store-pickup", name: "門市自取", driver_team_id: null, created_at: "2026-01-01" },
+      { id: "store-pickup-fleet", name: "門市自取", driver_team_id: "fleet-1", created_at: "2026-01-02" },
+    ];
+    expect(isPickupShippingMethodName("門市自取")).toBe(true);
+    expect(isPickupShippingMethodName("Self Pickup")).toBe(true);
+    expect(isPickupShippingMethodName("送貨上門")).toBe(false);
+    expect(resolvePickupDistrictId(withPickup)).toBe("store-pickup");
+    expect(resolvePickupDistrictId(districts)).toBeNull();
   });
 
   it("reads a district cart attribute when the street has no prefix", () => {

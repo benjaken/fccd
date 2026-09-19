@@ -24,6 +24,8 @@ import {
   replaceShopifyLunchBoxAggregate,
   resolveShopifyShippingMethodId,
   resolveShopifyDistrictId,
+  resolvePickupDistrictId,
+  isPickupShippingMethodName,
   shopifyCateringUtensilPacks,
   shopifyBentoUtensilCount,
   shopifyLunchBoxUtensilCount,
@@ -1010,7 +1012,19 @@ async function attachShopifyLookups(
       shippingMethods,
     );
     if (shippingMethodId) item.orderRow.shipping_method_id = shippingMethodId;
-    const districtId = resolveShopifyDistrictId(item.districtSources, districts);
+    const matchedMethod = shippingMethods.find(
+      (method) => method.id === shippingMethodId,
+    );
+    const methodName = matchedMethod
+      ? (matchedMethod.display_name?.trim() || matchedMethod.name)
+      : item.shippingMethodTitle;
+    // Self-pick orders must never inherit the address-based TBC fallback: keep
+    // them on the 門市自取 district so the factory board shows 自取.
+    const pickupDistrictId = isPickupShippingMethodName(methodName)
+      ? resolvePickupDistrictId(districts)
+      : null;
+    const districtId =
+      pickupDistrictId ?? resolveShopifyDistrictId(item.districtSources, districts);
     if (districtId) item.orderRow.delivery_district_id = districtId;
   }
 }
