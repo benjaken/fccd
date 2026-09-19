@@ -43,6 +43,7 @@ export type DeliveryListItem = {
   factorySentAt?: string | null;
   addonShopifyPending?: boolean;
   orderReceivedAt?: string | null;
+  statusLegacyIds?: string[];
   takenAt: string | null;
   fulfilledAt: string | null;
   imageReferences: string[];
@@ -101,6 +102,7 @@ type OrderRow = {
   factory_sent_at?: string | null;
   addon_shopify_pending?: boolean | null;
   order_received_at?: string | null;
+  order_status_legacy_ids?: string[] | null;
   shipping_methods?: Nested<NamedRow>;
 };
 
@@ -139,7 +141,7 @@ const DELIVERY_SELECT = [
   "image_references",
   "motorcade_id",
   "shipping_method_id",
-  "orders!inner(id,order_number,customer_name_snapshot,contact_number_a_snapshot,contact_number_b_snapshot,shipping_address_snapshot,shipping_method_id,grand_total,delivery_time,ship_out_time,delivery_status,is_sent_to_factory,factory_sent_at,addon_shopify_pending,order_received_at,shipping_methods(name,display_name))",
+  "orders!inner(id,order_number,customer_name_snapshot,contact_number_a_snapshot,contact_number_b_snapshot,shipping_address_snapshot,shipping_method_id,grand_total,delivery_time,ship_out_time,delivery_status,is_sent_to_factory,factory_sent_at,addon_shopify_pending,order_received_at,order_status_legacy_ids,shipping_methods(name,display_name))",
   "delivery_districts!district_id(name)",
   "shipping_methods!shipping_method_id(name,display_name)",
   "delivery_teams!motorcade_id(name,short_name)",
@@ -329,6 +331,11 @@ export function mapDeliveryRow(row: DeliveryRow): DeliveryListItem {
     factorySentAt: order?.factory_sent_at ?? null,
     addonShopifyPending: order?.addon_shopify_pending === true,
     orderReceivedAt: order?.order_received_at ?? null,
+    statusLegacyIds: Array.isArray(order?.order_status_legacy_ids)
+      ? order.order_status_legacy_ids.filter(
+          (legacyId): legacyId is string => typeof legacyId === "string",
+        )
+      : [],
     takenAt: row.taken_at,
     fulfilledAt: row.fulfilled_at,
     imageReferences: (row.image_references ?? []).filter(Boolean),
