@@ -3101,7 +3101,7 @@
 .customer-faq-trace-trigger {
   display: inline-flex; min-height: 24px; align-items: center; gap: 4px;
   margin: -5px 3px -4px 0; padding: 2px 7px; border: 0; border-radius: 999px;
-  background: transparent; color: var(--muted-foreground); font: inherit; font-size: 11px; font-weight: 700; line-height: 1; cursor: pointer;
+  background: transparent; color: var(--muted-foreground); font: inherit; font-size: 12px; font-weight: 700; line-height: 1; cursor: pointer;
 }
 .customer-faq-trace-trigger:hover,
 .customer-faq-trace-trigger:focus-visible,
@@ -3128,7 +3128,7 @@
 .customer-faq-trace-popover > header svg { width: 17px; height: 17px; color: var(--primary); }
 .customer-faq-trace-popover > header strong { font-size: 14px; font-weight: 750; }
 .customer-faq-trace-popover > header > span {
-  flex: 0 0 auto; color: var(--muted-foreground); font-size: 11px; font-variant-numeric: tabular-nums;
+  flex: 0 0 auto; color: var(--muted-foreground); font-size: 12px; font-variant-numeric: tabular-nums;
 }
 .customer-faq-trace-popover ol {
   display: grid; gap: 0; margin: 0; padding: 6px 10px 10px; list-style: none;
@@ -3166,11 +3166,11 @@
   margin-top: 2px; color: var(--muted-foreground); font-size: 12px; line-height: 1.4;
 }
 .customer-faq-trace-popover li small {
-  margin-top: 3px; color: var(--muted-foreground); opacity: .82; font-size: 11px; line-height: 1.4;
+  margin-top: 3px; color: var(--muted-foreground); opacity: .82; font-size: 12px; line-height: 1.4;
 }
 .customer-faq-trace-stage {
   padding-top: 2px; color: var(--muted-foreground); font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
-  font-size: 10px; font-variant-numeric: tabular-nums;
+  font-size: 12px; font-variant-numeric: tabular-nums;
 }
 .customer-faq-trace-failure {
   display: flex; align-items: flex-start; gap: 7px; margin: 10px 10px 0;
@@ -3189,8 +3189,12 @@
 .dark .customer-faq-trace-popover li.is-failed strong { color: #fca5a5; }
 .dark .customer-faq-trace-popover li.is-warn strong { color: #fbbf24; }
 .customer-faq-chat-message.user small { color: inherit; opacity: .8; }
+.customer-faq-chat-message-image { display: block; width: 100%; max-width: 240px; margin-bottom: 4px; border-radius: 6px; object-fit: cover; }
+.customer-faq-chat-attachment { display: flex; flex: 0 0 auto; align-items: center; gap: 8px; padding: 6px 10px; border-top: 1px solid rgb(210 204 194 / 70%); background: #f0f2f5; }
+.customer-faq-chat-attachment img { width: 44px; height: 44px; border-radius: 6px; object-fit: cover; }
+.customer-faq-chat-attachment .button-ghost { color: #54656f; }
 .customer-faq-chat-empty { align-self: center; margin: auto 0; padding: 7px 11px; border-radius: 7px; background: rgb(255 255 255 / 82%); color: #667781; box-shadow: 0 1px 1px rgb(11 20 26 / 10%); font-size: 12px; text-align: center; }
-.customer-faq-chat-composer { display: grid; flex: 0 0 auto; grid-template-columns: 38px minmax(0, 1fr) 42px; align-items: center; gap: 4px; min-height: 62px; padding: 10px 9px; border-top: 1px solid rgb(210 204 194 / 70%); background: #f0f2f5; }
+.customer-faq-chat-composer { display: grid; flex: 0 0 auto; grid-template-columns: 38px 38px minmax(0, 1fr) 42px; align-items: center; gap: 4px; min-height: 62px; padding: 10px 9px; border-top: 1px solid rgb(210 204 194 / 70%); background: #f0f2f5; }
 .customer-faq-chat-composer > label { min-width: 0; }
 .customer-faq-chat-composer input { width: 100%; height: 40px; padding: 9px 13px; border: 0; border-radius: 20px; outline: none; background: #fff; color: #111b21; font: inherit; font-size: 14px; }
 .customer-faq-chat-composer input::placeholder { color: #8696a0; }

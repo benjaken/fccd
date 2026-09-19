@@ -47,4 +47,11 @@ describe("customer service P1/P2 quality controls", () => {
     expect(webhook).toContain('event.type === "reaction"');
     expect(webhook).toContain('ignored: "reaction"');
   });
+
+  it("enriches inbound image handoffs with the vision analysis", () => {
+    expect(webhook).toContain("analyzeCustomerServiceImage");
+    expect(webhook).toContain("visionInternalSummary(vision, visionFailureReason)");
+    expect(webhook).toContain("visionCustomerReply(vision, label)");
+    expect(webhook).toContain("customer_service_vision_failed");
+  });
 });

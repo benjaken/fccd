@@ -131,7 +131,7 @@ export function FactoryOrderJobView({
   loadLabelCommand?: FactoryLabelCommandLoader;
   saveDispatchTime?: typeof updateFactoryDispatchTime;
   onLinePrinted?: (lineId: string) => void;
-  onAssigned?: (fleet: FactoryFleet) => void;
+  onAssigned?: (fleet: FactoryFleet | null) => void;
   onBack?: () => void;
   qz: ReturnType<typeof useQzTray>;
 }) {
@@ -347,15 +347,17 @@ export function FactoryOrderJobView({
     }
   };
 
-  const submitAssignment = async () => {
-    const fleet = fleets.find((entry) => entry.id === selectedFleetId);
-    if (!fleet) return;
+  const submitAssignment = async (fleetId: string) => {
+    const fleet = fleetId
+      ? fleets.find((entry) => entry.id === fleetId) ?? null
+      : null;
+    if (fleetId && !fleet) return;
     setAssigning(true);
     setAssignError(false);
     setAssignSuccess(false);
     try {
-      await assignMotorcade(item.id, fleet.id);
-      setAssignedFleetId(fleet.id);
+      await assignMotorcade(item.id, fleet?.id ?? null);
+      setAssignedFleetId(fleet?.id ?? "");
       setAssignOpen(false);
       setAssignSuccess(true);
       onAssigned?.(fleet);
@@ -709,10 +711,20 @@ export function FactoryOrderJobView({
               >
                 {t("factoryBoard.close")}
               </Button>
+              {assignedFleetId ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={assigning}
+                  onClick={() => void submitAssignment("")}
+                >
+                  {t("factoryBoard.unassignDriver")}
+                </Button>
+              ) : null}
               <Button
                 type="button"
                 disabled={!selectedFleetId || assigning}
-                onClick={() => void submitAssignment()}
+                onClick={() => void submitAssignment(selectedFleetId)}
               >
                 {assigning
                   ? t("factoryBoard.assigning")

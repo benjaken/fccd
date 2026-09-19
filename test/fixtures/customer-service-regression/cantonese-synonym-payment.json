@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 1,
+  "id": "cantonese-synonym-payment",
+  "title": "粵語口語別名命中付款方式 FAQ",
+  "status": "approved",
+  "clock": "2026-09-15T07:00:00.000Z",
+  "source": {
+    "kind": "target_baseline",
+    "reference": "PRD FR-02 P0 / FAQ_DIRECT_MATCH_RULES 點樣俾錢"
+  },
+  "world": {
+    "faqs": [
+      {
+        "id": "fixture-payment-method",
+        "question": "接受咩付款方式",
+        "answer": "我哋接受信用卡、Alipay 同 WeChat Pay。"
+      }
+    ]
+  },
+  "turns": [
+    {
+      "customer": "點樣俾錢？",
+      "recordedClassification": {
+        "intent": "search_faq",
+        "configuredIntentKey": "search_faq",
+        "dialogAction": "new_request"
+      },
+      "expect": {
+        "effects": {
+          "writeInquiry": 0,
+          "queueHandoff": 0
+        },
+        "replyContains": [
+          "信用卡"
+        ],
+        "replyExcludes": [
+          "undefined",
+          "NaN"
+        ],
+        "state": "identifying"
+      }
+    }
+  ]
+}

@@ -167,8 +167,8 @@ export function FactoryOrderPage({
               current
                 ? {
                     ...current,
-                    motorcadeId: fleet.id,
-                    motorcadeName: fleet.name,
+                    motorcadeId: fleet?.id ?? null,
+                    motorcadeName: fleet?.name ?? null,
                   }
                 : current,
             )

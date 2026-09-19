@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "id": "pronoun-followup-target",
+  "title": "指代追問「咁星期日呢？」需 Query Rewrite",
+  "status": "draft",
+  "clock": "2026-09-15T07:00:00.000Z",
+  "source": {
+    "kind": "target_gap",
+    "reference": "PRD FR-02 case B"
+  },
+  "world": {
+    "faqs": [
+      {
+        "id": "fixture-urgent-delivery",
+        "question": "加急送貨費用",
+        "answer": "加急送貨需額外 HK$100。"
+      }
+    ]
+  },
+  "turns": [
+    {
+      "customer": "加急送貨幾錢？",
+      "referenceReplies": [],
+      "expect": null
+    },
+    {
+      "customer": "咁星期日呢？",
+      "referenceReplies": [],
+      "expect": null
+    }
+  ]
+}

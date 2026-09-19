@@ -102,6 +102,9 @@ verify_jwt = false
 [functions.customer-service-daily-report]
 verify_jwt = false
 
+[functions.customer-service-faq-embed]
+verify_jwt = false
+
 [functions.customer-service-model-evaluate]
 verify_jwt = false
 

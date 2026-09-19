@@ -70,10 +70,10 @@ describe("customer service delivery, identity, and release controls", () => {
     expect(sql).toContain("customer_service_config_rollback");
   });
 
-  it("evaluates answer, intent, and tool accuracy before release", () => {
-    expect(evaluator).toContain("answerCustomerServiceFaqWithTieredAi");
+  it("evaluates answer, intent, and dialog accuracy before release", () => {
+    expect(evaluator).toContain("answerCustomerServiceFaqForEvaluation");
     expect(evaluator).toContain("classifyCustomerServiceWithTieredAi");
     expect(evaluator).toContain("intent_accuracy");
-    expect(evaluator).toContain("tool_accuracy");
+    expect(evaluator).toContain("dialog_action_accuracy");
   });
 });

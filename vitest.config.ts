@@ -17,6 +17,6 @@ export default defineConfig({
     css: true,
     maxWorkers: 4,
     testTimeout: 10_000,
-    exclude: ["**/.codex-temp/**", "**/node_modules/**"],
+    exclude: ["**/.codex-temp/**", "**/.git/**", "**/node_modules/**"],
   },
 });

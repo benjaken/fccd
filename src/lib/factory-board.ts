@@ -8,6 +8,12 @@ import {
 import { supabase } from "@/lib/supabase"
 import { formatFactoryOrderNumber } from "@/lib/factory-order-number"
 import { fetchActiveOrderEditIds } from "@/lib/order-edit-lock"
+import {
+  catalogLegacyIdsForNames,
+  fetchOrderStatusCatalog,
+  ORDER_TAG_QUEUE_NAMES,
+  type ConfiguredOrderStatus,
+} from "@/lib/order-statuses"
 import { productListDisplayName } from "@/lib/products"
 import {
   factoryMenuCategory,
@@ -65,6 +71,33 @@ export function isNewFactoryOrder(
 export function factoryEligibleDeliveries<T extends DeliveryListItem>(items: T[]): T[] {
   return items.filter(
     (item) => item.isSentToFactory === true || item.isSentToFactory === undefined,
+  )
+}
+
+export function reschedulePendingLegacyIds(
+  catalog: readonly Pick<ConfiguredOrderStatus, "name" | "legacyId">[],
+): string[] {
+  return catalogLegacyIdsForNames(
+    catalog,
+    ORDER_TAG_QUEUE_NAMES["reschedule-pending"],
+  )
+}
+
+export function isReschedulePendingOrder(
+  item: Pick<DeliveryListItem, "statusLegacyIds">,
+  rescheduleLegacyIds: ReadonlySet<string>,
+): boolean {
+  if (rescheduleLegacyIds.size === 0) return false
+  return (item.statusLegacyIds ?? []).some((legacyId) =>
+    rescheduleLegacyIds.has(legacyId),
+  )
+}
+
+export function excludeReschedulePending<
+  T extends Pick<DeliveryListItem, "statusLegacyIds">,
+>(items: T[], rescheduleLegacyIds: ReadonlySet<string>): T[] {
+  return items.filter(
+    (item) => !isReschedulePendingOrder(item, rescheduleLegacyIds),
   )
 }
 
@@ -820,13 +853,23 @@ export async function fetchFactoryMultiDayMenu(
   startDate: string,
   endDate: string,
 ): Promise<FactoryMultiDayMenuContribution[]> {
-  const deliveries = factoryEligibleDeliveries(await fetchDeliveryExportRows({
-    search: "",
-    startDate,
-    endDate,
-    motorcadeId: "",
-    shippingMethodId: "",
-  }))
+  const [exportRows, statusCatalog] = await Promise.all([
+    fetchDeliveryExportRows({
+      search: "",
+      startDate,
+      endDate,
+      motorcadeId: "",
+      shippingMethodId: "",
+    }),
+    fetchOrderStatusCatalog(),
+  ])
+  const rescheduleLegacyIds = new Set(
+    reschedulePendingLegacyIds(statusCatalog),
+  )
+  const deliveries = excludeReschedulePending(
+    factoryEligibleDeliveries(exportRows),
+    rescheduleLegacyIds,
+  )
   const orderIds = [
     ...new Set(
       deliveries
@@ -1058,7 +1101,7 @@ export async function fetchFactoryBoard(
   days = 3,
 ): Promise<FactoryBoardData> {
   const dates = factoryVisibleDates(startDate, days)
-  const [deliveryItems, meatItems, shopOrders] = await Promise.all([
+  const [deliveryItems, meatItems, shopOrders, statusCatalog] = await Promise.all([
     fetchDeliveryExportRows({
       search: "",
       startDate: dates[0],
@@ -1068,14 +1111,21 @@ export async function fetchFactoryBoard(
     }),
     fetchFactoryMeatOrders(dates[0]!, dates[dates.length - 1]!),
     fetchShopOrderRequests({ channel: "fc_internal" }),
+    fetchOrderStatusCatalog(),
   ])
+  const rescheduleLegacyIds = new Set(
+    reschedulePendingLegacyIds(statusCatalog),
+  )
   const shopItems = mapFactoryShopOrders(shopOrders).filter((item) => {
     if (!item.deliveryAt) return false
     const date = hongKongDateKey(item.deliveryAt)
     return date >= dates[0]! && date <= dates[dates.length - 1]!
   })
   const items: FactoryBoardItem[] = [
-    ...factoryEligibleDeliveries(deliveryItems).map((item) => ({ ...item, factorySource: "delivery" as const })),
+    ...excludeReschedulePending(
+      factoryEligibleDeliveries(deliveryItems),
+      rescheduleLegacyIds,
+    ).map((item) => ({ ...item, factorySource: "delivery" as const })),
     ...meatItems,
     ...shopItems,
   ]

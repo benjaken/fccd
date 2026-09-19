@@ -100,6 +100,15 @@ export type CustomerServiceTraceStep = {
   params: Record<string, string | number | boolean | null>;
 };
 
+export type CustomerServiceVisionPreview = {
+  mediaKind: string;
+  confidence: number;
+  needsHuman: boolean;
+  orderNumber: string | null;
+  summary: string;
+  extractedText: string;
+};
+
 export type CustomerServicePreviewResult = {
   reply: string | null;
   conversation: CustomerServicePreviewConversation;
@@ -112,6 +121,8 @@ export type CustomerServicePreviewResult = {
   toolKeys?: string[];
   relatedFaqs?: RelatedFaqSuggestion[];
   failureReason?: string | null;
+  mediaRoute?: string | null;
+  vision?: CustomerServiceVisionPreview | null;
   trace?: CustomerServiceTraceStep[];
 };
 
@@ -231,6 +242,12 @@ export type CustomerServiceReviewTurn = {
   note: string | null;
 };
 
+export type CustomerServiceRagFlags = {
+  enableRagV2: boolean;
+  enableQueryRewrite: boolean;
+  enableGroundedClarification: boolean;
+};
+
 export type CustomerServiceConfigVersion = {
   id: string;
   environment: string;
@@ -243,10 +260,20 @@ export type CustomerServiceConfigVersion = {
   systemPrompt: string;
   temperature: number;
   retrievalLimit: number;
+  ragConfig: CustomerServiceRagFlags;
   status: "draft" | "active" | "archived";
   activatedAt: string | null;
   createdAt: string;
 };
+
+export function parseCustomerServiceRagConfig(raw: unknown): CustomerServiceRagFlags {
+  const row = raw && typeof raw === "object" ? raw as Record<string, unknown> : {};
+  return {
+    enableRagV2: row.enable_rag_v2 === true,
+    enableQueryRewrite: row.enable_query_rewrite === true,
+    enableGroundedClarification: row.enable_grounded_clarification === true,
+  };
+}
 
 export type CustomerServiceEvaluationRun = {
   id: string;
@@ -468,6 +495,23 @@ export async function fetchCustomerFaqs({
   };
 }
 
+export async function refreshCustomerFaqEmbeddings() {
+  try {
+    const { data, error } = await supabase.functions.invoke("customer-service-faq-embed", {
+      body: { limit: 20 },
+    });
+    if (error || !data || data.ok !== true) {
+      console.warn("customer-service embedding refresh incomplete; inspect embedding status and retry");
+      return { ok: false, code: "embedding_refresh_incomplete" };
+    }
+    // Saving a FAQ and finishing ALL pending embeddings are separate outcomes.
+    return { ok: true, ...data };
+  } catch {
+    console.warn("customer-service embedding refresh invocation failed");
+    return { ok: false, code: "embedding_refresh_failed" };
+  }
+}
+
 export async function createCustomerFaq(input: CustomerFaqWriteInput) {
   const fields = normalizeCustomerFaqInput(input);
   const { error } = await supabase.from("customer_faqs").insert({
@@ -480,6 +524,7 @@ export async function createCustomerFaq(input: CustomerFaqWriteInput) {
     sort_order: fields.sortOrder,
   });
   if (error) throw error;
+  void refreshCustomerFaqEmbeddings();
 }
 
 export async function updateCustomerFaq(
@@ -500,6 +545,7 @@ export async function updateCustomerFaq(
     })
     .eq("id", id);
   if (error) throw error;
+  void refreshCustomerFaqEmbeddings();
 }
 
 export async function fetchCustomerServiceControls(): Promise<CustomerServiceControls> {
@@ -557,6 +603,7 @@ export async function searchPublishedCustomerFaqs(
 export async function previewCustomerServiceTurn(input: {
   text: string;
   phone?: string;
+  image?: string;
   conversation?: CustomerServicePreviewConversation | null;
 }): Promise<CustomerServicePreviewResult> {
   const { data, error } = await supabase.functions.invoke(
@@ -566,6 +613,7 @@ export async function previewCustomerServiceTurn(input: {
         mode: "preview",
         text: input.text.trim(),
         phone: input.phone?.trim() || undefined,
+        image: input.image || undefined,
         conversation: input.conversation ?? undefined,
       },
     },
@@ -583,6 +631,8 @@ export async function previewCustomerServiceTurn(input: {
     tool_keys?: unknown;
     related_faqs?: unknown;
     failure_reason?: unknown;
+    media_route?: unknown;
+    vision?: unknown;
     trace?: unknown;
   } | null;
   if (!payload?.conversation)
@@ -618,7 +668,27 @@ export async function previewCustomerServiceTurn(input: {
     relatedFaqs,
     failureReason:
       typeof payload.failure_reason === "string" ? payload.failure_reason : null,
+    mediaRoute:
+      typeof payload.media_route === "string" ? payload.media_route : null,
+    vision: parseCustomerServiceVisionPreview(payload.vision),
     trace: parseCustomerServiceTrace(payload.trace),
+  };
+}
+
+function parseCustomerServiceVisionPreview(
+  value: unknown,
+): CustomerServiceVisionPreview | null {
+  if (!value || typeof value !== "object") return null;
+  const row = value as Record<string, unknown>;
+  if (typeof row.media_kind !== "string") return null;
+  return {
+    mediaKind: row.media_kind,
+    confidence: typeof row.confidence === "number" ? row.confidence : 0,
+    needsHuman: Boolean(row.needs_human),
+    orderNumber: typeof row.order_number === "string" ? row.order_number : null,
+    summary: typeof row.summary === "string" ? row.summary : "",
+    extractedText:
+      typeof row.extracted_text === "string" ? row.extracted_text : "",
   };
 }
 
@@ -798,6 +868,7 @@ export async function generateCustomerServiceDailyReport(reportDate: string) {
     { body: { report_date: reportDate } },
   );
   if (error) throw error;
+  void refreshCustomerFaqEmbeddings();
   return data;
 }
 
@@ -810,6 +881,7 @@ export async function reviewCustomerServiceLearningSuggestion(
     { p_id: id, p_status: status },
   );
   if (error) throw error;
+  if (status === "approved") void refreshCustomerFaqEmbeddings();
   return (data as Array<{ target_faq_id: string | null }> | null)?.[0];
 }
 
@@ -868,6 +940,7 @@ export async function submitCustomerServiceTurnFeedback(input: {
     },
   );
   if (error) throw error;
+  if (input.createFaqDraft) void refreshCustomerFaqEmbeddings();
   return data;
 }
 
@@ -892,12 +965,28 @@ export async function fetchCustomerServiceConfigVersions(
       systemPrompt: String(row.system_prompt || ""),
       temperature: Number(row.temperature),
       retrievalLimit: Number(row.retrieval_limit),
+      ragConfig: parseCustomerServiceRagConfig(row.rag_config),
       status: row.status as CustomerServiceConfigVersion["status"],
       activatedAt:
         typeof row.activated_at === "string" ? row.activated_at : null,
       createdAt: String(row.created_at),
     }),
   );
+}
+
+export async function setCustomerServiceConfigRag(
+  id: string,
+  ragConfig: CustomerServiceRagFlags,
+) {
+  const { error } = await supabase.rpc("customer_service_config_set_rag", {
+    p_id: id,
+    p_rag_config: {
+      enable_rag_v2: ragConfig.enableRagV2,
+      enable_query_rewrite: ragConfig.enableQueryRewrite,
+      enable_grounded_clarification: ragConfig.enableGroundedClarification,
+    },
+  });
+  if (error) throw error;
 }
 
 export async function createCustomerServiceConfig(input: {
@@ -910,6 +999,7 @@ export async function createCustomerServiceConfig(input: {
   systemPrompt: string;
   temperature: number;
   retrievalLimit: number;
+  ragConfig?: CustomerServiceRagFlags;
 }) {
   const { data, error } = await supabase.rpc("customer_service_config_create_tiered", {
     p_environment: input.environment || "develop",
@@ -923,7 +1013,9 @@ export async function createCustomerServiceConfig(input: {
     p_retrieval_limit: input.retrievalLimit,
   });
   if (error) throw error;
-  return String(data);
+  const id = String(data);
+  if (input.ragConfig) await setCustomerServiceConfigRag(id, input.ragConfig);
+  return id;
 }
 
 export async function activateCustomerServiceConfig(id: string) {

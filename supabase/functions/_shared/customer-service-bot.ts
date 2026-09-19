@@ -1,3 +1,4 @@
+import { composeGroundedFaqReply } from "./customer-service-grounding.ts";
 import {
   classifyCustomerServiceMessage,
   customerServiceBrandIdentityName,
@@ -14,6 +15,7 @@ import {
   isCustomerServiceGreeting,
   isCustomerServiceEmojiAcknowledgement,
   isCustomerServiceThanks,
+  isBlockedDateReasonQuestion,
   isDeliveryAvailabilityQuestion,
   isHongKongCalendarDateToday,
   isMenuInformationRequest,
@@ -209,6 +211,16 @@ export type CustomerServiceBotDeps = {
     anotherEvent: boolean,
   ) => Promise<CustomerServiceInquiryWrite>;
   searchFaqs: (query: string) => Promise<CustomerServiceFaqHit[]>;
+  /**
+   * Optional query rewrite (coreference resolution) applied before FAQ
+   * retrieval. Returning null leaves the original query untouched.
+   */
+  rewriteQuery?: (query: string) => Promise<{
+    rewrittenQuery: string;
+    intentHint: string;
+    usedContext: boolean;
+    model: string;
+  } | null>;
   searchCatalog?: (query: string) => Promise<CustomerServiceCatalogHit[]>;
   checkDeliveryDateAvailability?: (
     date: string,
@@ -221,8 +233,17 @@ export type CustomerServiceBotDeps = {
   answerFaqWithModel?: (
     query: string,
     candidates: CustomerServiceFaqHit[],
+    rewrittenQuery?: string,
   ) => Promise<
-    string | { answer: string; sourceIds: string[]; model: string } | null
+    | string
+    | {
+      answer: string;
+      sourceIds: string[];
+      model: string;
+      needsClarification?: boolean;
+      clarificationQuestion?: string;
+    }
+    | null
   >;
   answerWithoutFaqWithModel?: (input: {
     query: string;
@@ -335,7 +356,7 @@ function normalizedFaqText(value: string) {
     .replace(/^(請問|想問|我想問|可唔可以問)/, "");
 }
 
-function orderIntakeAvailabilityReply(
+export function orderIntakeAvailabilityReply(
   date: string,
   availability: CustomerServiceOrderIntakeAvailability,
   deliveryTime?: string | null,
@@ -1530,11 +1551,37 @@ async function replySingleFaq(
   conversation: CustomerServiceConversation,
   query: string,
 ): Promise<BotTurn> {
-  const hits = await deps.searchFaqs(query);
-  const approvedHits = hits.filter((hit) => strongPublishedFaqMatch(query, hit));
+  // Query rewrite only affects retrieval quality; the customer's original
+  // wording is kept for anything that reaches the customer.
+  let lookupQuery = query;
+  if (deps.rewriteQuery) {
+    try {
+      const rewritten = await deps.rewriteQuery(query);
+      if (rewritten?.rewrittenQuery?.trim() && rewritten.intentHint !== "clarification") {
+        lookupQuery = rewritten.rewrittenQuery.trim();
+      }
+    } catch (error) {
+      console.error(
+        "customer-service query rewrite failed",
+        error instanceof Error ? error.message.slice(0, 200) : String(error),
+      );
+    }
+  }
+  let hits: CustomerServiceFaqHit[];
+  try {
+    hits = await deps.searchFaqs(lookupQuery);
+  } catch {
+    // A retrieval outage is not evidence that a policy does not exist.
+    return {
+      reply: "唔好意思，暫時未能查到相關資料，請稍後再試。",
+      conversation, wroteInquiry: false, notified: false,
+      usedModel: classified.usedModel, failureReason: "retrieval_error",
+    };
+  }
+  const approvedHits = hits.filter((hit) => strongPublishedFaqMatch(lookupQuery, hit));
   // Text rules remain a fast path, not an allow-list for newly published knowledge.
   // Weak candidates may only produce a cited model answer, never a raw fallback.
-  const normalizedQuery = normalizedFaqText(query);
+  const normalizedQuery = normalizedFaqText(lookupQuery);
   const genericQuery = FAQ_MODEL_FALLBACK_GENERIC_QUERIES.has(normalizedQuery.toLowerCase());
   const modelCandidates = approvedHits.length ? approvedHits : genericQuery ? [] : hits.filter((hit) => {
     const question = normalizedFaqText(hit.question);
@@ -1545,12 +1592,26 @@ async function replySingleFaq(
   });
   if (deps.answerFaqWithModel && modelCandidates.length) {
     try {
-      const modelAnswer = await deps.answerFaqWithModel(query, modelCandidates);
-      const answer =
+      const rewrittenQuery = lookupQuery !== query ? lookupQuery : undefined;
+      const modelAnswer = rewrittenQuery
+        ? await deps.answerFaqWithModel(query, modelCandidates, rewrittenQuery)
+        : await deps.answerFaqWithModel(query, modelCandidates);
+      const rawAnswer =
         typeof modelAnswer === "string" ? modelAnswer : modelAnswer?.answer;
+      const clarification =
+        typeof modelAnswer === "object" && modelAnswer?.needsClarification
+          ? modelAnswer.clarificationQuestion?.trim() ?? ""
+          : "";
+
       const returnedSourceIds = typeof modelAnswer === "object" && modelAnswer ? modelAnswer.sourceIds : [];
       const citedIds = returnedSourceIds.filter((id) => modelCandidates.some((hit) => hit.id === id));
       const validFallbackSources = citedIds.length > 0 && citedIds.length === returnedSourceIds.length;
+      // Validate every field after composition, even for a custom/mock answer adapter.
+      const groundingSources = citedIds.length
+        ? modelCandidates.filter((hit) => citedIds.includes(hit.id)) : approvedHits;
+      const composed = rawAnswer
+        ? composeGroundedFaqReply(rawAnswer, clarification, groundingSources) : null;
+      const answer = composed?.answer;
       if (answer && (approvedHits.length > 0 || validFallbackSources)) {
         const excludeIds = citedIds.length
           ? citedIds
@@ -1630,7 +1691,9 @@ async function replyFaq(
     usedModel: turns.some((turn) => turn.usedModel),
     faqSourceIds: turns.flatMap((turn) => turn.faqSourceIds ?? []),
     relatedFaqs: turns.flatMap((turn) => turn.relatedFaqs ?? []).slice(0, 3),
-    failureReason: unanswered.length === turns.length
+    failureReason: turns.some((turn) => turn.failureReason === "retrieval_error")
+      ? answered.length ? "faq_partially_answered" : "retrieval_error"
+      : unanswered.length === turns.length
       ? "faq_not_found"
       : answered.length < turns.length
       ? "faq_partially_answered"
@@ -2216,6 +2279,7 @@ export async function handleCustomerServiceTurn({
   if (
     classified.configuredIntentKey === "delivery_availability" ||
     (!classified.usedModel && isDeliveryAvailabilityQuestion(text)) ||
+    isBlockedDateReasonQuestion(text) ||
     (conversation.pending_request === "availability:date" && canContinueAvailability && Boolean(resolveCustomerServiceDeliveryDate(text)))
   ) {
     const requestedDate = resolveCustomerServiceDeliveryDate(text);
@@ -2552,3 +2616,6 @@ export async function handleCustomerServiceTurn({
     toolKeys: [...(faqTurn.toolKeys ?? []), "queue_handoff"],
   });
 }
+
+// Read-only FAQ entry point shared with the evaluation endpoint.
+export { replyFaq as answerCustomerServiceFaqForEvaluation };

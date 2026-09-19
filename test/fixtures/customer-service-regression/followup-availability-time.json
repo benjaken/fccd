@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "id": "followup-availability-time",
+  "title": "先問日期再追問送達時間的承接",
+  "status": "approved",
+  "clock": "2026-09-15T07:00:00.000Z",
+  "source": {
+    "kind": "target_baseline",
+    "reference": "PRD FR-01 / short follow-up within pending availability request"
+  },
+  "world": {},
+  "turns": [
+    {
+      "customer": "2026-09-20可以訂到會嗎？",
+      "recordedClassification": {
+        "intent": "search_faq",
+        "configuredIntentKey": "delivery_availability",
+        "dialogAction": "new_request"
+      },
+      "expect": {
+        "effects": {
+          "writeInquiry": 0,
+          "queueHandoff": 0
+        },
+        "replyContains": [
+          "20/9"
+        ],
+        "replyExcludes": [
+          "undefined",
+          "NaN"
+        ],
+        "intakeDate": "2026-09-20",
+        "pendingRequest": "availability:delivery_time"
+      }
+    },
+    {
+      "customer": "下午6點",
+      "expect": {
+        "effects": {
+          "writeInquiry": 0,
+          "queueHandoff": 0
+        },
+        "replyContains": [
+          "18:00"
+        ],
+        "replyExcludes": [
+          "undefined",
+          "NaN"
+        ]
+      }
+    }
+  ]
+}

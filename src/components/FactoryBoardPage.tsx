@@ -859,8 +859,8 @@ export function FactoryBoardPage({
                       item.id === selectedJob.id
                         ? {
                             ...item,
-                            motorcadeId: fleet.id,
-                            motorcadeName: fleet.name,
+                            motorcadeId: fleet?.id ?? null,
+                            motorcadeName: fleet?.name ?? null,
                           }
                         : item,
                     ),
@@ -871,8 +871,8 @@ export function FactoryBoardPage({
               current
                 ? {
                     ...current,
-                    motorcadeId: fleet.id,
-                    motorcadeName: fleet.name,
+                    motorcadeId: fleet?.id ?? null,
+                    motorcadeName: fleet?.name ?? null,
                   }
                 : current,
             );

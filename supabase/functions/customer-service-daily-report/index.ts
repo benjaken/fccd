@@ -69,6 +69,24 @@ async function authorize(request: Request, admin: AdminClient) {
   if (accessError) throw new Error("page_access_required");
 }
 
+async function refreshPendingFaqEmbeddings() {
+  const url = `${env("SUPABASE_URL")}/functions/v1/customer-service-faq-embed`;
+  try {
+    const response = await fetch(url, {
+      method: "POST",
+      signal: AbortSignal.timeout(48_000),
+      headers: { Authorization: `Bearer ${serviceRoleKey()}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ limit: 20 }),
+    });
+    const result = await response.json().catch(() => null);
+    if (!response.ok || result?.ok !== true) {
+      console.error("customer-service faq embedding refresh incomplete; inspect pending/failed rows");
+    }
+  } catch {
+    console.error("customer-service faq embedding refresh invocation failed");
+  }
+}
+
 function previousHongKongDate() {
   return new Date(Date.now() + 8 * 60 * 60 * 1_000 - 24 * 60 * 60 * 1_000)
     .toISOString()
@@ -365,6 +383,7 @@ Deno.serve(async (request) => {
       }
     }
 
+    await refreshPendingFaqEmbeddings();
     return jsonResponse({ ok: true, report_id: report.id, report_date: reportDate, status, metrics });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);

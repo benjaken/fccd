@@ -10,6 +10,9 @@ import {
   factoryVisibleDates,
   factoryOrderPrintStatus,
   factoryEligibleDeliveries,
+  excludeReschedulePending,
+  isReschedulePendingOrder,
+  reschedulePendingLegacyIds,
   factoryProductLabelName,
   factoryProductLabelNames,
   factoryOrderLineLabelName,
@@ -151,6 +154,43 @@ describe("factory board helpers", () => {
         item({ id: "legacy-fixture" }),
       ]).map((row) => row.id),
     ).toEqual(["sent", "legacy-fixture"]);
+  });
+
+  it("hides reschedule-pending orders from the factory board", () => {
+    const catalog = [
+      { legacyId: "legacy-reschedule", name: "改期未定" },
+      { legacyId: "legacy-review", name: "改期未審" },
+      { legacyId: "legacy-monthly", name: "月結" },
+    ];
+    const legacyIds = new Set(reschedulePendingLegacyIds(catalog));
+
+    expect(reschedulePendingLegacyIds(catalog)).toEqual([
+      "legacy-reschedule",
+      "legacy-review",
+    ]);
+    expect(
+      isReschedulePendingOrder(
+        item({ id: "pending", statusLegacyIds: ["legacy-reschedule"] }),
+        legacyIds,
+      ),
+    ).toBe(true);
+    expect(
+      isReschedulePendingOrder(
+        item({ id: "normal", statusLegacyIds: ["legacy-monthly"] }),
+        legacyIds,
+      ),
+    ).toBe(false);
+
+    expect(
+      excludeReschedulePending(
+        [
+          item({ id: "normal", statusLegacyIds: ["legacy-monthly"] }),
+          item({ id: "pending", statusLegacyIds: ["legacy-reschedule"] }),
+          item({ id: "legacy-fixture" }),
+        ],
+        legacyIds,
+      ).map((row) => row.id),
+    ).toEqual(["normal", "legacy-fixture"]);
   });
 
   it("marks a factory order as new only during the first 12 hours after entry", () => {

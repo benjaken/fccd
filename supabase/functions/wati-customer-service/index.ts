@@ -1,8 +1,8 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { createCustomerServiceFaqRagDeps } from "../_shared/customer-service-rag-runtime.ts";
 
 import { EMAIL_FROM } from "../_shared/email-sender.ts";
 import {
-  answerCustomerServiceFaqWithTieredAi,
   answerCustomerServiceFallbackWithTieredAi,
   classifyCustomerServiceWithTieredAi,
   customerServiceAiConfig,
@@ -15,6 +15,10 @@ import {
   sanitizeCustomerServiceRecentMessages,
   type CustomerServiceRecentMessage,
 } from "../_shared/customer-service-context.ts";
+import {
+  customerServiceRagConfig,
+  type CustomerServiceRagConfig,
+} from "../_shared/customer-service-rag-config.ts";
 import {
   customerServiceCatalogItemLinks,
   customerServiceCatalogSearchAnchor,
@@ -35,7 +39,9 @@ import {
 } from "../_shared/customer-service-burst.ts";
 import {
   handleCustomerServiceTurn,
+  orderIntakeAvailabilityReply,
   type CustomerServiceConversation,
+  type CustomerServiceOrderIntakeAvailability,
   type CustomerServiceTraceStep,
 } from "../_shared/customer-service-bot.ts";
 import {
@@ -47,6 +53,7 @@ import {
   classifyCustomerServiceMessage,
   extractCustomerServiceClockTime,
   explicitCustomerServiceOrderNumber,
+  resolveCustomerServiceDeliveryDate,
   shouldBypassCustomerServiceAi,
   type ClassifiedMessage,
   type CustomerServiceIntent,
@@ -92,9 +99,30 @@ import {
 } from "../_shared/customer-service-order-intake.ts";
 import {
   buildInboundMediaHandoffSummary,
-  isTrustedWatiMediaUrl,
+  downloadTrustedInboundMedia,
+  isTrustedInboundImageUrl,
   mediaStoragePath,
 } from "../_shared/customer-service-media.ts";
+import {
+  analyzeCustomerServiceImage,
+  customerServiceVisionUnavailableReason,
+  type CustomerServiceVisionResult,
+} from "../_shared/customer-service-vision.ts";
+import {
+  customerServiceBrandMenuLinks,
+  customerServiceMenuBrandFromUrl,
+  customerServiceMenuImageBrand,
+  customerServiceMenuImageBrandLink,
+  customerServiceMenuImageReplyText,
+  customerServiceMenuProductMatches,
+  customerServiceMenuProductReplyText,
+  customerServiceExactSkuFilter,
+  customerServicePublicProductUrl,
+  customerServiceShopifyProductUrl,
+  customerServiceSkuProductsForBrand,
+  decideCustomerServiceMediaRoute,
+  type CustomerServiceMediaRoute,
+} from "../_shared/customer-service-vision-routing.ts";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -1043,12 +1071,13 @@ type ActiveCustomerServiceConfig = {
   system_prompt: string;
   temperature: number;
   retrieval_limit: number;
+  rag_config?: unknown;
 };
 
 async function loadActiveCustomerServiceConfig(admin: AdminClient) {
   const { data, error } = await admin
     .from("customer_service_config_versions")
-    .select("model,fallback_model,fallback_enabled,escalation_confidence,system_prompt,temperature,retrieval_limit")
+    .select("model,fallback_model,fallback_enabled,escalation_confidence,system_prompt,temperature,retrieval_limit,rag_config")
     .eq("environment", deploymentEnvironment())
     .eq("status", "active")
     .maybeSingle();
@@ -1678,6 +1707,7 @@ function createBotDeps(
     activeConfig = null,
     tiers = customerServiceAiTiers(activeConfig),
     workflowPolicies = [],
+    recentMessages = [],
   }: {
     dryRun?: boolean;
     mutationGuard?: () => Promise<void>;
@@ -1685,13 +1715,22 @@ function createBotDeps(
     activeConfig?: ActiveCustomerServiceConfig | null;
     tiers?: CustomerServiceAiTierConfig;
     workflowPolicies?: WorkflowPolicy[];
+    recentMessages?: CustomerServiceRecentMessage[];
   } = {},
 ) {
+  const ragConfig: CustomerServiceRagConfig = customerServiceRagConfig(activeConfig);
   return {
     replyTemplates,
     workflowAutoResume: Object.fromEntries(
       workflowPolicies.map((policy) => [policy.goalKey, policy.autoResume]),
     ),
+    ...createCustomerServiceFaqRagDeps({
+      db: admin,
+      ragConfig,
+      tiers,
+      recentMessages,
+      legacyLimit: activeConfig?.retrieval_limit ?? 12,
+    }),
     async lookupOrders(phone: string) {
       const { data, error } = await admin.rpc(
         "customer_service_lookup_orders",
@@ -1771,22 +1810,6 @@ function createBotDeps(
       )?.[0];
       if (!row) throw new Error("inquiry_write_failed");
       return row;
-    },
-    async searchFaqs(query: string) {
-      const { data, error } = await admin.rpc(
-        "search_published_customer_faqs",
-        {
-          p_query: query,
-          p_limit: activeConfig?.retrieval_limit ?? 12,
-        },
-      );
-      if (error) throw error;
-      return (data ?? []) as Array<{
-        id: string;
-        category: string;
-        question: string;
-        answer: string;
-      }>;
     },
     async checkDeliveryDateAvailability(date: string) {
       const start = new Date(`${date}T00:00:00+08:00`);
@@ -2031,26 +2054,6 @@ function createBotDeps(
         };
       });
     },
-    async answerFaqWithModel(
-      query: string,
-      candidates: Array<{
-        id: string;
-        category?: string;
-        question: string;
-        answer: string;
-      }>,
-    ) {
-      if (!candidates.length) return null;
-      const result = await answerCustomerServiceFaqWithTieredAi({
-        question: query,
-        faqs: candidates.map((candidate) => ({
-          ...candidate,
-          category: candidate.category || "general",
-        })),
-        tiers,
-      });
-      return result ?? null;
-    },
     async answerWithoutFaqWithModel(input: {
       query: string;
       intentKey: string;
@@ -2189,6 +2192,17 @@ function previewConversation(
   };
 }
 
+const PREVIEW_IMAGE_PREFIX = "data:image/";
+const PREVIEW_IMAGE_MAX_CHARS = 7_000_000;
+
+/** Accept only a small base64 image data URL from the preview console. */
+function parsePreviewImage(value: unknown) {
+  if (typeof value !== "string") return "";
+  const trimmed = value.trim();
+  if (!trimmed.startsWith(PREVIEW_IMAGE_PREFIX)) return "";
+  return trimmed.slice(0, PREVIEW_IMAGE_MAX_CHARS);
+}
+
 async function handleBackendPreview(
   request: Request,
   payload: Record<string, unknown>,
@@ -2212,7 +2226,8 @@ async function handleBackendPreview(
 
   const text =
     typeof payload.text === "string" ? payload.text.trim().slice(0, 1_000) : "";
-  if (!text) return jsonResponse({ error: "message_required" }, 400);
+  const image = parsePreviewImage(payload.image);
+  if (!text && !image) return jsonResponse({ error: "message_required" }, 400);
   const phone =
     normalizeNotificationPhone(
       typeof payload.phone === "string" ? payload.phone : "",
@@ -2227,6 +2242,7 @@ async function handleBackendPreview(
     params: {
       state: conversation.state,
       pending_request: conversation.pending_request ?? null,
+      has_image: Boolean(image),
     },
   });
   const [runtime, activeConfig] = await Promise.all([
@@ -2246,32 +2262,175 @@ async function handleBackendPreview(
       escalation_confidence: tiers.escalationConfidence,
     },
   });
-  const turn = await handleCustomerServiceTurn({
-    phone,
-    text,
-    conversation,
-    deps: createBotDeps(admin, {
-      dryRun: true,
-      replyTemplates: runtime.replyTemplates,
-      activeConfig,
-      tiers,
-      workflowPolicies: runtime.workflowPolicies,
-    }),
-    classify: createCustomerServiceClassifier({
-      intents: runtime.intents,
-      conversationState: conversation.state,
-      pendingRequest: conversation.pending_request,
-      recentMessages: conversation.recent_messages,
-      activeGoal: conversation.active_goal,
-      workflowPolicies: runtime.workflowPolicies,
-      tiers,
-      traceSteps,
-    }),
+  let vision: CustomerServiceVisionResult | null = null;
+  let visionFailureReason = "";
+  if (image) {
+    try {
+      vision = await analyzeCustomerServiceImage({
+        imageUrl: image,
+        caption: text,
+      });
+      if (!vision) {
+        visionFailureReason = customerServiceVisionUnavailableReason(image);
+      }
+    } catch (error) {
+      visionFailureReason =
+        error instanceof Error ? error.message.slice(0, 300) : String(error);
+      console.error("customer_service_preview_vision_failed", visionFailureReason);
+    }
+    traceSteps.push({
+      stage: "vision",
+      status: vision ? (vision.needsHuman ? "warn" : "ok") : "failed",
+      code: vision?.mediaKind ?? "vision_unavailable",
+      params: {
+        reason: visionFailureReason || null,
+        confidence: vision?.confidence ?? null,
+        needs_human: vision?.needsHuman ?? null,
+        order_number: vision?.entities?.orderNumber ?? null,
+      },
+    });
+  }
+  const mediaRoute = image ? decideCustomerServiceMediaRoute(vision) : null;
+  const deps = createBotDeps(admin, {
+    dryRun: true,
+    replyTemplates: runtime.replyTemplates,
+    activeConfig,
+    tiers,
+    workflowPolicies: runtime.workflowPolicies,
+    recentMessages: conversation.recent_messages,
+  });
+  const baseClassify = createCustomerServiceClassifier({
+    intents: runtime.intents,
+    conversationState: conversation.state,
+    pendingRequest: conversation.pending_request,
+    recentMessages: conversation.recent_messages,
+    activeGoal: conversation.active_goal,
+    workflowPolicies: runtime.workflowPolicies,
+    tiers,
     traceSteps,
   });
+  let turn: Awaited<ReturnType<typeof handleCustomerServiceTurn>>;
+  if (mediaRoute?.action === "menu") {
+    const menuText = customerServiceMenuImageText(text, vision);
+    const brand = customerServiceMenuImageBrand(menuText);
+    const skuReply = await loadCustomerServiceMenuSkuReply(
+      admin,
+      vision?.entities?.productCode ?? "",
+      brand,
+    );
+    const nameReply = skuReply ? "" : await loadCustomerServiceMenuProductReply(
+      admin,
+      vision?.entities?.productNames ?? [],
+      brand,
+    );
+    const productReply = skuReply || nameReply;
+    const menuResolution = await resolveCustomerServiceMenuImageReply(admin, {
+      conversation,
+      text: menuText || text,
+      brand,
+      productReply,
+      dryRun: true,
+    });
+    turn = {
+      reply: menuResolution.reply,
+      conversation: menuResolution.restricted
+        ? menuImageRestrictedConversation(
+          conversation,
+          menuResolution.deliveryDate,
+          menuText,
+        )
+        : conversation,
+      wroteInquiry: false,
+      notified: false,
+      usedModel: false,
+      intentKey: "media_menu",
+      toolKeys: menuResolution.restricted
+        ? ["check_order_intake"]
+        : productReply
+        ? ["search_catalog"]
+        : ["search_faqs"],
+      failureReason: menuResolution.restricted
+        ? "menu_image_blocked_date"
+        : null,
+      dialogAction: "new_request",
+    };
+    traceSteps.push({
+      stage: "media_route",
+      status: "ok",
+      code: "menu",
+      params: {
+        brand: brand || null,
+        product_code: vision?.entities?.productCode ?? null,
+        product_source: skuReply
+          ? "sku"
+          : nameReply
+          ? "name"
+          : "brand_menu",
+        product_match: Boolean(productReply),
+        restricted: menuResolution.restricted,
+        delivery_date: menuResolution.deliveryDate || null,
+        has_links: /https?:\/\//i.test(menuResolution.reply),
+      },
+    });
+  } else if (mediaRoute?.action === "order") {
+    const orderNumber = mediaRoute.orderNumber;
+    turn = await handleCustomerServiceTurn({
+      phone,
+      text: text || orderNumber,
+      conversation,
+      deps,
+      classify: async (value: string) => {
+        const baseResult = await baseClassify(value);
+        return baseResult.orderNumber
+          ? baseResult
+          : { ...baseResult, orderNumber };
+      },
+      traceSteps,
+    });
+    traceSteps.push({
+      stage: "media_route",
+      status: "ok",
+      code: "order",
+      params: { order_number: orderNumber },
+    });
+  } else if (image) {
+    turn = {
+      reply: visionCustomerReply(vision, "圖片"),
+      conversation: {
+        ...conversation,
+        state: "awaiting_human",
+        handoff_at: new Date().toISOString(),
+        pending_request: "查看客人圖片",
+        active_goal: null,
+        handoff_kind: "general",
+        handoff_urgent: false,
+        handoff_quote_id: null,
+      },
+      wroteInquiry: false,
+      notified: false,
+      queuedHandoff: true,
+      usedModel: false,
+      intentKey: vision?.mediaKind === "menu_product"
+        ? "media_vision"
+        : "media_handoff",
+      toolKeys: ["queue_handoff"],
+      failureReason: null,
+      dialogAction: "new_request",
+    };
+  } else {
+    turn = await handleCustomerServiceTurn({
+      phone,
+      text,
+      conversation,
+      deps,
+      classify: baseClassify,
+      traceSteps,
+    });
+  }
+  const recordedText = text || "[圖片]";
   turn.conversation.recent_messages = sanitizeCustomerServiceRecentMessages([
     ...(conversation.recent_messages ?? []),
-    { role: "customer", text },
+    { role: "customer", text: recordedText },
     ...(turn.reply ? [{ role: "assistant" as const, text: turn.reply }] : []),
   ]);
   const failureReason = turn.failureReason ?? null;
@@ -2331,6 +2490,17 @@ async function handleBackendPreview(
     tool_keys: turn.toolKeys ?? [],
     related_faqs: turn.relatedFaqs ?? [],
     failure_reason: failureReason,
+    media_route: mediaRoute?.action ?? null,
+    vision: vision
+      ? {
+        media_kind: vision.mediaKind,
+        confidence: vision.confidence,
+        needs_human: vision.needsHuman,
+        order_number: vision.entities?.orderNumber ?? null,
+        summary: vision.summary,
+        extracted_text: vision.extractedText,
+      }
+      : null,
     trace: traceSteps,
   });
 }
@@ -2341,6 +2511,10 @@ async function prepareCustomerServiceTurn(
     phone: string;
     text: string;
     mutationGuard?: () => Promise<void>;
+    classify?: (
+      text: string,
+      base: (value: string) => Promise<ClassifiedMessage>,
+    ) => ClassifiedMessage | Promise<ClassifiedMessage>;
   },
 ) {
   const conversation = await loadConversation(admin, input.phone);
@@ -2350,6 +2524,15 @@ async function prepareCustomerServiceTurn(
     loadActiveCustomerServiceConfig(admin),
   ]);
   const tiers = customerServiceAiTiers(activeConfig);
+  const baseClassify = createCustomerServiceClassifier({
+    intents: runtime.intents,
+    conversationState: conversation.state,
+    pendingRequest: conversation.pending_request,
+    recentMessages: conversation.recent_messages,
+    activeGoal: conversation.active_goal,
+    workflowPolicies: runtime.workflowPolicies,
+    tiers,
+  });
   const turn = await handleCustomerServiceTurn({
     phone: input.phone,
     text: input.text,
@@ -2360,16 +2543,11 @@ async function prepareCustomerServiceTurn(
       tiers,
       workflowPolicies: runtime.workflowPolicies,
       mutationGuard: input.mutationGuard,
-    }),
-    classify: createCustomerServiceClassifier({
-      intents: runtime.intents,
-      conversationState: conversation.state,
-      pendingRequest: conversation.pending_request,
       recentMessages: conversation.recent_messages,
-      activeGoal: conversation.active_goal,
-      workflowPolicies: runtime.workflowPolicies,
-      tiers,
     }),
+    classify: input.classify
+      ? (text: string) => input.classify!(text, baseClassify)
+      : baseClassify,
   });
   return { conversation, startedAt, turn };
 }
@@ -2516,43 +2694,61 @@ async function mirrorInboundMedia(
   admin: AdminClient,
   event: Pick<WatiInboundEvent, "id" | "waId" | "mediaUrl">,
 ) {
-  if (!isTrustedWatiMediaUrl(event.mediaUrl)) return null;
-  const token = env("WATI_API_TOKEN") || env("WATI_ACCESS_TOKEN");
-  if (!token) return null;
+  if (!isTrustedInboundImageUrl(event.mediaUrl)) {
+    let host = "";
+    let path = "";
+    try {
+      const parsed = new URL(event.mediaUrl || "");
+      host = parsed.hostname;
+      path = parsed.pathname;
+    } catch {
+      // The URL is only used for diagnostics.
+    }
+    console.error("customer_service_media_untrusted_url", {
+      providerMessageId: event.id,
+      host,
+      path,
+      hasMediaUrl: Boolean(event.mediaUrl),
+    });
+    return null;
+  }
   try {
-    const response = await fetch(event.mediaUrl!, {
-      headers: { Authorization: `Bearer ${token.replace(/^Bearer\s+/i, "")}` },
+    const downloaded = await downloadTrustedInboundMedia(event.mediaUrl, {
+      tokens: [env("WATI_ACCESS_TOKEN"), env("WATI_API_TOKEN")],
+      maxBytes: CUSTOMER_SERVICE_MEDIA_MAX_BYTES,
     });
-    if (!response.ok) throw new Error(`wati_media_download_failed:${response.status}`);
-    const declaredSize = Number(response.headers.get("content-length") || 0);
-    if (declaredSize > CUSTOMER_SERVICE_MEDIA_MAX_BYTES) {
-      throw new Error("wati_media_too_large");
+    let signedUrl: string | null = null;
+    try {
+      const path = mediaStoragePath({
+        environment: deploymentEnvironment(),
+        phone: event.waId,
+        messageId: event.id,
+        mediaUrl: event.mediaUrl,
+        contentType: downloaded.contentType,
+      });
+      const { error: uploadError } = await admin.storage
+        .from(CUSTOMER_SERVICE_MEDIA_BUCKET)
+        .upload(path, downloaded.bytes, {
+          contentType: downloaded.contentType,
+          upsert: true,
+        });
+      if (uploadError) throw uploadError;
+      const { data, error: signedUrlError } = await admin.storage
+        .from(CUSTOMER_SERVICE_MEDIA_BUCKET)
+        .createSignedUrl(path, 60 * 60 * 24 * 30);
+      if (signedUrlError) throw signedUrlError;
+      signedUrl = data.signedUrl;
+    } catch (error) {
+      console.error("customer_service_media_upload_failed", {
+        providerMessageId: event.id,
+        error: error instanceof Error ? error.message : String(error),
+      });
     }
-    const contentType = (response.headers.get("content-type") || "application/octet-stream")
-      .split(";", 1)[0].trim().toLowerCase();
-    if (!contentType.startsWith("image/") && !contentType.startsWith("audio/")) {
-      throw new Error(`wati_media_type_not_allowed:${contentType}`);
-    }
-    const body = await response.arrayBuffer();
-    if (body.byteLength > CUSTOMER_SERVICE_MEDIA_MAX_BYTES) {
-      throw new Error("wati_media_too_large");
-    }
-    const path = mediaStoragePath({
-      environment: deploymentEnvironment(),
-      phone: event.waId,
-      messageId: event.id,
-      mediaUrl: event.mediaUrl!,
-      contentType,
-    });
-    const { error: uploadError } = await admin.storage
-      .from(CUSTOMER_SERVICE_MEDIA_BUCKET)
-      .upload(path, body, { contentType, upsert: true });
-    if (uploadError) throw uploadError;
-    const { data, error: signedUrlError } = await admin.storage
-      .from(CUSTOMER_SERVICE_MEDIA_BUCKET)
-      .createSignedUrl(path, 60 * 60 * 24 * 30);
-    if (signedUrlError) throw signedUrlError;
-    return data.signedUrl;
+    return {
+      signedUrl,
+      dataUrl: downloaded.dataUrl,
+      contentType: downloaded.contentType,
+    };
   } catch (error) {
     console.error("customer_service_media_mirror_failed", {
       providerMessageId: event.id,
@@ -2562,21 +2758,599 @@ async function mirrorInboundMedia(
   }
 }
 
-async function handleInboundMedia(admin: AdminClient, event: WatiInboundEvent) {
+function visionInternalSummary(
+  vision: CustomerServiceVisionResult | null,
+  failureReason = "",
+) {
+  if (!vision) {
+    return failureReason
+      ? `圖片未能完成自動分析（原因：${failureReason}）。`
+      : "圖片未能完成自動分析。";
+  }
+  const lines = [
+    `圖片分類：${vision.mediaKind}`,
+    `分析信心：${vision.confidence.toFixed(2)}`,
+  ];
+  if (vision.summary) lines.push(`分析摘要：${vision.summary}`);
+  if (vision.extractedText) {
+    lines.push(`圖片文字：${vision.extractedText.slice(0, 800)}`);
+  }
+  if (vision.entities.orderNumber) {
+    lines.push(`識別到訂單編號：${vision.entities.orderNumber}`);
+  }
+  if (vision.entities.productNames?.length) {
+    lines.push(
+      `識別到產品：${vision.entities.productNames.join("、").slice(0, 500)}`,
+    );
+  }
+  return lines.join("\n").slice(0, 1_500);
+}
+
+function visionCustomerReply(
+  vision: CustomerServiceVisionResult | null,
+  label: string,
+) {
+  if (!vision) {
+    return `已收到你嘅${label}，暫時未能自動睇清楚，會交由客服同事查看，稍後回覆你。`;
+  }
+  if (vision.mediaKind === "menu_product" && !vision.needsHuman) {
+    return "已收到你嘅圖片，初步識別到可能係菜單或套餐資料，會交由客服同事核對後回覆你。";
+  }
+  if (vision.mediaKind === "order_screenshot") {
+    return "已收到你嘅訂單圖片。為保障訂單私隱，會交由客服同事核對後回覆你。";
+  }
+  if (vision.mediaKind === "payment_proof") {
+    return "已收到你嘅付款圖片，付款狀態需要由客服同事核對，稍後回覆你。";
+  }
+  if (vision.mediaKind === "food_complaint") {
+    return "已收到你提供嘅圖片，會交由客服同事盡快查看及跟進。";
+  }
+  return `已收到你嘅${label}，會交由客服同事查看，稍後回覆你。`;
+}
+
+async function loadCustomerServiceMenuImageReply(
+  admin: AdminClient,
+  brand = "",
+): Promise<string> {
+  if (brand) {
+    try {
+      const { data } = await admin
+        .from("customer_faqs")
+        .select("answer")
+        .eq("locale", "zh-HK")
+        .eq("is_published", true)
+        .eq("question", `${brand} 有冇餐牌可以睇？`)
+        .maybeSingle();
+      const answer = typeof data?.answer === "string" ? data.answer.trim() : "";
+      if (answer) return answer;
+    } catch (error) {
+      console.error(
+        "customer_service_menu_image_faq_failed",
+        error instanceof Error ? error.message.slice(0, 300) : String(error),
+      );
+    }
+    const brandLink = customerServiceMenuImageBrandLink(brand);
+    if (brandLink) return customerServiceMenuImageReplyText([brandLink]);
+  }
+  try {
+    const { data, error } = await admin.rpc("search_published_customer_faqs", {
+      p_query: "餐牌 菜單 menu 品牌 到會 飯盒 派對 即日",
+      p_limit: 20,
+    });
+    if (error) throw error;
+    const links = customerServiceBrandMenuLinks(
+      (data ?? []) as Array<{ question?: string | null; answer?: string | null }>,
+    );
+    return customerServiceMenuImageReplyText(links);
+  } catch (error) {
+    console.error(
+      "customer_service_menu_image_reply_failed",
+      error instanceof Error ? error.message.slice(0, 300) : String(error),
+    );
+    return customerServiceMenuImageReplyText();
+  }
+}
+
+/** Joins the caption and vision-extracted text used to detect the menu brand. */
+function customerServiceMenuImageText(
+  caption: string | null | undefined,
+  vision: CustomerServiceVisionResult | null,
+) {
+  return [
+    caption ?? "",
+    vision?.extractedText ?? "",
+    vision?.entities?.productCode ?? "",
+    (vision?.entities?.productNames ?? []).join(" "),
+    // The model summary is intentionally excluded: it paraphrases the image and
+    // can inject words (for example "lunch box") that misroute the brand.
+  ]
+    .filter((value) => value.trim())
+    .join(" ")
+    .trim();
+}
+
+/**
+ * Looks up the dish names recognised in a menu image against the Shopify
+ * catalog and returns a product reply when a confident, brand-correct match is
+ * found. Returns "" so the caller can fall back to the brand menu links.
+ */
+async function loadCustomerServiceMenuProductReply(
+  admin: AdminClient,
+  terms: readonly string[],
+  brand: string,
+): Promise<string> {
+  const cleaned = terms.map((term) => term.trim()).filter((term) =>
+    term.length >= 2
+  );
+  if (!cleaned.length) return "";
+  try {
+    const { data: channels, error } = await admin
+      .from("channels")
+      .select("id")
+      .eq("is_active", true)
+      .is("archived_at", null);
+    if (error) throw error;
+    const channelIds = ((channels ?? []) as Array<{ id?: string | null }>)
+      .flatMap((row) => typeof row.id === "string" ? [row.id] : []);
+    if (!channelIds.length) return "";
+    const { data: hits, error: hitError } = await admin.rpc(
+      "search_order_intake_catalog",
+      { p_channel_ids: channelIds, p_terms: cleaned, p_limit: 8 },
+    );
+    if (hitError) throw hitError;
+    const matches = customerServiceMenuProductMatches(
+      cleaned,
+      ((hits ?? []) as Array<{
+        name?: string | null;
+        product_url?: string | null;
+      }>).map((hit) => ({
+        ...hit,
+        product_url: customerServicePublicProductUrl(
+          String(hit.product_url ?? ""),
+        ),
+      })),
+      brand,
+    );
+    return customerServiceMenuProductReplyText(matches, brand);
+  } catch (error) {
+    console.error(
+      "customer_service_menu_product_lookup_failed",
+      error instanceof Error ? error.message.slice(0, 300) : String(error),
+    );
+    return "";
+  }
+}
+
+/**
+ * Resolves a product code / SKU recognised in a menu image to its Shopify
+ * product page. It checks both the Shopify variant SKU and the internal product
+ * SKU (mapped through shopify_catalog_mappings), because the code printed on the
+ * website is not always stored on the variant.
+ */
+async function loadCustomerServiceMenuSkuReply(
+  admin: AdminClient,
+  sku: string,
+  brand: string,
+): Promise<string> {
+  const code = customerServiceExactSkuFilter(sku);
+  if (!code) return "";
+  try {
+    const [variantResult, productResult] = await Promise.all([
+      admin
+        .from("shopify_catalog_draft_variants")
+        .select("draft_id")
+        .ilike("sku", code)
+        .limit(20),
+      admin
+        .from("products")
+        .select("id")
+        .ilike("sku", code)
+        .limit(20),
+    ]);
+    if (variantResult.error) throw variantResult.error;
+    if (productResult.error) throw productResult.error;
+
+    const draftIds = [...new Set(
+      ((variantResult.data ?? []) as Array<{ draft_id?: string | null }>)
+        .flatMap((row) => typeof row.draft_id === "string" ? [row.draft_id] : []),
+    )];
+    const productIds = [...new Set(
+      ((productResult.data ?? []) as Array<{ id?: string | null }>)
+        .flatMap((row) => typeof row.id === "string" ? [row.id] : []),
+    )];
+
+    const mappingResult = productIds.length
+      ? await admin
+        .from("shopify_catalog_mappings")
+        .select("store_id,shopify_product_id")
+        .eq("resource_type", "product_variant")
+        .eq("is_active", true)
+        .in("internal_product_id", productIds)
+      : { data: [], error: null };
+    if (mappingResult.error) throw mappingResult.error;
+    const mappingPairs = ((mappingResult.data ?? []) as Array<{
+      store_id?: string | null;
+      shopify_product_id?: number | string | null;
+    }>).flatMap((row) => {
+      const storeId = row.store_id?.trim() ?? "";
+      const productId = row.shopify_product_id === null ||
+          row.shopify_product_id === undefined
+        ? ""
+        : String(row.shopify_product_id);
+      return storeId && productId ? [{ storeId, productId }] : [];
+    });
+
+    const draftColumns =
+      "id,title,handle,store_id,shopify_product_id,shopify_status";
+    const draftsByIdResult = draftIds.length
+      ? await admin
+        .from("shopify_catalog_drafts")
+        .select(draftColumns)
+        .in("id", draftIds)
+        .eq("shopify_status", "active")
+      : { data: [], error: null };
+    if (draftsByIdResult.error) throw draftsByIdResult.error;
+
+    const mappingStoreIds = [...new Set(mappingPairs.map((pair) => pair.storeId))];
+    const mappingProductIds = [
+      ...new Set(mappingPairs.map((pair) => pair.productId)),
+    ];
+    const draftsByMappingResult = mappingStoreIds.length &&
+        mappingProductIds.length
+      ? await admin
+        .from("shopify_catalog_drafts")
+        .select(draftColumns)
+        .in("store_id", mappingStoreIds)
+        .in("shopify_product_id", mappingProductIds)
+        .eq("shopify_status", "active")
+      : { data: [], error: null };
+    if (draftsByMappingResult.error) throw draftsByMappingResult.error;
+
+    type DraftRow = {
+      title?: string | null;
+      handle?: string | null;
+      store_id?: string | null;
+      shopify_product_id?: number | string | null;
+    };
+    const allowedPairs = new Set(
+      mappingPairs.map((pair) => `${pair.storeId}:${pair.productId}`),
+    );
+    const candidateDrafts: DraftRow[] = [
+      ...((draftsByIdResult.data ?? []) as DraftRow[]),
+      ...((draftsByMappingResult.data ?? []) as DraftRow[]).filter((row) =>
+        allowedPairs.has(
+          `${row.store_id ?? ""}:${String(row.shopify_product_id ?? "")}`,
+        )
+      ),
+    ];
+
+    const storeIds = [...new Set(
+      candidateDrafts.flatMap((row) =>
+        typeof row.store_id === "string" ? [row.store_id] : []
+      ),
+    )];
+    const storesResult = storeIds.length
+      ? await admin
+        .from("shopify_stores")
+        .select("id,shop_domain,is_active")
+        .in("id", storeIds)
+      : { data: [], error: null };
+    if (storesResult.error) throw storesResult.error;
+    const domains = new Map<string, string>();
+    for (const store of (storesResult.data ?? []) as Array<{
+      id?: string | null;
+      shop_domain?: string | null;
+      is_active?: boolean | null;
+    }>) {
+      if (
+        typeof store.id === "string" && store.shop_domain &&
+        store.is_active !== false
+      ) {
+        domains.set(store.id, store.shop_domain);
+      }
+    }
+
+    const products: Array<{ name: string; productUrl: string }> = [];
+    const seen = new Set<string>();
+    for (const draft of candidateDrafts) {
+      const name = String(draft.title ?? "").trim();
+      const domain = draft.store_id ? domains.get(draft.store_id) ?? "" : "";
+      const productUrl = customerServiceShopifyProductUrl(
+        domain,
+        String(draft.handle ?? ""),
+      );
+      if (!name || !productUrl || seen.has(productUrl)) continue;
+      seen.add(productUrl);
+      products.push({ name, productUrl });
+    }
+    const matched = customerServiceSkuProductsForBrand(products, brand);
+    if (!matched.length) return "";
+    const resolvedBrand = customerServiceMenuBrandFromUrl(
+      matched[0]?.productUrl ?? "",
+    ) || brand;
+    return customerServiceMenuProductReplyText(matched, resolvedBrand);
+  } catch (error) {
+    console.error(
+      "customer_service_menu_sku_lookup_failed",
+      error instanceof Error ? error.message.slice(0, 300) : String(error),
+    );
+    return "";
+  }
+}
+
+async function createMediaBotDeps(admin: AdminClient, dryRun: boolean) {
+  const [runtime, activeConfig] = await Promise.all([
+    loadCustomerServiceRuntime(admin),
+    loadActiveCustomerServiceConfig(admin),
+  ]);
+  const tiers = customerServiceAiTiers(activeConfig);
+  return createBotDeps(admin, {
+    dryRun,
+    replyTemplates: runtime.replyTemplates,
+    activeConfig,
+    tiers,
+    workflowPolicies: runtime.workflowPolicies,
+  });
+}
+
+/** Delivery date already known for this conversation, else parsed from text. */
+function menuImageDeliveryDate(
+  conversation: CustomerServiceConversation,
+  text: string,
+) {
+  const stored = conversation.workflow_slots?.eventDate;
+  if (typeof stored === "string" && /^\d{4}-\d{2}-\d{2}$/.test(stored)) {
+    return stored;
+  }
+  return resolveCustomerServiceDeliveryDate(text);
+}
+
+function menuImageProductAllowed(
+  productReply: string,
+  intake: CustomerServiceOrderIntakeAvailability,
+) {
+  const terms = [
+    ...(intake.allowedProductTerms ?? []),
+    ...(intake.allowedProductTermGroups ?? []).flat(),
+  ].map((term) => term.trim()).filter(Boolean);
+  if (!terms.length) return false;
+  return terms.some((term) => productReply.includes(term));
+}
+
+function menuImageRestrictedConversation(
+  conversation: CustomerServiceConversation,
+  date: string,
+  text: string,
+): CustomerServiceConversation {
+  return {
+    ...conversation,
+    state: "collecting",
+    active_goal: "catering_inquiry",
+    pending_request: "特別接單安排人工覆核",
+    workflow_slots: {
+      ...(conversation.workflow_slots ?? {}),
+      eventDate: date,
+      availabilityQuestion: text.slice(0, 1_000),
+    },
+  };
+}
+
+/**
+ * Phase 2 menu reply with order-intake awareness:
+ * - a known delivery date is checked against block dates; a restricted date
+ *   replaces the product answer with the rule's own reason,
+ * - an unknown date keeps the product answer but asks for the date so the next
+ *   turn can confirm supply.
+ */
+async function resolveCustomerServiceMenuImageReply(
+  admin: AdminClient,
+  input: {
+    conversation: CustomerServiceConversation;
+    text: string;
+    brand: string;
+    productReply: string;
+    dryRun: boolean;
+  },
+): Promise<{
+  reply: string;
+  restricted: boolean;
+  deliveryDate: string;
+  requiresTime: boolean;
+}> {
+  const date = menuImageDeliveryDate(input.conversation, input.text);
+  if (!date) {
+    return {
+      reply: input.productReply
+        ? `${input.productReply}\n請提供送貨日期，我可以即時幫你確認該日供應。`
+        : await loadCustomerServiceMenuImageReply(admin, input.brand),
+      restricted: false,
+      deliveryDate: "",
+      requiresTime: false,
+    };
+  }
+
+  let intake: CustomerServiceOrderIntakeAvailability = { status: "unknown" };
+  try {
+    const deps = await createMediaBotDeps(admin, input.dryRun);
+    if (deps.checkOrderIntakeAvailability) {
+      intake = await deps.checkOrderIntakeAvailability(date, input.text);
+    }
+  } catch (error) {
+    console.error(
+      "customer_service_menu_intake_check_failed",
+      error instanceof Error ? error.message.slice(0, 300) : String(error),
+    );
+  }
+
+  if (
+    intake.status === "manual_review" && input.productReply &&
+    !menuImageProductAllowed(input.productReply, intake)
+  ) {
+    return {
+      reply: orderIntakeAvailabilityReply(date, intake),
+      restricted: true,
+      deliveryDate: date,
+      requiresTime: Boolean(intake.requiresTime),
+    };
+  }
+
+  const fallback = input.productReply ||
+    await loadCustomerServiceMenuImageReply(admin, input.brand);
+  return {
+    reply: intake.requiresTime
+      ? `${fallback}\n該日有指定時段限制，請提供希望送達時間，我再核對接單安排。`
+      : fallback,
+    restricted: false,
+    deliveryDate: date,
+    requiresTime: Boolean(intake.requiresTime),
+  };
+}
+
+async function handleInboundMedia(
+  admin: AdminClient,
+  event: WatiInboundEvent,
+): Promise<CustomerServiceMediaRoute["action"]> {
   const conversation = await loadConversation(admin, event.waId);
-  if (conversation.state === "human_owned") return;
+  if (conversation.state === "human_owned") return "handoff";
   const label = mediaTypeLabel(event.type);
-  const attachmentUrl = await mirrorInboundMedia(admin, event);
+  const mirrored = await mirrorInboundMedia(admin, event);
+  const attachmentUrl = mirrored?.signedUrl ?? null;
+  const inboundCaption = event.caption?.trim()
+    || (!/^https?:\/\//i.test(event.text) ? event.text.trim() : "");
+  const mediaText = `[${label}]${inboundCaption ? ` ${inboundCaption}` : ""}`;
+  let vision: CustomerServiceVisionResult | null = null;
+  let visionFailureReason = "";
+  const imageForVision = mirrored?.dataUrl || attachmentUrl || "";
+  if (event.type === "image" && imageForVision) {
+    try {
+      vision = await analyzeCustomerServiceImage({
+        imageUrl: imageForVision,
+        caption: inboundCaption,
+        providerMessageId: event.id,
+      });
+      if (!vision) {
+        visionFailureReason =
+          customerServiceVisionUnavailableReason(imageForVision);
+      }
+    } catch (error) {
+      visionFailureReason =
+        error instanceof Error ? error.message.slice(0, 300) : String(error);
+      console.error("customer_service_vision_failed", {
+        providerMessageId: event.id,
+        error: visionFailureReason,
+      });
+    }
+  } else if (event.type === "image") {
+    visionFailureReason = "media_not_mirrored";
+    console.error("customer_service_vision_skipped", {
+      providerMessageId: event.id,
+      reason: visionFailureReason,
+    });
+  }
+
+  const route = decideCustomerServiceMediaRoute(vision);
+
+  // A confident menu/product image is answered with a matched product link when
+  // the dish names resolve, otherwise with the brand menu links, so it does not
+  // consume a human.
+  if (route.action === "menu") {
+    const menuText = customerServiceMenuImageText(inboundCaption, vision);
+    const brand = customerServiceMenuImageBrand(menuText);
+    const productReply = await loadCustomerServiceMenuSkuReply(
+      admin,
+      vision?.entities?.productCode ?? "",
+      brand,
+    ) || await loadCustomerServiceMenuProductReply(
+      admin,
+      vision?.entities?.productNames ?? [],
+      brand,
+    );
+    const menuResolution = await resolveCustomerServiceMenuImageReply(admin, {
+      conversation,
+      text: menuText || inboundCaption || "",
+      brand,
+      productReply,
+      dryRun: false,
+    });
+    await persistCustomerServiceTurn(admin, {
+      providerMessageId: event.id,
+      phone: event.waId,
+      text: mediaText,
+      prepared: {
+        conversation,
+        startedAt: Date.now(),
+        turn: {
+          reply: menuResolution.reply,
+          conversation: menuResolution.restricted
+            ? menuImageRestrictedConversation(
+              conversation,
+              menuResolution.deliveryDate,
+              menuText,
+            )
+            : conversation,
+          wroteInquiry: false,
+          notified: false,
+          usedModel: false,
+          intentKey: "media_menu",
+          toolKeys: menuResolution.restricted
+            ? ["check_order_intake"]
+            : productReply
+            ? ["search_catalog"]
+            : ["search_faqs"],
+          failureReason: menuResolution.restricted
+            ? "menu_image_blocked_date"
+            : null,
+          dialogAction: "new_request",
+        },
+      },
+    });
+    return "menu";
+  }
+
+  // An order screenshot with an order number is re-run as a normal turn using
+  // the customer's caption. The number must still match the sender's phone
+  // (lookupOrders is phone scoped), which is the ownership check; no email
+  // verification is requested. Read-only captions get a lookup answer, change
+  // requests fall through to the normal order handoff.
+  if (route.action === "order") {
+    const orderNumber = route.orderNumber;
+    const text = inboundCaption || orderNumber;
+    const prepared = await prepareCustomerServiceTurn(admin, {
+      phone: event.waId,
+      text,
+      classify: async (turnText, base) => {
+        const baseResult = await base(turnText);
+        return baseResult.orderNumber
+          ? baseResult
+          : { ...baseResult, orderNumber };
+      },
+    });
+    await persistCustomerServiceTurn(admin, {
+      providerMessageId: event.id,
+      phone: event.waId,
+      text,
+      prepared,
+    });
+    return "order";
+  }
+
+  // Phase 1 behaviour for every other image: enrich the human handoff with the
+  // vision analysis instead of auto-answering.
   await queueInternalHandoff(admin, {
     phone: event.waId,
     quoteId: conversation.selected_order_id,
     orderNumber: null,
-    summary: buildInboundMediaHandoffSummary({
-      label,
-      caption: event.caption,
-      originalUrl: event.mediaUrl,
-      attachmentUrl,
-    }),
+    summary: [
+      buildInboundMediaHandoffSummary({
+        label,
+        caption: inboundCaption,
+        originalUrl: event.mediaUrl,
+        attachmentUrl,
+      }),
+      visionInternalSummary(vision, visionFailureReason),
+    ]
+      .join("\n")
+      .slice(0, 2_000),
     kind: "order_handoff",
   });
   const nextConversation: CustomerServiceConversation = {
@@ -2589,11 +3363,11 @@ async function handleInboundMedia(admin: AdminClient, event: WatiInboundEvent) {
     handoff_urgent: false,
     handoff_quote_id: null,
   };
-  const reply = `已收到你嘅${label}，呢類訊息會交由客服同事查看，稍後回覆你。`;
+  const reply = visionCustomerReply(vision, label);
   await persistCustomerServiceTurn(admin, {
     providerMessageId: event.id,
     phone: event.waId,
-    text: `[${label}]${event.caption ? ` ${event.caption}` : ""}`,
+    text: mediaText,
     prepared: {
       conversation,
       startedAt: Date.now(),
@@ -2604,13 +3378,17 @@ async function handleInboundMedia(admin: AdminClient, event: WatiInboundEvent) {
         notified: false,
         queuedHandoff: true,
         usedModel: false,
-        intentKey: "media_handoff",
+        intentKey:
+          vision?.mediaKind === "menu_product"
+            ? "media_vision"
+            : "media_handoff",
         toolKeys: ["queue_handoff"],
         failureReason: null,
         dialogAction: "new_request",
       },
     },
   });
+  return "handoff";
 }
 
 async function processInboundBatch(
@@ -2751,7 +3529,7 @@ Deno.serve(async (request) => {
   ) {
     return jsonResponse({ error: "channel_mismatch" }, 403);
   }
-  // WhatsApp reactions (e.g. a customer tapping ?? on a message) arrive with
+  // WhatsApp reactions (e.g. a customer tapping 🙏 on a message) arrive with
   // type "reaction". They are not customer turns, so never auto-reply to them.
   if (event.type === "reaction") {
     return jsonResponse({ ok: true, ignored: "reaction" });
@@ -2866,8 +3644,19 @@ Deno.serve(async (request) => {
       return jsonResponse({ ok: true, filtered: "advertisement" });
     }
     if (isCustomerServiceMediaType(event.type)) {
-      await handleInboundMedia(admin, event);
-      return jsonResponse({ ok: true, handoff: true, media_type: event.type });
+      deferBackground(
+        handleInboundMedia(admin, event).catch((error) => {
+          console.error(
+            "customer service inbound media failed",
+            error instanceof Error ? error.message.slice(0, 300) : String(error),
+          );
+        }),
+      );
+      return jsonResponse({
+        ok: true,
+        media_type: event.type,
+        queued: true,
+      });
     }
 
     const batch = await enqueueInboundBatch(admin, event);
