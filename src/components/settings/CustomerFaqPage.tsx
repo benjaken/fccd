@@ -168,6 +168,7 @@ function hongKongDateOffset(offsetDays = 0) {
 }
 
 const CUSTOMER_SERVICE_IMPORT_MAX_DAYS = 14;
+const CUSTOMER_SERVICE_LEARN_CONCURRENCY = 3;
 
 const SKELETON_COLUMNS = [
   { width: "7rem" },
@@ -1181,12 +1182,34 @@ export function CustomerFaqPage({
     if (!canEdit || learningDates || !targets.length) return;
     setLearningDates(true);
     setInsightsError("");
-    try {
-      for (const [index, date] of targets.entries()) {
-        setImportProgress(`正在學習 ${date}（${index + 1}/${targets.length}）…`);
-        await generateCustomerServiceDailyReport(date);
+    let completed = 0;
+    let failed = 0;
+    let next = 0;
+    const worker = async () => {
+      while (next < targets.length) {
+        const date = targets[next];
+        next += 1;
+        try {
+          await generateCustomerServiceDailyReport(date);
+        } catch {
+          failed += 1;
+        } finally {
+          completed += 1;
+          setImportProgress(
+            `正在學習 ${date}（${completed}/${targets.length}）…`,
+          );
+        }
       }
+    };
+    try {
+      await Promise.all(
+        Array.from(
+          { length: Math.min(CUSTOMER_SERVICE_LEARN_CONCURRENCY, targets.length) },
+          worker,
+        ),
+      );
       await loadInsights();
+      if (failed) setInsightsError("產生學習建議時出錯，部分日期可能未完成。");
     } catch {
       setInsightsError("產生學習建議時出錯，部分日期可能未完成。");
     } finally {
