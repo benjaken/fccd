@@ -83,6 +83,14 @@ describe("wati conversation history adapter", () => {
     expect(rows[1]).toMatchObject({ role: "human", source_message_id: "h1" });
   });
 
+  it("skips the internal develop test number", () => {
+    const rows = mapWatiHistoryMessages([
+      { id: "t1", text: "測試", type: "text", occurredAt: "2026-08-01T10:00:00Z",
+        owner: false, localMessageId: "", operatorName: "", operatorEmail: "", eventType: "message" },
+    ], { phone: "8613828747224", environment: "develop" });
+    expect(rows).toEqual([]);
+  });
+
   it("paginates v3 messages and falls back to v1 on unavailable endpoints", async () => {
     const calls: string[] = [];
     const v3Fetch = vi.fn(async (url: string | URL | Request) => {
@@ -280,6 +288,15 @@ describe("learning import wiring", () => {
     expect(sql).toContain("grant all on table public.customer_service_learning_import_messages to service_role");
   });
 
+  it("filters the internal test number from the import summary", () => {
+    const sql = readFileSync(
+      "supabase/migrations/20260919170000_customer_service_learning_ignore_test_phone.sql",
+      "utf8",
+    );
+    expect(sql).toContain("delete from public.customer_service_learning_import_messages");
+    expect(sql).toContain("where messages.phone_normalized not in ('8613828747224', '13828747224')");
+  });
+
   it("authorizes the backfill function before contacting WATI", () => {
     const source = readFileSync(
       "supabase/functions/wati-customer-service-backfill/index.ts",
@@ -288,5 +305,14 @@ describe("learning import wiring", () => {
     expect(source).toContain("await authorize(request, admin)");
     expect(source).toContain("fetchWatiConversationMessagesV1");
     expect(source).toContain("customer_service_learning_import_runs");
+    expect(source).toContain("isIgnoredCustomerServicePhone");
+  });
+
+  it("excludes the internal test number from the daily learning report", () => {
+    const report = readFileSync(
+      "supabase/functions/customer-service-daily-report/index.ts",
+      "utf8",
+    );
+    expect(report).toContain("isIgnoredCustomerServicePhone");
   });
 });

@@ -4,6 +4,7 @@ import {
   normalizeWhatsAppChannel,
 } from "../_shared/wati-customer-service-adapter.ts";
 import {
+  isIgnoredCustomerServicePhone,
   sanitizeCustomerServiceContextText,
   type CustomerServiceContextMessageRow,
 } from "../_shared/customer-service-context.ts";
@@ -239,6 +240,7 @@ Deno.serve(async (request) => {
         log: console.error,
       });
     }
+    phones = phones.filter((phone) => !isIgnoredCustomerServicePhone(phone));
     if (enumerated && maxPhones && phones.length > maxPhones) {
       phones = phones.slice(0, maxPhones);
     }

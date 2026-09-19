@@ -49,6 +49,10 @@ operator email or a non-bot operator name become `human`. Text is redacted by
 `sanitizeCustomerServiceContextText`, so emails, phone numbers, and addresses are
 never stored.
 
+The internal develop test number (`8613828747224`) is ignored: the backfill skips
+it, the daily report drops its turns/messages, and
+`customer_service_learning_import_summary` excludes it.
+
 ## Triggering a backfill
 
 The function authorizes with the `x-cron-secret` header matching

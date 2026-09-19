@@ -6,6 +6,17 @@ export type CustomerServiceRecentMessage = {
 
 export const CUSTOMER_SERVICE_CONTEXT_LOOKBACK_DAYS = 30;
 
+/**
+ * Internal develop test numbers. Their messages are operator test traffic, so
+ * they are excluded from historical import, learning, and the import summary.
+ */
+export const CUSTOMER_SERVICE_IGNORED_PHONES = ["8613828747224", "13828747224"];
+
+export function isIgnoredCustomerServicePhone(value: string | null | undefined) {
+  const digits = (value || "").replace(/\D/g, "");
+  return Boolean(digits) && CUSTOMER_SERVICE_IGNORED_PHONES.includes(digits);
+}
+
 export type CustomerServiceContextMessageRow = {
   source_message_id: string;
   phone_normalized: string;

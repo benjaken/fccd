@@ -4,6 +4,7 @@ import {
 } from "./wati-customer-service-adapter.ts";
 import {
   customerServiceContextMessageRow,
+  isIgnoredCustomerServicePhone,
   sanitizeCustomerServiceContextText,
   type CustomerServiceContextMessageRow,
 } from "./customer-service-context.ts";
@@ -239,6 +240,7 @@ export function mapWatiHistoryMessages(
     until?: string;
   },
 ): CustomerServiceContextMessageRow[] {
+  if (isIgnoredCustomerServicePhone(input.phone)) return [];
   const since = input.since ? Date.parse(input.since) : Number.NaN;
   const until = input.until ? Date.parse(input.until) : Number.NaN;
   const rows: CustomerServiceContextMessageRow[] = [];

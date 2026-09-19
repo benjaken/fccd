@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import {
   customerServiceContextMessageRow,
   customerServiceContextSince,
+  isIgnoredCustomerServicePhone,
   sanitizeCustomerServiceContextText,
   sanitizeCustomerServiceRecentMessages,
 } from "../supabase/functions/_shared/customer-service-context.ts";
@@ -18,6 +19,14 @@ describe("customer-service contextual learning", () => {
     expect(value).not.toContain("9123 4567");
     expect(value).not.toContain("nero@example.com");
     expect(value).not.toContain("九龍城某道18號");
+  });
+
+  it("flags the internal develop test number in any format", () => {
+    expect(isIgnoredCustomerServicePhone("8613828747224")).toBe(true);
+    expect(isIgnoredCustomerServicePhone("86 138 2874 7224")).toBe(true);
+    expect(isIgnoredCustomerServicePhone("13828747224")).toBe(true);
+    expect(isIgnoredCustomerServicePhone("85291234567")).toBe(false);
+    expect(isIgnoredCustomerServicePhone("")).toBe(false);
   });
 
   it("builds a sanitized human message row for later bot context", () => {
