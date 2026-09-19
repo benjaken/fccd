@@ -106,7 +106,7 @@ describe("history import UI wiring", () => {
     expect(page).toContain("fetchCustomerServiceLearningImportSummary");
     expect(page).toContain("一鍵學習最近日期");
     expect(page).toContain("產生學習建議");
-    expect(page).toContain("probeCustomerServiceHistory");
+    expect(page).toContain("setImportDialogOpen(true)");
     expect(page).toContain("getTime() + 86_400_000");
   });
 

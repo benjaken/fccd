@@ -1,5 +1,9 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { createCustomerServiceFaqRagDeps } from "../_shared/customer-service-rag-runtime.ts";
+import {
+  customerServiceAiTiers,
+  type ActiveCustomerServiceConfig,
+} from "../_shared/customer-service-active-config.ts";
 
 import { EMAIL_FROM } from "../_shared/email-sender.ts";
 import {
@@ -1058,17 +1062,6 @@ async function recordHumanOperatorContextMessage(
   }
 }
 
-type ActiveCustomerServiceConfig = {
-  model: string;
-  fallback_model: string;
-  fallback_enabled: boolean;
-  escalation_confidence: number;
-  system_prompt: string;
-  temperature: number;
-  retrieval_limit: number;
-  rag_config?: unknown;
-};
-
 async function loadActiveCustomerServiceConfig(admin: AdminClient) {
   const { data, error } = await admin
     .from("customer_service_config_versions")
@@ -1080,29 +1073,6 @@ async function loadActiveCustomerServiceConfig(admin: AdminClient) {
     console.error("customer service active config load failed", error.message.slice(0, 300));
   }
   return data as ActiveCustomerServiceConfig | null;
-}
-
-function customerServiceAiTiers(active: ActiveCustomerServiceConfig | null): CustomerServiceAiTierConfig {
-  const base = customerServiceAiConfig();
-  const primaryModel = active?.model || base.model || "grok-4.3";
-  const fallbackModel = active?.fallback_model || "grok-4.5";
-  return {
-    primary: {
-      ...base,
-      model: primaryModel,
-      systemPrompt: active?.system_prompt || "",
-      temperature: Number(active?.temperature ?? 0.1),
-      reasoningEffort: /^grok-4\.3/i.test(primaryModel) ? "none" : "low",
-    },
-    fallback: active?.fallback_enabled === false ? null : {
-      ...base,
-      model: fallbackModel,
-      systemPrompt: active?.system_prompt || "",
-      temperature: Number(active?.temperature ?? 0.1),
-      reasoningEffort: "low",
-    },
-    escalationConfidence: Number(active?.escalation_confidence ?? 0.72),
-  };
 }
 
 async function queueOutboundMessage(

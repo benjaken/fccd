@@ -127,6 +127,28 @@ export function buildRepairProposal(input: RepairProposalInput): RepairProposal 
   };
 }
 
+/** Convert the domain shape to the columns accepted by PostgREST. */
+export function repairProposalInsertRow(proposal: RepairProposal) {
+  return {
+    environment: proposal.environment,
+    repair_kind: proposal.repairKind,
+    risk_level: proposal.riskLevel,
+    target_type: proposal.targetType,
+    target_id: proposal.targetId,
+    scope: { environment: proposal.environment },
+    base_revision: proposal.baseRevision,
+    base_hash: proposal.baseHash,
+    base_profile: proposal.baseProfile,
+    allowlist_version: proposal.allowlistVersion,
+    source_sample_ids: proposal.sourceSampleIds,
+    reason: proposal.reason,
+    candidate_patch: proposal.candidatePatch,
+    status: proposal.status,
+    idempotency_key: proposal.idempotencyKey,
+    preauthorized: proposal.preauthorized,
+  };
+}
+
 export type R2ValidationGateInput = {
   improved: boolean;
   regressedCount: number;

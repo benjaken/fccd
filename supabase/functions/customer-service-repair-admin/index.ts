@@ -4,6 +4,7 @@ import { runFaqEmbeddingBackfill } from "../_shared/customer-service-embedding-b
 import { runCaseEmbeddingBackfill } from "../_shared/customer-service-case-embedding.ts";
 import {
   autoRepairMode, buildRepairProposal, r1ReembedEligible, repairExecutionAllowed,
+  repairProposalInsertRow,
   REPAIR_ALLOWLIST_VERSION, type R1TargetState,
 } from "../_shared/customer-service-repair-proposals.ts";
 
@@ -132,7 +133,7 @@ Deno.serve(async (request) => {
         candidatePatch: { action: "reembed", allowlist_version: REPAIR_ALLOWLIST_VERSION },
       });
       const { data: inserted, error } = await admin.from("customer_service_repair_proposals").upsert({
-        ...proposal, status: "proposed", evidence: { eligibility },
+        ...repairProposalInsertRow(proposal), evidence: { eligibility },
       }, { onConflict: "idempotency_key", ignoreDuplicates: true }).select("id, status, idempotency_key").maybeSingle();
       if (error) throw error;
       return json({ ok: true, action, mode, eligibility, proposal: inserted ?? proposal });

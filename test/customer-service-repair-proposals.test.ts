@@ -8,6 +8,7 @@ import {
   r1ReembedEligible,
   r2ValidationGate,
   repairExecutionAllowed,
+  repairProposalInsertRow,
   REPAIR_ALLOWLIST_VERSION,
   type R1TargetState,
 } from "../supabase/functions/_shared/customer-service-repair-proposals.ts";
@@ -58,6 +59,17 @@ describe("repair proposals", () => {
     expect(first.allowlistVersion).toBe(REPAIR_ALLOWLIST_VERSION);
     expect(first.preauthorized).toBe(true);
     expect(buildRepairProposal({ ...base, repairKind: "alias_candidate", riskLevel: "R2" }).preauthorized).toBe(false);
+  });
+
+  it("writes proposal fields using database column names", () => {
+    const proposal = buildRepairProposal(base);
+    const row = repairProposalInsertRow(proposal);
+    expect(row).toMatchObject({
+      repair_kind: "reembed_index", risk_level: "R1", target_type: "faq",
+      target_id: "faq-1", base_revision: 3,
+      idempotency_key: proposal.idempotencyKey,
+    });
+    expect(Object.keys(row)).not.toContain("repairKind");
   });
 });
 

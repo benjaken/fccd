@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 
 import { describe, expect, it } from "vitest";
@@ -6,7 +6,7 @@ import { describe, expect, it } from "vitest";
 const migration = readFileSync(
   path.resolve(
     process.cwd(),
-    "supabase/migrations/20260919120000_pickup_orders_use_store_pickup_district.sql",
+    "supabase/migrations/20260919121000_pickup_orders_use_store_pickup_district.sql",
   ),
   "utf8",
 );
@@ -20,6 +20,13 @@ const syncIndex = readFileSync(
 );
 
 describe("pickup orders keep the 門市自取 district", () => {
+  it("uses a distinct migration version from today's other changes", () => {
+    const today = readdirSync(path.resolve(process.cwd(), "supabase/migrations"))
+      .filter((name) => name.startsWith("20260919"));
+    const versions = today.map((name) => name.split("_")[0]);
+    expect(new Set(versions).size).toBe(today.length);
+  });
+
   it("anchors pickup districts on 門市自取 and only rewrites TBC rows", () => {
     expect(migration).toContain("lower('門市自取')");
     expect(migration).toContain("(自取|pickup)");

@@ -1,6 +1,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { caseFingerprint } from "../_shared/customer-service-cases.ts";
-import { customerServiceAiConfig, type CustomerServiceAiTierConfig } from "../_shared/customer-service-ai.ts";
+import { customerServiceAiTiers, type ActiveCustomerServiceConfig } from "../_shared/customer-service-active-config.ts";
+import { customerServiceRagConfig } from "../_shared/customer-service-rag-config.ts";
 import {
   buildHistoryDecisionSamples,
   HISTORY_SAMPLE_BUILDER_VERSION,
@@ -12,6 +13,7 @@ import {
 } from "../_shared/customer-service-history-replay.ts";
 import {
   deterministicHistoryIssues,
+  mergeHistoryJudgment,
   HISTORY_JUDGE_RUBRIC_VERSION,
 } from "../_shared/customer-service-history-judge.ts";
 import { judgeHistoryDecisionPoint } from "../_shared/customer-service-history-judge-ai.ts";
@@ -105,6 +107,21 @@ type JudgeSampleRow = {
 
 type AdminClient = ReturnType<typeof createClient>;
 
+async function loadReplayConfig(admin: AdminClient, environment: string) {
+  const { data, error } = await admin.from("customer_service_config_versions")
+    .select("model,fallback_model,fallback_enabled,escalation_confidence,system_prompt,temperature,retrieval_limit,rag_config")
+    .eq("environment", environment).eq("status", "active").maybeSingle();
+  if (error) throw error;
+  const active = data as ActiveCustomerServiceConfig | null;
+  const tiers = customerServiceAiTiers(active);
+  const ragConfig = customerServiceRagConfig(active);
+  const fingerprint = caseFingerprint(JSON.stringify({
+    active, ragConfig, primaryModel: tiers.primary.model,
+    fallbackModel: tiers.fallback?.model ?? null,
+  }));
+  return { tiers, ragConfig, fingerprint };
+}
+
 async function authorize(request: Request, admin: AdminClient): Promise<string | null> {
   const secret = env("CUSTOMER_SERVICE_REPORT_CRON_SECRET") || env("WATI_ORDER_CRON_SECRET");
   if (secret && request.headers.get("x-cron-secret")?.trim() === secret) return null;
@@ -169,6 +186,7 @@ Deno.serve(async (request) => {
 
     if (action === "start") {
       const scope = body.scope === "routing_safety" ? "routing_safety" : "answer_quality";
+      const replayConfig = await loadReplayConfig(admin, environment);
       const requested = Math.max(1, Math.min(MAX_PLAN, Number(body.sample_size) || 50));
       const seed = typeof body.seed === "string" ? body.seed.slice(0, 64) : "";
       const since = typeof body.source_since === "string" && body.source_since ? body.source_since : null;
@@ -182,14 +200,14 @@ Deno.serve(async (request) => {
           .filter((entry) => typeof entry.text === "string" && entry.text.trim())
           .slice(0, requested);
         if (!valid.length) return json({ ok: false, error: "no_routing_samples" }, 422);
-        const config = customerServiceAiConfig();
         const { data: run, error: runError } = await admin.from("customer_service_history_eval_runs").insert({
           environment, scope, evaluation_mode: "current_policy_regression",
-          baseline_ref: "active", candidate_ref: config.model || "default",
+          baseline_ref: "active", candidate_ref: replayConfig.tiers.primary.model,
           dataset_hash: caseFingerprint(valid.map((entry) => String(entry.text)).sort().join(",")),
           snapshot: {
             pipeline_version: "routing-replay-v1", judge_rubric_version: HISTORY_JUDGE_RUBRIC_VERSION,
             replay_pipeline: "production_turn_function_read_only_stubs",
+            config_fingerprint: replayConfig.fingerprint,
           },
           flags: {}, budget: { planned: valid.length },
           sample_size: valid.length, planned: valid.length, status: "running",
@@ -227,17 +245,17 @@ Deno.serve(async (request) => {
       const samples = buildHistoryDecisionSamples(messages);
       if (!samples.length) return json({ ok: false, error: "no_replay_samples" }, 422);
       const manifest = selectManifest(samples, Math.min(requested, samples.length), seed);
-      const config = customerServiceAiConfig();
       const { data: run, error: runError } = await admin.from("customer_service_history_eval_runs").insert({
         environment, scope, evaluation_mode: "current_policy_regression",
-        baseline_ref: "active", candidate_ref: config.model || "default",
+        baseline_ref: "active", candidate_ref: replayConfig.tiers.primary.model,
         dataset_hash: caseFingerprint(manifest.map((sample) => sample.sampleKey).sort().join(",")),
         snapshot: {
           builder_version: HISTORY_SAMPLE_BUILDER_VERSION,
           pipeline_version: HISTORY_REPLAY_PIPELINE_VERSION,
           judge_rubric_version: HISTORY_JUDGE_RUBRIC_VERSION,
           source_mapper_version: "history-source-v1",
-          model: config.model, prompt_hash: null, seed: seed || null,
+          model: replayConfig.tiers.primary.model, config_fingerprint: replayConfig.fingerprint,
+          seed: seed || null,
           replay_pipeline: "production_faq_subpipeline_plus_fallback",
         },
         flags: { cases_mode: env("CUSTOMER_SERVICE_CASES_MODE") || "off", rag_v2: env("CUSTOMER_SERVICE_RAG_V2") || "false" },
@@ -274,10 +292,17 @@ Deno.serve(async (request) => {
         .select("id, question, context, reference_answer, pairing, context_gap, source_fingerprint, lineage")
         .eq("run_id", runId).eq("status", "pending").order("created_at").limit(limit);
       if (pendingError) throw pendingError;
-      const { data: runRow } = await admin.from("customer_service_history_eval_runs").select("scope").eq("id", runId).maybeSingle();
+      const { data: runRow, error: runError } = await admin.from("customer_service_history_eval_runs")
+        .select("scope,environment,snapshot").eq("id", runId).maybeSingle();
+      if (runError) throw runError;
+      if (!runRow) return json({ error: "run_not_found" }, 404);
+      if (runRow.environment !== environment) return json({ error: "environment_mismatch" }, 400);
       const runScope = String(runRow?.scope ?? "answer_quality");
-      const baseConfig = customerServiceAiConfig();
-      const tiers: CustomerServiceAiTierConfig = { primary: baseConfig, fallback: null, escalationConfidence: 0.72 };
+      const replayConfig = await loadReplayConfig(admin, environment);
+      if ((runRow.snapshot as Record<string, unknown> | null)?.config_fingerprint !== replayConfig.fingerprint) {
+        return json({ error: "config_changed_restart_run" }, 409);
+      }
+      const { tiers, ragConfig } = replayConfig;
       const deadlineAt = Date.now() + DEADLINE_MS;
       let processed = 0, scored = 0, notEvaluable = 0, failed = 0;
       const items: Array<{ question: string; status: string }> = [];
@@ -319,7 +344,8 @@ Deno.serve(async (request) => {
             Boolean(entry) && typeof entry === "object") : [];
         try {
           const result = await replayHistoryDecisionPoint({
-            db: admin, tiers, sample: { question: sample.question, recentMessages: context },
+            db: admin, tiers, ragConfig,
+            sample: { question: sample.question, recentMessages: context },
           });
           const issues = deterministicHistoryIssues({
             aiAnswer: result.aiAnswer, grounded: result.grounded, usedFallback: result.usedFallback,
@@ -328,13 +354,15 @@ Deno.serve(async (request) => {
             pairing: sample.pairing === "pairing_uncertain" ? "pairing_uncertain" : "confident",
             contextGap: Boolean(sample.context_gap), answerGuardPassed: result.answerGuardPassed,
           });
-          const blocked = issues.some((issue) => issue.severity === "high" || issue.severity === "critical");
-          const status = issues.some((issue) => issue.layer === "sample" || issue.layer === "infrastructure") || blocked
-            ? "not_evaluable" : "scored";
+          const needsReview = issues.some((issue) =>
+            issue.layer === "sample" || issue.layer === "context" || issue.layer === "infrastructure" ||
+            issue.severity === "high" || issue.severity === "critical"
+          );
+          const status = needsReview ? "not_evaluable" : "scored";
           const { data: updated } = await admin.from("customer_service_history_eval_samples").update({
             status, ai_answer: result.aiAnswer, trace: result, judge_model: null,
             judge_rubric_version: HISTORY_JUDGE_RUBRIC_VERSION,
-            judgment: { stage: "deterministic", issues, requiresHumanReview: blocked, pipeline_version: result.pipelineVersion },
+            judgment: { stage: "deterministic", issues, requiresHumanReview: needsReview, pipeline_version: result.pipelineVersion },
           }).eq("id", sample.id).eq("status", "pending").select("id");
           if (!updated?.length) return;
           processed += 1;
@@ -369,7 +397,15 @@ Deno.serve(async (request) => {
       if (!UUID.test(runId)) return json({ error: "invalid_run_id" }, 400);
       const limit = Math.max(1, Math.min(MAX_PLAN, Number(body.limit) || MAX_PLAN));
       const concurrency = readConcurrency(body.concurrency);
-      const { data: judgeScope } = await admin.from("customer_service_history_eval_runs").select("scope").eq("id", runId).maybeSingle();
+      const { data: judgeScope, error: runError } = await admin.from("customer_service_history_eval_runs")
+        .select("scope,environment,snapshot").eq("id", runId).maybeSingle();
+      if (runError) throw runError;
+      if (!judgeScope) return json({ error: "run_not_found" }, 404);
+      if (judgeScope.environment !== environment) return json({ error: "environment_mismatch" }, 400);
+      const replayConfig = await loadReplayConfig(admin, environment);
+      if ((judgeScope.snapshot as Record<string, unknown> | null)?.config_fingerprint !== replayConfig.fingerprint) {
+        return json({ error: "config_changed_restart_run" }, 409);
+      }
       if (judgeScope?.scope === "routing_safety") {
         // Routing safety is fully deterministic; there is no FAQ answer to judge.
         return json({ ok: true, action, run_id: runId, judged: 0, note: "routing_safety_deterministic_only" });
@@ -379,7 +415,7 @@ Deno.serve(async (request) => {
         .eq("run_id", runId).in("status", ["scored", "not_evaluable"])
         .is("judge_model", null).order("created_at").limit(limit);
       if (error) throw error;
-      const config = customerServiceAiConfig();
+      const config = replayConfig.tiers.primary;
       const deadlineAt = Date.now() + DEADLINE_MS;
       let judged = 0;
       const items: Array<{ question: string; status: string; comparison: string }> = [];
@@ -407,13 +443,16 @@ Deno.serve(async (request) => {
         }
         if (!judgment) return;
         const deterministic = (sample.judgment as Record<string, unknown> | null)?.issues ?? [];
+        const merged = mergeHistoryJudgment(
+          Array.isArray(deterministic) ? deterministic : [], judgment,
+        );
         const { data: updated } = await admin.from("customer_service_history_eval_samples").update({
           judge_model: config.model, judge_rubric_version: HISTORY_JUDGE_RUBRIC_VERSION,
-          judgment: { stage: "llm", ...judgment, deterministic_issues: deterministic },
+          judgment: { stage: "llm", ...merged },
         }).eq("id", sample.id).is("judge_model", null).select("id");
         if (!updated?.length) return;
         judged += 1;
-        items.push({ question: sample.question.slice(0, 120), status: judgment.status, comparison: judgment.comparison });
+        items.push({ question: sample.question.slice(0, 120), status: merged.status, comparison: merged.comparison });
       });
       const { data: stillPending } = await admin.from("customer_service_history_eval_samples")
         .select("id").eq("run_id", runId).in("status", ["scored", "not_evaluable"]).is("judge_model", null).limit(1);
@@ -553,15 +592,18 @@ Deno.serve(async (request) => {
       const nextStatus = decision === "approve" ? "ready" : decision === "reject" ? "rejected" : decision === "block" ? "blocked" : "";
       if (!nextStatus) return json({ error: "invalid_decision" }, 400);
       const { data: proposal, error } = await admin.from("customer_service_repair_proposals")
-        .select("id, status, environment").eq("id", proposalId).maybeSingle();
+        .select("id, status, environment, validation").eq("id", proposalId).maybeSingle();
       if (error) throw error;
       if (!proposal) return json({ error: "proposal_not_found" }, 404);
       if (proposal.environment !== environment) return json({ error: "environment_mismatch" }, 400);
       if (proposal.status !== "proposed" && proposal.status !== "blocked") {
         return json({ error: "proposal_not_reviewable", status: proposal.status }, 409);
       }
+      if (decision === "approve" && !actorId) return json({ error: "reviewer_required" }, 403);
+      const validated = (proposal.validation as Record<string, unknown> | null)?.passed === true;
+      const reviewedStatus = decision === "approve" && !validated ? "proposed" : nextStatus;
       const { error: updateError } = await admin.from("customer_service_repair_proposals").update({
-        status: nextStatus,
+        status: reviewedStatus,
         approved_by: decision === "approve" ? actorId : null,
         approved_at: decision === "approve" ? new Date().toISOString() : null,
         updated_at: new Date().toISOString(),
@@ -569,14 +611,14 @@ Deno.serve(async (request) => {
       if (updateError) throw updateError;
       // Review only records approval. Applying an R2 change still requires the
       // separate controlled executor and its validation gate.
-      return json({ ok: true, action, proposal_id: proposalId, status: nextStatus, review_only: true });
+      return json({ ok: true, action, proposal_id: proposalId, status: reviewedStatus, review_only: true });
     }
 
     if (action === "validate_proposal") {
       const proposalId = String(body.proposal_id ?? "").trim();
       if (!UUID.test(proposalId)) return json({ error: "invalid_proposal_id" }, 400);
       const { data: proposal, error } = await admin.from("customer_service_repair_proposals")
-        .select("id, environment, repair_kind, status, source_sample_ids, candidate_patch")
+        .select("id, environment, repair_kind, status, source_sample_ids, candidate_patch, approved_by, scope")
         .eq("id", proposalId).maybeSingle();
       if (error) throw error;
       if (!proposal) return json({ error: "proposal_not_found" }, 404);
@@ -590,13 +632,21 @@ Deno.serve(async (request) => {
       const sampleIds = Array.isArray(proposal.source_sample_ids)
         ? (proposal.source_sample_ids as string[]).slice(0, 3) : [];
       if (!sampleIds.length) return json({ error: "no_source_samples" }, 400);
+      const proposalScope = (proposal.scope ?? {}) as Record<string, unknown>;
+      const sourceRunId = typeof proposalScope.run_id === "string" ? proposalScope.run_id : "";
+      if (!UUID.test(sourceRunId)) return json({ error: "invalid_source_run" }, 409);
       const { data: sourceRows, error: sourceError } = await admin.from("customer_service_history_eval_samples")
-        .select("id, question, context, ai_answer").in("id", sampleIds);
+        .select("id, question, context, ai_answer").eq("run_id", sourceRunId).in("id", sampleIds);
       if (sourceError) throw sourceError;
-
-      const tiers: CustomerServiceAiTierConfig = {
-        primary: customerServiceAiConfig(), fallback: null, escalationConfidence: 0.72,
-      };
+      const { data: sourceRun, error: runError } = await admin.from("customer_service_history_eval_runs")
+        .select("environment,snapshot").eq("id", sourceRunId).maybeSingle();
+      if (runError) throw runError;
+      if (!sourceRun || sourceRun.environment !== environment) return json({ error: "source_run_not_found" }, 404);
+      const replayConfig = await loadReplayConfig(admin, environment);
+      if ((sourceRun.snapshot as Record<string, unknown> | null)?.config_fingerprint !== replayConfig.fingerprint) {
+        return json({ error: "config_changed_restart_run" }, 409);
+      }
+      const { tiers, ragConfig } = replayConfig;
       const deadlineAt = Date.now() + 60_000;
       const results: Array<Record<string, unknown>> = [];
       let improvements = 0;
@@ -611,7 +661,7 @@ Deno.serve(async (request) => {
         }];
         try {
           const candidate = await replayHistoryDecisionPoint({
-            db: admin, tiers, runClassificationAi: false, deadlineAt,
+            db: admin, tiers, ragConfig, runClassificationAi: false, deadlineAt,
             sample: { question: String(row.question ?? ""), recentMessages: context },
             candidateOverlay: overlay,
           });
@@ -622,12 +672,14 @@ Deno.serve(async (request) => {
             pairing: "confident", contextGap: false, answerGuardPassed: candidate.answerGuardPassed,
           });
           const blocked = issues.some((issue) => issue.severity === "high" || issue.severity === "critical");
-          const improved = candidate.grounded && candidate.aiAnswer.trim().length > 0 && !blocked;
+          const answerChanged = candidate.aiAnswer.trim() !== String(row.ai_answer ?? "").trim();
+          const improved = answerChanged && candidate.grounded &&
+            candidate.faqSourceIds.includes(overlay[0].id) && !blocked;
           if (improved) improvements += 1;
           if (blocked) blockedCount += 1;
           results.push({
             sample_id: row.id, improved, blocked, grounded: candidate.grounded,
-            answer_changed: candidate.aiAnswer !== String(row.ai_answer ?? ""), issues,
+            answer_changed: answerChanged, issues,
           });
         } catch (caught) {
           blockedCount += 1;
@@ -637,16 +689,19 @@ Deno.serve(async (request) => {
           });
         }
       }
-      const passed = improvements >= 1 && blockedCount === 0;
+      const passed = (sourceRows ?? []).length === new Set(sampleIds).size &&
+        results.length === (sourceRows ?? []).length && improvements >= 1 && blockedCount === 0;
       const validation = {
         passed, improvements, blocked: blockedCount, total: results.length, results,
         pipeline_version: HISTORY_REPLAY_PIPELINE_VERSION, validated_at: new Date().toISOString(),
         controls: "not_run_v1",
       };
-      await admin.from("customer_service_repair_proposals").update({
-        validation, status: passed ? "ready" : "blocked", updated_at: new Date().toISOString(),
+      const validatedStatus = passed ? (proposal.approved_by ? "ready" : "proposed") : "blocked";
+      const { error: validationError } = await admin.from("customer_service_repair_proposals").update({
+        validation, status: validatedStatus, updated_at: new Date().toISOString(),
       }).eq("id", proposalId);
-      return json({ ok: true, action, proposal_id: proposalId, status: passed ? "ready" : "blocked", validation });
+      if (validationError) throw validationError;
+      return json({ ok: true, action, proposal_id: proposalId, status: validatedStatus, validation });
     }
 
     if (action === "apply_proposal") {
@@ -657,7 +712,7 @@ Deno.serve(async (request) => {
       const proposalId = String(body.proposal_id ?? "").trim();
       if (!UUID.test(proposalId)) return json({ error: "invalid_proposal_id" }, 400);
       const { data: proposal, error } = await admin.from("customer_service_repair_proposals")
-        .select("id, environment, status, validation, candidate_patch, scope, source_sample_ids")
+        .select("id, environment, status, validation, candidate_patch, scope, source_sample_ids, approved_by")
         .eq("id", proposalId).maybeSingle();
       if (error) throw error;
       if (!proposal) return json({ error: "proposal_not_found" }, 404);
@@ -666,6 +721,7 @@ Deno.serve(async (request) => {
       if ((proposal.validation as Record<string, unknown> | null)?.passed !== true) {
         return json({ error: "validation_required" }, 409);
       }
+      if (!proposal.approved_by) return json({ error: "reviewer_required" }, 403);
       const patch = (proposal.candidate_patch ?? {}) as Record<string, unknown>;
       const rawQuestion = typeof patch.question === "string" ? patch.question.trim() : "";
       const guidance = typeof patch.guidance === "string" ? patch.guidance.trim() : "";
@@ -676,10 +732,11 @@ Deno.serve(async (request) => {
         ? (proposal.source_sample_ids as string[]).join(",") : "";
       // Make the origin explicit so the draft is traceable in the FAQ list: the
       // raw burst ("5份") is only a fragment, so it is never stored bare.
-      const question = `【歷史回放待審·${environment}】${rawQuestion}`;
+      const question = `【歷史回放待審·${environment}·${proposalId}】${rawQuestion}`;
       const keywords = [
         "history-replay",
         `env=${environment}`,
+        `proposal=${proposalId}`,
         runId ? `run=${runId}` : "",
         sampleIds ? `sample=${sampleIds}` : "",
       ].filter(Boolean).join(" ");
@@ -693,18 +750,21 @@ Deno.serve(async (request) => {
       }).select("id").single();
       if (insertError) {
         const { data: existingFaq } = await admin.from("customer_faqs")
-          .select("id").eq("locale", "zh-HK").eq("question", question).maybeSingle();
-        if (!existingFaq?.id) throw insertError;
+          .select("id,answer,keywords,is_published").eq("locale", "zh-HK").eq("question", question).maybeSingle();
+        if (!existingFaq?.id || existingFaq.is_published ||
+          existingFaq.answer !== guidance ||
+          !String(existingFaq.keywords ?? "").split(" ").includes(`proposal=${proposalId}`)) throw insertError;
         faqId = String(existingFaq.id);
       } else {
         faqId = String(inserted.id);
       }
-      await admin.from("customer_service_repair_proposals").update({
+      const { error: applyError } = await admin.from("customer_service_repair_proposals").update({
         status: "applied", executed_by: "history-replay",
         executed_at: new Date().toISOString(),
         rollback: { faq_id: faqId, kind: "draft_faq" },
         updated_at: new Date().toISOString(),
       }).eq("id", proposalId);
+      if (applyError) throw applyError;
       return json({ ok: true, action, proposal_id: proposalId, status: "applied", faq_id: faqId, note: "draft_unpublished" });
     }
 
@@ -720,12 +780,24 @@ Deno.serve(async (request) => {
       const rollback = (proposal.rollback ?? {}) as Record<string, unknown>;
       const faqId = typeof rollback.faq_id === "string" ? rollback.faq_id : "";
       if (faqId) {
-        // Only remove the draft we created and only while it is still unpublished.
-        await admin.from("customer_faqs").delete().eq("id", faqId).eq("is_published", false);
+        const { data: faq, error: faqError } = await admin.from("customer_faqs")
+          .select("id,keywords,is_published").eq("id", faqId).maybeSingle();
+        if (faqError) throw faqError;
+        if (faq) {
+          if (!String(faq.keywords ?? "").split(" ").includes(`proposal=${proposalId}`)) {
+            return json({ error: "rollback_not_owned" }, 409);
+          }
+          if (faq.is_published) return json({ error: "rollback_published" }, 409);
+          const { data: deleted, error: deleteError } = await admin.from("customer_faqs")
+            .delete().eq("id", faqId).eq("is_published", false).select("id").maybeSingle();
+          if (deleteError) throw deleteError;
+          if (!deleted) return json({ error: "rollback_not_deleted" }, 409);
+        }
       }
-      await admin.from("customer_service_repair_proposals").update({
+      const { error: rollbackError } = await admin.from("customer_service_repair_proposals").update({
         status: "rolled_back", rollback_at: new Date().toISOString(), updated_at: new Date().toISOString(),
       }).eq("id", proposalId);
+      if (rollbackError) throw rollbackError;
       return json({ ok: true, action, proposal_id: proposalId, status: "rolled_back" });
     }
 

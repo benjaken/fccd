@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   deterministicHistoryIssues,
+  mergeHistoryJudgment,
   parseHistoryJudgment,
   type DeterministicHistoryCheckInput,
 } from "../supabase/functions/_shared/customer-service-history-judge.ts";
@@ -21,6 +22,28 @@ const base: DeterministicHistoryCheckInput = {
 };
 
 describe("deterministic history checks", () => {
+  it("keeps a critical deterministic issue after a clean model verdict", () => {
+    const deterministic = deterministicHistoryIssues({ ...base, answerGuardPassed: false });
+    const merged = mergeHistoryJudgment(deterministic, {
+      status: "scored", comparison: "match", aiGrounding: "supported",
+      referenceStatus: "unknown", issues: [], requiresHumanReview: false,
+    });
+    expect(merged.status).toBe("not_evaluable");
+    expect(merged.comparison).toBe("inconclusive");
+    expect(merged.requiresHumanReview).toBe(true);
+    expect(merged.issues.map((issue) => issue.category)).toContain("wrong_amount_date");
+  });
+
+  it("requires review when replay context is incomplete", () => {
+    const deterministic = deterministicHistoryIssues({ ...base, contextGap: true });
+    const merged = mergeHistoryJudgment(deterministic, {
+      status: "scored", comparison: "match", aiGrounding: "supported",
+      referenceStatus: "unknown", issues: [], requiresHumanReview: false,
+    });
+    expect(merged.status).toBe("not_evaluable");
+    expect(merged.requiresHumanReview).toBe(true);
+  });
+
   it("passes a grounded, labelled, confident sample", () => {
     expect(deterministicHistoryIssues(base)).toEqual([]);
   });

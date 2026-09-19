@@ -46,6 +46,25 @@ export type HistoryJudgment = {
   requiresHumanReview: boolean;
 };
 
+/** The model may add findings, but it cannot clear deterministic blockers. */
+export function mergeHistoryJudgment(
+  deterministic: HistoryIssue[],
+  judgment: HistoryJudgment,
+): HistoryJudgment & { deterministic_issues: HistoryIssue[] } {
+  const blocked = deterministic.some((issue) =>
+    issue.layer === "sample" || issue.layer === "context" || issue.layer === "infrastructure" ||
+    issue.severity === "high" || issue.severity === "critical"
+  );
+  return {
+    ...judgment,
+    status: blocked ? "not_evaluable" : judgment.status,
+    comparison: blocked ? "inconclusive" : judgment.comparison,
+    issues: [...deterministic, ...judgment.issues],
+    requiresHumanReview: blocked || judgment.requiresHumanReview,
+    deterministic_issues: deterministic,
+  };
+}
+
 export type DeterministicHistoryCheckInput = {
   aiAnswer: string;
   grounded: boolean;

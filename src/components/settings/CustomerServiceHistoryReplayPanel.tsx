@@ -35,6 +35,7 @@ const HISTORY_REPLAY_ERROR_MESSAGES: Record<string, string> = {
     "找不到可回放的歷史對話。請先在「歷史對話」匯入對話後再試。",
   no_routing_samples: "沒有可用的路由樣本。",
   environment_mismatch: "環境設定不符，請確認目前環境後再試。",
+  config_changed_restart_run: "客服模型設定已變更，請開始新的歷史回放。",
   auto_repair_disabled:
     "修復提案未啟用。請設定 CUSTOMER_SERVICE_AUTO_REPAIR_MODE=propose 後再試。",
   auto_apply_disabled:
@@ -46,6 +47,10 @@ const HISTORY_REPLAY_ERROR_MESSAGES: Record<string, string> = {
   proposal_not_ready: "提案未通過驗證，不能套用。",
   proposal_not_applied: "提案未套用，無法撤回。",
   validation_required: "需要先完成隔離驗證並通過。",
+  reviewer_required: "需要由有權限的覆核人員核准。",
+  rollback_not_owned: "這份 FAQ 草稿不屬於此提案，無法撤回。",
+  rollback_published: "FAQ 已發布，請先在知識庫處理。",
+  rollback_not_deleted: "草稿狀態已改變，請重新載入後再試。",
   no_candidate_guidance: "提案沒有可用的候選內容。",
   no_source_samples: "提案沒有來源樣本。",
   page_access_required: "沒有編輯權限，無法執行歷史回放。",

@@ -2565,7 +2565,7 @@ export function CustomerFaqPage({
                 onChange={setSuggestionSearch}
                 onSubmit={() => setSuggestionPage(1)}
                 label="搜尋學習建議"
-                placeholder="搜尋標題、內容或關鍵字…"
+                placeholder={t("settings.customerFaq.searchPlaceholder")}
                 filters={
                   <label className="cs-review-filter-field">
                     <FilterableSelect
