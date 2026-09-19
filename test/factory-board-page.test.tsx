@@ -934,6 +934,50 @@ describe("FactoryBoardPage", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("unassigns an assigned delivery from the order page", async () => {
+    const user = userEvent.setup();
+    const assignMotorcade = vi.fn(async () => {});
+    render(
+      <FactoryBoardPage
+        initialDate="2026-08-17"
+        loadBoard={async () => ({
+          ...board,
+          items: board.items.map((entry) => ({
+            ...entry,
+            motorcadeId: "team-adam",
+            motorcadeName: "Adam",
+          })),
+        })}
+        loadFleets={async () => [
+          { id: "team-sun", name: "Sun-Line", shortName: "宏" },
+          { id: "team-adam", name: "Adam", shortName: null },
+        ]}
+        loadBrands={async () => []}
+        loadOrderJob={async () => ({
+          packingNote: null,
+          dispatchTime: "10:00",
+          arrivalWindow: null,
+          lines: [],
+        })}
+        assignMotorcade={assignMotorcade}
+        openOrdersInNewPage={false}
+        qzClient={qzClient}
+      />,
+    );
+
+    await user.click(await screen.findByRole("button", { name: /B-1522/ }));
+    await user.click(
+      await screen.findByRole("button", { name: "已選擇 - Adam" }),
+    );
+    await user.click(screen.getByRole("button", { name: "取消分派" }));
+
+    expect(assignMotorcade).toHaveBeenCalledWith("job-1", null);
+    expect(await screen.findByText("分配成功")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "分派司機" }),
+    ).toBeInTheDocument();
+  });
+
   it("prints a full dish-label set through QZ before marking the line printed", async () => {
     const user = userEvent.setup();
     const printLabels = vi.fn(async () => {});
