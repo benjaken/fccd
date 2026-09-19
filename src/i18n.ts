@@ -820,6 +820,8 @@ const resources = {
         previous: "上一頁",
         next: "下一頁",
         pagination: "顯示 {{from}}–{{to}}，共 {{total}} 筆",
+        pageOf: "/",
+        jumpToPage: "跳至頁碼",
         employees: {
           title: "員工列表",
           description: "每日從 OTC2 同步 Active 員工；登入帳號只在明確匹配時連結。",
@@ -6985,6 +6987,8 @@ const resources = {
         previous: "Previous page",
         next: "Next page",
         pagination: "Showing {{from}}–{{to}} of {{total}}",
+        pageOf: "/",
+        jumpToPage: "Jump to page",
         employees: {
           title: "Employees",
           description: "Active OTC2 staff are synced daily; login accounts are linked only on an explicit match.",

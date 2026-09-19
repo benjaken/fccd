@@ -264,6 +264,7 @@ export type CustomerServiceConfigVersion = {
   status: "draft" | "active" | "archived";
   activatedAt: string | null;
   createdAt: string;
+  updatedAt: string;
 };
 
 export function parseCustomerServiceRagConfig(raw: unknown): CustomerServiceRagFlags {
@@ -823,9 +824,40 @@ export async function setCustomerServiceConversationMode(
   return data;
 }
 
-export async function fetchCustomerServiceLearningSuggestions(
-  status = "draft",
-  limit = 50,
+function mapCustomerServiceLearningSuggestion(
+  row: Record<string, unknown>,
+): CustomerServiceLearningSuggestion {
+  return {
+    id: String(row.id),
+    reportId: String(row.report_id),
+    reportDate: String(row.report_date),
+    suggestionType:
+      row.suggestion_type as CustomerServiceLearningSuggestion["suggestionType"],
+    title: String(row.title || ""),
+    reason: String(row.reason || ""),
+    proposedContent:
+      row.proposed_content && typeof row.proposed_content === "object"
+        ? (row.proposed_content as CustomerServiceLearningSuggestion["proposedContent"])
+        : {},
+    evidenceCount: Number(row.evidence_count || 0),
+    status: String(row.status || "draft"),
+    targetFaqId:
+      typeof row.target_faq_id === "string" ? row.target_faq_id : null,
+    runtimeTarget:
+      typeof row.runtime_target === "string" ? row.runtime_target : null,
+    executionStatus: String(row.execution_status || "pending") as CustomerServiceLearningSuggestion["executionStatus"],
+    executionResult:
+      row.execution_result && typeof row.execution_result === "object"
+        ? (row.execution_result as Record<string, unknown>)
+        : {},
+    executedAt: typeof row.executed_at === "string" ? row.executed_at : null,
+    createdAt: String(row.created_at),
+  };
+}
+
+async function queryCustomerServiceLearningSuggestions(
+  status: string,
+  limit: number,
 ) {
   const { data, error } = await supabase.rpc(
     "customer_service_learning_suggestions_list",
@@ -833,33 +865,25 @@ export async function fetchCustomerServiceLearningSuggestions(
   );
   if (error) throw error;
   return ((data ?? []) as Array<Record<string, unknown>>).map(
-    (row): CustomerServiceLearningSuggestion => ({
-      id: String(row.id),
-      reportId: String(row.report_id),
-      reportDate: String(row.report_date),
-      suggestionType:
-        row.suggestion_type as CustomerServiceLearningSuggestion["suggestionType"],
-      title: String(row.title || ""),
-      reason: String(row.reason || ""),
-      proposedContent:
-        row.proposed_content && typeof row.proposed_content === "object"
-          ? (row.proposed_content as CustomerServiceLearningSuggestion["proposedContent"])
-          : {},
-      evidenceCount: Number(row.evidence_count || 0),
-      status: String(row.status || "draft"),
-      targetFaqId:
-        typeof row.target_faq_id === "string" ? row.target_faq_id : null,
-      runtimeTarget:
-        typeof row.runtime_target === "string" ? row.runtime_target : null,
-      executionStatus: String(row.execution_status || "pending") as CustomerServiceLearningSuggestion["executionStatus"],
-      executionResult:
-        row.execution_result && typeof row.execution_result === "object"
-          ? (row.execution_result as Record<string, unknown>)
-          : {},
-      executedAt: typeof row.executed_at === "string" ? row.executed_at : null,
-      createdAt: String(row.created_at),
-    }),
+    mapCustomerServiceLearningSuggestion,
   );
+}
+
+export async function fetchCustomerServiceLearningSuggestions(
+  status = "draft",
+  limit = 50,
+) {
+  return queryCustomerServiceLearningSuggestions(status, limit);
+}
+
+export async function fetchCustomerServiceLearningSuggestionHistory(
+  limit = 200,
+) {
+  const [approved, rejected] = await Promise.all([
+    queryCustomerServiceLearningSuggestions("approved", limit),
+    queryCustomerServiceLearningSuggestions("rejected", limit),
+  ]);
+  return [...approved, ...rejected];
 }
 
 export type CustomerServiceImportDay = {
@@ -873,6 +897,7 @@ export type CustomerServiceImportProgress = {
   batches: number;
   messagesImported: number;
   phonesProcessed: number;
+  phonesTotal: number;
 };
 
 export type CustomerServiceImportResult = {
@@ -900,6 +925,7 @@ export async function importCustomerServiceHistory(
   let batches = 0;
   let messagesImported = 0;
   let phonesProcessed = 0;
+  let phonesTotal = 0;
   const errors: string[] = [];
   for (let guard = 0; guard < 100; guard += 1) {
     const { data, error } = await supabase.functions.invoke(
@@ -921,10 +947,19 @@ export async function importCustomerServiceHistory(
     batches += 1;
     messagesImported += Number(payload.messages_imported || 0);
     phonesProcessed = Number(payload.phones_processed || 0);
+    const requested = Number(payload.phones_requested || 0);
+    if (Number.isFinite(requested) && requested > 0) {
+      phonesTotal = requested;
+    }
     if (Array.isArray(payload.errors)) {
       errors.push(...payload.errors.map((item) => String(item)));
     }
-    input.onProgress?.({ batches, messagesImported, phonesProcessed });
+    input.onProgress?.({
+      batches,
+      messagesImported,
+      phonesProcessed,
+      phonesTotal: phonesTotal || phonesProcessed,
+    });
     if (payload.done === true) break;
     const next = payload.next_cursor;
     if (!next || typeof next !== "object") break;
@@ -1070,6 +1105,7 @@ export async function fetchCustomerServiceConfigVersions(
       activatedAt:
         typeof row.activated_at === "string" ? row.activated_at : null,
       createdAt: String(row.created_at),
+      updatedAt: String(row.updated_at || row.created_at),
     }),
   );
 }
@@ -1164,6 +1200,261 @@ export async function fetchCustomerServiceEvaluationRuns(limit = 20) {
       createdAt: String(row.created_at),
     }),
   );
+}
+
+export type CustomerServiceHistoryReplayRun = {
+  id: string;
+  environment: string;
+  scope: string;
+  status: string;
+  planned: number;
+  processed: number;
+  scored: number;
+  failed: number;
+  skipped: number;
+  completeSampleSet: boolean;
+  createdAt: string;
+  completedAt: string | null;
+};
+
+function mapHistoryReplayRun(row: Record<string, unknown>): CustomerServiceHistoryReplayRun {
+  return {
+    id: String(row.id),
+    environment: String(row.environment),
+    scope: String(row.scope),
+    status: String(row.status),
+    planned: Number(row.planned || 0),
+    processed: Number(row.processed || 0),
+    scored: Number(row.scored || 0),
+    failed: Number(row.failed || 0),
+    skipped: Number(row.skipped || 0),
+    completeSampleSet: row.complete_sample_set === true,
+    createdAt: String(row.created_at),
+    completedAt: typeof row.completed_at === "string" ? row.completed_at : null,
+  };
+}
+
+/**
+ * Invokes the history-replay function and, on a non-2xx response, throws an
+ * Error whose message is the server error code (e.g. `history_eval_disabled`)
+ * so the UI can show an actionable reason instead of a generic failure.
+ */
+async function invokeCustomerServiceHistoryReplay<T>(
+  body: Record<string, unknown>,
+): Promise<T> {
+  const { data, error } = await supabase.functions.invoke(
+    "customer-service-history-replay",
+    { body },
+  );
+  if (error) {
+    let code = "";
+    const context = (error as { context?: Response }).context;
+    if (context && typeof context.json === "function") {
+      try {
+        const payload = (await context.json()) as { error?: unknown };
+        if (payload?.error) code = String(payload.error);
+      } catch {
+        // Response body was not JSON; fall back to the SDK message.
+      }
+    }
+    throw new Error(code || error.message || "history_replay_failed");
+  }
+  return data as T;
+}
+
+export async function fetchCustomerServiceHistoryReplayRuns(
+  limit = 20,
+): Promise<CustomerServiceHistoryReplayRun[]> {
+  const payload = await invokeCustomerServiceHistoryReplay<{
+    runs?: Array<Record<string, unknown>>;
+  } | null>({ action: "status", limit });
+  return (payload?.runs ?? []).map(mapHistoryReplayRun);
+}
+
+export type CustomerServiceHistoryReplaySample = {
+  id: string;
+  question: string;
+  context: Array<{ role: string; text: string }>;
+  aiAnswer: string;
+  referenceAnswer: string;
+  status: string;
+  comparison: string | null;
+  aiGrounding: string | null;
+  requiresHumanReview: boolean;
+  issues: Array<Record<string, unknown>>;
+  scenarioAt: string;
+};
+
+export async function fetchCustomerServiceHistoryReplaySamples(
+  runId: string,
+  limit = 200,
+): Promise<CustomerServiceHistoryReplaySample[]> {
+  const payload = await invokeCustomerServiceHistoryReplay<{
+    samples?: Array<Record<string, unknown>>;
+  } | null>({ action: "samples", run_id: runId, limit });
+  return (payload?.samples ?? []).map((row) => ({
+    id: String(row.id),
+    question: String(row.question ?? ""),
+    context: Array.isArray(row.context)
+      ? (row.context as Array<{ role: string; text: string }>)
+      : [],
+    aiAnswer: String(row.ai_answer ?? ""),
+    referenceAnswer: String(row.reference_answer ?? ""),
+    status: String(row.status ?? ""),
+    comparison: typeof row.comparison === "string" ? row.comparison : null,
+    aiGrounding: typeof row.ai_grounding === "string" ? row.ai_grounding : null,
+    requiresHumanReview: row.requires_human_review === true,
+    issues: Array.isArray(row.issues) ? (row.issues as Array<Record<string, unknown>>) : [],
+    scenarioAt: String(row.scenario_at ?? ""),
+  }));
+}
+
+export type CustomerServiceRepairProposal = {
+  id: string;
+  repairKind: string;
+  riskLevel: string;
+  status: string;
+  reason: string;
+  sourceSampleIds: string[];
+  candidatePatch: Record<string, unknown>;
+  validation: Record<string, unknown> | null;
+  createdAt: string;
+};
+
+/** R0 only: drafts a reviewable repair proposal from divergent replay samples. */
+export async function proposeCustomerServiceHistoryRepair(input: {
+  runId: string;
+  sampleId?: string;
+  repairKind?: string;
+}) {
+  return invokeCustomerServiceHistoryReplay<{
+    created?: string[];
+    existing?: string[];
+    skipped?: string[];
+    error?: string;
+  }>({
+    action: "propose",
+    run_id: input.runId,
+    sample_id: input.sampleId,
+    repair_kind: input.repairKind,
+  });
+}
+
+export async function fetchCustomerServiceRepairProposals(
+  runId: string,
+): Promise<CustomerServiceRepairProposal[]> {
+  const payload = await invokeCustomerServiceHistoryReplay<{
+    proposals?: Array<Record<string, unknown>>;
+  }>({ action: "proposals", run_id: runId });
+  return (payload?.proposals ?? []).map((row) => ({
+    id: String(row.id),
+    repairKind: String(row.repair_kind ?? ""),
+    riskLevel: String(row.risk_level ?? ""),
+    status: String(row.status ?? ""),
+    reason: String(row.reason ?? ""),
+    sourceSampleIds: Array.isArray(row.source_sample_ids)
+      ? (row.source_sample_ids as string[])
+      : [],
+    candidatePatch: (row.candidate_patch ?? {}) as Record<string, unknown>,
+    validation: (row.validation ?? null) as Record<string, unknown> | null,
+    createdAt: String(row.created_at ?? ""),
+  }));
+}
+
+/** Re-runs the source samples in isolation with the candidate FAQ overlay. */
+export async function validateCustomerServiceRepairProposal(proposalId: string) {
+  return invokeCustomerServiceHistoryReplay<{
+    status?: string;
+    validation?: Record<string, unknown>;
+    error?: string;
+  }>({ action: "validate_proposal", proposal_id: proposalId });
+}
+
+/** Controlled apply: creates an unpublished draft FAQ. Requires apply_allowlist. */
+export async function applyCustomerServiceRepairProposal(proposalId: string) {
+  return invokeCustomerServiceHistoryReplay<{
+    status?: string;
+    faq_id?: string;
+    note?: string;
+    error?: string;
+  }>({ action: "apply_proposal", proposal_id: proposalId });
+}
+
+export async function rollbackCustomerServiceRepairProposal(proposalId: string) {
+  return invokeCustomerServiceHistoryReplay<{ status?: string; error?: string }>({
+    action: "rollback_proposal",
+    proposal_id: proposalId,
+  });
+}
+
+/** Records a human review decision. It does not apply the change. */
+export async function reviewCustomerServiceRepairProposal(input: {
+  proposalId: string;
+  decision: "approve" | "reject" | "block";
+}) {
+  return invokeCustomerServiceHistoryReplay<{
+    status?: string;
+    review_only?: boolean;
+    error?: string;
+  }>({ action: "review_proposal", proposal_id: input.proposalId, decision: input.decision });
+}
+
+export async function startCustomerServiceHistoryReplay(input: {
+  sampleSize?: number;
+  scope?: "answer_quality" | "routing_safety";
+  sourceSince?: string;
+  sourceUntil?: string;
+  seed?: string;
+}) {
+  return invokeCustomerServiceHistoryReplay<{
+    run_id?: string;
+    planned?: number;
+    error?: string;
+  }>({
+    action: "start",
+    sample_size: input.sampleSize,
+    scope: input.scope,
+    source_since: input.sourceSince,
+    source_until: input.sourceUntil,
+    seed: input.seed,
+  });
+}
+
+export type CustomerServiceHistoryReplayItem = {
+  question: string;
+  status: string;
+  comparison?: string;
+};
+
+/** Processes pending samples in parallel and reports what each one produced. */
+export async function processCustomerServiceHistoryReplay(
+  runId: string,
+  limit = 200,
+  concurrency = 4,
+) {
+  return invokeCustomerServiceHistoryReplay<{
+    processed?: number;
+    scored?: number;
+    not_evaluable?: number;
+    failed?: number;
+    remaining?: number;
+    items?: CustomerServiceHistoryReplayItem[];
+    error?: string;
+  }>({ action: "process", run_id: runId, limit, concurrency });
+}
+
+/** Judges processed samples in parallel and reports each verdict. */
+export async function judgeCustomerServiceHistoryReplay(
+  runId: string,
+  limit = 200,
+  concurrency = 4,
+) {
+  return invokeCustomerServiceHistoryReplay<{
+    judged?: number;
+    remaining?: number;
+    items?: CustomerServiceHistoryReplayItem[];
+    error?: string;
+  }>({ action: "judge", run_id: runId, limit, concurrency });
 }
 
 export async function fetchCustomerServiceLogic(): Promise<CustomerServiceLogic> {

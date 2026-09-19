@@ -603,6 +603,30 @@
 .customer-service-import-controls input[type="date"]{min-height:38px;padding:0 10px;border:1px solid #dbe5df;border-radius:9px;background:#fff;color:#18382b;font:inherit;}
 .customer-service-import-progress{margin:0;color:#54665d;font-size:0.82rem;overflow-wrap:anywhere;}
 .customer-service-import-probe{max-height:320px;margin:0;padding:12px;overflow:auto;border:1px solid #e4ebe7;border-radius:10px;background:#f6faf8;color:#243b31;font-size:0.72rem;line-height:1.45;white-space:pre-wrap;overflow-wrap:anywhere;}
+.customer-service-replay-progress{display:grid;gap:8px;}
+.customer-service-replay-progress-track{height:8px;border-radius:999px;background:#e4ebe7;overflow:hidden;}
+.customer-service-replay-progress-track>span{display:block;height:100%;background:#0d6f41;transition:width .3s ease;}
+.customer-service-replay-log{max-height:340px;margin:0;padding:0;list-style:none;display:grid;gap:4px;overflow:auto;font-size:0.78rem;color:#33453c;}
+.customer-service-replay-log li{padding:6px 8px;border:1px solid #eef3f0;border-radius:8px;background:#f8fbf9;overflow-wrap:anywhere;}
+.customer-service-replay-results{display:grid;gap:10px;margin-top:8px;}
+.customer-service-replay-results>header{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;}
+.customer-service-replay-results>header strong{color:#18382b;font-size:0.9rem;}
+.customer-service-replay-filters{display:flex;flex-wrap:wrap;gap:6px;}
+.customer-service-replay-case{display:grid;gap:6px;padding:12px;border:1px solid #e4ebe7;border-radius:10px;background:#fff;}
+.customer-service-replay-case-head{display:flex;flex-wrap:wrap;gap:10px;align-items:center;font-size:0.76rem;color:#607068;}
+.customer-service-replay-case p{margin:0;font-size:0.84rem;color:#243b31;overflow-wrap:anywhere;}
+.customer-service-replay-case strong{color:#54665d;}
+.customer-service-replay-case details{font-size:0.8rem;color:#54665d;}
+.customer-service-replay-case ul{margin:6px 0 0;padding-left:18px;display:grid;gap:4px;}
+.cs-compare{display:inline-flex;align-items:center;padding:2px 8px;border-radius:999px;font-weight:700;font-size:0.72rem;}
+.cs-compare-divergent{background:#fdecea;color:#b3261e;}
+.cs-compare-partial{background:#fff4e0;color:#a05a00;}
+.cs-compare-match{background:#e6f4ea;color:#0d6f41;}
+.cs-compare-inconclusive,.cs-compare-none{background:#eef1f0;color:#54665d;}
+.customer-service-replay-sheet-body{min-height:0;overflow:auto;padding:0 20px 24px;}
+.customer-service-replay-sheet-tabs{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;position:sticky;top:0;z-index:1;padding:8px 0;background:var(--background);}
+.customer-service-replay-sheet-body .side-panel-header{padding:0;}
+.customer-service-replay-case-actions{display:flex;flex-wrap:wrap;gap:8px;}
 .customer-service-import-days{display:grid;gap:8px;}
 .customer-service-import-days>header{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;}
 .customer-service-import-days>header strong{color:#18382b;font-size:0.9rem;}
@@ -4673,4 +4697,1711 @@ body:has(.shop-order-product-panel) .restaurant-workspace-body > .shop-order-pag
     height: 297mm !important;
     overflow: hidden !important;
   }
+}
+
+/* Customer FAQ in-page section tabs (AI report split into 5 sections). */
+.customer-faq-tabs {
+  margin: 0 0 2px;
+  display: flex;
+  flex-wrap: wrap;
+}
+
+/* Section tabs on the left, auto-reply switch on the right, same row. */
+.customer-faq-page .customer-faq-controls-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.customer-faq-page .customer-faq-controls-head .customer-faq-auto-reply-topbar {
+  flex: 0 1 auto;
+  min-height: 0;
+  justify-content: flex-end;
+}
+
+/* Non-FAQ sections: keep the page as its own scroll container on desktop so the
+   controls/operation bar stay visible and the content can scroll. */
+@media (max-width: 1100px) {
+  .customer-faq-page.customer-faq-page--section {
+    height: auto;
+    min-height: 0;
+    overflow: visible;
+    grid-template-rows: auto;
+    align-content: start;
+  }
+}
+
+@media (min-width: 1101px) {
+  /* Fixed toolbar row + an inner scroll pane. The scrollbar belongs to the
+     content pane so it starts below the auto-reply toolbar instead of running
+     the full height of the page. */
+  .customer-faq-page.customer-faq-page--section {
+    display: flex;
+    flex-direction: column;
+    height: calc(
+      100dvh - var(--topbar-height) - var(--workspace-height) - 40px
+    );
+    min-height: 560px;
+    overflow: hidden;
+  }
+
+  .customer-faq-page.customer-faq-page--section > .customer-faq-auto-reply-controls {
+    flex: 0 0 auto;
+    position: static;
+    z-index: 5;
+    background: #ffffff;
+    border-bottom: 1px solid #e2e9e4;
+  }
+
+  .customer-faq-page--section > .customer-faq-section-scroll {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    scrollbar-gutter: stable;
+    padding-bottom: 24px;
+  }
+
+  /* Section workspaces fill the pane so they line up with the fixed toolbar. */
+  .customer-faq-page--section .customer-service-insights-panel,
+  .customer-faq-page--section .customer-service-review-panel,
+  .customer-faq-page--section .customer-service-logic-panel {
+    width: 100%;
+    max-width: none;
+    margin-inline: auto;
+  }
+}
+
+/* Model lab config form: tidy two-column layout with labelled fields. */
+.customer-faq-page .customer-service-config-form {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 16px;
+  padding: 16px;
+  border: 1px solid #dbe5df;
+  border-radius: 13px;
+  background: #f8faf9;
+}
+
+.customer-faq-page .customer-service-config-form > textarea,
+.customer-faq-page .customer-service-config-form > fieldset,
+.customer-faq-page .customer-service-config-form > .customer-service-rag-flags,
+.customer-faq-page .customer-service-config-form > button {
+  grid-column: 1 / -1;
+}
+
+.customer-faq-page .customer-service-config-form > label:has(input[type="checkbox"]) {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.customer-faq-page .customer-service-config-form .customer-service-rag-flags {
+  padding: 12px 14px;
+  border: 1px solid #dbe5df;
+  border-radius: 12px;
+  background: #ffffff;
+}
+
+.customer-faq-page .customer-service-config-form .customer-service-rag-flags legend {
+  padding: 0 6px;
+  font-weight: 700;
+}
+
+.customer-faq-page .customer-service-config-form .customer-service-rag-flags label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Model lab: candidate configuration cards matching the settings reference. */
+@media (min-width: 1101px) {
+  .customer-faq-page--model-lab .customer-service-insights-panel,
+  .customer-faq-page--insights .customer-service-insights-panel {
+    width: 100%;
+    max-width: none;
+  }
+}
+
+.cs-report-toolbar {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.cs-report-toolbar .customer-service-report-header-actions {
+  justify-content: flex-end;
+}
+
+.customer-faq-page .customer-service-model-lab-page {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 12px;
+  width: 100%;
+  min-width: 0;
+}
+
+.cs-model-card {
+  border: 1px solid #e2e9e4;
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: 0 4px 14px rgb(31 70 51 / 4%);
+}
+
+.cs-model-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 16px;
+  border-bottom: 1px solid #eef2ef;
+}
+
+.cs-model-card-head .customer-service-section-title {
+  margin: 0;
+}
+
+.customer-service-model-lab-page .customer-service-section-title > span {
+  width: 26px;
+  height: 26px;
+  flex: 0 0 26px;
+  border-radius: 7px;
+  background: transparent;
+  color: #3f5348;
+}
+
+.customer-service-model-lab-page .customer-service-section-title svg {
+  width: 18px;
+  height: 18px;
+}
+
+.cs-model-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px 14px;
+  padding: 12px 14px;
+}
+
+.cs-model-field {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.cs-model-field--wide {
+  grid-column: 1 / -1;
+}
+
+.cs-model-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #44564d;
+  font-size: 0.82rem;
+  font-weight: 680;
+}
+
+.cs-model-label em {
+  margin-left: 2px;
+  color: #d64545;
+  font-style: normal;
+}
+
+.cs-model-help {
+  width: 14px;
+  height: 14px;
+  flex: 0 0 14px;
+  color: #9aa8a1;
+}
+
+.cs-model-help-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #9aa8a1;
+  cursor: help;
+}
+
+.cs-model-help-btn:hover,
+.cs-model-help-btn:focus-visible {
+  color: #52625a;
+}
+
+.cs-model-help-popover {
+  z-index: 80;
+  width: max-content;
+  max-width: 240px;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: #1f2c26;
+  color: #ffffff;
+  font-size: 0.74rem;
+  font-weight: 500;
+  line-height: 1.5;
+  box-shadow: 0 10px 24px rgb(15 30 22 / 24%);
+}
+
+.cs-model-field input,
+.cs-model-field select,
+.cs-model-field textarea,
+.cs-model-field .multi-select-trigger {
+  width: 100%;
+  min-height: 36px;
+  padding: 6px 11px;
+  border: 1px solid #d5dfd9;
+  border-radius: 9px;
+  background: #ffffff;
+  color: #18382b;
+  font: inherit;
+}
+
+.cs-model-field textarea {
+  min-height: 58px;
+  resize: vertical;
+}
+
+.cs-model-field input:focus-visible,
+.cs-model-field select:focus-visible,
+.cs-model-field textarea:focus-visible {
+  border-color: #12824c;
+  outline: 2px solid rgb(18 130 76 / 18%);
+  outline-offset: 0;
+}
+
+.cs-model-field input:disabled,
+.cs-model-field select:disabled,
+.cs-model-field textarea:disabled {
+  background: #f3f6f4;
+  color: #8a978f;
+}
+
+.cs-rag-options input[type="checkbox"],
+.cs-version-menu-flags input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
+  accent-color: #12824c;
+}
+
+.cs-rag-section {
+  display: grid;
+  gap: 10px;
+  padding: 12px 14px 14px;
+  border-top: 1px solid #eef2ef;
+}
+
+.cs-rag-section-head {
+  display: grid;
+  gap: 3px;
+}
+
+.cs-rag-section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #34473d;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.cs-rag-section-title svg {
+  width: 16px;
+  height: 16px;
+  color: #5b6f64;
+}
+
+.cs-rag-hint {
+  margin: 0;
+  color: #607068;
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+
+.cs-rag-options {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px 16px;
+}
+
+.cs-rag-options label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 22px;
+  color: #34473d;
+  font-size: 0.82rem;
+}
+
+.cs-model-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 12px 14px;
+  border-top: 1px solid #eef2ef;
+}
+
+.cs-version-list {
+  display: grid;
+  gap: 8px;
+  padding: 12px 16px;
+}
+
+.cs-version-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 16px;
+  border: 1px solid #e2e8e4;
+  border-left: 4px solid #cfdcd5;
+  border-radius: 11px;
+  background: #ffffff;
+}
+
+.cs-version-card.is-active {
+  border-color: #c9e6d5;
+  border-left-color: #12904f;
+  background: #f6fbf8;
+}
+
+.cs-version-body {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.cs-version-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.cs-version-title strong {
+  color: #16302a;
+  font-size: 0.95rem;
+  font-weight: 720;
+}
+
+.cs-version-meta {
+  margin: 0;
+  color: #4d5f56;
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+.cs-version-time {
+  margin: 0;
+  color: #8a978f;
+  font-size: 0.76rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.cs-version-empty {
+  margin: 0;
+  padding: 18px;
+  color: #7b8a82;
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+.cs-version-menu {
+  display: grid;
+  gap: 10px;
+  width: 288px;
+  padding: 14px;
+}
+
+.cs-version-menu .ui-button {
+  width: 100%;
+  justify-content: center;
+}
+
+.cs-version-menu-note {
+  margin: 0;
+  color: #6b7a72;
+  font-size: 0.76rem;
+  line-height: 1.45;
+}
+
+.cs-version-menu-flags {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid #e2e8e4;
+  border-radius: 10px;
+  background: #f8faf9;
+}
+
+.cs-version-menu-flags legend {
+  padding: 0 6px;
+  color: #44564d;
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.cs-version-menu-flags label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #44564d;
+  font-size: 0.8rem;
+}
+
+@media (max-width: 1100px) {
+  .cs-model-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .cs-model-grid,
+  .cs-rag-options {
+    grid-template-columns: 1fr;
+  }
+
+
+  .cs-version-card {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .cs-version-menu {
+    width: min(288px, calc(100vw - 32px));
+  }
+}
+
+.customer-service-inline-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 16px;
+  align-items: center;
+  margin-bottom: 16px;
+  padding: 14px 18px;
+  border: 1px solid #dbe5df;
+  border-radius: 13px;
+  background: #ffffff;
+}
+
+.customer-service-inline-header h2 {
+  color: #102b20;
+  font-size: 1.25rem;
+}
+
+.customer-service-inline-header p {
+  margin-top: 4px;
+  color: #607068;
+}
+
+.customer-faq-inline-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.customer-faq-page .customer-service-insights-panel,
+.customer-faq-page .customer-service-logic-panel,
+.customer-faq-page .customer-service-review-panel {
+  display: block;
+}
+
+.customer-faq-page .customer-service-review-workspace {
+  padding: 0;
+  border: 1px solid #dbe5df;
+  border-radius: 13px;
+  background: #ffffff;
+  overflow: hidden;
+}
+
+/* Customer-service logic accordion cards. */
+.customer-service-logic-group {
+  display: grid;
+  gap: 10px;
+}
+
+.customer-service-logic-group > header {
+  display: grid;
+  gap: 3px;
+}
+
+.customer-service-logic-group > header h3 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.customer-service-logic-group > header p {
+  margin: 0;
+  color: var(--muted-foreground);
+  font-size: 0.85rem;
+}
+
+.customer-service-logic-card {
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--background);
+}
+
+.customer-service-logic-card > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.customer-service-logic-card > summary::-webkit-details-marker {
+  display: none;
+}
+
+.customer-service-logic-card > summary::after {
+  content: "▾";
+  margin-left: 8px;
+  color: var(--muted-foreground);
+  transition: transform 0.15s ease;
+}
+
+.customer-service-logic-card[open] > summary::after {
+  transform: rotate(180deg);
+}
+
+.customer-service-logic-card-title {
+  font-weight: 700;
+}
+
+.customer-service-logic-card-body {
+  display: grid;
+  gap: 12px;
+  padding: 0 16px 16px;
+}
+
+.customer-service-logic-card-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: flex-end;
+}
+
+.customer-service-logic-card-row > .ingredients-field {
+  flex: 1 1 200px;
+}
+
+/* AI learning suggestions as a standalone table card. */
+.customer-faq-page .customer-service-learning-suggestions {
+  display: block;
+  padding: 18px;
+  border: 1px solid #dbe5df;
+  border-radius: 14px;
+  background: #ffffff;
+}
+
+.customer-faq-page .customer-service-learning-suggestions > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0 0 12px;
+  padding: 0 0 13px;
+  border-bottom: 1px solid #e6ece8;
+}
+
+.customer-faq-page .customer-service-learning-suggestions > header > div {
+  display: grid;
+  gap: 3px;
+}
+
+/* No sticky header: this table lives on a normally-scrolling page and must not
+   cover the FAQ operation bar / tabs above it. */
+.customer-service-suggestions-table-wrap {
+  overflow: visible;
+}
+
+.customer-service-suggestions-table {
+  table-layout: fixed;
+  width: 100%;
+}
+
+.customer-service-suggestions-table th {
+  position: static;
+}
+
+.customer-service-suggestions-table th:nth-child(1) {
+  width: 6rem;
+}
+
+.customer-service-suggestions-table th:nth-child(2) {
+  width: 20rem;
+}
+
+.customer-service-suggestions-table th:nth-child(4) {
+  width: 5rem;
+}
+
+.customer-service-suggestions-table th:nth-child(5) {
+  width: 12rem;
+}
+
+.customer-service-suggestions-table td {
+  vertical-align: top;
+}
+
+.customer-service-suggestion-reason {
+  margin: 4px 0 0;
+  color: var(--muted-foreground);
+  font-size: 0.85rem;
+}
+
+.customer-service-suggestion-detail {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 2px 8px;
+  margin: 0;
+}
+
+.customer-service-suggestion-detail dt {
+  color: var(--muted-foreground);
+  font-weight: 600;
+}
+
+.customer-service-suggestion-detail dd {
+  margin: 0;
+}
+
+@media (max-width: 760px) {
+  .customer-service-inline-header {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* AI performance report (insights) redesign. */
+.cs-report-kpis {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr)) minmax(0, 1.7fr);
+  gap: 12px;
+  width: 100%;
+  min-width: 0;
+}
+
+.cs-report-kpi {
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  padding: 14px;
+  border: 1px solid #e2e9e4;
+  border-radius: 13px;
+  background: #ffffff;
+  box-shadow: 0 4px 14px rgb(31 70 51 / 4%);
+}
+
+.cs-report-kpi-icon {
+  display: inline-grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border-radius: 50%;
+  background: #e9f5ee;
+  color: #08743f;
+}
+
+.cs-report-kpi-icon svg {
+  width: 17px;
+  height: 17px;
+}
+
+.cs-report-kpi.is-bad .cs-report-kpi-icon {
+  background: #fdecec;
+  color: #c0392b;
+}
+
+.cs-report-kpi.is-neutral .cs-report-kpi-icon {
+  background: #e9f5ee;
+  color: #08743f;
+}
+
+.cs-report-kpi.is-warn .cs-report-kpi-icon {
+  background: #fef1e4;
+  color: #c2710c;
+}
+
+.cs-report-kpi-label {
+  color: #607068;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.cs-report-kpi-value {
+  color: #102b20;
+  font-size: 1.9rem;
+  font-weight: 760;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+
+.cs-report-delta {
+  color: #7b8a82;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.cs-report-delta.is-up {
+  color: #0f8a4c;
+}
+
+.cs-report-delta.is-down {
+  color: #c0392b;
+}
+
+.cs-report-kpi-foot {
+  color: #8a978f;
+  font-size: 0.76rem;
+}
+
+.cs-report-summary {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  padding: 14px 16px;
+  border: 1px solid #e2e9e4;
+  border-radius: 13px;
+  background: #ffffff;
+  box-shadow: 0 4px 14px rgb(31 70 51 / 4%);
+}
+
+.cs-report-summary header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #102b20;
+  font-size: 0.95rem;
+  font-weight: 760;
+}
+
+.cs-report-summary header svg {
+  width: 17px;
+  height: 17px;
+  color: #08743f;
+}
+
+.cs-report-summary ul {
+  display: grid;
+  gap: 7px;
+  margin: 0;
+  padding-left: 16px;
+  color: #3f5348;
+  font-size: 0.82rem;
+  line-height: 1.55;
+}
+
+.cs-report-summary p {
+  margin: 0;
+  color: #607068;
+  font-size: 0.82rem;
+  line-height: 1.55;
+}
+
+.cs-report-grid {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  gap: 14px;
+  width: 100%;
+  min-width: 0;
+}
+
+.cs-report-card {
+  border: 1px solid #e2e9e4;
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: 0 4px 14px rgb(31 70 51 / 4%);
+}
+
+.cs-report-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 18px;
+  border-bottom: 1px solid #eef2ef;
+}
+
+.cs-report-card-head .customer-service-section-title {
+  margin: 0;
+}
+
+.cs-report-card-head > div p {
+  margin: 6px 0 0;
+}
+
+.cs-report-attention .customer-service-section-title > span {
+  background: #fef1e4;
+  color: #c2710c;
+}
+
+.cs-delivery-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 12px 18px 0;
+}
+
+.cs-delivery-tabs button {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px;
+  border: 1px solid #e2e8e4;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #4d5f56;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.cs-delivery-tabs button b {
+  margin-left: 6px;
+  font-variant-numeric: tabular-nums;
+}
+
+.cs-delivery-tabs button.is-active {
+  border-color: #16a34a;
+  background: #f3faf5;
+  color: #12824c;
+}
+
+.cs-delivery-list {
+  display: grid;
+  gap: 10px;
+  padding: 14px 18px 18px;
+}
+
+.cs-delivery-item {
+  display: grid;
+  gap: 5px;
+  padding: 12px 14px;
+  border: 1px solid #eef2ef;
+  border-radius: 11px;
+  background: #ffffff;
+}
+
+.cs-delivery-item small {
+  color: #8a978f;
+  font-size: 0.74rem;
+}
+
+.cs-delivery-item strong {
+  color: #16302a;
+  font-size: 0.86rem;
+}
+
+.cs-delivery-item p {
+  margin: 0;
+  color: #5a6b62;
+  font-size: 0.8rem;
+}
+
+.cs-delivery-item code {
+  display: block;
+  padding: 6px 8px;
+  border-radius: 7px;
+  background: #fdecec;
+  color: #b93a2c;
+  font-size: 0.74rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.cs-delivery-item footer {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.cs-delivery-empty {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  padding: 30px 12px 22px;
+  text-align: center;
+}
+
+.cs-delivery-empty-icon {
+  display: inline-grid;
+  width: 58px;
+  height: 58px;
+  place-items: center;
+  border-radius: 50%;
+  background: #eef7f1;
+  color: #16a34a;
+}
+
+.cs-delivery-empty-icon svg {
+  width: 26px;
+  height: 26px;
+}
+
+.cs-delivery-empty strong {
+  color: #16302a;
+  font-size: 0.95rem;
+}
+
+.cs-delivery-empty p {
+  margin: 0;
+  color: #7b8a82;
+  font-size: 0.82rem;
+  line-height: 1.55;
+}
+
+.cs-attention-list {
+  display: grid;
+  gap: 10px;
+  padding: 14px 18px 18px;
+}
+
+.cs-attention-item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid #eef2ef;
+  border-radius: 11px;
+  background: #ffffff;
+}
+
+.cs-attention-icon {
+  display: inline-grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border-radius: 50%;
+  background: #fef1e4;
+  color: #c2710c;
+}
+
+.cs-attention-icon svg {
+  width: 15px;
+  height: 15px;
+}
+
+.cs-attention-body {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.cs-attention-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cs-attention-title strong {
+  color: #16302a;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.cs-attention-title > svg {
+  width: 16px;
+  height: 16px;
+  margin-left: auto;
+  flex: 0 0 auto;
+  color: #a8b4ac;
+}
+
+.cs-attention-tag {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #fef1e4;
+  color: #b45309;
+  font-size: 0.72rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.cs-attention-body p {
+  margin: 0;
+  color: #5a6b62;
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+.cs-attention-body small {
+  color: #8a978f;
+  font-size: 0.74rem;
+}
+
+.cs-report-metrics > summary {
+  cursor: pointer;
+  list-style: none;
+}
+
+.cs-report-metrics > summary::-webkit-details-marker {
+  display: none;
+}
+
+.cs-report-metrics > summary > svg {
+  width: 18px;
+  height: 18px;
+  margin-left: auto;
+  color: #8a978f;
+  transition: transform 160ms ease;
+}
+
+.cs-report-metrics:not([open]) > summary > svg {
+  transform: rotate(-180deg);
+}
+
+.cs-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  border-top: 1px solid #eef2ef;
+}
+
+.cs-metrics-grid > div {
+  display: grid;
+  gap: 6px;
+  padding: 14px 18px;
+  border-right: 1px solid #eef2ef;
+}
+
+.cs-metrics-grid > div:last-child {
+  border-right: 0;
+}
+
+.cs-metrics-grid span {
+  color: #607068;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.cs-metrics-grid strong {
+  color: #16302a;
+  font-size: 1.4rem;
+  font-weight: 760;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 1280px) {
+  .cs-report-kpis {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .cs-report-summary {
+    grid-column: span 3;
+  }
+
+  .cs-metrics-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .cs-metrics-grid > div {
+    border-bottom: 1px solid #eef2ef;
+  }
+}
+
+@media (max-width: 1024px) {
+  .cs-report-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 760px) {
+  .cs-report-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .cs-report-summary {
+    grid-column: 1 / -1;
+  }
+
+  .cs-metrics-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Learning & review workspace. */
+.cs-review-page {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  min-height: 0;
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.cs-review-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 18px;
+  border-bottom: 1px solid #e2e9e4;
+}
+
+.cs-review-toolbar > .list-search-host {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.cs-review-filter-field {
+  display: flex;
+  align-items: center;
+}
+
+.cs-review-filter-field select {
+  min-width: 9rem;
+  min-height: 2.5rem;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--card);
+  color: inherit;
+  font: inherit;
+}
+
+.cs-review-table-card {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.cs-review-table-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  max-height: calc(100dvh - 340px);
+  scrollbar-gutter: stable;
+}
+
+@media (max-width: 1100px) {
+  .cs-review-table-scroll {
+    max-height: 60vh;
+  }
+}
+
+@media (min-width: 1101px) {
+  /* Learning tab owns a single scrollbar: the table scrolls, the page pane
+     does not. */
+  .customer-faq-page--learning .customer-faq-section-scroll {
+    overflow: hidden;
+  }
+
+  .customer-faq-page--learning .customer-service-insights-panel,
+  .customer-faq-page--learning .customer-service-insights {
+    height: 100%;
+    min-height: 0;
+  }
+
+  .customer-faq-page--learning .customer-service-insights {
+    grid-template-rows: minmax(0, 1fr);
+  }
+
+  .customer-faq-page--learning .cs-review-page {
+    height: 100%;
+    min-height: 0;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+  }
+
+  .customer-faq-page--learning .cs-review-table-card {
+    min-height: 0;
+  }
+
+  .customer-faq-page--learning .cs-review-table-scroll {
+    max-height: none;
+  }
+}
+
+.cs-review-table {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+}
+
+.cs-review-table th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  padding: 12px 16px;
+  border-bottom: 1px solid #eef2ef;
+  background: #f6f9f7;
+  color: #4d5f56;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.cs-review-table td {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  padding: 14px 16px;
+  border-bottom: 1px solid #eef2ef;
+  color: #34473d;
+  font-size: 0.85rem;
+  vertical-align: top;
+}
+
+.cs-review-table .customer-service-suggestion-detail,
+.cs-review-table .customer-service-suggestion-reason {
+  max-width: 100%;
+  min-width: 0;
+}
+
+.cs-review-table .customer-service-suggestion-detail dt,
+.cs-review-table .customer-service-suggestion-detail dd {
+  min-width: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.cs-review-table tr:last-child td {
+  border-bottom: 0;
+}
+
+.cs-review-table th:nth-child(1),
+.cs-review-table td:nth-child(1) {
+  width: 7%;
+  white-space: nowrap;
+}
+
+.cs-review-table th:nth-child(2),
+.cs-review-table td:nth-child(2) {
+  width: 22%;
+}
+
+.cs-review-table th:nth-child(2) strong,
+.cs-review-table .customer-service-suggestion-reason {
+  display: block;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.cs-review-table th:nth-child(4),
+.cs-review-table td:nth-child(4) {
+  width: 7%;
+  white-space: nowrap;
+}
+
+.cs-review-table th:nth-child(5),
+.cs-review-table td:nth-child(5) {
+  width: 20%;
+  white-space: nowrap;
+}
+
+.cs-review-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  justify-content: flex-end;
+  white-space: nowrap;
+}
+
+.cs-review-row-actions .customer-service-review-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.cs-review-row-actions .customer-service-review-actions .ui-button {
+  flex: 0 0 auto;
+}
+
+.cs-review-state {
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 0.76rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.cs-review-state.is-approved {
+  background: #e9f5ee;
+  color: #12824c;
+}
+
+.cs-review-state.is-rejected {
+  background: #fdecec;
+  color: #c0392b;
+}
+
+.cs-review-state.is-incomplete {
+  background: #fef1e4;
+  color: #c2710c;
+}
+
+.cs-review-state.is-pending {
+  background: #fdf3d8;
+  color: #b07d09;
+}
+
+.cs-review-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 10px 16px;
+  border-top: 1px solid #eef2ef;
+  background: #ffffff;
+  color: #607068;
+  font-size: 0.82rem;
+}
+
+.cs-review-pagination {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.cs-review-pagination button {
+  display: inline-grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border: 1px solid #e2e8e4;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #4d5f56;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+
+.cs-review-pagination button.is-active {
+  border-color: #16a34a;
+  background: #e9f5ee;
+  color: #12824c;
+  font-weight: 700;
+}
+
+.cs-review-pagination button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.cs-review-pagination button svg {
+  width: 15px;
+  height: 15px;
+}
+
+.cs-review-page-size {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cs-review-page-size select {
+  height: 32px;
+  padding: 0 8px;
+  border: 1px solid #d5dfd9;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #34473d;
+}
+
+/* History import workspace. */
+.cs-history-days {
+  display: grid;
+  gap: 12px;
+}
+
+.customer-service-import-lab.cs-history-days-card {
+  padding: 0;
+  overflow: hidden;
+}
+
+.cs-history-table-card {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.cs-history-table-scroll {
+  overflow: visible;
+  max-height: none;
+}
+
+.cs-history-table {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+}
+
+.cs-history-table th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  padding: 12px 16px;
+  border-bottom: 1px solid #eef2ef;
+  background: #f6f9f7;
+  color: #4d5f56;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-align: left;
+}
+
+.cs-history-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid #eef2ef;
+  color: #34473d;
+  font-size: 0.85rem;
+}
+
+.cs-history-table tr:last-child td {
+  border-bottom: 0;
+}
+
+.cs-history-table th:nth-child(1),
+.cs-history-table td:nth-child(1) {
+  width: 34%;
+}
+
+.cs-history-table th:nth-child(3),
+.cs-history-table td:nth-child(3) {
+  width: 30%;
+  text-align: right;
+}
+
+.cs-history-actions {
+  white-space: nowrap;
+}
+
+.cs-history-actions .ui-button {
+  flex: 0 0 auto;
+}
+
+.customer-service-review-table-wrap {
+  max-height: min(62vh, 700px);
+  overflow: auto;
+}
+
+.customer-service-import-lab {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 14px;
+  padding: 16px 18px 18px;
+  border: 1px solid #e2e9e4;
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: 0 4px 14px rgb(31 70 51 / 4%);
+}
+
+.customer-service-import-lab > .customer-service-model-lab-content {
+  padding: 0;
+  border-top: 0;
+}
+
+.customer-service-import-lab > .customer-service-import-controls {
+  padding-top: 0;
+}
+
+.customer-service-import-lab > .customer-service-history-replay {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.cs-history-page {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 14px;
+}
+
+.customer-service-review-panel {
+  width: 100%;
+  min-width: 0;
+}
+
+.customer-service-review-table-wrap {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.customer-service-history-replay {
+  display: grid;
+  gap: 12px;
+}
+
+.customer-service-history-replay .customer-service-import-controls {
+  padding-top: 0;
+}
+
+.customer-service-history-replay input[type="number"] {
+  width: 6rem;
+  min-height: 38px;
+  padding: 0 10px;
+  border: 1px solid #dbe5df;
+  border-radius: 9px;
+  background: #fff;
+  color: #18382b;
+  font: inherit;
+}
+
+@media (min-width: 1101px) {
+  /* Review tab fills the pane: table scrolls, pagination pinned at the bottom. */
+  .customer-faq-page--review .customer-faq-section-scroll {
+    overflow: hidden;
+  }
+
+  .customer-faq-page--review .customer-service-review-panel {
+    display: grid;
+    grid-template-rows: minmax(0, 1fr);
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+  }
+
+  .customer-faq-page--review .customer-service-review-workspace {
+    display: grid;
+    grid-template-rows: minmax(0, 1fr) auto;
+    min-height: 0;
+  }
+
+  .customer-faq-page--review .customer-service-review-table-wrap {
+    max-height: none;
+  }
+
+  /* History tab fills the pane: table scrolls, pagination pinned at the bottom. */
+  .customer-faq-page--history .customer-faq-section-scroll {
+    overflow: hidden;
+  }
+
+  .customer-faq-page--history .customer-service-insights-panel,
+  .customer-faq-page--history .customer-service-insights {
+    height: 100%;
+    min-height: 0;
+  }
+
+  .customer-faq-page--history .customer-service-insights {
+    grid-template-rows: minmax(0, 1fr);
+  }
+
+  .customer-faq-page--history .cs-history-page {
+    height: 100%;
+    min-height: 0;
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+
+  .customer-faq-page--history .cs-history-page > .customer-service-import-lab:last-child {
+    grid-template-rows: minmax(0, 1fr);
+    min-height: 0;
+  }
+
+  .customer-faq-page--history .cs-history-days {
+    grid-template-rows: minmax(0, 1fr) auto;
+    min-height: 0;
+  }
+
+  .customer-faq-page--history .cs-history-table-card {
+    min-height: 0;
+  }
+
+  .customer-faq-page--history .cs-history-table-scroll {
+    overflow: auto;
+    max-height: none;
+  }
+}
+
+.cs-import-dialog {
+  display: grid;
+  gap: 12px;
+}
+
+.cs-import-progress {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.cs-import-bar {
+  position: relative;
+  flex: 1 1 auto;
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e9f0ec;
+}
+
+.cs-import-bar > span {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 0;
+  border-radius: inherit;
+  background: #12824c;
+  transition: width 220ms ease;
+}
+
+.cs-import-percent {
+  flex: 0 0 auto;
+  min-width: 2.5rem;
+  color: #12824c;
+  font-size: 0.82rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.cs-import-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cs-import-stats li {
+  display: grid;
+  gap: 4px;
+  padding: 10px 12px;
+  border: 1px solid #e2e9e4;
+  border-radius: 10px;
+  background: #f8faf9;
+}
+
+.cs-import-stats span {
+  color: #607068;
+  font-size: 0.78rem;
+}
+
+.cs-import-stats strong {
+  color: #16302a;
+  font-size: 1.3rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.cs-import-message {
+  margin: 0;
+  color: #54665d;
+  font-size: 0.85rem;
+}
+
+.cs-import-done {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #e9f5ee;
+  color: #12824c;
+  font-size: 0.85rem;
+}
+
+.cs-import-error {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #fdecec;
+  color: #b93a2c;
+  font-size: 0.85rem;
 }

@@ -303,25 +303,25 @@ describe("CustomerFaqPage", () => {
     try {
       render(<CustomerFaqPage loadFaqs={vi.fn().mockResolvedValue({ items: [], total: 0 })}
         loadControls={vi.fn().mockResolvedValue({ botEnabled: false, allowedPhones: [], updatedAt: faq.updatedAt })} />);
-      await user.click(await screen.findByRole("button", { name: "AI 成效報告" }));
-      const complete = (await screen.findByText("完整問答")).closest("article")!;
+      await user.click(await screen.findByRole("tab", { name: "學習與覆核" }));
+      const complete = (await screen.findByText("完整問答")).closest("tr")!;
       expect(within(complete).getByText("幾點可以自取？")).toBeVisible();
       expect(within(complete).getByText("請先聯絡同事約定自取時間。")).toBeVisible();
       expect(within(complete).getByText("自取時間,領取")).toBeVisible();
       expect(within(complete).getByRole("button", { name: "批准並發布" })).toBeEnabled();
       for (const title of ["缺少答案", "缺少設定"]) {
-        const article = screen.getByText(title).closest("article")!;
+        const article = screen.getByText(title).closest("tr")!;
         expect(within(article).getByRole("button", { name: /批准並/ })).toBeDisabled();
         expect(within(article).getByRole("button", { name: "忽略" })).toBeEnabled();
       }
-      const mapped = screen.getByText("更新回覆").closest("article")!;
+      const mapped = screen.getByText("更新回覆").closest("tr")!;
       expect(within(mapped).getByText("回覆內容")).toBeVisible();
       expect(within(mapped).getByText("多謝支持。")).toBeVisible();
       expect(within(mapped).getByRole("button", { name: "批准並套用" })).toBeEnabled();
       await user.click(within(complete).getByRole("button", { name: "批准並發布" }));
       await waitFor(() => expect(review).toHaveBeenCalledWith("complete", "approved"));
       await waitFor(() => expect(screen.queryByText("完整問答")).not.toBeInTheDocument());
-      const incomplete = screen.getByText("缺少答案").closest("article")!;
+      const incomplete = screen.getByText("缺少答案").closest("tr")!;
       await user.click(within(incomplete).getByRole("button", { name: "忽略" }));
       await waitFor(() => expect(review).toHaveBeenCalledWith("missing-answer", "rejected"));
       await waitFor(() => expect(screen.queryByText("缺少答案")).not.toBeInTheDocument());
@@ -603,15 +603,16 @@ describe("CustomerFaqPage", () => {
       />,
     );
 
-    const reportButton = await screen.findByRole("button", { name: "AI 成效報告" });
-    const reviewButton = screen.getByRole("button", { name: "人工覆核學習" });
+    const insightsTab = await screen.findByRole("tab", { name: "AI 成效報告" });
+    const reviewTab = screen.getByRole("tab", { name: "人工覆核" });
     expect(
-      reportButton.compareDocumentPosition(reviewButton) & Node.DOCUMENT_POSITION_FOLLOWING,
+      insightsTab.compareDocumentPosition(reviewTab) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
 
-    await user.click(reviewButton);
-    const panel = await screen.findByRole("dialog", { name: "人工覆核學習" });
-    expect(panel).toHaveClass("customer-service-review-panel", "side-panel-majority");
+    await user.click(reviewTab);
+    const heading = await screen.findByRole("heading", { name: "人工覆核學習" });
+    const panel = heading.closest("section")!;
+    expect(panel).toHaveClass("customer-service-review-panel");
     expect(within(panel).getByRole("columnheader", { name: "客戶問題" })).toBeInTheDocument();
     expect(within(panel).getByRole("columnheader", { name: "AI 回覆" })).toBeInTheDocument();
     expect(within(panel).getByRole("columnheader", { name: "修正方向" })).toBeInTheDocument();
@@ -634,5 +635,27 @@ describe("CustomerFaqPage", () => {
         createFaqDraft: false,
       }),
     );
+  });
+
+  it("splits the page into five sections and switches between them", async () => {
+    const user = userEvent.setup();
+    render(
+      <CustomerFaqPage
+        loadFaqs={vi.fn().mockResolvedValue({ items: [], total: 0 })}
+        loadControls={vi.fn().mockResolvedValue({ botEnabled: false, updatedAt: faq.updatedAt })}
+      />,
+    );
+    for (const name of ["FAQ 知識庫", "客服邏輯", "AI 成效報告", "學習與覆核", "模型實驗室"]) {
+      expect(await screen.findByRole("tab", { name })).toBeInTheDocument();
+    }
+    expect(document.querySelector(".customer-faq-layout")).toBeTruthy();
+    expect(document.querySelector(".customer-service-insights-panel")).toBeNull();
+
+    await user.click(screen.getByRole("tab", { name: "AI 成效報告" }));
+    expect(await screen.findByText("收到問題")).toBeInTheDocument();
+    expect(document.querySelector(".customer-faq-layout")).toBeNull();
+
+    await user.click(screen.getByRole("tab", { name: "模型實驗室" }));
+    expect(await screen.findByText("已建立的候選版本")).toBeInTheDocument();
   });
 });
