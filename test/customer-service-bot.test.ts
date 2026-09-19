@@ -97,7 +97,16 @@ describe("customer-service intents", () => {
   it("recognizes the runtime-gated learned acknowledgement patterns", () => {
     expect(isCustomerServiceEmojiAcknowledgement("👍🙏")).toBe(true);
     expect(isCustomerServiceEmojiAcknowledgement("👍 幾時送貨")).toBe(false);
+    expect(isCustomerServiceEmojiAcknowledgement("❤️")).toBe(true);
+    expect(isCustomerServiceEmojiAcknowledgement("🎉🔥")).toBe(true);
+    expect(isCustomerServiceEmojiAcknowledgement("1")).toBe(false);
+    expect(isCustomerServiceEmojiAcknowledgement("😊 你好")).toBe(false);
     expect(isCustomerServiceThanks("多謝🙏")).toBe(true);
+    expect(isCustomerServiceThanks("Thank you so much! ❤️")).toBe(true);
+    expect(isCustomerServiceThanks("多謝晒")).toBe(true);
+    expect(isCustomerServiceThanks("感謝你")).toBe(true);
+    expect(isCustomerServiceThanks("thanks a lot")).toBe(true);
+    expect(isCustomerServiceThanks("多謝，我想查訂單")).toBe(false);
     expect(isTakeawayPackagingRequest("可唔可以提供多幾個外賣盒？")).toBe(true);
     expect(isTakeawayPackagingRequest("有冇餐具？")).toBe(false);
     expect(isProductQualityComplaint("筷子發霉")).toBe(true);

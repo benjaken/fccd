@@ -17,6 +17,8 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
+  Download,
+  History,
   ImagePlus,
   MessageCircleMore,
   ListTree,
@@ -29,6 +31,7 @@ import {
   Settings2,
   Smile,
   Sparkles,
+  Stethoscope,
   UserRound,
   X,
 } from "lucide-react";
@@ -62,8 +65,11 @@ import {
   fetchCustomerServiceReviewTurns,
   fetchCustomerFaqs,
   fetchCustomerServiceControls,
+  fetchCustomerServiceLearningImportSummary,
   fetchCustomerServiceLogic,
+  importCustomerServiceHistory,
   previewCustomerServiceTurn,
+  probeCustomerServiceHistory,
   generateCustomerServiceDailyReport,
   reviewCustomerServiceLearningSuggestion,
   retryCustomerServiceOutboundMessage,
@@ -93,6 +99,8 @@ import {
   type CustomerServiceReviewTurn,
   type CustomerServiceReplyTemplate,
   type CustomerServiceWorkflowPolicy,
+  type CustomerServiceImportDay,
+  type CustomerServiceImportResult,
 } from "@/lib/customer-faq";
 
 // Chat copy is mostly Chinese prose. Stop before adjacent Han/full-width text so
@@ -152,6 +160,14 @@ function previousHongKongDate() {
     .toISOString()
     .slice(0, 10);
 }
+
+function hongKongDateOffset(offsetDays = 0) {
+  return new Date(Date.now() + 8 * 60 * 60 * 1_000 + offsetDays * 86_400_000)
+    .toISOString()
+    .slice(0, 10);
+}
+
+const CUSTOMER_SERVICE_IMPORT_MAX_DAYS = 14;
 
 const SKELETON_COLUMNS = [
   { width: "7rem" },
@@ -666,6 +682,15 @@ export function CustomerFaqPage({
   const [reviewError, setReviewError] = useState("");
   const [reportDate, setReportDate] = useState(previousHongKongDate);
   const [generatingReport, setGeneratingReport] = useState(false);
+  const [importSince, setImportSince] = useState(() => hongKongDateOffset(-90));
+  const [importUntil, setImportUntil] = useState(hongKongDateOffset);
+  const [importBusy, setImportBusy] = useState(false);
+  const [learningDates, setLearningDates] = useState(false);
+  const [importProgress, setImportProgress] = useState("");
+  const [importResult, setImportResult] = useState<CustomerServiceImportResult | null>(null);
+  const [importDays, setImportDays] = useState<CustomerServiceImportDay[]>([]);
+  const [probeBusy, setProbeBusy] = useState(false);
+  const [probeResult, setProbeResult] = useState<Record<string, unknown> | null>(null);
   const [reviewingSuggestion, setReviewingSuggestion] = useState("");
   const [feedbackDrafts, setFeedbackDrafts] = useState<Record<string, string>>(
     {},
@@ -1068,18 +1093,21 @@ export function CustomerFaqPage({
         nextConfigs,
         nextRuns,
         nextOutbound,
+        nextImportDays,
       ] = await Promise.all([
         fetchCustomerServiceDailyReports(),
         fetchCustomerServiceLearningSuggestions(),
         fetchCustomerServiceConfigVersions("develop"),
         fetchCustomerServiceEvaluationRuns(),
         fetchCustomerServiceOutboundMessages(),
+        fetchCustomerServiceLearningImportSummary(),
       ]);
       setReports(nextReports);
       setSuggestions(nextSuggestions);
       setConfigVersions(nextConfigs);
       setEvaluationRuns(nextRuns);
       setOutboundMessages(nextOutbound);
+      setImportDays(nextImportDays);
     } catch {
       setInsightsError("載入客服成效及學習資料失敗。");
     } finally {
@@ -1118,6 +1146,65 @@ export function CustomerFaqPage({
       setInsightsError("產生每日 AI 報告失敗。");
     } finally {
       setGeneratingReport(false);
+    }
+  };
+  const runHistoryImport = async () => {
+    if (!canEdit || importBusy || learningDates) return;
+    setImportBusy(true);
+    setInsightsError("");
+    setImportResult(null);
+    setImportProgress("正在向 WATI 取得歷史對話…");
+    try {
+      const result = await importCustomerServiceHistory({
+        since: importSince ? `${importSince}T00:00:00+08:00` : undefined,
+        until: importUntil
+          ? new Date(
+              new Date(`${importUntil}T00:00:00+08:00`).getTime() + 86_400_000,
+            ).toISOString()
+          : undefined,
+        onProgress: (progress) =>
+          setImportProgress(
+            `已處理 ${progress.phonesProcessed} 個對話，匯入 ${progress.messagesImported} 則訊息…`,
+          ),
+      });
+      setImportResult(result);
+      setImportDays(await fetchCustomerServiceLearningImportSummary());
+    } catch {
+      setInsightsError("匯入歷史對話失敗，請檢查 WATI 憑證及函式設定。");
+    } finally {
+      setImportProgress("");
+      setImportBusy(false);
+    }
+  };
+  const learnImportDates = async (dates: string[]) => {
+    const targets = dates.filter(Boolean).slice(0, CUSTOMER_SERVICE_IMPORT_MAX_DAYS);
+    if (!canEdit || learningDates || !targets.length) return;
+    setLearningDates(true);
+    setInsightsError("");
+    try {
+      for (const [index, date] of targets.entries()) {
+        setImportProgress(`正在學習 ${date}（${index + 1}/${targets.length}）…`);
+        await generateCustomerServiceDailyReport(date);
+      }
+      await loadInsights();
+    } catch {
+      setInsightsError("產生學習建議時出錯，部分日期可能未完成。");
+    } finally {
+      setImportProgress("");
+      setLearningDates(false);
+    }
+  };
+  const runHistoryProbe = async () => {
+    if (!canEdit || probeBusy) return;
+    setProbeBusy(true);
+    setInsightsError("");
+    setProbeResult(null);
+    try {
+      setProbeResult(await probeCustomerServiceHistory());
+    } catch {
+      setInsightsError("讀取 WATI 診斷資料失敗。");
+    } finally {
+      setProbeBusy(false);
     }
   };
   const retryOutbound = async (id: string) => {
@@ -1270,6 +1357,10 @@ export function CustomerFaqPage({
     failedOutboundCount > 0 ||
     Number(latestReport?.metrics.failed ?? 0) > 0 ||
     Number(latestReport?.metrics.wrong_handoff_count ?? 0) > 0;
+  const learnableImportDates = importDays
+    .filter((day) => day.humanCount > 0)
+    .slice(0, CUSTOMER_SERVICE_IMPORT_MAX_DAYS)
+    .map((day) => day.date);
   const formatRate = (value: number | null | undefined) =>
     typeof value === "number" ? `${Math.round(value * 100)}%` : "—";
   const intentDraft = logic?.intents.find(
@@ -2192,6 +2283,114 @@ export function CustomerFaqPage({
             ) : null}
           </section>
           </div>
+
+          <details className="customer-service-model-lab customer-service-import-lab">
+            <summary>
+              <div>
+                <h3 className="customer-service-section-title">
+                  <span><History /></span>
+                  歷史對話學習
+                </h3>
+                <p>匯入指定日期區間過往的 WATI 對話，再為有真人回覆的日子產生學習建議。</p>
+              </div>
+              <ChevronDown aria-hidden="true" />
+            </summary>
+            <div className="customer-service-model-lab-content">
+              <div className="customer-service-import-controls">
+                <label>
+                  <span>起始日期</span>
+                  <input
+                    type="date"
+                    value={importSince}
+                    max={importUntil || undefined}
+                    disabled={importBusy || learningDates}
+                    onChange={(event) => setImportSince(event.target.value)}
+                  />
+                </label>
+                <label>
+                  <span>結束日期</span>
+                  <input
+                    type="date"
+                    value={importUntil}
+                    min={importSince || undefined}
+                    disabled={importBusy || learningDates}
+                    onChange={(event) => setImportUntil(event.target.value)}
+                  />
+                </label>
+                <Button
+                  type="button"
+                  disabled={!canEdit || importBusy || learningDates}
+                  onClick={() => void runHistoryImport()}
+                >
+                  <Download />
+                  {importBusy ? "匯入中…" : "匯入歷史對話"}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={!canEdit || probeBusy || importBusy || learningDates}
+                  onClick={() => void runHistoryProbe()}
+                >
+                  <Stethoscope />
+                  {probeBusy ? "診斷中…" : "診斷"}
+                </Button>
+              </div>
+              {probeResult ? (
+                <pre className="customer-service-import-probe">
+                  {JSON.stringify(probeResult, null, 2)}
+                </pre>
+              ) : null}
+              {importProgress ? (
+                <p className="customer-service-import-progress" role="status">
+                  {importProgress}
+                </p>
+              ) : null}
+              {importResult ? (
+                <p className="customer-service-import-progress" role="status">
+                  已匯入 {importResult.messagesImported} 則訊息（{importResult.batches} 批）
+                  {importResult.errors.length
+                    ? `，有 ${importResult.errors.length} 個對話出錯。`
+                    : "，全部成功。"}
+                </p>
+              ) : null}
+              <div className="customer-service-import-days">
+                <header>
+                  <strong>已匯入日期</strong>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    disabled={!canEdit || learningDates || !learnableImportDates.length}
+                    onClick={() => void learnImportDates(learnableImportDates)}
+                  >
+                    <Sparkles />
+                    {learningDates ? "學習中…" : "一鍵學習最近日期"}
+                  </Button>
+                </header>
+                {importDays.length ? (
+                  importDays.slice(0, CUSTOMER_SERVICE_IMPORT_MAX_DAYS).map((day) => (
+                    <article key={day.date}>
+                      <span>{day.date}</span>
+                      <span>訊息 {day.messageCount} · 真人 {day.humanCount}</span>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        disabled={!canEdit || learningDates || day.humanCount === 0}
+                        onClick={() => void learnImportDates([day.date])}
+                      >
+                        產生學習建議
+                      </Button>
+                    </article>
+                  ))
+                ) : (
+                  <p className="customer-service-import-progress">
+                    尚未匯入任何歷史對話。選擇日期區間後按「匯入歷史對話」。
+                  </p>
+                )}
+              </div>
+            </div>
+          </details>
 
           <details className="customer-service-metrics-details" open>
             <summary>

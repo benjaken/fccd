@@ -862,6 +862,106 @@ export async function fetchCustomerServiceLearningSuggestions(
   );
 }
 
+export type CustomerServiceImportDay = {
+  date: string;
+  messageCount: number;
+  humanCount: number;
+  customerCount: number;
+};
+
+export type CustomerServiceImportProgress = {
+  batches: number;
+  messagesImported: number;
+  phonesProcessed: number;
+};
+
+export type CustomerServiceImportResult = {
+  batches: number;
+  messagesImported: number;
+  phonesProcessed: number;
+  errors: string[];
+};
+
+/**
+ * Pulls past WATI conversations into the learning-only import table. The edge
+ * function stops at a wall-clock budget and returns a cursor, so this loops
+ * until every phone in the window has been fetched.
+ */
+export async function importCustomerServiceHistory(
+  input: {
+    since?: string;
+    until?: string;
+    maxPhones?: number;
+    onProgress?: (progress: CustomerServiceImportProgress) => void;
+  } = {},
+): Promise<CustomerServiceImportResult> {
+  let cursor: Record<string, unknown> | undefined;
+  let lastIndex = 0;
+  let batches = 0;
+  let messagesImported = 0;
+  let phonesProcessed = 0;
+  const errors: string[] = [];
+  for (let guard = 0; guard < 100; guard += 1) {
+    const { data, error } = await supabase.functions.invoke(
+      "wati-customer-service-backfill",
+      {
+        body: {
+          since: input.since || undefined,
+          until: input.until || undefined,
+          max_phones: input.maxPhones,
+          cursor,
+        },
+      },
+    );
+    if (error) throw error;
+    const payload = data as Record<string, unknown> | null;
+    if (!payload || payload.ok !== true) {
+      throw new Error("customer_service_import_invalid_response");
+    }
+    batches += 1;
+    messagesImported += Number(payload.messages_imported || 0);
+    phonesProcessed = Number(payload.phones_processed || 0);
+    if (Array.isArray(payload.errors)) {
+      errors.push(...payload.errors.map((item) => String(item)));
+    }
+    input.onProgress?.({ batches, messagesImported, phonesProcessed });
+    if (payload.done === true) break;
+    const next = payload.next_cursor;
+    if (!next || typeof next !== "object") break;
+    const nextIndex = Number((next as { phone_index?: unknown }).phone_index);
+    if (!Number.isFinite(nextIndex) || nextIndex <= lastIndex) break;
+    lastIndex = nextIndex;
+    cursor = next as Record<string, unknown>;
+  }
+  return { batches, messagesImported, phonesProcessed, errors };
+}
+
+/** Read-only raw sample from WATI; use when an import returns no messages. */
+export async function probeCustomerServiceHistory(maxPhones = 3) {
+  const { data, error } = await supabase.functions.invoke(
+    "wati-customer-service-backfill",
+    { body: { mode: "probe", max_phones: maxPhones } },
+  );
+  if (error) throw error;
+  return data as Record<string, unknown> | null;
+}
+
+export async function fetchCustomerServiceLearningImportSummary(
+  limit = 90,
+): Promise<CustomerServiceImportDay[]> {
+  const { data, error } = await supabase.rpc(
+    "customer_service_learning_import_summary",
+    { p_limit: limit },
+  );
+  if (error) throw error;
+  return ((data ?? []) as Array<Record<string, unknown>>).map((row) => ({
+    date: String(row.import_date),
+    messageCount: Number(row.message_count || 0),
+    humanCount: Number(row.human_count || 0),
+    customerCount: Number(row.customer_count || 0),
+  }));
+}
+
 export async function generateCustomerServiceDailyReport(reportDate: string) {
   const { data, error } = await supabase.functions.invoke(
     "customer-service-daily-report",

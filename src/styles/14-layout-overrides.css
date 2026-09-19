@@ -598,6 +598,17 @@
 .customer-service-secondary-metrics strong{color:#0d6f41;font-size:1.3rem;font-variant-numeric:tabular-nums;}
 .customer-service-model-lab-content{display:grid;gap:14px;padding:0 18px 18px;border-top:1px solid #e4ebe7;}
 .customer-service-insights-panel .customer-service-config-form{margin-top:16px;}
+.customer-service-import-controls{display:flex;flex-wrap:wrap;align-items:end;gap:12px;padding-top:16px;}
+.customer-service-import-controls label{display:grid;gap:6px;color:#54665d;font-size:0.78rem;}
+.customer-service-import-controls input[type="date"]{min-height:38px;padding:0 10px;border:1px solid #dbe5df;border-radius:9px;background:#fff;color:#18382b;font:inherit;}
+.customer-service-import-progress{margin:0;color:#54665d;font-size:0.82rem;overflow-wrap:anywhere;}
+.customer-service-import-probe{max-height:320px;margin:0;padding:12px;overflow:auto;border:1px solid #e4ebe7;border-radius:10px;background:#f6faf8;color:#243b31;font-size:0.72rem;line-height:1.45;white-space:pre-wrap;overflow-wrap:anywhere;}
+.customer-service-import-days{display:grid;gap:8px;}
+.customer-service-import-days>header{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;}
+.customer-service-import-days>header strong{color:#18382b;font-size:0.9rem;}
+.customer-service-import-days>article{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border:1px solid #e4ebe7;border-radius:10px;background:#fff;}
+.customer-service-import-days>article>span:first-child{color:#0d6f41;font-weight:700;font-variant-numeric:tabular-nums;}
+.customer-service-import-days>article>span:nth-child(2){color:#607068;font-size:0.8rem;}
 @media (max-width:1280px){.customer-service-insights-panel>.side-panel-header>div:first-child{flex-basis:auto;min-width:190px;max-width:none;}
 .customer-service-insights-panel>.side-panel-header p{display:none;}
 }
@@ -644,6 +655,12 @@
 .customer-service-secondary-metrics>div:nth-child(2n){border-right:0;}
 .customer-service-secondary-metrics>div:last-child{grid-column:1 / -1;border-bottom:0;}
 .customer-service-model-lab-content{padding:0 14px 14px;}
+.customer-service-import-controls{flex-direction:column;align-items:stretch;}
+.customer-service-import-controls label{width:100%;}
+.customer-service-import-controls input[type="date"]{width:100%;}
+.customer-service-import-controls .ui-button{width:100%;justify-content:center;}
+.customer-service-import-days>article{flex-direction:column;align-items:flex-start;}
+.customer-service-import-days>article .ui-button{width:100%;justify-content:center;}
 }
 @media (prefers-reduced-motion:reduce){.customer-service-insights-panel details>summary>svg{transition:none;}
 }

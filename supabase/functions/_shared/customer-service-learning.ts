@@ -4,7 +4,26 @@ export type LearningMessage = {
   role: "customer" | "assistant" | "human";
   text: string;
   createdAt: string;
+  sourceMessageId?: string;
 };
+
+/** Live and backfilled rows share a provider message id, so they collapse into one learning row. */
+export function mergeLearningMessages(
+  primary: LearningMessage[],
+  secondary: LearningMessage[],
+): LearningMessage[] {
+  const seen = new Set<string>();
+  const merged: LearningMessage[] = [];
+  for (const message of [...primary, ...secondary]) {
+    const key = message.sourceMessageId?.trim()
+      ? `${message.sourceMessageId}\0${message.role}`
+      : `${message.id ?? ""}\0${message.role}\0${message.phone}\0${message.createdAt}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    merged.push(message);
+  }
+  return merged.sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+}
 
 export type LearningTurn = {
   id: string;

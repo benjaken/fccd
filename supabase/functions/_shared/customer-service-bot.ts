@@ -1792,7 +1792,11 @@ export async function handleCustomerServiceTurn({
     isCustomerServiceEmojiAcknowledgement(text)
   ) {
     return guarded("acknowledgement", {
-      reply: configuredReply(deps, "acknowledgement", "收到，多謝你。"),
+      reply: configuredReply(
+        deps,
+        "acknowledgement",
+        "唔使客氣 😊 仲有咩可以幫到你？隨時同我哋講。",
+      ),
       conversation,
       wroteInquiry: false,
       notified: false,
@@ -1816,7 +1820,11 @@ export async function handleCustomerServiceTurn({
     isCustomerServiceThanks(text)
   ) {
     return guarded("thanks", {
-      reply: configuredReply(deps, "thanks", "唔使客氣，多謝你。"),
+      reply: configuredReply(
+        deps,
+        "thanks",
+        "唔使客氣 😊 仲有咩可以幫到你？隨時同我哋講。",
+      ),
       conversation,
       wroteInquiry: false,
       notified: false,
