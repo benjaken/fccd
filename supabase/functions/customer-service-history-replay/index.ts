@@ -10,7 +10,14 @@ import {
 import {
   replayHistoryDecisionPoint,
   HISTORY_REPLAY_PIPELINE_VERSION,
+  type HistoryReplayResult,
 } from "../_shared/customer-service-history-replay.ts";
+import {
+  diagnoseHistoryRepair, evaluateRepairTrials, normalizedRepairQuestion,
+  type RepairTrial,
+} from "../_shared/customer-service-history-auto-repair.ts";
+import { HISTORY_CASE_INTENTS, recognizeHistoryCase } from "../_shared/customer-service-history-case-recognition.ts";
+import { parseCustomerServiceCaseInput } from "../_shared/customer-service-cases.ts";
 import {
   deterministicHistoryIssues,
   mergeHistoryJudgment,
@@ -107,9 +114,31 @@ type JudgeSampleRow = {
 
 type AdminClient = ReturnType<typeof createClient>;
 
+type AutoRepairSample = {
+  id: string; run_id: string; question: string; context: unknown;
+  reference_answer: string | null; ai_answer: string | null;
+  status: string; pairing: string | null; context_gap: boolean; judgment: unknown; lineage: unknown;
+  scenario_at: string | null;
+};
+
+function asReplayContext(value: unknown) {
+  return Array.isArray(value) ? value.filter((entry): entry is {
+    role: "customer" | "assistant" | "human"; text: string;
+  } => Boolean(entry) && typeof entry === "object" && typeof entry.text === "string") : [];
+}
+
+function comparisonTrial(baseline: HistoryReplayResult, candidate: HistoryReplayResult): RepairTrial {
+  return {
+    baselineSourceIds: baseline.faqSourceIds, candidateSourceIds: candidate.faqSourceIds,
+    baselineGuard: baseline.answerGuardPassed, candidateGuard: candidate.answerGuardPassed,
+    baselineAnswer: baseline.aiAnswer, candidateAnswer: candidate.aiAnswer,
+    retrievalError: baseline.retrieval.error || candidate.retrieval.error,
+  };
+}
+
 async function loadReplayConfig(admin: AdminClient, environment: string) {
   const { data, error } = await admin.from("customer_service_config_versions")
-    .select("model,fallback_model,fallback_enabled,escalation_confidence,system_prompt,temperature,retrieval_limit,rag_config")
+    .select("id,updated_at,model,fallback_model,fallback_enabled,escalation_confidence,system_prompt,temperature,retrieval_limit,rag_config")
     .eq("environment", environment).eq("status", "active").maybeSingle();
   if (error) throw error;
   const active = data as ActiveCustomerServiceConfig | null;
@@ -119,7 +148,8 @@ async function loadReplayConfig(admin: AdminClient, environment: string) {
     active, ragConfig, primaryModel: tiers.primary.model,
     fallbackModel: tiers.fallback?.model ?? null,
   }));
-  return { tiers, ragConfig, fingerprint };
+  return { tiers, ragConfig, fingerprint,
+    configId: active?.id ?? null, configUpdatedAt: active?.updated_at ?? null };
 }
 
 async function authorize(request: Request, admin: AdminClient): Promise<string | null> {
@@ -208,6 +238,7 @@ Deno.serve(async (request) => {
             pipeline_version: "routing-replay-v1", judge_rubric_version: HISTORY_JUDGE_RUBRIC_VERSION,
             replay_pipeline: "production_turn_function_read_only_stubs",
             config_fingerprint: replayConfig.fingerprint,
+            config_id: replayConfig.configId, config_updated_at: replayConfig.configUpdatedAt,
           },
           flags: {}, budget: { planned: valid.length },
           sample_size: valid.length, planned: valid.length, status: "running",
@@ -255,6 +286,7 @@ Deno.serve(async (request) => {
           judge_rubric_version: HISTORY_JUDGE_RUBRIC_VERSION,
           source_mapper_version: "history-source-v1",
           model: replayConfig.tiers.primary.model, config_fingerprint: replayConfig.fingerprint,
+          config_id: replayConfig.configId, config_updated_at: replayConfig.configUpdatedAt,
           seed: seed || null,
           replay_pipeline: "production_faq_subpipeline_plus_fallback",
         },
@@ -492,6 +524,295 @@ Deno.serve(async (request) => {
           };
         }),
       });
+    }
+
+    if (action === "auto_repair") {
+      if (env("CUSTOMER_SERVICE_AUTO_REPAIR_PAUSED").toLowerCase() === "true") {
+        return json({ error: "auto_repair_paused" }, 503);
+      }
+      const mode = env("CUSTOMER_SERVICE_AUTO_REPAIR_MODE").toLowerCase();
+      if (mode !== "propose" && mode !== "apply_allowlist") {
+        return json({ error: "auto_repair_disabled" }, 503);
+      }
+      const forceOff = env("CUSTOMER_SERVICE_RAG_FORCE_OFF").toLowerCase() === "true";
+      const allowedFaqIds = new Set(env("CUSTOMER_SERVICE_AUTO_REPAIR_FAQ_ALLOWLIST")
+        .split(",").map((value) => value.trim().toLowerCase()).filter((value) => UUID.test(value)));
+      const runId = String(body.run_id ?? "").trim();
+      if (!UUID.test(runId)) return json({ error: "invalid_run_id" }, 400);
+      const { data: run, error: runError } = await admin.from("customer_service_history_eval_runs")
+        .select("id,environment,status,scope,snapshot").eq("id", runId).maybeSingle();
+      if (runError) throw runError;
+      if (!run || run.environment !== environment) return json({ error: "run_not_found" }, 404);
+      if (run.status !== "complete" || run.scope !== "answer_quality") {
+        return json({ error: "run_not_ready" }, 409);
+      }
+      const replayConfig = await loadReplayConfig(admin, environment);
+      if ((run.snapshot as Record<string, unknown> | null)?.config_fingerprint !== replayConfig.fingerprint) {
+        return json({ error: "config_changed_restart_run" }, 409);
+      }
+      if (!replayConfig.configId || !replayConfig.configUpdatedAt ||
+          (run.snapshot as Record<string, unknown> | null)?.config_id !== replayConfig.configId ||
+          (run.snapshot as Record<string, unknown> | null)?.config_updated_at !== replayConfig.configUpdatedAt) {
+        return json({ error: "active_config_required" }, 409);
+      }
+      const { data: rows, error: sampleError } = await admin.from("customer_service_history_eval_samples")
+        .select("id,run_id,question,context,reference_answer,ai_answer,status,pairing,context_gap,judgment,lineage,scenario_at,judge_model")
+        .eq("run_id", runId).limit(MAX_PLAN);
+      if (sampleError) throw sampleError;
+      const { data: existingRepairRows, error: existingRepairError } = await admin
+        .from("customer_service_repair_proposals")
+        .select("id,idempotency_key").eq("environment", environment)
+        .eq("scope->>run_id", runId).limit(100);
+      if (existingRepairError) throw existingRepairError;
+      const usedBudget = (existingRepairRows ?? []).filter((row: Record<string, unknown>) =>
+        String(row.idempotency_key ?? "").startsWith("history-auto:")).length;
+      const maxCandidates = Math.max(1, Math.min(10,
+        Number(env("CUSTOMER_SERVICE_AUTO_REPAIR_MAX_CANDIDATES_PER_RUN")) || 3));
+      if (usedBudget >= maxCandidates) {
+        return json({ ok: true, action, run_id: runId, results: [], budget_exhausted: true });
+      }
+      const samples = ((rows ?? []) as AutoRepairSample[]).filter((row) =>
+        row.status === "scored" && Boolean((row as AutoRepairSample & { judge_model?: string }).judge_model));
+      const conversationId = (row: AutoRepairSample) =>
+        String(((row.lineage ?? {}) as Record<string, unknown>).conversation_id ?? "");
+      const results: Array<{ sample_id: string; proposal_id: string; status: string; reason: string }> = [];
+      const deadlineAt = Date.now() + DEADLINE_MS;
+      // One candidate per invocation bounds model calls and permits safe continuation.
+      const limit = Math.max(1, Math.min(maxCandidates - usedBudget, 2, Number(body.limit) || 1));
+      for (const sample of samples) {
+        if (results.length >= limit || Date.now() > deadlineAt - 20_000) break;
+        const judgment = (sample.judgment ?? {}) as Record<string, unknown>;
+        if (judgment.comparison !== "divergent" && judgment.comparison !== "partial") continue;
+        const diagnosis = diagnoseHistoryRepair({
+          status: sample.status, pairing: sample.pairing, contextGap: sample.context_gap,
+          judgment,
+        });
+        const faqId = diagnosis.faqId;
+        const idempotencyKey = `history-auto:${sample.id}:${faqId ?? diagnosis.reason}:${replayConfig.fingerprint}`;
+        const { data: prior } = await admin.from("customer_service_repair_proposals")
+          .select("id,status").eq("idempotency_key", idempotencyKey).maybeSingle();
+        if (prior) {
+          continue;
+        }
+        let target: { id: string; question: string; content_hash: string;
+          category: string; created_at: string } | null = null;
+        if (diagnosis.outcome === "candidate" && faqId && UUID.test(faqId)) {
+          const { data, error } = await admin.rpc("customer_service_verified_repair_target", { p_faq_id: faqId });
+          if (error) throw error;
+          if (data && typeof data === "object") {
+            target = data as { id: string; question: string; content_hash: string;
+              category: string; created_at: string };
+          }
+        }
+        // A FAQ created from the same historical event is not independent evidence.
+        if (target && (!sample.scenario_at || !target.created_at ||
+            !Number.isFinite(Date.parse(target.created_at)) ||
+            !Number.isFinite(Date.parse(sample.scenario_at)) ||
+            Date.parse(target.created_at) >= Date.parse(sample.scenario_at) ||
+            /history.replay|歷史回放/i.test(target.category))) target = null;
+        const lineage = (sample.lineage ?? {}) as Record<string, unknown>;
+        const sourceMessageIds = [lineage.request_message_ids, lineage.reference_message_ids]
+          .flatMap((value) => Array.isArray(value) ? value.filter((id): id is string =>
+            typeof id === "string" && Boolean(id.trim())) : []);
+        const caseCandidate = !target && diagnosis.outcome !== "candidate" &&
+          sample.pairing === "confident" && !sample.context_gap &&
+          sourceMessageIds.length > 0 && sample.reference_answer &&
+          judgment.status === "scored" &&
+          !["reference_not_current", "reference_suspect"].includes(String(judgment.referenceStatus)) &&
+          Date.now() < deadlineAt - 20_000
+          ? await recognizeHistoryCase({
+            question: sample.question, context: asReplayContext(sample.context),
+            humanReply: sample.reference_answer, config: replayConfig.tiers.primary,
+          }) : null;
+        if (caseCandidate) {
+          const caseInput = parseCustomerServiceCaseInput({
+            title: `場景 · ${HISTORY_CASE_INTENTS[caseCandidate.intent]}`, scenario_context: sample.question,
+            known_information: {}, missing_information: caseCandidate.missingSlots,
+            conversation_excerpt: [{ role: "customer", text: sample.question }],
+            response_strategy: { steps: caseCandidate.steps },
+            applicability: { intents: [caseCandidate.intent], brand: null,
+              effective_from: new Date().toISOString(), effective_to: null },
+            environment, source_message_ids: sourceMessageIds,
+            provenance: "learned_human", outcome: "unknown", is_synthetic: false,
+          }, { expectedEnvironment: environment });
+          if (caseInput.ok) {
+            const { data: inserted, error: insertError } = await admin.from("customer_service_repair_proposals")
+              .insert({
+                environment, repair_kind: "case_guidance_candidate", risk_level: "R2",
+                target_type: "case_guidance", target_id: null,
+                scope: { environment, run_id: runId, conversation_id: conversationId(sample) },
+                source_sample_ids: [sample.id], reason: "reusable_scenario_without_faq",
+                evidence: { diagnosis, classifier_model: replayConfig.tiers.primary.model,
+                  source_message_ids: sourceMessageIds },
+                candidate_patch: { kind: "case_guidance_draft", case: caseInput.value },
+                validation: { passed: false, reasons: ["case_draft_only"] },
+                status: "proposed", idempotency_key: idempotencyKey, preauthorized: false,
+              }).select("id").single();
+            if (insertError || !inserted) throw insertError || new Error("case_proposal_insert_failed");
+            let status = "proposed";
+            if (env("CUSTOMER_SERVICE_CASES_AUTO_INGEST").toLowerCase() === "true") {
+              const { data: existing, error: existingError } = await admin.from("customer_service_cases")
+                .select("id,status").eq("environment", environment)
+                .eq("source_fingerprint", caseInput.value.source_fingerprint).maybeSingle();
+              if (existingError) throw existingError;
+              let caseId = existing?.id ?? null;
+              if (!existing) {
+                const { data: created, error: caseError } = await admin.from("customer_service_cases")
+                  .insert({ ...caseInput.value, status: "draft" }).select("id").single();
+                if (caseError && caseError.code !== "23505") throw caseError;
+                caseId = created?.id ?? null;
+                if (!caseId) {
+                  const { data: raced } = await admin.from("customer_service_cases")
+                    .select("id").eq("environment", environment)
+                    .eq("source_fingerprint", caseInput.value.source_fingerprint).maybeSingle();
+                  caseId = raced?.id ?? null;
+                }
+              }
+              if (caseId) {
+                const { error: linkError } = await admin.from("customer_service_repair_proposals")
+                  .update({ target_id: caseId }).eq("id", inserted.id);
+                if (linkError) throw linkError;
+              }
+              status = existing ? "case_already_recorded" : "case_draft_recorded";
+            }
+            results.push({ sample_id: sample.id, proposal_id: String(inserted.id),
+              status, reason: "reusable_scenario_guidance" });
+            continue;
+          }
+        }
+        const reason = !target && diagnosis.outcome === "candidate"
+          ? "verified_faq_not_independent" : diagnosis.reason;
+        const initialStatus = target ? "candidate" : diagnosis.outcome === "unsupported_repair"
+          ? "unsupported_repair" : "insufficient_evidence";
+        const { data: inserted, error: insertError } = await admin.from("customer_service_repair_proposals")
+          .insert({
+            environment, repair_kind: target ? "alias_candidate" : "code_change_proposal",
+            risk_level: target ? "R1" : "R3", target_type: target ? "faq" : "diagnosis",
+            target_id: target?.id ?? null, base_hash: target?.content_hash ?? null,
+            scope: { environment, run_id: runId, conversation_id: conversationId(sample) },
+            source_sample_ids: [sample.id], reason,
+            evidence: { diagnosis, issue_categories: Array.isArray(judgment.issues)
+              ? (judgment.issues as Array<{ category?: string }>).map((issue) => issue.category) : [] },
+            candidate_patch: target ? { kind: "verified_faq_rewrite", faq_id: target.id,
+              question: sample.question, canonical_question: target.question } : { kind: "diagnosis_only" },
+            validation: {}, status: initialStatus, idempotency_key: idempotencyKey,
+            preauthorized: Boolean(target && allowedFaqIds.has(target.id.toLowerCase())),
+          }).select("id").single();
+        if (insertError || !inserted) throw insertError || new Error("proposal_insert_failed");
+        const proposalId = String(inserted.id);
+        if (!target || !normalizedRepairQuestion(sample.question) || !conversationId(sample)) {
+          results.push({ sample_id: sample.id, proposal_id: proposalId,
+            status: initialStatus, reason });
+          continue;
+        }
+        const questionKey = normalizedRepairQuestion(sample.question);
+        const holdouts = samples.filter((other) => other.id !== sample.id &&
+          conversationId(other) && conversationId(other) !== conversationId(sample) &&
+          normalizedRepairQuestion(other.question) === questionKey &&
+          other.pairing === "confident" && !other.context_gap).slice(0, 2);
+        const controls = samples.filter((other) => other.id !== sample.id &&
+          conversationId(other) !== conversationId(sample) &&
+          normalizedRepairQuestion(other.question) !== questionKey &&
+          ((other.judgment ?? {}) as Record<string, unknown>).comparison === "match" &&
+          other.pairing === "confident" && !other.context_gap).slice(0, 2);
+        if (!holdouts.length || !controls.length) {
+          const { error } = await admin.from("customer_service_repair_proposals")
+            .update({ status: "insufficient_evidence", validation: {
+              passed: false, reasons: [!holdouts.length ? "insufficient_holdouts" : "insufficient_controls"],
+              holdout_count: holdouts.length, control_count: controls.length,
+            } }).eq("id", proposalId).eq("status", "candidate");
+          if (error) throw error;
+          results.push({ sample_id: sample.id, proposal_id: proposalId,
+            status: "insufficient_evidence", reason: "independent_samples_required" });
+          continue;
+        }
+        const { error: validatingError } = await admin.from("customer_service_repair_proposals")
+          .update({ status: "validating" }).eq("id", proposalId).eq("status", "candidate");
+        if (validatingError) throw validatingError;
+        const trial = async (row: AutoRepairSample) => {
+          const replaySample = { question: row.question, recentMessages: asReplayContext(row.context) };
+          const baseline = await replayHistoryDecisionPoint({ db: admin, ...replayConfig,
+            environment, sample: replaySample, runClassificationAi: false, deadlineAt });
+          const candidate = await replayHistoryDecisionPoint({ db: admin, ...replayConfig,
+            environment, sample: replaySample, runClassificationAi: false, deadlineAt,
+            repairRewrite: { queryKey: questionKey, canonicalQuestion: target.question } });
+          return comparisonTrial(baseline, candidate);
+        };
+        try {
+          const sourceTrial = await trial(sample);
+          const holdoutTrials: RepairTrial[] = [];
+          for (const row of holdouts) holdoutTrials.push(await trial(row));
+          const controlTrials: RepairTrial[] = [];
+          for (const row of controls) controlTrials.push(await trial(row));
+          const gate = evaluateRepairTrials(target.id, sourceTrial, holdoutTrials, controlTrials);
+          const currentConfig = await loadReplayConfig(admin, environment);
+          if (currentConfig.fingerprint !== replayConfig.fingerprint) {
+            throw new Error("config_changed_restart_run");
+          }
+          const status = gate.passed ? "eligible" : "validation_failed";
+          const validation = { passed: gate.passed, reasons: gate.reasons,
+            gate_version: gate.gateVersion, config_fingerprint: replayConfig.fingerprint,
+            source: sourceTrial, holdouts: holdoutTrials, controls: controlTrials,
+            holdout_count: holdoutTrials.length, control_count: controlTrials.length,
+            evaluated_at: new Date().toISOString() };
+          const { error } = await admin.from("customer_service_repair_proposals")
+            .update({ status, validation }).eq("id", proposalId).eq("status", "validating");
+          if (error) throw error;
+          let finalStatus = status;
+          if (gate.passed && mode === "apply_allowlist" && !forceOff &&
+              allowedFaqIds.has(target.id.toLowerCase())) {
+            const { error: applyError } = await admin.rpc("customer_service_apply_verified_rewrite", {
+              p_proposal_id: proposalId, p_environment: environment,
+              p_config_fingerprint: replayConfig.fingerprint,
+            });
+            if (applyError) throw applyError;
+            const { data: staged, error: stagedError } = await admin
+              .from("customer_service_verified_rewrite_repairs")
+              .select("id,status,faq_id").eq("proposal_id", proposalId).maybeSingle();
+            if (stagedError || staged?.status !== "canary" || staged.faq_id !== target.id) {
+              throw stagedError || new Error("repair_not_staged");
+            }
+            const preview = await replayHistoryDecisionPoint({ db: admin, ...replayConfig,
+              environment, sample: { question: sample.question,
+                recentMessages: asReplayContext(sample.context) },
+              runClassificationAi: false, deadlineAt,
+              repairRewrite: { queryKey: questionKey, canonicalQuestion: target.question } });
+            if (!preview.faqSourceIds.includes(target.id) || preview.answerGuardPassed !== true ||
+                preview.retrieval.error) throw new Error("repair_canary_failed");
+            const { data: activated, error: activateError } = await admin.rpc(
+              "customer_service_finish_verified_rewrite", {
+                p_proposal_id: proposalId, p_environment: environment, p_activate: true,
+              });
+            if (activateError || activated !== true) throw activateError || new Error("repair_activate_failed");
+            const live = await replayHistoryDecisionPoint({ db: admin, ...replayConfig,
+              environment, sample: { question: sample.question,
+                recentMessages: asReplayContext(sample.context) },
+              runClassificationAi: false, deadlineAt });
+            const passedLive = live.faqSourceIds.includes(target.id) &&
+              live.answerGuardPassed === true && !live.retrieval.error;
+            if (!passedLive) {
+              const { error: rollbackError } = await admin.rpc(
+                "customer_service_finish_verified_rewrite", {
+                  p_proposal_id: proposalId, p_environment: environment, p_activate: false,
+                });
+              if (rollbackError) throw rollbackError;
+            }
+            finalStatus = passedLive ? "active" : "rolled_back";
+          }
+          results.push({ sample_id: sample.id, proposal_id: proposalId,
+            status: finalStatus, reason: gate.reasons.join(",") || "verified" });
+        } catch (error) {
+          await admin.rpc("customer_service_finish_verified_rewrite", {
+            p_proposal_id: proposalId, p_environment: environment, p_activate: false,
+          });
+          await admin.from("customer_service_repair_proposals").update({
+            status: "failed", validation: { passed: false, reasons: ["execution_failed"] },
+          }).eq("id", proposalId).in("status", ["validating", "eligible"]);
+          results.push({ sample_id: sample.id, proposal_id: proposalId,
+            status: "failed", reason: error instanceof Error ? error.message.slice(0, 80) : "failed" });
+        }
+      }
+      return json({ ok: true, action, run_id: runId, results });
     }
 
     if (action === "propose") {
@@ -776,6 +1097,15 @@ Deno.serve(async (request) => {
       if (error) throw error;
       if (!proposal) return json({ error: "proposal_not_found" }, 404);
       if (proposal.environment !== environment) return json({ error: "environment_mismatch" }, 400);
+      if (proposal.status === "active" || proposal.status === "canary") {
+        const { data: finished, error: finishError } = await admin.rpc(
+          "customer_service_finish_verified_rewrite", {
+            p_proposal_id: proposalId, p_environment: environment, p_activate: false,
+          });
+        if (finishError) throw finishError;
+        if (finished !== true) return json({ error: "rollback_not_owned" }, 409);
+        return json({ ok: true, action, proposal_id: proposalId, status: "rolled_back" });
+      }
       if (proposal.status !== "applied") return json({ error: "proposal_not_applied", status: proposal.status }, 409);
       const rollback = (proposal.rollback ?? {}) as Record<string, unknown>;
       const faqId = typeof rollback.faq_id === "string" ? rollback.faq_id : "";

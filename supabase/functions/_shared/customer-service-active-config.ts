@@ -1,6 +1,8 @@
 import { customerServiceAiConfig, type CustomerServiceAiTierConfig } from "./customer-service-ai.ts";
 
 export type ActiveCustomerServiceConfig = {
+  id?: string;
+  updated_at?: string;
   model: string;
   fallback_model: string;
   fallback_enabled: boolean;

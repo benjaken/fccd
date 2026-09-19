@@ -1321,6 +1321,13 @@ export type CustomerServiceRepairProposal = {
   createdAt: string;
 };
 
+export async function runCustomerServiceHistoryAutoRepair(runId: string, limit = 1) {
+  return invokeCustomerServiceHistoryReplay<{
+    results?: Array<{ sample_id: string; proposal_id: string; status: string; reason: string }>;
+    error?: string;
+  }>({ action: "auto_repair", run_id: runId, limit });
+}
+
 /** R0 only: drafts a reviewable repair proposal from divergent replay samples. */
 export async function proposeCustomerServiceHistoryRepair(input: {
   runId: string;

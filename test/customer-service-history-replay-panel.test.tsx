@@ -6,6 +6,7 @@ const api = vi.hoisted(() => ({
   fetchCustomerServiceHistoryReplayRuns: vi.fn(),
   fetchCustomerServiceHistoryReplaySamples: vi.fn(),
   fetchCustomerServiceRepairProposals: vi.fn(),
+  runCustomerServiceHistoryAutoRepair: vi.fn(),
   proposeCustomerServiceHistoryRepair: vi.fn(),
   reviewCustomerServiceRepairProposal: vi.fn(),
   validateCustomerServiceRepairProposal: vi.fn(),
@@ -31,6 +32,7 @@ describe("CustomerServiceHistoryReplayPanel", () => {
     api.fetchCustomerServiceHistoryReplayRuns.mockReset();
     api.fetchCustomerServiceHistoryReplaySamples.mockReset();
     api.fetchCustomerServiceRepairProposals.mockReset();
+    api.runCustomerServiceHistoryAutoRepair.mockReset();
     api.proposeCustomerServiceHistoryRepair.mockReset();
     api.reviewCustomerServiceRepairProposal.mockReset();
     api.validateCustomerServiceRepairProposal.mockReset();
@@ -41,6 +43,7 @@ describe("CustomerServiceHistoryReplayPanel", () => {
     api.judgeCustomerServiceHistoryReplay.mockReset();
     api.fetchCustomerServiceHistoryReplaySamples.mockResolvedValue([]);
     api.fetchCustomerServiceRepairProposals.mockResolvedValue([]);
+    api.runCustomerServiceHistoryAutoRepair.mockResolvedValue({ results: [] });
   });
 
   it("runs processing then judging from a single click and shows a real log", async () => {
@@ -101,7 +104,7 @@ describe("CustomerServiceHistoryReplayPanel", () => {
     expect(await screen.findByText(/需人手覆核/)).toBeInTheDocument();
   });
 
-  it("creates a repair proposal from a divergent case", async () => {
+  it("continues automatic diagnosis for a divergent case", async () => {
     api.fetchCustomerServiceHistoryReplayRuns.mockResolvedValue([run]);
     api.fetchCustomerServiceHistoryReplaySamples.mockResolvedValue([
       {
@@ -111,42 +114,38 @@ describe("CustomerServiceHistoryReplayPanel", () => {
         scenarioAt: "2026-09-18T14:54:47.000Z",
       },
     ]);
-    api.proposeCustomerServiceHistoryRepair.mockResolvedValue({ created: ["p1"], existing: [], skipped: [] });
+    api.runCustomerServiceHistoryAutoRepair.mockResolvedValue({
+      results: [{ sample_id: "s1", proposal_id: "p1", status: "insufficient_evidence", reason: "verified_faq_missing_or_ambiguous" }],
+    });
     render(<CustomerServiceHistoryReplayPanel canEdit />);
 
     await userEvent.click(await screen.findByRole("button", { name: /開啟側邊欄/ }));
-    await userEvent.click(await screen.findByRole("button", { name: "建立修復提案" }));
+    await userEvent.click(await screen.findByRole("button", { name: "繼續自動診斷" }));
 
     await waitFor(() =>
-      expect(api.proposeCustomerServiceHistoryRepair).toHaveBeenCalledWith({
-        runId: "run-1",
-        sampleId: "s1",
-      }),
+      expect(api.runCustomerServiceHistoryAutoRepair).toHaveBeenCalledWith("run-1", 1),
     );
-    expect((await screen.findAllByText(/已建立 1 個修復提案/)).length).toBeGreaterThan(0);
+    expect((await screen.findAllByText(/自動判定：insufficient_evidence/)).length).toBeGreaterThan(0);
   });
 
-  it("records a human review decision on a proposal", async () => {
+  it("offers emergency rollback for an active verified repair", async () => {
     api.fetchCustomerServiceHistoryReplayRuns.mockResolvedValue([run]);
     api.fetchCustomerServiceRepairProposals.mockResolvedValue([
       {
-        id: "p1", repairKind: "case_guidance_candidate", riskLevel: "R2", status: "proposed",
-        reason: "history_replay:divergent", sourceSampleIds: ["s1"], candidatePatch: {},
+        id: "p1", repairKind: "alias_candidate", riskLevel: "R1", status: "active",
+        reason: "verified_faq_retrieval_miss", sourceSampleIds: ["s1"], candidatePatch: {},
         createdAt: "2026-09-19T02:00:00.000Z",
       },
     ]);
-    api.reviewCustomerServiceRepairProposal.mockResolvedValue({ status: "ready", review_only: true });
+    api.rollbackCustomerServiceRepairProposal.mockResolvedValue({ status: "rolled_back" });
     render(<CustomerServiceHistoryReplayPanel canEdit />);
 
     await userEvent.click(await screen.findByRole("button", { name: /開啟側邊欄/ }));
     await userEvent.click(await screen.findByRole("tab", { name: /修復提案/ }));
-    await userEvent.click(await screen.findByRole("button", { name: "核准（待發布）" }));
+    await userEvent.click(await screen.findByRole("button", { name: "緊急撤回" }));
 
     await waitFor(() =>
-      expect(api.reviewCustomerServiceRepairProposal).toHaveBeenCalledWith({
-        proposalId: "p1",
-        decision: "approve",
-      }),
+      expect(api.rollbackCustomerServiceRepairProposal).toHaveBeenCalledWith("p1"),
     );
   });
 

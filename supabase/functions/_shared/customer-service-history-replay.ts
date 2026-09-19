@@ -90,6 +90,7 @@ export type ReplayHistoryDecisionPointInput = {
    * to retrieval so the composer can use it, but nothing is persisted.
    */
   candidateOverlay?: CustomerServiceFaqCandidate[];
+  repairRewrite?: { queryKey: string; canonicalQuestion: string };
 };
 
 /**
@@ -99,7 +100,7 @@ export type ReplayHistoryDecisionPointInput = {
  */
 export async function replayHistoryDecisionPoint({
   db, tiers, sample, ragConfig, runClassificationAi = true, fetchImpl = fetch, onTrace, deadlineAt,
-  candidateOverlay,
+  candidateOverlay, repairRewrite, environment,
 }: ReplayHistoryDecisionPointInput): Promise<HistoryReplayResult> {
   const started = Date.now();
   const traces: RagTrace[] = [];
@@ -121,6 +122,7 @@ export async function replayHistoryDecisionPoint({
     recentMessages: sample.recentMessages,
     onTrace: emit,
     deadlineAt: deadlineAt ?? Date.now() + 30_000,
+    environment, repairRewrite,
   });
   let captured: CustomerServiceFaqCandidate[] = [];
   const deps: CustomerServiceBotDeps = {

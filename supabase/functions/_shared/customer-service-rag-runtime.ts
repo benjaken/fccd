@@ -35,12 +35,16 @@ function legMetadata(leg: RagLeg): Omit<RagLeg,"candidates"> {
 export function createCustomerServiceFaqRagDeps({
   db, ragConfig, tiers, recentMessages = [], legacyLimit = 12,
   embeddingConfig = customerServiceEmbeddingConfig(), fetchImpl = fetch,
-  onTrace, deadlineAt = Date.now()+25_000,
+  onTrace, deadlineAt = Date.now()+25_000, environment,
+  repairRewrite,
 }: {
   db: CustomerServiceRagDatabase; ragConfig: CustomerServiceRagConfig; tiers: CustomerServiceAiTierConfig;
   recentMessages?: CustomerServiceRecentMessage[]; legacyLimit?: number;
   embeddingConfig?: CustomerServiceEmbeddingConfig; fetchImpl?: typeof fetch;
   onTrace?: (trace: RagTrace) => void; deadlineAt?: number;
+  environment?: string;
+  /** Isolated candidate uses the same query rewrite point as an active rule. */
+  repairRewrite?: { queryKey: string; canonicalQuestion: string };
 }) {
   const traceId = crypto.randomUUID();
   const emit = (trace: Omit<RagTrace,"traceId">) => {
@@ -72,11 +76,24 @@ export function createCustomerServiceFaqRagDeps({
     }:{}),
     async searchFaqs(query: string): Promise<CustomerServiceFaqCandidate[]> {
       const started=Date.now();
+      let lookupQuery=query;
+      const queryKey=query.trim().toLocaleLowerCase().replace(/[\s?？!！,，。:：;；、]+/g,"");
+      if (!ragConfig.forceOff && repairRewrite?.queryKey===queryKey) lookupQuery=repairRewrite.canonicalQuestion;
+      else if (!ragConfig.forceOff && environment) {
+        try {
+          const repaired=await ragRpc(db,"customer_service_verified_rewrite",
+            {p_environment:environment,p_query:query},Math.min(1_000,remaining(1_000)));
+          if (typeof repaired==="string" && repaired.trim()) lookupQuery=repaired.trim();
+        } catch { /* Missing migration or unavailable rule must preserve the original query. */ }
+      }
+      if (lookupQuery!==query) emit({stage:"rewrite",status:"ok",code:"verified_faq_rewrite",
+        elapsedMs:Date.now()-started,queryHash:await fingerprint(query),
+        rewrittenQueryHash:await fingerprint(lookupQuery)});
       const lexicalRequest = async ():Promise<RagLeg> => {
         const time=Date.now();
         try {
           if (Date.now()>=deadlineAt) throw new Error("rag_deadline");
-          const data=await ragRpc(db,"search_published_customer_faqs",{p_query:query,p_limit:ragConfig.enableRagV2?ragConfig.lexicalTopK:legacyLimit},remaining(3_000));
+          const data=await ragRpc(db,"search_published_customer_faqs",{p_query:lookupQuery,p_limit:ragConfig.enableRagV2?ragConfig.lexicalTopK:legacyLimit},remaining(3_000));
           return {status:"ok",code:"lexical_ok",elapsedMs:Date.now()-time,candidates:records(data)};
         } catch { return {status:"error",code:"lexical_error",elapsedMs:Date.now()-time,candidates:[]}; }
       };
@@ -88,7 +105,7 @@ export function createCustomerServiceFaqRagDeps({
           if (Date.now()>=deadlineAt) throw new Error("rag_deadline");
           if (embeddingConfig.dimensions!==CUSTOMER_SERVICE_EMBEDDING_DIMENSIONS) throw new CustomerServiceEmbeddingError("embedding_storage_dimension_mismatch");
           profile=await customerServiceEmbeddingProfile(embeddingConfig);
-          const [vector]=await embedCustomerServiceTexts([query],{config:{...embeddingConfig,maxRetries:0,timeoutMs:remaining(Math.min(4_000,embeddingConfig.timeoutMs))},fetchImpl,deadlineAt});
+          const [vector]=await embedCustomerServiceTexts([lookupQuery],{config:{...embeddingConfig,maxRetries:0,timeoutMs:remaining(Math.min(4_000,embeddingConfig.timeoutMs))},fetchImpl,deadlineAt});
           const data=await ragRpc(db,"search_published_customer_faqs_by_vector_v2",{
             p_query_embedding:JSON.stringify(vector),p_model:embeddingConfig.model,p_profile:profile,
             p_limit:ragConfig.vectorTopK,p_threshold:ragConfig.vectorThreshold,

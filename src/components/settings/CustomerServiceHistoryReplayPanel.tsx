@@ -17,12 +17,9 @@ import {
   fetchCustomerServiceRepairProposals,
   judgeCustomerServiceHistoryReplay,
   processCustomerServiceHistoryReplay,
-  applyCustomerServiceRepairProposal,
-  proposeCustomerServiceHistoryRepair,
-  reviewCustomerServiceRepairProposal,
+  runCustomerServiceHistoryAutoRepair,
   rollbackCustomerServiceRepairProposal,
   startCustomerServiceHistoryReplay,
-  validateCustomerServiceRepairProposal,
   type CustomerServiceHistoryReplayRun,
   type CustomerServiceHistoryReplaySample,
   type CustomerServiceRepairProposal,
@@ -36,8 +33,6 @@ const HISTORY_REPLAY_ERROR_MESSAGES: Record<string, string> = {
   no_routing_samples: "沒有可用的路由樣本。",
   environment_mismatch: "環境設定不符，請確認目前環境後再試。",
   config_changed_restart_run: "客服模型設定已變更，請開始新的歷史回放。",
-  auto_repair_disabled:
-    "修復提案未啟用。請設定 CUSTOMER_SERVICE_AUTO_REPAIR_MODE=propose 後再試。",
   auto_apply_disabled:
     "受控套用未啟用。請設定 CUSTOMER_SERVICE_AUTO_REPAIR_MODE=apply_allowlist 後再試。",
   sample_not_found: "找不到該樣本。",
@@ -48,6 +43,10 @@ const HISTORY_REPLAY_ERROR_MESSAGES: Record<string, string> = {
   proposal_not_applied: "提案未套用，無法撤回。",
   validation_required: "需要先完成隔離驗證並通過。",
   reviewer_required: "需要由有權限的覆核人員核准。",
+  auto_repair_disabled: "自動修復尚未啟用。由管理員設定修復模式後可運行。",
+  auto_repair_paused: "自動修復已暫停。",
+  run_not_ready: "回放和判定尚未完成，請先跑完。",
+  active_config_required: "自動修復需要已啟用且固定版本的客服設定。",
   rollback_not_owned: "這份 FAQ 草稿不屬於此提案，無法撤回。",
   rollback_published: "FAQ 已發布，請先在知識庫處理。",
   rollback_not_deleted: "草稿狀態已改變，請重新載入後再試。",
@@ -182,9 +181,6 @@ export function CustomerServiceHistoryReplayPanel({ canEdit = false }: { canEdit
     void loadProposals();
   }, [loadProposals]);
 
-  const proposedSampleIds = new Set(
-    proposals.flatMap((proposal) => proposal.sourceSampleIds),
-  );
   const filteredSamples = samples.filter((sample) =>
     sampleFilter === "all"
       ? true
@@ -193,21 +189,16 @@ export function CustomerServiceHistoryReplayPanel({ canEdit = false }: { canEdit
         : sample.comparison === sampleFilter,
   );
 
-  const createProposals = async (sampleId?: string) => {
+  const runAutoRepair = async () => {
     if (!canEdit || proposalBusy || !activeRunId) return;
     setProposalBusy(true);
     setProposalMessage("");
     try {
-      const result = await proposeCustomerServiceHistoryRepair({
-        runId: activeRunId,
-        sampleId,
-      });
+      const result = await runCustomerServiceHistoryAutoRepair(activeRunId, 1);
       if (result?.error) throw new Error(result.error);
-      const createdCount = result?.created?.length ?? 0;
-      const existingCount = result?.existing?.length ?? 0;
-      setProposalMessage(
-        `已建立 ${createdCount} 個修復提案${existingCount ? `，${existingCount} 個已存在` : ""}。`,
-      );
+      const item = result?.results?.[0];
+      setProposalMessage(item ? `自動判定：${item.status}（${item.reason}）。`
+        : "沒有新的可處理問題。證據不足時不會自動生效。");
       await loadProposals();
     } catch (error) {
       setProposalMessage(historyReplayErrorMessage(error));
@@ -216,49 +207,14 @@ export function CustomerServiceHistoryReplayPanel({ canEdit = false }: { canEdit
     }
   };
 
-  const reviewProposal = async (
-    proposalId: string,
-    decision: "approve" | "reject" | "block",
-  ) => {
+  const rollbackProposal = async (proposalId: string) => {
     if (!canEdit || reviewBusy || !activeRunId) return;
     setReviewBusy(proposalId);
     setProposalMessage("");
     try {
-      const result = await reviewCustomerServiceRepairProposal({ proposalId, decision });
+      const result = await rollbackCustomerServiceRepairProposal(proposalId);
       if (result?.error) throw new Error(result.error);
-      setProposalMessage(
-        `提案已更新為 ${result?.status ?? ""}（僅記錄審核，未生效）。`,
-      );
-      await loadProposals();
-    } catch (error) {
-      setProposalMessage(historyReplayErrorMessage(error));
-    } finally {
-      setReviewBusy("");
-    }
-  };
-
-  const runProposalAction = async (
-    proposalId: string,
-    action: "validate" | "apply" | "rollback",
-  ) => {
-    if (!canEdit || reviewBusy || !activeRunId) return;
-    setReviewBusy(proposalId);
-    setProposalMessage("");
-    try {
-      const result =
-        action === "validate"
-          ? await validateCustomerServiceRepairProposal(proposalId)
-          : action === "apply"
-            ? await applyCustomerServiceRepairProposal(proposalId)
-            : await rollbackCustomerServiceRepairProposal(proposalId);
-      if (result?.error) throw new Error(result.error);
-      setProposalMessage(
-        action === "validate"
-          ? `隔離驗證結果：${result?.status ?? ""}（只讀，未改動正式資料）。`
-          : action === "apply"
-            ? `已建立未發布 FAQ 草稿（${"faq_id" in result ? result.faq_id ?? "" : ""}），需人手在 FAQ 頁發布。`
-            : "已撤回草稿。",
-      );
+      setProposalMessage("已撤回此修復。");
       await loadProposals();
     } catch (error) {
       setProposalMessage(historyReplayErrorMessage(error));
@@ -350,6 +306,20 @@ export function CustomerServiceHistoryReplayPanel({ canEdit = false }: { canEdit
           if ((result?.judged ?? 0) <= 0) break;
         }
       }
+      if (!cancelRef.current) {
+        setPhase("自動診斷與驗證");
+        for (let step = 0; step < Math.min(sampleSize, 200) && !cancelRef.current; step += 1) {
+          const result = await runCustomerServiceHistoryAutoRepair(activeRunId, 1);
+          if (result?.error === "auto_repair_disabled") {
+            appendLog(["自動修復尚未啟用。"]);
+            break;
+          }
+          if (result?.error) throw new Error(result.error);
+          const item = result?.results?.[0];
+          if (!item) break;
+          appendLog([`自動修復 · ${item.status}：${item.reason}`]);
+        }
+      }
       setPhase(cancelRef.current ? "已停止" : "完成");
       await load();
       await loadSamples();
@@ -371,7 +341,7 @@ export function CustomerServiceHistoryReplayPanel({ canEdit = false }: { canEdit
   return (
     <div className="customer-service-history-replay">
       <p className="customer-service-import-progress">
-        以歷史情境回放找出可重現的回答問題，產生受限修復提案。此功能不發送訊息、不執行訂單操作。
+        以現行政策回測歷史問題，對有核實來源的檢索問題自動診斷、驗證及修復。場景回覆不會寫入 FAQ。
       </p>
       <div className="customer-service-import-controls">
         <label>
@@ -516,7 +486,7 @@ export function CustomerServiceHistoryReplayPanel({ canEdit = false }: { canEdit
           <SheetHeader>
             <SheetTitle>歷史回放診斷</SheetTitle>
             <SheetDescription>
-              逐題並排顯示歷史問題、真人參考與 AI 答案；修復提案只作草稿，未生效。
+              逐題顯示歷史問題與現行回答；自動修復記錄說明證據、驗證結果和生效狀態。
             </SheetDescription>
           </SheetHeader>
           <div className="customer-service-replay-sheet-body">
@@ -535,9 +505,9 @@ export function CustomerServiceHistoryReplayPanel({ canEdit = false }: { canEdit
                   type="button"
                   size="sm"
                   disabled={!canEdit || proposalBusy || !activeRunId}
-                  onClick={() => void createProposals()}
+                  onClick={() => void runAutoRepair()}
                 >
-                  {proposalBusy ? "建立中…" : "為有差異建立提案"}
+                  {proposalBusy ? "判定中…" : "繼續自動診斷"}
                 </Button>
               ) : null}
             </div>
@@ -607,19 +577,6 @@ export function CustomerServiceHistoryReplayPanel({ canEdit = false }: { canEdit
                         </ul>
                       </details>
                     ) : null}
-                    {sample.comparison === "divergent" || sample.comparison === "partial" ? (
-                      <div>
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="outline"
-                          disabled={!canEdit || proposalBusy || proposedSampleIds.has(sample.id)}
-                          onClick={() => void createProposals(sample.id)}
-                        >
-                          {proposedSampleIds.has(sample.id) ? "已建立提案" : "建立修復提案"}
-                        </Button>
-                      </div>
-                    ) : null}
                   </article>
                 ))
               ) : (
@@ -631,7 +588,7 @@ export function CustomerServiceHistoryReplayPanel({ canEdit = false }: { canEdit
             ) : proposals.length ? (
               <div className="customer-service-replay-results">
                 <header>
-                  <strong>修復提案（待審，未生效）</strong>
+                  <strong>自動修復記錄</strong>
                 </header>
                 {proposals.map((proposal) => (
                   <article key={proposal.id} className="customer-service-replay-case">
@@ -655,81 +612,35 @@ export function CustomerServiceHistoryReplayPanel({ canEdit = false }: { canEdit
                     ) : null}
                     {typeof proposal.candidatePatch.guidance === "string" ? (
                       <p>
-                        <strong>建議指引（待審）：</strong>
+                        <strong>候選指引：</strong>
                         {proposal.candidatePatch.guidance}
+                      </p>
+                    ) : null}
+                    {proposal.candidatePatch.case && typeof proposal.candidatePatch.case === "object" ? (
+                      <p>
+                        <strong>場景指引草稿：</strong>
+                        {String((proposal.candidatePatch.case as Record<string, unknown>).title ?? "可重用場景")}
                       </p>
                     ) : null}
                     {proposal.validation ? (
                       <p>
                         <strong>隔離驗證：</strong>
-                        {proposal.validation.passed === true ? "通過" : "未通過"} · 改善{" "}
-                        {String(proposal.validation.improvements ?? 0)}/
-                        {String(proposal.validation.total ?? 0)}
+                        {proposal.validation.passed === true ? "通過" : "未通過"} · 獨立樣本{" "}
+                        {String(proposal.validation.holdout_count ?? 0)} · 對照{" "}
+                        {String(proposal.validation.control_count ?? 0)}
                       </p>
                     ) : null}
                     {canEdit ? (
                       <div className="customer-service-replay-case-actions">
-                        {proposal.status === "proposed" || proposal.status === "blocked" ? (
-                          <>
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="outline"
-                              disabled={Boolean(reviewBusy)}
-                              onClick={() => void runProposalAction(proposal.id, "validate")}
-                            >
-                              隔離驗證
-                            </Button>
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="outline"
-                              disabled={Boolean(reviewBusy)}
-                              onClick={() => void reviewProposal(proposal.id, "approve")}
-                            >
-                              核准（待發布）
-                            </Button>
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="outline"
-                              disabled={Boolean(reviewBusy)}
-                              onClick={() => void reviewProposal(proposal.id, "reject")}
-                            >
-                              拒絕
-                            </Button>
-                          </>
-                        ) : null}
-                        {proposal.status === "ready" ? (
-                          <>
-                            <Button
-                              type="button"
-                              size="sm"
-                              disabled={Boolean(reviewBusy)}
-                              onClick={() => void runProposalAction(proposal.id, "apply")}
-                            >
-                              套用（建立草稿）
-                            </Button>
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="outline"
-                              disabled={Boolean(reviewBusy)}
-                              onClick={() => void reviewProposal(proposal.id, "reject")}
-                            >
-                              拒絕
-                            </Button>
-                          </>
-                        ) : null}
-                        {proposal.status === "applied" ? (
+                        {["active", "canary", "applied"].includes(proposal.status) ? (
                           <Button
                             type="button"
                             size="sm"
                             variant="outline"
                             disabled={Boolean(reviewBusy)}
-                            onClick={() => void runProposalAction(proposal.id, "rollback")}
+                            onClick={() => void rollbackProposal(proposal.id)}
                           >
-                            撤回草稿
+                            緊急撤回
                           </Button>
                         ) : null}
                       </div>
@@ -739,7 +650,7 @@ export function CustomerServiceHistoryReplayPanel({ canEdit = false }: { canEdit
               </div>
             ) : (
               <p className="customer-service-import-progress">
-                尚無修復提案。在「診斷結果」為有差異個案建立。
+                尚無自動修復記錄。完成回放後系統會診斷可處理的問題。
               </p>
             )}
           </div>

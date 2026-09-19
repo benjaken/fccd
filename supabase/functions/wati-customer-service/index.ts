@@ -1694,6 +1694,7 @@ function createBotDeps(
       ragConfig,
       tiers,
       recentMessages,
+      environment: deploymentEnvironment(),
       legacyLimit: activeConfig?.retrieval_limit ?? 12,
     }),
     async lookupOrders(phone: string) {
