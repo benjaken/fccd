@@ -13,7 +13,7 @@ import {
   type HistoryReplayResult,
 } from "../_shared/customer-service-history-replay.ts";
 import {
-  diagnoseHistoryRepair, evaluateRepairTrials, normalizedRepairQuestion,
+  canDraftHistoryCaseGuidance, diagnoseHistoryRepair, evaluateRepairTrials, normalizedRepairQuestion,
   type RepairTrial,
 } from "../_shared/customer-service-history-auto-repair.ts";
 import { HISTORY_CASE_INTENTS, recognizeHistoryCase } from "../_shared/customer-service-history-case-recognition.ts";
@@ -614,7 +614,7 @@ Deno.serve(async (request) => {
         const sourceMessageIds = [lineage.request_message_ids, lineage.reference_message_ids]
           .flatMap((value) => Array.isArray(value) ? value.filter((id): id is string =>
             typeof id === "string" && Boolean(id.trim())) : []);
-        const caseCandidate = !target && diagnosis.outcome !== "candidate" &&
+        const caseCandidate = !target && canDraftHistoryCaseGuidance(diagnosis) &&
           sample.pairing === "confident" && !sample.context_gap &&
           sourceMessageIds.length > 0 && sample.reference_answer &&
           judgment.status === "scored" &&
