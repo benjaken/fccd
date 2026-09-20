@@ -9,6 +9,12 @@ export type HistoryRepairDiagnosis = {
   reason: string;
 };
 
+/** Scenario guidance is only a fallback for an otherwise unexplained workflow gap. */
+export function canDraftHistoryCaseGuidance(diagnosis: HistoryRepairDiagnosis): boolean {
+  return diagnosis.outcome === "insufficient_evidence" &&
+    (diagnosis.cause === "unknown" || diagnosis.cause === "context");
+}
+
 /** Only an explicitly cited, already approved FAQ can supply facts to an automatic repair. */
 export function diagnoseHistoryRepair(input: {
   status: string;

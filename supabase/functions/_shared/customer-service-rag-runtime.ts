@@ -74,20 +74,23 @@ export function createCustomerServiceFaqRagDeps({
         }
       },
     }:{}),
-    async searchFaqs(query: string): Promise<CustomerServiceFaqCandidate[]> {
+    async searchFaqs(query: string, originalQuery = query): Promise<CustomerServiceFaqCandidate[]> {
       const started=Date.now();
       let lookupQuery=query;
-      const queryKey=query.trim().toLocaleLowerCase().replace(/[\s?？!！,，。:：;；、]+/g,"");
+      // Repair rules are approved against the historical/customer utterance,
+      // not the context-expanded query produced later by the LLM rewriter.
+      const repairQuery=originalQuery.trim() || query;
+      const queryKey=repairQuery.trim().toLocaleLowerCase().replace(/[\s?？!！,，。:：;；、]+/g,"");
       if (!ragConfig.forceOff && repairRewrite?.queryKey===queryKey) lookupQuery=repairRewrite.canonicalQuestion;
       else if (!ragConfig.forceOff && environment) {
         try {
           const repaired=await ragRpc(db,"customer_service_verified_rewrite",
-            {p_environment:environment,p_query:query},Math.min(1_000,remaining(1_000)));
+            {p_environment:environment,p_query:repairQuery},Math.min(1_000,remaining(1_000)));
           if (typeof repaired==="string" && repaired.trim()) lookupQuery=repaired.trim();
         } catch { /* Missing migration or unavailable rule must preserve the original query. */ }
       }
       if (lookupQuery!==query) emit({stage:"rewrite",status:"ok",code:"verified_faq_rewrite",
-        elapsedMs:Date.now()-started,queryHash:await fingerprint(query),
+        elapsedMs:Date.now()-started,queryHash:await fingerprint(repairQuery),
         rewrittenQueryHash:await fingerprint(lookupQuery)});
       const lexicalRequest = async ():Promise<RagLeg> => {
         const time=Date.now();
