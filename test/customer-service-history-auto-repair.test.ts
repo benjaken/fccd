@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  diagnoseHistoryRepair, evaluateRepairTrials, normalizedRepairQuestion,
+  canDraftHistoryCaseGuidance, diagnoseHistoryRepair, evaluateRepairTrials, normalizedRepairQuestion,
   type RepairTrial,
 } from "../supabase/functions/_shared/customer-service-history-auto-repair";
 
@@ -37,6 +37,19 @@ describe("history automatic repair gate", () => {
         { category: "wrong_route", layer: "routing", evidence: [] },
       ] },
     }).cause).toBe("routing");
+  });
+
+  it("drafts case guidance only for unexplained workflow gaps", () => {
+    expect(canDraftHistoryCaseGuidance({
+      cause: "unknown", outcome: "insufficient_evidence", faqId: null,
+      reason: "no_supported_diagnosis",
+    })).toBe(true);
+    for (const cause of ["routing", "generation"] as const) {
+      expect(canDraftHistoryCaseGuidance({
+        cause, outcome: "unsupported_repair", faqId: null,
+        reason: "code_change_required",
+      })).toBe(false);
+    }
   });
 
   it("requires independent improvement and no control regression", () => {

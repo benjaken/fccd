@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 import { createCustomerServiceFaqRagDeps } from
   "../supabase/functions/_shared/customer-service-rag-runtime";
+import { answerCustomerServiceFaqForEvaluation } from
+  "../supabase/functions/_shared/customer-service-bot";
 import type { CustomerServiceRagDatabase } from
   "../supabase/functions/_shared/customer-service-rag-db";
 
@@ -25,6 +27,48 @@ describe("verified rewrite at the live FAQ retrieval point", () => {
     expect((await runtime.searchFaqs("有冇送貨？"))[0].id).toBe("faq-1");
     expect(rpc).toHaveBeenCalledWith("customer_service_verified_rewrite",
       { p_environment: "develop", p_query: "有冇送貨？" });
+    expect(rpc).toHaveBeenCalledWith("search_published_customer_faqs",
+      { p_query: "送貨範圍？", p_limit: 12 });
+  });
+
+  it("matches a verified repair against the original query after context rewriting", async () => {
+    const originalQuery = "咁聽日呢？";
+    const contextualQuery = "明天九龍區是否可以送貨？";
+    const rpc = vi.fn((name: string, args: Record<string, unknown>) => Promise.resolve({
+      data: name === "customer_service_verified_rewrite"
+        ? args.p_query === originalQuery ? "送貨範圍？" : null
+        : [],
+      error: null,
+    }));
+    const fetchImpl = vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      choices: [{ message: { content: JSON.stringify({
+        rewritten_query: contextualQuery, intent_hint: "follow_up", used_context: true,
+      }) } }],
+    }), { status: 200, headers: { "Content-Type": "application/json" } }));
+    const runtime = createCustomerServiceFaqRagDeps({
+      db: { rpc } as CustomerServiceRagDatabase,
+      ragConfig: { ...ragConfig, enableQueryRewrite: true },
+      tiers: { primary: { enabled: true, endpoint: "https://ai.test/rewrite", apiKey: "test",
+        model: "rewrite-test", temperature: 0, timeoutMs: 2_000 }, fallback: null,
+        escalationConfidence: 0.72 } as never,
+      embeddingConfig: { enabled: false } as never,
+      environment: "develop", recentMessages: [{ role: "customer", text: "九龍可以送貨嗎？" }],
+      fetchImpl, onTrace: () => {},
+    });
+
+    await answerCustomerServiceFaqForEvaluation(
+      runtime as never,
+      { usedModel: false } as never,
+      { phone_normalized: "history", state: "identifying", selected_order_id: null,
+        handoff_at: null, pending_request: null } as never,
+      originalQuery,
+    );
+
+    expect(fetchImpl).toHaveBeenCalledOnce();
+    expect(rpc).toHaveBeenCalledWith("customer_service_verified_rewrite",
+      { p_environment: "develop", p_query: originalQuery });
+    expect(rpc).not.toHaveBeenCalledWith("customer_service_verified_rewrite",
+      { p_environment: "develop", p_query: contextualQuery });
     expect(rpc).toHaveBeenCalledWith("search_published_customer_faqs",
       { p_query: "送貨範圍？", p_limit: 12 });
   });

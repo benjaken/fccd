@@ -43,7 +43,7 @@ describe("customer-service RAG phase 1 retrieval rewrite", () => {
     const result = await run("點樣退錢？");
 
     expect(deps.rewriteQuery).toHaveBeenCalledWith("點樣退錢？");
-    expect(deps.searchFaqs).toHaveBeenCalledWith("退款流程是什麼");
+    expect(deps.searchFaqs).toHaveBeenCalledWith("退款流程是什麼", "點樣退錢？");
     expect(deps.answerFaqWithModel).toHaveBeenCalledWith("點樣退錢？", [faq], "退款流程是什麼");
     expect(result.reply).toContain(faq.answer);
   });

@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { stripTypeScriptTypes } from "node:module";
 import { runInNewContext } from "node:vm";
 import { describe, expect, it } from "vitest";
-import { diagnoseHistoryRepair, evaluateRepairTrials, normalizedRepairQuestion } from
+import { canDraftHistoryCaseGuidance, diagnoseHistoryRepair, evaluateRepairTrials, normalizedRepairQuestion } from
   "../supabase/functions/_shared/customer-service-history-auto-repair";
 import { parseCustomerServiceCaseInput } from "../supabase/functions/_shared/customer-service-cases";
 import { HISTORY_CASE_INTENTS } from "../supabase/functions/_shared/customer-service-history-case-recognition";
@@ -132,7 +132,7 @@ function replayEndpoint(allowlist = id(99), caseAutoIngest = false) {
         retrieval: { candidateCount: 1, error: false, degraded: false },
         answerGuardPassed: true };
     },
-    diagnoseHistoryRepair, evaluateRepairTrials, normalizedRepairQuestion,
+    canDraftHistoryCaseGuidance, diagnoseHistoryRepair, evaluateRepairTrials, normalizedRepairQuestion,
     HISTORY_CASE_INTENTS,
     recognizeHistoryCase: async () => ({ intent: "order_intake",
       steps: ["acknowledge", "ask_missing_details"], missingSlots: ["delivery_date"] }),
@@ -255,7 +255,7 @@ describe("history replay proposal safeguards", () => {
       context_gap: false, judge_model: "test", lineage: { conversation_id: "conversation-a",
         request_message_ids: ["request-1"], reference_message_ids: ["reply-1"] },
       judgment: { status: "scored", comparison: "divergent", referenceStatus: "unknown",
-        issues: [{ category: "missing_context", layer: "generation", evidence: [] }] } });
+        issues: [] } });
     const response = await app.call({ action: "auto_repair", run_id: id(3), limit: 1 });
     expect((response.body.results as Row[])[0].status).toBe("case_draft_recorded");
     expect(app.cases).toHaveLength(1);
@@ -264,5 +264,26 @@ describe("history replay proposal safeguards", () => {
     expect(app.faqs).toHaveLength(0);
     expect(app.proposals[0].repair_kind).toBe("case_guidance_candidate");
     expect(app.proposals[0].preauthorized).toBe(false);
+  });
+
+  it("keeps generation defects as code-change proposals instead of case guidance", async () => {
+    const app = replayEndpoint("", true);
+    app.runs.push({ id: id(3), environment: "develop", status: "complete",
+      scope: "answer_quality", snapshot: { config_fingerprint: "stable", config_id: id(40),
+        config_updated_at: "2026-09-19T00:00:00Z" } });
+    app.samples.push({ id: id(4), run_id: id(3), question: "明天送貨要準備甚麼？",
+      reference_answer: "先確認日期和地址。", context: [],
+      scenario_at: "2026-09-19T00:00:00Z", status: "scored", pairing: "confident",
+      context_gap: false, judge_model: "test", lineage: { conversation_id: "conversation-a",
+        request_message_ids: ["request-1"], reference_message_ids: ["reply-1"] },
+      judgment: { status: "scored", comparison: "divergent", referenceStatus: "unknown",
+        issues: [{ category: "answer_logic", layer: "generation", evidence: [] }] } });
+
+    const response = await app.call({ action: "auto_repair", run_id: id(3), limit: 1 });
+
+    expect((response.body.results as Row[])[0].status).toBe("unsupported_repair");
+    expect(app.cases).toHaveLength(0);
+    expect(app.proposals[0].repair_kind).toBe("code_change_proposal");
+    expect(app.proposals[0].reason).toBe("answer_logic_code_change_required");
   });
 });
