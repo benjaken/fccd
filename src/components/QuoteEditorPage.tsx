@@ -1525,6 +1525,11 @@ export function QuoteEditorPage({
       })),
       selectedPackageProducts.map((product) => {
         const addonPrice = Number(product.addonPrice);
+        // Each chosen dish carries the package member's portion count, so the
+        // ordered line must multiply the member quantity by the ordered package
+        // count instead of collapsing every dish to one.
+        const memberQuantity = Number(product.quantity);
+        const portions = Number.isFinite(memberQuantity) && memberQuantity > 0 ? memberQuantity : 1;
         return {
           orderId: pendingPackageLine.orderId,
           item: {
@@ -1534,7 +1539,7 @@ export function QuoteEditorPage({
             name: product.productName || product.productChineseName || product.productSku || "-",
             price: Number.isFinite(addonPrice) && addonPrice >= 0 ? addonPrice : 0,
           },
-          quantity: pendingPackageLine.quantity,
+          quantity: pendingPackageLine.quantity * portions,
           unitPrice: Number.isFinite(addonPrice) && addonPrice >= 0 ? addonPrice : 0,
           remarks: "",
         };

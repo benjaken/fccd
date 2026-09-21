@@ -49,4 +49,21 @@ describe("learning analysis batching", () => {
     expect(await analyzeLearningBatches([], [], analyze)).toEqual({ analyses: [], errors: [] });
     expect(analyze).not.toHaveBeenCalled();
   });
+
+  it("runs provider batches concurrently without exceeding the limit", async () => {
+    let inFlight = 0;
+    let peak = 0;
+    const analyze = async () => {
+      inFlight += 1;
+      peak = Math.max(peak, inFlight);
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      inFlight -= 1;
+      return "ok";
+    };
+    const turns = Array.from({ length: 500 }, (_, index) => index);
+    const result = await analyzeLearningBatches(turns, [], analyze);
+    expect(result.analyses).toHaveLength(10);
+    expect(peak).toBeGreaterThan(1);
+    expect(peak).toBeLessThanOrEqual(4);
+  });
 });

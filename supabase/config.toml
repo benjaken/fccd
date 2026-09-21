@@ -108,3 +108,6 @@ verify_jwt = false
 [functions.customer-service-model-evaluate]
 verify_jwt = false
 
+[functions.wati-customer-service-backfill]
+verify_jwt = false
+

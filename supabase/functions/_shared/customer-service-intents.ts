@@ -458,13 +458,30 @@ export function customerServiceSeasonalMenuFaqQuery(value: string) {
   return null;
 }
 
+const THANKS_PHRASES =
+  /^(?:好的?|明白|了解|收到|知道|ok|okay|sure|fine|alright)?(?:thankyou(?:somuch|verymuch|alot|amillion|you)?|thanks(?:somuch|alot|amillion|you)?|manythanks|thx|thnx|tysm|非常感謝|萬分感謝|万分感谢|多謝|多谢|多謝晒|多谢晒|多謝哂|多謝曬|多謝你|多谢你|多謝大家|多謝你呀|多謝你啊|唔該|唔该|唔該晒|唔該哂|唔該曬|唔該你|感謝|感谢|感謝你|感谢你|感謝晒|感謝哂|謝謝|谢谢|謝謝你|谢谢你|謝|谢)$/iu;
+
+/**
+ * Strip emoji, punctuation and spacing before phrase matching so mixed
+ * acknowledgements such as "Thank you so much! ❤️" or "多謝晒🙏" still match.
+ */
+function normalizeAcknowledgementText(value: string) {
+  return value.trim().toLowerCase().replace(/[^\p{L}\p{N}]+/gu, "");
+}
+
 export function isCustomerServiceEmojiAcknowledgement(text: string) {
   const body = text.trim();
-  return body !== "" && /^(?:[👍🙏👌😊🙂🙌👏❤️❤✨]+|(?:ok|okay)[!！.]*)$/iu.test(body);
+  if (body === "") return false;
+  if (/^(?:ok|okay)[!！.]*$/iu.test(body)) return true;
+  // Any pure-emoji reaction (👍🙏❤️🎉…) is an acknowledgement, but a message
+  // that still contains letters or digits is business content and must route.
+  if (/[\p{L}\p{N}]/u.test(body)) return false;
+  return /\p{Extended_Pictographic}/u.test(body);
 }
 
 export function isCustomerServiceThanks(text: string) {
-  return /^(?:多謝|唔該晒|謝謝|谢谢|thanks?|thank\s+you)[!！。.🙏😊]*$/iu.test(text.trim());
+  const normalized = normalizeAcknowledgementText(text);
+  return normalized !== "" && THANKS_PHRASES.test(normalized);
 }
 
 export function isTakeawayPackagingRequest(text: string) {

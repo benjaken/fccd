@@ -3,10 +3,12 @@ import { analyzeLearningBatches } from "../_shared/customer-service-learning-bat
 import {
   buildHumanLearningConversations,
   buildHumanLearningPairs,
+  mergeLearningMessages,
   parseLearningAnalysis,
   type LearningEvaluation,
   type LearningMessage,
 } from "../_shared/customer-service-learning.ts";
+import { isIgnoredCustomerServicePhone } from "../_shared/customer-service-context.ts";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -240,6 +242,17 @@ async function readDailyRows(admin: AdminClient, table: string, columns: string,
   }
 }
 
+function toLearningMessage(message: Record<string, unknown>): LearningMessage {
+  return {
+    id: String(message.id),
+    phone: String(message.phone_normalized),
+    role: message.role as LearningMessage["role"],
+    text: String(message.message_text),
+    createdAt: String(message.created_at),
+    sourceMessageId: String(message.source_message_id ?? ""),
+  };
+}
+
 function countBy(rows: TurnRow[], key: keyof TurnRow) {
   const counts = new Map<string, number>();
   for (const row of rows) {
@@ -278,15 +291,18 @@ Deno.serve(async (request) => {
     const reportDate = typeof body.report_date === "string" ? body.report_date : previousHongKongDate();
     const period = reportPeriod(reportDate);
     const environment = deploymentEnvironment();
-    const turns = await readDailyRows(admin, "customer_service_turns",
+    const turns = (await readDailyRows(admin, "customer_service_turns",
       "id,phone_normalized,faq_source_ids,question,answer,intent,route,processing_status,failure_reason,reply_attempted,reply_sent,human_handoff,used_model,latency_ms,auto_outcome,auto_score,auto_dimensions,auto_reason,created_at",
-      environment, period) as unknown as TurnRow[];
+      environment, period) as unknown as TurnRow[])
+      .filter((turn) => !isIgnoredCustomerServicePhone(turn.phone_normalized));
     const messageData = await readDailyRows(admin, "customer_service_messages",
-      "id,phone_normalized,role,message_text,created_at", environment, period);
-    const learningMessages: LearningMessage[] = messageData.map((message) => ({
-      id: String(message.id), phone: String(message.phone_normalized), role: message.role as LearningMessage["role"],
-      text: String(message.message_text), createdAt: String(message.created_at),
-    }));
+      "id,phone_normalized,role,message_text,created_at,source_message_id", environment, period);
+    const importedData = await readDailyRows(admin, "customer_service_learning_import_messages",
+      "id,phone_normalized,role,message_text,created_at,source_message_id", environment, period);
+    const learningMessages = mergeLearningMessages(
+      messageData.map(toLearningMessage),
+      importedData.map(toLearningMessage),
+    ).filter((message) => !isIgnoredCustomerServicePhone(message.phone));
     const humanConversations = buildHumanLearningConversations(learningMessages);
 
     let analysis: AiAnalysis | null = null;

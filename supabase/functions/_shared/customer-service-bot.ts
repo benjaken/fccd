@@ -210,7 +210,15 @@ export type CustomerServiceBotDeps = {
     slots: InquirySlots,
     anotherEvent: boolean,
   ) => Promise<CustomerServiceInquiryWrite>;
-  searchFaqs: (query: string) => Promise<CustomerServiceFaqHit[]>;
+  /**
+   * Searches FAQs using the resolved retrieval query. `originalQuery` is
+   * supplied when context rewriting changed the customer's wording so
+   * verified repairs can still match the utterance they were approved for.
+   */
+  searchFaqs: (
+    query: string,
+    originalQuery?: string,
+  ) => Promise<CustomerServiceFaqHit[]>;
   /**
    * Optional query rewrite (coreference resolution) applied before FAQ
    * retrieval. Returning null leaves the original query untouched.
@@ -1569,7 +1577,9 @@ async function replySingleFaq(
   }
   let hits: CustomerServiceFaqHit[];
   try {
-    hits = await deps.searchFaqs(lookupQuery);
+    hits = lookupQuery === query
+      ? await deps.searchFaqs(lookupQuery)
+      : await deps.searchFaqs(lookupQuery, query);
   } catch {
     // A retrieval outage is not evidence that a policy does not exist.
     return {
@@ -1792,7 +1802,11 @@ export async function handleCustomerServiceTurn({
     isCustomerServiceEmojiAcknowledgement(text)
   ) {
     return guarded("acknowledgement", {
-      reply: configuredReply(deps, "acknowledgement", "收到，多謝你。"),
+      reply: configuredReply(
+        deps,
+        "acknowledgement",
+        "唔使客氣 😊 仲有咩可以幫到你？隨時同我哋講。",
+      ),
       conversation,
       wroteInquiry: false,
       notified: false,
@@ -1816,7 +1830,11 @@ export async function handleCustomerServiceTurn({
     isCustomerServiceThanks(text)
   ) {
     return guarded("thanks", {
-      reply: configuredReply(deps, "thanks", "唔使客氣，多謝你。"),
+      reply: configuredReply(
+        deps,
+        "thanks",
+        "唔使客氣 😊 仲有咩可以幫到你？隨時同我哋講。",
+      ),
       conversation,
       wroteInquiry: false,
       notified: false,
@@ -2033,11 +2051,13 @@ export async function handleCustomerServiceTurn({
   }
 
   const faqSearchCache = new Map<string, Promise<CustomerServiceFaqHit[]>>();
-  const searchFaqsOnce = (query: string) => {
-    const key = normalizedFaqText(query);
+  const searchFaqsOnce = (query: string, originalQuery?: string) => {
+    const key = `${normalizedFaqText(query)}\u0000${normalizedFaqText(originalQuery ?? query)}`;
     const existing = faqSearchCache.get(key);
     if (existing) return existing;
-    const pending = deps.searchFaqs(query).catch((error) => {
+    const pending = (originalQuery === undefined
+      ? deps.searchFaqs(query)
+      : deps.searchFaqs(query, originalQuery)).catch((error) => {
       faqSearchCache.delete(key);
       throw error;
     });

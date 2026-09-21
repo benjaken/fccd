@@ -1,4 +1,5 @@
 export type CustomerServiceRagConfig = {
+  forceOff?: boolean;
   enableRagV2: boolean; enableQueryRewrite: boolean; enableGroundedClarification: boolean;
   contextRounds: number; lexicalTopK: number; vectorTopK: number; finalTopK: number;
   rrfK: number; vectorWeight: number; lexicalWeight: number; vectorThreshold: number;
@@ -30,6 +31,7 @@ export function customerServiceRagConfig(active?: { rag_config?: unknown; retrie
   let lexicalWeight = setting("lexical_weight", "CUSTOMER_SERVICE_LEXICAL_WEIGHT", 0.3, 0, 1);
   if (vectorWeight === 0 && lexicalWeight === 0) { vectorWeight = 0.7; lexicalWeight = 0.3; }
   return {
+    forceOff,
     enableRagV2: !forceOff && master,
     // Keep A-only rollout available; force-off overrides database AND env flags.
     enableQueryRewrite: !forceOff && bool(raw.enable_query_rewrite, envFlag("CUSTOMER_SERVICE_QUERY_REWRITE") ?? master),

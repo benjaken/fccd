@@ -1,0 +1,32 @@
+{
+  "is_synthetic": true,
+  "provenance": "manual",
+  "environment": "develop",
+  "title": "團體訂餐：先承接已知需求再追問",
+  "scenario_context": "客戶想安排公司聚餐，已提供人數及飲食限制，仍未確定日期及配送地區。",
+  "known_information": {
+    "headcount": "約30位",
+    "dietary": "兩位食素"
+  },
+  "missing_information": ["日期", "配送地區"],
+  "conversation_excerpt": [
+    { "role": "customer", "text": "公司聚餐想訂餐，但唔知點揀。" },
+    { "role": "human", "text": "大概幾多位？有冇素食或者其他飲食要求？" },
+    { "role": "customer", "text": "三十位，有兩位食素。" },
+    { "role": "human", "text": "明白，想安排邊日、送去邊區？" }
+  ],
+  "response_strategy": {
+    "approach": "先承接客戶已提供的資訊，再只追問仍缺少且影響下一步的資料。",
+    "ask_next": ["日期", "配送地區"],
+    "avoid": ["不要重問人數", "不要在未查詢現行資料前承諾套餐、價格或供應情況"]
+  },
+  "applicability": {
+    "intents": ["group_order"],
+    "brand": null,
+    "effective_from": "2026-09-19T00:00:00+08:00",
+    "effective_to": null
+  },
+  "source_message_ids": [],
+  "outcome": "unknown",
+  "outcome_evidence": {}
+}

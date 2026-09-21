@@ -883,6 +883,57 @@ describe("Quote editor", () => {
     expect(saveLine).toHaveBeenCalledTimes(3);
   }, 10_000);
 
+  it("uses each package member's portion quantity for the added dish lines", async () => {
+    const user = userEvent.setup();
+    const searchCatalog = vi.fn().mockResolvedValue([
+      { id: "package-1", kind: "package", sku: "SET-1", name: "Family Feast", price: 680 },
+    ]);
+    const loadPackageDetail = vi.fn().mockResolvedValue({
+      id: "package-1",
+      choiceSets: [{
+        id: "choice-set-1",
+        legacyId: "legacy-choice-set-1",
+        name: "Main dishes",
+        maximumChoices: 2,
+        products: [
+          { id: "member-1", productId: "product-1", productSku: "D-1", productName: "Roast chicken", productChineseName: null, addonPrice: 0, isSelected: false, quantity: 2 },
+          { id: "member-2", productId: "product-2", productSku: "D-2", productName: "Steamed fish", productChineseName: null, addonPrice: 10, isSelected: false, quantity: 2 },
+          { id: "member-3", productId: "product-3", productSku: "D-3", productName: "Braised tofu", productChineseName: null, addonPrice: 0, isSelected: false, quantity: 1 },
+        ],
+      }],
+      ungroupedProducts: [],
+    });
+    const saveLine = vi.fn().mockResolvedValue(undefined);
+
+    renderEditor({ searchCatalog, loadPackageDetail, saveLine });
+    await screen.findByLabelText(/Brand/);
+    await fillRequiredQuoteDetails(user);
+    await user.click(screen.getByRole("button", { name: "Save and add products" }));
+
+    await user.type(await screen.findByPlaceholderText("Search product name or SKU"), "SET-1");
+    await user.click(await screen.findByRole("option", { name: /Family Feast/ }));
+    await user.click(screen.getByRole("button", { name: "Add to quote" }));
+
+    const dialog = await screen.findByRole("dialog", { name: "Choose package dishes" });
+    await user.click(within(dialog).getByRole("checkbox", { name: /Roast chicken/ }));
+    await user.click(within(dialog).getByRole("checkbox", { name: /Steamed fish/ }));
+    await user.click(within(dialog).getByRole("button", { name: "Confirm and add" }));
+
+    await user.click(within(document.getElementById("quote-editor-editable-items")!).getByRole("button", { name: "Save changes" }));
+    await waitFor(() => expect(saveLine).toHaveBeenCalledWith(expect.objectContaining({
+      orderId: "quote-1",
+      item: expect.objectContaining({ id: "product-1", kind: "product", sku: "D-1" }),
+      quantity: 2,
+      unitPrice: 0,
+    })));
+    expect(saveLine).toHaveBeenCalledWith(expect.objectContaining({
+      orderId: "quote-1",
+      item: expect.objectContaining({ id: "product-2", kind: "product", sku: "D-2" }),
+      quantity: 2,
+      unitPrice: 10,
+    }));
+  }, 10_000);
+
   it("applies shipping rules and selectable delivery times", async () => {
     const user = userEvent.setup();
     renderEditor();

@@ -151,3 +151,83 @@
     transition: none;
   }
 }
+
+/* shadcn-style scrollbars across the whole app (thin, rounded, muted thumb).
+   `!important` keeps the look consistent over the earlier per-component rules. */
+* {
+  scrollbar-width: thin !important;
+  scrollbar-color: color-mix(in oklch, var(--foreground) 22%, transparent)
+    transparent !important;
+}
+
+*::-webkit-scrollbar {
+  width: 10px !important;
+  height: 10px !important;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent !important;
+}
+
+*::-webkit-scrollbar-thumb {
+  border: 2px solid transparent !important;
+  border-radius: 999px !important;
+  background-color: color-mix(in oklch, var(--foreground) 22%, transparent) !important;
+  background-clip: content-box !important;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background-color: color-mix(in oklch, var(--foreground) 35%, transparent) !important;
+}
+
+*::-webkit-scrollbar-corner {
+  background: transparent !important;
+}
+
+/* Radix ScrollArea (shadcn) — available for opt-in virtual scroll containers. */
+.ui-scroll-area {
+  position: relative;
+  overflow: hidden;
+}
+
+.ui-scroll-area-viewport {
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+}
+
+.ui-scroll-area-bar {
+  display: flex;
+  touch-action: none;
+  user-select: none;
+  transition: background-color 160ms ease;
+}
+
+.ui-scroll-area-bar.is-vertical {
+  width: 10px;
+  height: 100%;
+  padding: 1px;
+  border-left: 1px solid transparent;
+}
+
+.ui-scroll-area-bar.is-horizontal {
+  height: 10px;
+  flex-direction: column;
+  padding: 1px;
+  border-top: 1px solid transparent;
+}
+
+.ui-scroll-area-bar:hover {
+  background: color-mix(in oklch, var(--foreground) 6%, transparent);
+}
+
+.ui-scroll-area-thumb {
+  position: relative;
+  flex: 1 1 0;
+  border-radius: 999px;
+  background: color-mix(in oklch, var(--foreground) 22%, transparent);
+}
+
+.ui-scroll-area-thumb:hover {
+  background: color-mix(in oklch, var(--foreground) 35%, transparent);
+}

@@ -98,7 +98,16 @@ describe("customer-service intents", () => {
   it("recognizes the runtime-gated learned acknowledgement patterns", () => {
     expect(isCustomerServiceEmojiAcknowledgement("👍🙏")).toBe(true);
     expect(isCustomerServiceEmojiAcknowledgement("👍 幾時送貨")).toBe(false);
+    expect(isCustomerServiceEmojiAcknowledgement("❤️")).toBe(true);
+    expect(isCustomerServiceEmojiAcknowledgement("🎉🔥")).toBe(true);
+    expect(isCustomerServiceEmojiAcknowledgement("1")).toBe(false);
+    expect(isCustomerServiceEmojiAcknowledgement("😊 你好")).toBe(false);
     expect(isCustomerServiceThanks("多謝🙏")).toBe(true);
+    expect(isCustomerServiceThanks("Thank you so much! ❤️")).toBe(true);
+    expect(isCustomerServiceThanks("多謝晒")).toBe(true);
+    expect(isCustomerServiceThanks("感謝你")).toBe(true);
+    expect(isCustomerServiceThanks("thanks a lot")).toBe(true);
+    expect(isCustomerServiceThanks("多謝，我想查訂單")).toBe(false);
     expect(isTakeawayPackagingRequest("可唔可以提供多幾個外賣盒？")).toBe(true);
     expect(isTakeawayPackagingRequest("有冇餐具？")).toBe(false);
     expect(isProductQualityComplaint("筷子發霉")).toBe(true);
@@ -1912,9 +1921,11 @@ describe("customer-service bot turns", () => {
 
   it("resumes a suspended order workflow after completing a catering inquiry", async () => {
     const queueHandoff = vi.fn().mockResolvedValue(undefined);
+    // Keep this a future inquiry so the same-day urgent route does not replace the suspended task.
+    const inquiry = `${new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)} 30人到會`;
     const proposed = await handleCustomerServiceTurn({
       phone: conversation.phone_normalized,
-      text: "9月20日 30人到會",
+      text: inquiry,
       conversation: {
         ...conversation,
         state: "awaiting_human",
@@ -1924,7 +1935,7 @@ describe("customer-service bot turns", () => {
       deps: deps({ queueHandoff }),
       classify: vi.fn().mockResolvedValue({
         intent: "collect_inquiry",
-        slots: classifyCustomerServiceMessage("9月20日 30人到會").slots,
+        slots: classifyCustomerServiceMessage(inquiry).slots,
         orderNumber: "",
         usedModel: true,
         dialogAction: "switch_task",
