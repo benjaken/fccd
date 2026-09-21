@@ -24,7 +24,6 @@ export type HistoryRuntimeChangeInput = {
   question: string;
   context: Array<{ role: string; text: string }>;
   aiAnswer: string;
-  referenceAnswer: string;
   issues: HistoryIssue[];
   targets: LearningRuntimeTargets;
   area?: string;
@@ -73,7 +72,6 @@ export async function draftHistoryRuntimeChange(
               question: input.question,
               context: input.context,
               aiAnswer: input.aiAnswer,
-              humanReference: input.referenceAnswer,
               issues: input.issues.map((issue) => ({
                 category: issue.category, severity: issue.severity, layer: issue.layer,
                 suggestedFix: issue.suggestedFix,

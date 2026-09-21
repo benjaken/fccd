@@ -48,6 +48,7 @@ import { FilterableSelect } from "@/components/ui/filterable-select";
 import { ListSearchBar } from "@/components/ui/list-search-bar";
 import { Modal } from "@/components/ui/modal";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { TablePagination } from "@/components/ui/table-pagination";
 import { ListTable } from "@/components/ui/list-table";
 import {
@@ -3111,26 +3112,20 @@ export function CustomerFaqPage({
           {activeSection === "history" ? (
           <div className="cs-history-page">
             <section className="customer-service-import-lab">
-              <h2 className="sr-only">歷史對話學習</h2>
+              <h2 className="sr-only">{t("settings.customerFaq.historyLearningTitle")}</h2>
               <div className="customer-service-import-controls">
-                <label>
-                  <span>起始日期（最多 31 天）</span>
-                  <input
-                    type="date"
-                    value={importSince}
-                    disabled={importBusy || learningDates}
-                    onChange={(event) => applyImportSince(event.target.value)}
-                  />
-                </label>
-                <label>
-                  <span>結束日期</span>
-                  <input
-                    type="date"
-                    value={importUntil}
-                    disabled={importBusy || learningDates}
-                    onChange={(event) => applyImportUntil(event.target.value)}
-                  />
-                </label>
+                <DateRangePicker
+                  startId="customer-service-import-start"
+                  endId="customer-service-import-end"
+                  startValue={importSince}
+                  endValue={importUntil}
+                  onStartChange={applyImportSince}
+                  onEndChange={applyImportUntil}
+                  startLabel={t("settings.customerFaq.importStartDate")}
+                  endLabel={t("settings.customerFaq.importEndDate")}
+                  legend={t("settings.customerFaq.importDateRange")}
+                  disabled={importBusy || learningDates}
+                />
                 <Button
                   type="button"
                   size="sm"
@@ -3141,7 +3136,7 @@ export function CustomerFaqPage({
                     setImportUntil(hongKongDateOffset());
                   }}
                 >
-                  最近 7 日
+                  {t("settings.customerFaq.lastSevenDays")}
                 </Button>
                 <Button
                   type="button"

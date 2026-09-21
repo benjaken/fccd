@@ -968,6 +968,7 @@ export type MenuOption = {
 
 export type ShopifyMenuRemarkSource = {
   lineId: number;
+  parentLineId?: number | null;
   parentItemOrder: number | null;
   parentPackageId?: string | null;
   text: string;
@@ -985,6 +986,7 @@ export type ShopifyOptionAddonCandidate = {
 
 export type PlannedShopifyMenuOption = MenuOption & {
   lineId: number;
+  parentLineId: number | null;
   optionIndex: number;
   itemOrder: number;
   parentPackageId: string | null;
@@ -1225,6 +1227,7 @@ export function planShopifyMenuOptions(input: {
       options.push({
         ...option,
         lineId: source.lineId,
+        parentLineId: source.parentLineId ?? source.lineId,
         optionIndex,
         itemOrder,
         parentPackageId: source.parentPackageId ?? null,
@@ -1263,6 +1266,24 @@ export function resolvePackageOptionQuantity(input: {
     return member * factor;
   }
   return Number.isFinite(remark) && remark > 0 ? remark : 1;
+}
+
+export function packageQuantitiesByLineId(
+  lines: Array<{
+    lineId: number;
+    packageId: string | null;
+    productId: string | null;
+    quantity: number;
+  }>,
+): Map<number, number> {
+  const quantities = new Map<number, number>();
+  for (const line of lines) {
+    if (!line.packageId || line.productId) continue;
+    const quantity = Number(line.quantity);
+    if (!Number.isFinite(quantity) || quantity <= 0) continue;
+    quantities.set(line.lineId, quantity);
+  }
+  return quantities;
 }
 
 /** Returns the number of free six-person utensil packs implied by catering

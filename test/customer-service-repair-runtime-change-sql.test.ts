@@ -6,6 +6,10 @@ const migration = readFileSync(
   "supabase/migrations/20260921211000_customer_service_runtime_change_repairs.sql",
   "utf8",
 );
+const targetGuardMigration = readFileSync(
+  "supabase/migrations/20260921272000_customer_service_runtime_target_guard.sql",
+  "utf8",
+);
 
 const ACTOR = "00000000-0000-4000-8000-0000000000aa";
 const PROPOSAL = "00000000-0000-4000-8000-000000000001";
@@ -54,6 +58,7 @@ async function runtimeDb() {
       values ('help', '歡迎訊息', '你好');
   `);
   await db.exec(migration);
+  await db.exec(targetGuardMigration);
   return db;
 }
 
@@ -131,6 +136,41 @@ describe("customer-service repair runtime change executor", () => {
         "select * from public.customer_service_repair_runtime_change_review($1,$2,$3,$4)",
         [OTHER, "develop", ACTOR, "apply"],
       )).rejects.toThrow("proposal_not_drafted");
+    } finally {
+      await db.close();
+    }
+  });
+
+  it("refuses a missing reply template and preserves omitted optional fields", async () => {
+    const db = await runtimeDb();
+    try {
+      await db.query(
+        `insert into public.customer_service_repair_proposals
+           (id, repair_kind, risk_level, status, runtime_change_draft)
+         values ($1, 'runtime_policy_candidate', 'R2', 'drafted', $2)`,
+        [PROPOSAL, JSON.stringify({ changes: [
+          { target: "reply_template", key: "missing", patch: { content: "new content" } },
+        ] })],
+      );
+      await expect(db.query(
+        "select * from public.customer_service_repair_runtime_change_review($1,$2,$3,$4)",
+        [PROPOSAL, "develop", ACTOR, "apply"],
+      )).rejects.toThrow("runtime_change_mapping_invalid");
+
+      await db.query(
+        "update public.customer_service_repair_proposals set runtime_change_draft = $2 where id = $1",
+        [PROPOSAL, JSON.stringify({ changes: [
+          { target: "reply_template", key: "help", patch: { content: "updated content" } },
+        ] })],
+      );
+      await db.query(
+        "select * from public.customer_service_repair_runtime_change_review($1,$2,$3,$4)",
+        [PROPOSAL, "develop", ACTOR, "apply"],
+      );
+      const [template] = (await db.query<{ display_name: string; content: string; enabled: boolean }>(
+        "select display_name, content, enabled from public.customer_service_reply_templates where template_key = 'help'",
+      )).rows;
+      expect(template).toEqual({ display_name: "歡迎訊息", content: "updated content", enabled: true });
     } finally {
       await db.close();
     }

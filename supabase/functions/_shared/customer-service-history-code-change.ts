@@ -22,7 +22,6 @@ export type HistoryCodeChangeInput = {
   question: string;
   context: Array<{ role: string; text: string }>;
   aiAnswer: string;
-  referenceAnswer: string;
   issues: HistoryIssue[];
   area?: string;
   config: HistoryJudgeAiConfig;
@@ -69,7 +68,6 @@ export async function draftHistoryCodeChange(
               question: input.question,
               context: input.context,
               aiAnswer: input.aiAnswer,
-              humanReference: input.referenceAnswer,
               issues: input.issues.map((issue) => ({
                 category: issue.category, severity: issue.severity, layer: issue.layer,
                 suggestedFix: issue.suggestedFix,

@@ -5,6 +5,7 @@ const invokeMock = vi.hoisted(() => vi.fn());
 const rpcMock = vi.hoisted(() => vi.fn());
 
 vi.mock("@/lib/supabase", () => ({
+  supabaseUrl: "https://mxiueauyylnpwlxrvgbo.supabase.co",
   supabase: {
     functions: { invoke: invokeMock },
     rpc: rpcMock,
@@ -155,7 +156,7 @@ describe("customer-service history import client", () => {
     ]);
     expect(rpcMock).toHaveBeenCalledWith(
       "customer_service_learning_import_summary",
-      { p_limit: 90 },
+      { p_limit: 90, p_environment: "develop" },
     );
   });
 
@@ -191,7 +192,7 @@ describe("history import UI wiring", () => {
       "src/components/settings/CustomerFaqPage.tsx",
       "utf8",
     );
-    expect(page).toContain("歷史對話學習");
+    expect(page).toContain("settings.customerFaq.historyLearningTitle");
     expect(page).toContain("importCustomerServiceHistory");
     expect(page).toContain("fetchCustomerServiceLearningImportSummary");
     expect(page).toContain("一鍵學習最近日期");
@@ -199,8 +200,8 @@ describe("history import UI wiring", () => {
     expect(page).toContain("setImportDialogOpen(true)");
     expect(page).toContain("getTime() + 86_400_000");
     expect(page).toContain("CUSTOMER_SERVICE_IMPORT_MAX_RANGE_DAYS = 31");
-    expect(page).toContain("最多 31 天");
-    expect(page).toContain("最近 30 日");
+    expect(page).toContain("settings.customerFaq.importDateRange");
+    expect(page).toContain("settings.customerFaq.lastSevenDays");
     expect(page).toContain("historyImportRangeDays");
   });
 
@@ -231,5 +232,15 @@ describe("history import UI wiring", () => {
     expect(sql).toContain("public.customer_service_daily_reports");
     expect(sql).toContain("reports.status <> 'failed'");
     expect(sql).toContain("private.has_page_access('settings.customer_faq')");
+  });
+
+  it("keeps import counts and learned state inside the requested environment", () => {
+    const sql = readFileSync(
+      "supabase/migrations/20260921271000_customer_service_learning_summary_environment.sql",
+      "utf8",
+    );
+    expect(sql).toContain("messages.environment = p_environment");
+    expect(sql).toContain("reports.environment = p_environment");
+    expect(sql).toContain("p_environment not in ('develop', 'production')");
   });
 });

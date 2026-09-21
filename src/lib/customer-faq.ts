@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabase";
+import { supabase, supabaseUrl } from "@/lib/supabase";
 
 export const CUSTOMER_FAQS_PAGE_SIZE = 15;
 
@@ -1035,9 +1035,10 @@ export async function probeCustomerServiceHistory(maxPhones = 3) {
 export async function fetchCustomerServiceLearningImportSummary(
   limit = 90,
 ): Promise<CustomerServiceImportDay[]> {
+  const environment = supabaseUrl.includes("vignxasvlxqnyvuhtjlu") ? "production" : "develop";
   const { data, error } = await supabase.rpc(
     "customer_service_learning_import_summary",
-    { p_limit: limit },
+    { p_limit: limit, p_environment: environment },
   );
   if (error) throw error;
   return ((data ?? []) as Array<Record<string, unknown>>).map((row) => ({
@@ -1515,7 +1516,7 @@ export async function validateCustomerServiceRepairProposal(proposalId: string) 
   }>({ action: "validate_proposal", proposal_id: proposalId });
 }
 
-/** Controlled apply: creates an unpublished draft FAQ. Requires apply_allowlist. */
+/** Controlled apply for a human-approved repair proposal. */
 export async function applyCustomerServiceRepairProposal(proposalId: string) {
   return invokeCustomerServiceHistoryReplay<{
     status?: string;

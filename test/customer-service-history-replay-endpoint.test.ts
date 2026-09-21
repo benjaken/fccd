@@ -90,8 +90,10 @@ function replayEndpoint(
   }
 
   const admin = {
+    auth: { getUser: async () => ({ data: { user: { id: id(10) } }, error: null }) },
     from: (table: string) => new Query(table),
     rpc: async (name: string, args: Row) => {
+      if (name === "customer_service_edit_access_check") return { data: true, error: null };
       if (name === "customer_service_verified_repair_target") {
         if (!targetAvailable) return { data: null, error: null };
         return { data: { id: id(99), question: "送貨範圍？", content_hash: "faq-hash",
@@ -99,7 +101,9 @@ function replayEndpoint(
       }
       const proposal = proposals.find((row) => row.id === args.p_proposal_id);
       if (name === "customer_service_apply_verified_rewrite") {
-        if (!proposal || proposal.status !== "eligible") return { data: null, error: { message: "ineligible" } };
+        if (!proposal || proposal.status !== "ready" || proposal.risk_level !== "R2" || !proposal.approved_by) {
+          return { data: null, error: { message: "repair_not_human_reviewed" } };
+        }
         proposal.status = "canary";
         rules.push({ id: id(80), proposal_id: proposal.id, status: "canary", faq_id: id(99) });
         return { data: id(80), error: null };
@@ -196,10 +200,12 @@ function replayEndpoint(
     deterministicHistoryIssues: () => [],
     HISTORY_REPLAY_PIPELINE_VERSION: "test",
   });
-  const call = async (body: Row) => {
+  const call = async (body: Row, asUser = false) => {
     const response = await handler(new Request("http://local.test", {
       method: "POST",
-      headers: { "Content-Type": "application/json", "x-cron-secret": "local-test" },
+      headers: asUser
+        ? { "Content-Type": "application/json", Authorization: "Bearer local-user" }
+        : { "Content-Type": "application/json", "x-cron-secret": "local-test" },
       body: JSON.stringify(body),
     }));
     return { status: response.status, body: await response.json() as Row };
@@ -362,7 +368,7 @@ describe("history replay proposal safeguards", () => {
     expect(app.proposals[0].preauthorized).toBe(false);
   });
 
-  it("automatically applies a verified rewrite only with independent holdout and control", async () => {
+  it("keeps a verified alias as R2 until a human approves and applies it", async () => {
     const app = replayEndpoint();
     app.runs.push({ id: id(3), environment: "develop", status: "complete",
       scope: "answer_quality", snapshot: { config_fingerprint: "stable", config_id: id(40),
@@ -383,8 +389,18 @@ describe("history replay proposal safeguards", () => {
     }
     const response = await app.call({ action: "auto_repair", run_id: id(3), limit: 1 });
     expect(response.status).toBe(200);
-    expect((response.body.results as Row[])[0].status).toBe("active");
-    expect(app.proposals[0].status).toBe("active");
+    expect((response.body.results as Row[])[0].status).toBe("proposed");
+    expect(app.proposals[0]).toMatchObject({
+      status: "proposed", risk_level: "R2", preauthorized: false,
+    });
+    expect(app.rules).toHaveLength(0);
+
+    const review = await app.call({
+      action: "review_proposal", proposal_id: app.proposals[0].id, decision: "approve",
+    }, true);
+    expect(review.body.status).toBe("ready");
+    const applied = await app.call({ action: "apply_proposal", proposal_id: app.proposals[0].id }, true);
+    expect(applied.body.status).toBe("active");
     expect(app.rules[0].status).toBe("active");
     expect((await app.call({ action: "rollback_proposal", proposal_id: app.proposals[0].id })).body.status)
       .toBe("rolled_back");

@@ -12,6 +12,7 @@ import {
   normalizeShopDomain,
   orderNumberKey,
   planShopifyMenuOptions,
+  packageQuantitiesByLineId,
   resolvePackageOptionQuantity,
   parseMenuRemark,
   parseShopifyFreeDrinks,
@@ -531,7 +532,7 @@ function menuRemarkSources(
 ): ShopifyMenuRemarkSource[] {
   const sources: ShopifyMenuRemarkSource[] = [];
   if (item.remark?.trim()) {
-    sources.push({ lineId: 0, parentItemOrder: null, parentPackageId: null, text: item.remark });
+    sources.push({ lineId: 0, parentLineId: null, parentItemOrder: null, parentPackageId: null, text: item.remark });
   }
   for (const line of item.lines) {
     const text = collectLineMenuRemarkText(line.properties);
@@ -546,6 +547,7 @@ function menuRemarkSources(
       : line;
     sources.push({
       lineId: line.lineId,
+      parentLineId: parentLine.lineId,
       parentItemOrder: Number(parentLine.row.item_order ?? 0) || null,
       parentPackageId: packageIdsByLineId.get(parentLine.lineId) ??
         packageIdsByLineId.get(line.lineId) ??
@@ -724,7 +726,7 @@ async function buildMenuOptionLines(input: {
   catalogByName: Map<string, CatalogItem>;
   catalogProducts: MenuAiCatalogCandidate[];
   packageMemberQuantities: Map<string, number>;
-  packageQuantities: Map<string, number>;
+  packageQuantitiesByLineId: Map<number, number>;
   issues: IssueRow[];
 }): Promise<{
   lines: Record<string, unknown>[];
@@ -741,7 +743,7 @@ async function buildMenuOptionLines(input: {
     catalogByName,
     catalogProducts,
     packageMemberQuantities,
-    packageQuantities,
+    packageQuantitiesByLineId,
     issues,
   } = input;
   const lines: Record<string, unknown>[] = [];
@@ -802,7 +804,9 @@ async function buildMenuOptionLines(input: {
     const quantity = resolvePackageOptionQuantity({
       remarkQuantity: option.quantity,
       memberQuantity,
-      packageQuantity: packageId ? packageQuantities.get(packageId) : undefined,
+      packageQuantity: option.parentLineId === null
+        ? undefined
+        : packageQuantitiesByLineId.get(option.parentLineId),
     });
     lines.push({
       legacy_id: shopifyMenuOptionLegacyId(
@@ -1705,15 +1709,12 @@ async function processMappedOrders(
         (lineRows[index]?.package_id as string | null) ?? null,
       ])),
     );
-    const packageQuantities = new Map<string, number>();
-    item.lines.forEach((_, index) => {
-      const row = lineRows[index];
-      const packageId = (row?.package_id as string | null | undefined) ?? null;
-      if (!packageId || row?.product_id) return;
-      const quantity = Number(row?.quantity ?? 0);
-      if (!Number.isFinite(quantity) || quantity <= 0) return;
-      packageQuantities.set(packageId, (packageQuantities.get(packageId) ?? 0) + quantity);
-    });
+    const packageLineQuantities = packageQuantitiesByLineId(item.lines.map((line, index) => ({
+      lineId: line.lineId,
+      packageId: (lineRows[index]?.package_id as string | null | undefined) ?? null,
+      productId: (lineRows[index]?.product_id as string | null | undefined) ?? null,
+      quantity: Number(lineRows[index]?.quantity ?? 0),
+    })));
     const packageMemberQuantities = await fetchPackageMemberQuantities(
       client,
       menuSources.flatMap((source) => source.parentPackageId ?? []),
@@ -1725,7 +1726,7 @@ async function processMappedOrders(
       orderSupabaseId: insertedOrder.id,
       remarks: menuSources,
       packageMemberQuantities,
-      packageQuantities,
+      packageQuantitiesByLineId: packageLineQuantities,
       addonCandidates: item.lines.map((line) => ({
         legacyId: String(line.row.legacy_id ?? ""),
         itemOrder: Number(line.row.item_order ?? 0),

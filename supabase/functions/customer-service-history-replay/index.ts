@@ -576,7 +576,6 @@ Deno.serve(async (request) => {
       if (mode !== "propose" && mode !== "apply_allowlist") {
         return json({ error: "auto_repair_disabled" }, 503);
       }
-      const forceOff = env("CUSTOMER_SERVICE_RAG_FORCE_OFF").toLowerCase() === "true";
       const runId = String(body.run_id ?? "").trim();
       if (!UUID.test(runId)) return json({ error: "invalid_run_id" }, 400);
       const { data: run, error: runError } = await admin.from("customer_service_history_eval_runs")
@@ -730,7 +729,7 @@ Deno.serve(async (request) => {
           : diagnosis.outcome === "unsupported_repair" ? "unsupported_repair" : "insufficient_evidence";
         const repairKind = target ? "alias_candidate"
           : runtimeCandidate ? "runtime_policy_candidate" : "code_change_proposal";
-        const riskLevel = target ? "R1" : runtimeCandidate ? "R2" : "R3";
+        const riskLevel = target ? "R2" : runtimeCandidate ? "R2" : "R3";
         const candidatePatch = target
           ? { kind: "verified_faq_rewrite", faq_id: target.id,
             question: sample.question, canonical_question: target.question }
@@ -746,7 +745,7 @@ Deno.serve(async (request) => {
               ? (judgment.issues as Array<{ category?: string }>).map((issue) => issue.category) : [] },
             candidate_patch: candidatePatch,
             validation: {}, status: initialStatus, idempotency_key: idempotencyKey,
-            preauthorized: Boolean(target),
+            preauthorized: false,
           }).select("id").single();
         if (insertError || !inserted) throw insertError || new Error("proposal_insert_failed");
         const proposalId = String(inserted.id);
@@ -799,7 +798,9 @@ Deno.serve(async (request) => {
           if (currentConfig.fingerprint !== replayConfig.fingerprint) {
             throw new Error("config_changed_restart_run");
           }
-          const status = gate.passed ? "eligible" : "validation_failed";
+          // An alias changes live retrieval scope. Passing isolation validation
+          // only makes this R2 proposal reviewable; it never authorizes publish.
+          const status = gate.passed ? "proposed" : "validation_failed";
           const validation = { passed: gate.passed, reasons: gate.reasons,
             gate_version: gate.gateVersion, config_fingerprint: replayConfig.fingerprint,
             source: sourceTrial, holdouts: holdoutTrials, controls: controlTrials,
@@ -808,46 +809,7 @@ Deno.serve(async (request) => {
           const { error } = await admin.from("customer_service_repair_proposals")
             .update({ status, validation }).eq("id", proposalId).eq("status", "validating");
           if (error) throw error;
-          let finalStatus = status;
-          if (gate.passed && mode === "apply_allowlist" && !forceOff) {
-            const { error: applyError } = await admin.rpc("customer_service_apply_verified_rewrite", {
-              p_proposal_id: proposalId, p_environment: environment,
-              p_config_fingerprint: replayConfig.fingerprint,
-            });
-            if (applyError) throw applyError;
-            const { data: staged, error: stagedError } = await admin
-              .from("customer_service_verified_rewrite_repairs")
-              .select("id,status,faq_id").eq("proposal_id", proposalId).maybeSingle();
-            if (stagedError || staged?.status !== "canary" || staged.faq_id !== target.id) {
-              throw stagedError || new Error("repair_not_staged");
-            }
-            const preview = await replayHistoryDecisionPoint({ db: admin, ...replayConfig,
-              environment, sample: { question: sample.question,
-                recentMessages: asReplayContext(sample.context) },
-              runClassificationAi: false, deadlineAt,
-              repairRewrite: { queryKey: questionKey, canonicalQuestion: target.question } });
-            if (!preview.faqSourceIds.includes(target.id) || preview.answerGuardPassed !== true ||
-                preview.retrieval.error) throw new Error("repair_canary_failed");
-            const { data: activated, error: activateError } = await admin.rpc(
-              "customer_service_finish_verified_rewrite", {
-                p_proposal_id: proposalId, p_environment: environment, p_activate: true,
-              });
-            if (activateError || activated !== true) throw activateError || new Error("repair_activate_failed");
-            const live = await replayHistoryDecisionPoint({ db: admin, ...replayConfig,
-              environment, sample: { question: sample.question,
-                recentMessages: asReplayContext(sample.context) },
-              runClassificationAi: false, deadlineAt });
-            const passedLive = live.faqSourceIds.includes(target.id) &&
-              live.answerGuardPassed === true && !live.retrieval.error;
-            if (!passedLive) {
-              const { error: rollbackError } = await admin.rpc(
-                "customer_service_finish_verified_rewrite", {
-                  p_proposal_id: proposalId, p_environment: environment, p_activate: false,
-                });
-              if (rollbackError) throw rollbackError;
-            }
-            finalStatus = passedLive ? "active" : "rolled_back";
-          }
+          const finalStatus = status;
           results.push({ sample_id: sample.id, proposal_id: proposalId,
             status: finalStatus, reason: gate.reasons.join(",") || "verified" });
         } catch (error) {
@@ -1105,19 +1067,18 @@ Deno.serve(async (request) => {
       const sourceRunId = typeof scope.run_id === "string" ? scope.run_id : "";
       const sampleIds = Array.isArray(proposal.source_sample_ids)
         ? (proposal.source_sample_ids as string[]).slice(0, 3) : [];
-      let question = ""; let aiAnswer = ""; let referenceAnswer = "";
+      let question = ""; let aiAnswer = "";
       const context: Array<{ role: string; text: string }> = [];
       const issues: HistoryIssue[] = [];
       if (UUID.test(sourceRunId) && sampleIds.length) {
         const { data: rows, error: sampleError } = await admin.from("customer_service_history_eval_samples")
-          .select("id, question, context, ai_answer, reference_answer, judgment")
+          .select("id, question, context, ai_answer, judgment")
           .eq("run_id", sourceRunId).in("id", sampleIds);
         if (sampleError) throw sampleError;
         for (const row of rows ?? []) {
           if (!question) {
             question = String(row.question ?? "");
             aiAnswer = String(row.ai_answer ?? "");
-            referenceAnswer = String(row.reference_answer ?? "");
             if (Array.isArray(row.context)) {
               context.push(...(row.context as Array<{ role: string; text: string }>).slice(0, 12));
             }
@@ -1129,7 +1090,7 @@ Deno.serve(async (request) => {
       if (!question || !issues.length) return json({ error: "no_diagnosis_evidence" }, 422);
       const replayConfig = await loadReplayConfig(admin, environment);
       const draft = await draftHistoryCodeChange({
-        question, context, aiAnswer, referenceAnswer,
+        question, context, aiAnswer,
         issues, area: "customer_service_reply", config: replayConfig.tiers.primary,
       });
       if (!draft) return json({ error: "draft_generation_unavailable" }, 502);
@@ -1195,19 +1156,18 @@ Deno.serve(async (request) => {
       const sourceRunId = typeof scope.run_id === "string" ? scope.run_id : "";
       const sampleIds = Array.isArray(proposal.source_sample_ids)
         ? (proposal.source_sample_ids as string[]).slice(0, 3) : [];
-      let question = ""; let aiAnswer = ""; let referenceAnswer = "";
+      let question = ""; let aiAnswer = "";
       const context: Array<{ role: string; text: string }> = [];
       const issues: HistoryIssue[] = [];
       if (UUID.test(sourceRunId) && sampleIds.length) {
         const { data: rows, error: sampleError } = await admin.from("customer_service_history_eval_samples")
-          .select("id, question, context, ai_answer, reference_answer, judgment")
+          .select("id, question, context, ai_answer, judgment")
           .eq("run_id", sourceRunId).in("id", sampleIds);
         if (sampleError) throw sampleError;
         for (const row of rows ?? []) {
           if (!question) {
             question = String(row.question ?? "");
             aiAnswer = String(row.ai_answer ?? "");
-            referenceAnswer = String(row.reference_answer ?? "");
             if (Array.isArray(row.context)) {
               context.push(...(row.context as Array<{ role: string; text: string }>).slice(0, 12));
             }
@@ -1224,7 +1184,7 @@ Deno.serve(async (request) => {
         return json({ error: "no_runtime_targets" }, 422);
       }
       const draft = await draftHistoryRuntimeChange({
-        question, context, aiAnswer, referenceAnswer,
+        question, context, aiAnswer,
         issues, targets, area: "customer_service_reply", config: replayConfig.tiers.primary,
       });
       if (!draft) return json({ error: "draft_generation_unavailable" }, 502);
@@ -1273,14 +1233,14 @@ Deno.serve(async (request) => {
     }
 
     if (action === "apply_proposal") {
-      // Controlled apply. Requires explicit server opt-in and a passed validation.
-      if (env("CUSTOMER_SERVICE_AUTO_REPAIR_MODE").toLowerCase() !== "apply_allowlist") {
-        return json({ error: "auto_apply_disabled" }, 503);
-      }
+      // Controlled apply. R2 aliases require a recorded human approval; other
+      // proposal kinds keep the existing server allow-list gate.
+      const applyMode = autoRepairMode(env("CUSTOMER_SERVICE_AUTO_REPAIR_MODE"));
+      if (applyMode === "off") return json({ error: "auto_repair_disabled" }, 503);
       const proposalId = String(body.proposal_id ?? "").trim();
       if (!UUID.test(proposalId)) return json({ error: "invalid_proposal_id" }, 400);
       const { data: proposal, error } = await admin.from("customer_service_repair_proposals")
-        .select("id, environment, status, validation, candidate_patch, scope, source_sample_ids, approved_by")
+        .select("id, environment, repair_kind, risk_level, status, validation, candidate_patch, scope, source_sample_ids, approved_by")
         .eq("id", proposalId).maybeSingle();
       if (error) throw error;
       if (!proposal) return json({ error: "proposal_not_found" }, 404);
@@ -1292,6 +1252,52 @@ Deno.serve(async (request) => {
       if (!proposal.approved_by) return json({ error: "reviewer_required" }, 403);
       const patch = (proposal.candidate_patch ?? {}) as Record<string, unknown>;
       const rawQuestion = typeof patch.question === "string" ? patch.question.trim() : "";
+
+      if (proposal.repair_kind === "alias_candidate") {
+        if (proposal.risk_level !== "R2") return json({ error: "repair_not_human_reviewed" }, 409);
+        if (env("CUSTOMER_SERVICE_RAG_FORCE_OFF").toLowerCase() === "true") {
+          return json({ error: "auto_repair_paused" }, 503);
+        }
+        const faqId = typeof patch.faq_id === "string" ? patch.faq_id : "";
+        const canonicalQuestion = typeof patch.canonical_question === "string"
+          ? patch.canonical_question.trim() : "";
+        if (!rawQuestion || !UUID.test(faqId) || !canonicalQuestion) {
+          return json({ error: "invalid_alias_candidate" }, 422);
+        }
+        const replayConfig = await loadReplayConfig(admin, environment);
+        const { error: stageError } = await admin.rpc("customer_service_apply_verified_rewrite", {
+          p_proposal_id: proposalId,
+          p_environment: environment,
+          p_config_fingerprint: replayConfig.fingerprint,
+        });
+        if (stageError) throw stageError;
+        const { data: staged, error: stagedError } = await admin
+          .from("customer_service_verified_rewrite_repairs")
+          .select("id,status,faq_id").eq("proposal_id", proposalId).maybeSingle();
+        if (stagedError || staged?.status !== "canary" || staged.faq_id !== faqId) {
+          throw stagedError || new Error("repair_not_staged");
+        }
+        const preview = await replayHistoryDecisionPoint({
+          db: admin, ...replayConfig, environment,
+          sample: { question: rawQuestion, recentMessages: [] },
+          runClassificationAi: false, deadlineAt: Date.now() + 60_000,
+          repairRewrite: { queryKey: normalizedRepairQuestion(rawQuestion), canonicalQuestion },
+        });
+        if (!preview.faqSourceIds.includes(faqId) || preview.answerGuardPassed !== true || preview.retrieval.error) {
+          await admin.rpc("customer_service_finish_verified_rewrite", {
+            p_proposal_id: proposalId, p_environment: environment, p_activate: false,
+          });
+          return json({ error: "repair_canary_failed" }, 409);
+        }
+        const { data: activated, error: activateError } = await admin.rpc(
+          "customer_service_finish_verified_rewrite", {
+            p_proposal_id: proposalId, p_environment: environment, p_activate: true,
+          });
+        if (activateError || activated !== true) throw activateError || new Error("repair_activate_failed");
+        return json({ ok: true, action, proposal_id: proposalId, status: "active", rule_id: staged.id });
+      }
+
+      if (applyMode !== "apply_allowlist") return json({ error: "auto_apply_disabled" }, 503);
       const guidance = typeof patch.guidance === "string" ? patch.guidance.trim() : "";
       if (!rawQuestion || !guidance) return json({ error: "no_candidate_guidance" }, 400);
       const scope = (proposal.scope ?? {}) as Record<string, unknown>;

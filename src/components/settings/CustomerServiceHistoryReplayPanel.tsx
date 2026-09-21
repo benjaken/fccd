@@ -15,6 +15,7 @@ import {
 import {
   draftCustomerServiceRepairCodeChange,
   draftCustomerServiceRepairRuntimeChange,
+  applyCustomerServiceRepairProposal,
   fetchCustomerServiceHistoryReplayRuns,
   fetchCustomerServiceHistoryReplaySamples,
   fetchCustomerServiceRepairProposals,
@@ -530,6 +531,29 @@ export function CustomerServiceHistoryReplayPanel({ canEdit = false }: { canEdit
       await loadProposals();
     } catch (error) {
       setProposalMessage(historyReplayErrorMessage(error));
+    } finally {
+      setReviewBusy("");
+    }
+  };
+
+  const reviewAliasProposal = async (proposalId: string, decision: "approve" | "reject") => {
+    if (!canEdit || reviewBusy || !activeRunId) return;
+    setReviewBusy(proposalId);
+    setProposalMessage("");
+    try {
+      const reviewed = await reviewCustomerServiceRepairProposal({ proposalId, decision });
+      if (reviewed?.error) throw new Error(reviewed.error);
+      if (decision === "approve") {
+        const applied = await applyCustomerServiceRepairProposal(proposalId);
+        if (applied?.error) throw new Error(applied.error);
+        setProposalMessage("已核准並啟用相似問修復。");
+      } else {
+        setProposalMessage("已駁回相似問修復。");
+      }
+      await loadProposals();
+    } catch (error) {
+      setProposalMessage(historyReplayErrorMessage(error));
+      await loadProposals();
     } finally {
       setReviewBusy("");
     }
@@ -1155,6 +1179,28 @@ export function CustomerServiceHistoryReplayPanel({ canEdit = false }: { canEdit
                             );
                           })}
                         </ul>
+                      </div>
+                    ) : null}
+                    {proposal.repairKind === "alias_candidate" && proposal.status === "proposed" &&
+                    proposal.validation?.passed === true && canEdit ? (
+                      <div className="customer-service-replay-case-actions">
+                        <Button
+                          type="button"
+                          size="sm"
+                          disabled={Boolean(reviewBusy)}
+                          onClick={() => void reviewAliasProposal(proposal.id, "approve")}
+                        >
+                          核准並啟用
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          disabled={Boolean(reviewBusy)}
+                          onClick={() => void reviewAliasProposal(proposal.id, "reject")}
+                        >
+                          駁回
+                        </Button>
                       </div>
                     ) : null}
                     {proposal.repairKind === "code_change_proposal" ? (() => {

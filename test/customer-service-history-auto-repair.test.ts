@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
   canDraftHistoryCaseGuidance, diagnoseHistoryRepair, evaluateRepairTrials, normalizedRepairQuestion,
@@ -94,5 +95,16 @@ describe("history automatic repair gate", () => {
           evidence: [{ sourceType: "approved_source", sourceId: faqId }], suggestedFix: "" },
       ] },
     })).toMatchObject({ cause: "retrieval", outcome: "candidate", faqId });
+  });
+
+  it("requires human-reviewed R2 state before an alias can be activated", () => {
+    const sql = readFileSync(
+      "supabase/migrations/20260921270000_customer_service_reviewed_alias_repairs.sql",
+      "utf8",
+    );
+    expect(sql).toContain("v_proposal.status <> 'ready'");
+    expect(sql).toContain("v_proposal.risk_level <> 'R2'");
+    expect(sql).toContain("v_proposal.approved_by is null");
+    expect(sql).toContain("proposal.preauthorized is distinct from true");
   });
 });
