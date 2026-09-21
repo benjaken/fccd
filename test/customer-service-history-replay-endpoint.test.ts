@@ -10,7 +10,7 @@ import { HISTORY_CASE_INTENTS } from "../supabase/functions/_shared/customer-ser
 type Row = Record<string, unknown>;
 const id = (digit: number) => `00000000-0000-4000-8000-${String(digit).padStart(12, "0")}`;
 
-function replayEndpoint(allowlist = id(99), caseAutoIngest = false) {
+function replayEndpoint(targetAvailable = true, caseAutoIngest = false) {
   const proposals: Row[] = [];
   const faqs: Row[] = [];
   const samples: Row[] = [];
@@ -80,6 +80,7 @@ function replayEndpoint(allowlist = id(99), caseAutoIngest = false) {
     from: (table: string) => new Query(table),
     rpc: async (name: string, args: Row) => {
       if (name === "customer_service_verified_repair_target") {
+        if (!targetAvailable) return { data: null, error: null };
         return { data: { id: id(99), question: "送貨範圍？", content_hash: "faq-hash",
           category: "delivery", created_at: "2026-09-01T00:00:00Z" }, error: null };
       }
@@ -110,7 +111,6 @@ function replayEndpoint(allowlist = id(99), caseAutoIngest = false) {
       CUSTOMER_SERVICE_REPORT_CRON_SECRET: "local-test",
       CUSTOMER_SERVICE_ENVIRONMENT: "develop",
       CUSTOMER_SERVICE_AUTO_REPAIR_MODE: "apply_allowlist",
-      CUSTOMER_SERVICE_AUTO_REPAIR_FAQ_ALLOWLIST: allowlist,
       CUSTOMER_SERVICE_CASES_AUTO_INGEST: String(caseAutoIngest),
     } as Record<string, string>)[name] }, serve: (fn: typeof handler) => { handler = fn; } },
     createClient: () => admin,
@@ -220,8 +220,8 @@ describe("history replay proposal safeguards", () => {
     expect(app.rules[0].status).toBe("rolled_back");
   });
 
-  it("keeps a verified candidate inactive when its FAQ is outside the operator allowlist", async () => {
-    const app = replayEndpoint("");
+  it("does not create a verified rewrite when the cited FAQ is not an approved source", async () => {
+    const app = replayEndpoint(false);
     app.runs.push({ id: id(3), environment: "develop", status: "complete",
       scope: "answer_quality", snapshot: { config_fingerprint: "stable", config_id: id(40),
         config_updated_at: "2026-09-19T00:00:00Z" } });
@@ -239,13 +239,13 @@ describe("history replay proposal safeguards", () => {
           issues: comparison === "match" ? [] : [issue] } });
     }
     const response = await app.call({ action: "auto_repair", run_id: id(3), limit: 1 });
-    expect((response.body.results as Row[])[0].status).toBe("eligible");
+    expect((response.body.results as Row[])[0].status).toBe("insufficient_evidence");
     expect(app.proposals[0].preauthorized).toBe(false);
     expect(app.rules).toHaveLength(0);
   });
 
   it("records an AI-classified scenario as a draft case, never as FAQ knowledge", async () => {
-    const app = replayEndpoint("", true);
+    const app = replayEndpoint(true, true);
     app.runs.push({ id: id(3), environment: "develop", status: "complete",
       scope: "answer_quality", snapshot: { config_fingerprint: "stable", config_id: id(40),
         config_updated_at: "2026-09-19T00:00:00Z" } });
@@ -267,7 +267,7 @@ describe("history replay proposal safeguards", () => {
   });
 
   it("keeps generation defects as code-change proposals instead of case guidance", async () => {
-    const app = replayEndpoint("", true);
+    const app = replayEndpoint(true, true);
     app.runs.push({ id: id(3), environment: "develop", status: "complete",
       scope: "answer_quality", snapshot: { config_fingerprint: "stable", config_id: id(40),
         config_updated_at: "2026-09-19T00:00:00Z" } });

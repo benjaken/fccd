@@ -21,8 +21,8 @@
 ## 开关
 
 - `CUSTOMER_SERVICE_HISTORY_EVAL_ENABLED=true`：允许启动和处理历史回放。
-- `CUSTOMER_SERVICE_AUTO_REPAIR_MODE=off`：默认关闭自动诊断；`propose`：仅写诊断、候选与隔离验证；`apply_allowlist`：仅对下述白名单目标尝试生效。
-- `CUSTOMER_SERVICE_AUTO_REPAIR_FAQ_ALLOWLIST`：以逗号分隔的已批准 FAQ UUID。空值意味着**没有任何目标获得自动生效授权**。白名单由部署配置管理，不能由 judge 或请求参数写入。
+- `CUSTOMER_SERVICE_AUTO_REPAIR_MODE=off`：默认关闭自动诊断；`propose`：仅写诊断、候选与隔离验证；`apply_allowlist`：对**所有已发布（approved）FAQ** 的目标尝试自动生效。
+- 授权范围：已发布（`is_published` 且 `locale='zh-HK'`）的 FAQ 即为授权目标，不需要维护 UUID 白名单。授权由数据库 `customer_service_verified_repair_target` 的发布状态判定，judge 或请求参数无法写入。FAQ 撤回或正文变化会立即失效。
 - `CUSTOMER_SERVICE_AUTO_REPAIR_MAX_CANDIDATES_PER_RUN`：每次回放最多处理的候选，默认 3，上限 10。
 - `CUSTOMER_SERVICE_AUTO_REPAIR_PAUSED=true`：暂停新的自动诊断与生效。
 - `CUSTOMER_SERVICE_RAG_FORCE_OFF=true`：禁止自动生效；客服原有 RAG 抑制规则继续生效。

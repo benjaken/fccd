@@ -535,8 +535,6 @@ Deno.serve(async (request) => {
         return json({ error: "auto_repair_disabled" }, 503);
       }
       const forceOff = env("CUSTOMER_SERVICE_RAG_FORCE_OFF").toLowerCase() === "true";
-      const allowedFaqIds = new Set(env("CUSTOMER_SERVICE_AUTO_REPAIR_FAQ_ALLOWLIST")
-        .split(",").map((value) => value.trim().toLowerCase()).filter((value) => UUID.test(value)));
       const runId = String(body.run_id ?? "").trim();
       if (!UUID.test(runId)) return json({ error: "invalid_run_id" }, 400);
       const { data: run, error: runError } = await admin.from("customer_service_history_eval_runs")
@@ -696,7 +694,7 @@ Deno.serve(async (request) => {
             candidate_patch: target ? { kind: "verified_faq_rewrite", faq_id: target.id,
               question: sample.question, canonical_question: target.question } : { kind: "diagnosis_only" },
             validation: {}, status: initialStatus, idempotency_key: idempotencyKey,
-            preauthorized: Boolean(target && allowedFaqIds.has(target.id.toLowerCase())),
+            preauthorized: Boolean(target),
           }).select("id").single();
         if (insertError || !inserted) throw insertError || new Error("proposal_insert_failed");
         const proposalId = String(inserted.id);
@@ -759,8 +757,7 @@ Deno.serve(async (request) => {
             .update({ status, validation }).eq("id", proposalId).eq("status", "validating");
           if (error) throw error;
           let finalStatus = status;
-          if (gate.passed && mode === "apply_allowlist" && !forceOff &&
-              allowedFaqIds.has(target.id.toLowerCase())) {
+          if (gate.passed && mode === "apply_allowlist" && !forceOff) {
             const { error: applyError } = await admin.rpc("customer_service_apply_verified_rewrite", {
               p_proposal_id: proposalId, p_environment: environment,
               p_config_fingerprint: replayConfig.fingerprint,

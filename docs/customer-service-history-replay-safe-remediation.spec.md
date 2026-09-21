@@ -341,7 +341,7 @@ CUSTOMER_SERVICE_CASES_AUTO_INGEST=false
 | HISTORY_EVAL_ENABLED=false | 不開始新回放；已在執行的工作按受控取消／暫停規則處理，不再排新模型呼叫。 |
 | AUTO_REPAIR_MODE=off | 可以做已授權評估；不生成新的自動修復工作、不執行修復。 |
 | AUTO_REPAIR_MODE=propose | 只寫提案與隔離驗證記錄，正式知識、索引及設定不變。 |
-| AUTO_REPAIR_MODE=apply_allowlist | 僅 R1 白名單且有預授權的範圍可自動執行；R2/R3 不因此取得發布權限。 |
+| AUTO_REPAIR_MODE=apply_allowlist | 对所有已发布（approved）FAQ 的 R1 目标可自動執行；R2/R3 不因此取得發布權限。 |
 | RAG_FORCE_OFF=true | 保留修復後 FAQ 抑制行為；案例包括 shadow 關閉。本版另外抑制自動生效修復並記錄原因，不改寫原設定；授權人手 FAQ 回填不受此新增限制。 |
 | CASES_MODE=off | 只是不使用線上案例；不禁止另經授權的歷史評估，也不代表可自動匯入案例。 |
 | 旗標非法／role 不符／base 版本不符 | 拒絕相應新動作並告警，不能猜測放行。 |
