@@ -1240,6 +1240,31 @@ export function planShopifyMenuOptions(input: {
   };
 }
 
+/**
+ * Resolves the ordered quantity for a package child dish.
+ *
+ * An explicit multiplier in the remark (anything above the default one) is the
+ * customer's own choice and wins. Otherwise the catalog package member quantity
+ * is authoritative: every serving of the package yields that many portions of
+ * the chosen dish, and the ordered package count multiplies it. This keeps a
+ * missing "x N" from silently collapsing the dish to one.
+ */
+export function resolvePackageOptionQuantity(input: {
+  remarkQuantity: number;
+  memberQuantity?: number | null;
+  packageQuantity?: number | null;
+}): number {
+  const remark = Number(input.remarkQuantity);
+  if (Number.isFinite(remark) && remark > 1) return remark;
+  const member = Number(input.memberQuantity);
+  if (Number.isFinite(member) && member > 0) {
+    const packages = Number(input.packageQuantity);
+    const factor = Number.isFinite(packages) && packages > 0 ? packages : 1;
+    return member * factor;
+  }
+  return Number.isFinite(remark) && remark > 0 ? remark : 1;
+}
+
 /** Returns the number of free six-person utensil packs implied by catering
  * package capacity labels such as "(8-10人)". Ad-hoc/manual overrides are data
  * concerns and can safely replace the generated row because its id is stable. */

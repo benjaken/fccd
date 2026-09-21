@@ -12,6 +12,7 @@ import {
   normalizeShopDomain,
   orderNumberKey,
   planShopifyMenuOptions,
+  resolvePackageOptionQuantity,
   parseMenuRemark,
   parseShopifyFreeDrinks,
   mergeShopifyLunchBoxLines,
@@ -635,6 +636,32 @@ async function fetchCatalogByName(
   return result;
 }
 
+/**
+ * Loads the catalog package member quantities keyed by "packageId:productId".
+ * Shopify option remarks do not always carry the per-serving multiplier, so the
+ * formal package definition is used to restore the ordered dish quantity.
+ */
+async function fetchPackageMemberQuantities(
+  client: AdminClient,
+  packageIds: string[],
+): Promise<Map<string, number>> {
+  const result = new Map<string, number>();
+  const unique = [...new Set(packageIds.filter(Boolean))];
+  if (!unique.length) return result;
+  const { data } = await client
+    .from("package_products")
+    .select("package_id, product_id, quantity")
+    .in("package_id", unique);
+  for (const row of data ?? []) {
+    const packageId = String(row.package_id ?? "");
+    const productId = String(row.product_id ?? "");
+    const quantity = Number(row.quantity ?? 0);
+    if (!packageId || !productId || !Number.isFinite(quantity) || quantity <= 0) continue;
+    result.set(`${packageId}:${productId}`, quantity);
+  }
+  return result;
+}
+
 function menuCatalogSearchTerms(names: string[]): string[] {
   return [...new Set(names.flatMap((name) => {
     const core = name
@@ -689,6 +716,8 @@ async function buildMenuOptionLines(input: {
   }>;
   catalogByName: Map<string, CatalogItem>;
   catalogProducts: MenuAiCatalogCandidate[];
+  packageMemberQuantities: Map<string, number>;
+  packageQuantities: Map<string, number>;
   issues: IssueRow[];
 }): Promise<{
   lines: Record<string, unknown>[];
@@ -704,6 +733,8 @@ async function buildMenuOptionLines(input: {
     addonCandidates,
     catalogByName,
     catalogProducts,
+    packageMemberQuantities,
+    packageQuantities,
     issues,
   } = input;
   const lines: Record<string, unknown>[] = [];
@@ -756,6 +787,16 @@ async function buildMenuOptionLines(input: {
     if (!match) {
       issues.push({ store_id: storeRow.id, shopify_order_id: orderId, sku: null, issue: "unmatched_remark_option" });
     }
+    const productId = aiMatch?.id ?? (exactMatch?.kind === "product" ? exactMatch.id : null);
+    const packageId = option.parentPackageId ?? (exactMatch?.kind === "package" ? exactMatch.id : null);
+    const memberQuantity = packageId && productId
+      ? packageMemberQuantities.get(`${packageId}:${productId}`)
+      : undefined;
+    const quantity = resolvePackageOptionQuantity({
+      remarkQuantity: option.quantity,
+      memberQuantity,
+      packageQuantity: packageId ? packageQuantities.get(packageId) : undefined,
+    });
     lines.push({
       legacy_id: shopifyMenuOptionLegacyId(
         storeRow.shop_domain,
@@ -765,15 +806,17 @@ async function buildMenuOptionLines(input: {
       ),
       order_id: orderSupabaseId,
       order_legacy_id: orderLegacyId,
-      product_id: aiMatch?.id ?? (exactMatch?.kind === "product" ? exactMatch.id : null),
-      package_id: option.parentPackageId ?? (exactMatch?.kind === "package" ? exactMatch.id : null),
+      product_id: productId,
+      package_id: packageId,
       product_legacy_id: null,
       package_legacy_id: null,
       sku_snapshot: match?.sku ?? null,
       product_name_snapshot: option.name,
-      quantity: option.quantity,
+      quantity,
       unit_price: option.unitPrice,
-      total_price: option.totalPrice,
+      total_price: option.unitPrice === null
+        ? option.totalPrice
+        : Number((option.unitPrice * quantity).toFixed(2)),
       item_order: option.itemOrder,
       is_addon: false,
       is_void: false,
@@ -1648,18 +1691,34 @@ async function processMappedOrders(
       ? mergeShopifyLunchBoxLines(lineRows)
       : lineRows;
 
+    const menuSources = menuRemarkSources(
+      item,
+      new Map(item.lines.map((line, index) => [
+        line.lineId,
+        (lineRows[index]?.package_id as string | null) ?? null,
+      ])),
+    );
+    const packageQuantities = new Map<string, number>();
+    item.lines.forEach((_, index) => {
+      const row = lineRows[index];
+      const packageId = (row?.package_id as string | null | undefined) ?? null;
+      if (!packageId || row?.product_id) return;
+      const quantity = Number(row?.quantity ?? 0);
+      if (!Number.isFinite(quantity) || quantity <= 0) return;
+      packageQuantities.set(packageId, (packageQuantities.get(packageId) ?? 0) + quantity);
+    });
+    const packageMemberQuantities = await fetchPackageMemberQuantities(
+      client,
+      menuSources.flatMap((source) => source.parentPackageId ?? []),
+    );
     const menuOptionResult = await buildMenuOptionLines({
       storeRow,
       orderId: item.orderId,
       orderLegacyId: String(item.orderRow.legacy_id ?? ""),
       orderSupabaseId: insertedOrder.id,
-      remarks: menuRemarkSources(
-        item,
-        new Map(item.lines.map((line, index) => [
-          line.lineId,
-          (lineRows[index]?.package_id as string | null) ?? null,
-        ])),
-      ),
+      remarks: menuSources,
+      packageMemberQuantities,
+      packageQuantities,
       addonCandidates: item.lines.map((line) => ({
         legacyId: String(line.row.legacy_id ?? ""),
         itemOrder: Number(line.row.item_order ?? 0),

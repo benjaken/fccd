@@ -38,6 +38,7 @@ import {
   shopifyLunchBoxVariantRemark,
   shopifyDrinkSelectionQuantity,
   shopifyCustomizationCostParentName,
+  resolvePackageOptionQuantity,
   isShopifyBeverageName,
   staleGeneratedCustomLineIds,
   shopifyFinancialStatus,
@@ -673,6 +674,37 @@ Yoyo 6553 0678
       { name: "唐揚炸雞塊 (30件)", quantity: 2 },
       { name: "墨西哥脆片 (2磅)", quantity: 2 },
     ]);
+  });
+});
+
+describe("resolvePackageOptionQuantity", () => {
+  it("applies the package member quantity when the remark omits the multiplier", () => {
+    expect(resolvePackageOptionQuantity({
+      remarkQuantity: 1,
+      memberQuantity: 2,
+      packageQuantity: 1,
+    })).toBe(2);
+  });
+
+  it("multiplies the member quantity by the ordered package count", () => {
+    expect(resolvePackageOptionQuantity({
+      remarkQuantity: 1,
+      memberQuantity: 2,
+      packageQuantity: 3,
+    })).toBe(6);
+  });
+
+  it("keeps an explicit customer multiplier over the member quantity", () => {
+    expect(resolvePackageOptionQuantity({
+      remarkQuantity: 3,
+      memberQuantity: 2,
+      packageQuantity: 1,
+    })).toBe(3);
+  });
+
+  it("keeps the remark quantity for dishes that are not package members", () => {
+    expect(resolvePackageOptionQuantity({ remarkQuantity: 4 })).toBe(4);
+    expect(resolvePackageOptionQuantity({ remarkQuantity: 1, memberQuantity: null })).toBe(1);
   });
 });
 
