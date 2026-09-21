@@ -25,7 +25,7 @@ begin
       count(*) filter (where messages.role = 'human') as human_count,
       count(*) filter (where messages.role = 'customer') as customer_count
      from public.customer_service_learning_import_messages messages
-     group by 1})
+     group by 1
     order by 1 desc
     limit greatest(1, least(coalesce(p_limit, 90), 365));
 end;
