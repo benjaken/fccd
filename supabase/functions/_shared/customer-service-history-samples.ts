@@ -64,6 +64,28 @@ export type BuildHistorySampleOptions = {
   maxBurstMs?: number;
 };
 
+/**
+ * Chooses which decision points become a run's manifest.
+ * - No seed: takes the most recent `sampleSize` samples (input is oldest-first),
+ *   so the default is "最近的 N 個".
+ * - With a seed: draws a reproducible uniform pseudo-random subset from the
+ *   whole time range. The same seed over the same sample keys always yields the
+ *   same subset, so a run can be replayed exactly.
+ */
+export function selectHistorySampleManifest(
+  samples: readonly HistoryDecisionSample[],
+  sampleSize: number,
+  seed: string,
+): HistoryDecisionSample[] {
+  const size = Math.max(1, Math.trunc(sampleSize));
+  if (!seed) return samples.slice(-size);
+  return [...samples]
+    .sort((left, right) =>
+      caseFingerprint(`${seed}\u0000${left.sampleKey}`)
+        .localeCompare(caseFingerprint(`${seed}\u0000${right.sampleKey}`)))
+    .slice(0, size);
+}
+
 function sanitize(value: string): string {
   return sanitizeCustomerServiceContextText(String(value ?? "")).trim();
 }

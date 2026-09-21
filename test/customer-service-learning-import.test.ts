@@ -2,12 +2,16 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it, vi } from "vitest";
 
 import { mergeLearningMessages } from "../supabase/functions/_shared/customer-service-learning.ts";
+import { isLegacyAutomatedReply } from "../supabase/functions/_shared/customer-service-automated-replies.ts";
 import {
   classifyWatiHistoryRole,
   extractWatiConversationIds,
   fetchWatiContactPhones,
+  fetchWatiContactRecords,
   fetchWatiConversationEvents,
   fetchWatiConversationMessages,
+  fetchWatiConversationMessagesV1,
+  isWatiBroadcastMessage,
   mapWithConcurrency,
   mapWatiHistoryMessages,
   normalizeWatiHistoryItem,
@@ -64,6 +68,26 @@ describe("wati conversation history adapter", () => {
     expect(classifyWatiHistoryRole({ ...base, owner: true, operatorName: "bot" })).toBe("assistant");
     expect(classifyWatiHistoryRole({ ...base, eventType: "broadcastMessage" })).toBe("assistant");
     expect(classifyWatiHistoryRole({ ...base, eventType: "templateMessage" })).toBe("assistant");
+  });
+
+  it("flags broadcast blasts but not one-to-one templates", () => {
+    const rows = mapWatiHistoryMessages([
+      { id: "b1", text: "中秋早鳥優惠，滿$2,500即減$200", type: "text", occurredAt: "2026-08-28T04:05:00Z",
+        owner: false, localMessageId: "", operatorName: "", operatorEmail: "", eventType: "broadcastMessage" },
+      { id: "t1", text: "訂單確認：你的到會套餐將送到", type: "text", occurredAt: "2026-08-28T04:06:00Z",
+        owner: false, localMessageId: "", operatorName: "", operatorEmail: "", eventType: "templateMessage" },
+    ], { phone: "85291234567", environment: "develop" });
+
+    expect(rows[0]).toMatchObject({ role: "assistant", is_broadcast: true });
+    expect(rows[1]).toMatchObject({ role: "assistant", is_broadcast: false });
+    expect(isWatiBroadcastMessage({
+      id: "b2", text: "x", type: "text", occurredAt: "2026-08-28T04:05:00Z",
+      owner: false, localMessageId: "", operatorName: "", operatorEmail: "", eventType: "broadcastMessage",
+    })).toBe(true);
+    expect(isWatiBroadcastMessage({
+      id: "t2", text: "x", type: "text", occurredAt: "2026-08-28T04:06:00Z",
+      owner: false, localMessageId: "", operatorName: "", operatorEmail: "", eventType: "templateMessage",
+    })).toBe(false);
   });
 
   it("maps, filters by date, and redacts identity data", () => {
@@ -236,6 +260,22 @@ describe("wati conversation history adapter", () => {
     expect(extractWatiConversationIds(events)).toEqual(["c1", "c2"]);
   });
 
+  it("stops paginating once the wall-clock deadline is reached", async () => {
+    let calls = 0;
+    const stub = vi.fn(async () => {
+      calls += 1;
+      return jsonResponse({ messages: { items: [
+        { id: `m${calls}`, text: "x", created: "2026-08-01T10:00:00Z" },
+      ] } });
+    }) as unknown as typeof fetch;
+    const rows = await fetchWatiConversationMessagesV1({
+      endpoint: "https://live-mt-server.wati.io/2552", token: "t", phone: "85291234567",
+      fetchImpl: stub, pageSize: 1, deadlineAt: Date.now() - 1,
+    });
+    expect(rows).toEqual([]);
+    expect(calls).toBe(0);
+  });
+
   it("enumerates contacts and normalizes phone numbers", async () => {
     const stub = vi.fn(async () => jsonResponse({ contact_list: [
       { phone: "+852 9123 4567" },
@@ -246,6 +286,60 @@ describe("wati conversation history adapter", () => {
       endpoint: "https://live-mt-server.wati.io/2552", token: "t", fetchImpl: stub, pageSize: 100,
     });
     expect(phones).toEqual(["85291234567", "8613800000000"]);
+  });
+
+  it("reads each contact's last activity so inactive contacts can be skipped", async () => {
+    const stub = vi.fn(async () => jsonResponse({ contact_list: [
+      { phone: "85291234567", lastUpdated: "2026-09-21T03:54:40.718Z" },
+      { phone: "85255111130", lastMessageTime: "2026-08-01T00:00:00.000Z" },
+      { phone: "85260000000" },
+    ] })) as unknown as typeof fetch;
+    const records = await fetchWatiContactRecords({
+      endpoint: "https://live-mt-server.wati.io/2552", token: "t", fetchImpl: stub, pageSize: 100,
+    });
+    expect(records).toEqual([
+      { phone: "85291234567", lastMessageAt: "2026-09-21T03:54:40.718Z" },
+      { phone: "85255111130", lastMessageAt: "2026-08-01T00:00:00.000Z" },
+      { phone: "85260000000", lastMessageAt: "" },
+    ]);
+  });
+});
+
+describe("automated reply detection", () => {
+  it("flags canned bot replies even when the sender looks human", () => {
+    expect(isLegacyAutomatedReply(
+      "唔好意思，我哋呢度只可以幫你查訂單、到會查詢，或者公司已公布嘅政策。如果需要其他協助，請等同事上線。",
+    )).toBe(true);
+    expect(isLegacyAutomatedReply("已經幫你記低，同事會跟進。唔使再喺 WhatsApp 補電郵。")).toBe(true);
+    expect(isLegacyAutomatedReply("你好。未搵到用呢個 WhatsApp 號碼嘅正式訂單。如果你想查到會，請話我知活動日期或者人數，同事會跟進。")).toBe(true);
+    expect(isLegacyAutomatedReply("可以早一日前3:00前預訂")).toBe(false);
+    expect(isLegacyAutomatedReply("唔該幫我改去星期五")).toBe(false);
+  });
+
+  it("classifies an old automated reply from a human-looking sender as assistant", () => {
+    const role = classifyWatiHistoryRole({
+      id: "m1",
+      text: "已經幫你記低，同事會跟進。唔使再喺 WhatsApp 補電郵。",
+      type: "text",
+      occurredAt: "2026-09-11T03:35:00.000Z",
+      owner: true,
+      localMessageId: "",
+      operatorName: "Yoko FC Catering",
+      operatorEmail: "",
+      eventType: "message",
+    });
+    expect(role).toBe("assistant");
+  });
+
+  it("treats the WATI API token sender as automated", () => {
+    const base = {
+      id: "m2", text: "多謝查詢，同事會盡快回覆。", type: "text",
+      occurredAt: "2026-09-11T03:40:00.000Z", owner: true,
+      localMessageId: "", operatorEmail: "", eventType: "message",
+    };
+    expect(classifyWatiHistoryRole({ ...base, operatorName: "API Token 2552" })).toBe("assistant");
+    expect(classifyWatiHistoryRole({ ...base, operatorName: "Bot" })).toBe("assistant");
+    expect(classifyWatiHistoryRole({ ...base, operatorName: "Yoko FC Catering" })).toBe("human");
   });
 });
 
@@ -295,6 +389,21 @@ describe("learning import wiring", () => {
     );
     expect(sql).toContain("delete from public.customer_service_learning_import_messages");
     expect(sql).toContain("where messages.phone_normalized not in ('8613828747224', '13828747224')");
+  });
+
+  it("excludes broadcast blasts from the import summary and learning report", () => {
+    const sql = readFileSync(
+      "supabase/migrations/20260921130000_customer_service_learning_exclude_broadcasts.sql",
+      "utf8",
+    );
+    expect(sql).toContain("add column if not exists is_broadcast");
+    expect(sql).toContain("count(*) filter (where not messages.is_broadcast) as message_count");
+    expect(sql).toContain("broadcast_count");
+    const report = readFileSync(
+      "supabase/functions/customer-service-daily-report/index.ts",
+      "utf8",
+    );
+    expect(report).toContain("is_broadcast !== true");
   });
 
   it("authorizes the backfill function before contacting WATI", () => {

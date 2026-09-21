@@ -10,15 +10,21 @@ import { HISTORY_CASE_INTENTS } from "../supabase/functions/_shared/customer-ser
 type Row = Record<string, unknown>;
 const id = (digit: number) => `00000000-0000-4000-8000-${String(digit).padStart(12, "0")}`;
 
-function replayEndpoint(targetAvailable = true, caseAutoIngest = false) {
+function replayEndpoint(
+  targetAvailable = true,
+  caseAutoIngest = false,
+  options: { jevEnabled?: boolean; jevKey?: string; jevFail?: boolean; jevErrorCode?: string; judgeGrounding?: string } = {},
+) {
   const proposals: Row[] = [];
   const faqs: Row[] = [];
   const samples: Row[] = [];
   const runs: Row[] = [];
   const rules: Row[] = [];
   const cases: Row[] = [];
+  const jev: Row[] = [];
   let nextFaq = 0;
   let candidateAnswer = "unchanged";
+  let jevCalls = 0;
   const tables: Record<string, Row[]> = {
     customer_service_repair_proposals: proposals,
     customer_faqs: faqs,
@@ -28,6 +34,7 @@ function replayEndpoint(targetAvailable = true, caseAutoIngest = false) {
       environment: "develop", status: "active" }],
     customer_service_verified_rewrite_repairs: rules,
     customer_service_cases: cases,
+    customer_service_history_jev_judgments: jev,
   };
 
   class Query {
@@ -39,6 +46,7 @@ function replayEndpoint(targetAvailable = true, caseAutoIngest = false) {
     select() { return this; }
     order() { return this; }
     limit() { return this; }
+    range() { return this; }
     eq(key: string, value: unknown) {
       this.filters.push((row) => key === "scope->>run_id"
         ? (row.scope as Row | undefined)?.run_id === value : row[key] === value);
@@ -79,6 +87,28 @@ function replayEndpoint(targetAvailable = true, caseAutoIngest = false) {
   const admin = {
     from: (table: string) => new Query(table),
     rpc: async (name: string, args: Row) => {
+      if (name === "customer_service_history_jev_claim") {
+        for (const sample of samples) {
+          if (sample.run_id !== args.p_run_id || sample.status !== "scored") continue;
+          const exists = jev.some((row) => row.sample_id === sample.id &&
+            row.rubric_version === args.p_rubric_version && row.model_requested === args.p_model);
+          if (!exists) {
+            jev.push({ id: id(60 + jev.length), sample_id: sample.id, run_id: args.p_run_id,
+              environment: args.p_environment, status: "pending", model_requested: args.p_model,
+              rubric_version: args.p_rubric_version, attempt_count: 0,
+              created_at: "2026-09-21T00:00:00Z", updated_at: "2026-09-21T00:00:00Z" });
+          }
+        }
+        const claimed = jev.filter((row) => row.run_id === args.p_run_id &&
+          row.environment === args.p_environment && row.model_requested === args.p_model &&
+          row.rubric_version === args.p_rubric_version && row.status === "pending")
+          .slice(0, Number(args.p_limit) || 1);
+        claimed.forEach((row) => {
+          row.status = "processing";
+          row.attempt_count = Number(row.attempt_count) + 1;
+        });
+        return { data: claimed, error: null };
+      }
       if (name === "customer_service_verified_repair_target") {
         if (!targetAvailable) return { data: null, error: null };
         return { data: { id: id(99), question: "送貨範圍？", content_hash: "faq-hash",
@@ -112,6 +142,9 @@ function replayEndpoint(targetAvailable = true, caseAutoIngest = false) {
       CUSTOMER_SERVICE_ENVIRONMENT: "develop",
       CUSTOMER_SERVICE_AUTO_REPAIR_MODE: "apply_allowlist",
       CUSTOMER_SERVICE_CASES_AUTO_INGEST: String(caseAutoIngest),
+      CUSTOMER_SERVICE_HISTORY_JEV_ENABLED: String(options.jevEnabled ?? true),
+      TYPESAFE_API_KEY: options.jevKey ?? "typesafe-test-key",
+      CUSTOMER_SERVICE_HISTORY_JEV_MODEL: "jev-1.13.0",
     } as Record<string, string>)[name] }, serve: (fn: typeof handler) => { handler = fn; } },
     createClient: () => admin,
     caseFingerprint: () => "stable",
@@ -139,6 +172,47 @@ function replayEndpoint(targetAvailable = true, caseAutoIngest = false) {
     parseCustomerServiceCaseInput,
     deterministicHistoryIssues: () => [],
     HISTORY_REPLAY_PIPELINE_VERSION: "test",
+    HISTORY_JEV_RUBRIC_VERSION: "history-jev-v1",
+    TYPESAFE_SYSTEMONE_ENDPOINT: "https://api.typesafe.ai/v1/systemone",
+    resolveHistoryJevApprovedSources: (input: {
+      candidates: Array<{ id: string; question: string; answer: string }>;
+      selectedSourceIds: string[];
+      grounded: boolean;
+    }) => {
+      const selected = new Set(input.selectedSourceIds);
+      const sources = input.grounded
+        ? input.candidates.filter((candidate) => selected.has(candidate.id))
+          .map((candidate) => ({ id: candidate.id, text: `${candidate.question}\n${candidate.answer}` }))
+        : [];
+      return { sources, complete: input.grounded ? sources.length > 0 : true };
+    },
+    historyJevAgreement: (input: {
+      jevGrounding?: string | null; judgeGrounding?: string | null;
+      jevComplete: boolean; sampleEvaluable: boolean;
+    }) => {
+      if (!input.jevComplete || !input.sampleEvaluable) return "incomparable";
+      const jev = input.jevGrounding ?? null;
+      const judge = input.judgeGrounding ?? null;
+      if (!jev || !judge || jev === "unknown" || judge === "unknown") return "incomparable";
+      return jev === judge ? "agree" : "divergent";
+    },
+    judgeHistoryDecisionPointWithJev: async (input: { config: { model: string } }) => {
+      jevCalls += 1;
+      if (options.jevFail || options.jevErrorCode) {
+        return { ok: false, errorCode: options.jevErrorCode ?? "provider_unavailable",
+          attemptCount: 1, elapsedMs: 5, outcomeUncertain: false };
+      }
+      return {
+        ok: true, modelRequested: input.config.model, modelResolved: "jev-1.13.0",
+        answers: {
+          grounding: { choice: "unsupported", probabilities: { supported: 0.1, unsupported: 0.8, conflicting: 0.05, unknown: 0.05 }, confidence: 0.8 },
+          coverage: { choice: "complete", probabilities: { complete: 0.9, partial: 0.05, missed: 0.03, unknown: 0.02 }, confidence: 0.85 },
+          unverifiedAction: { noul: 0.1 },
+          humanReview: { noul: 0.4 },
+        },
+        inputTokens: 100, outputTokens: 20, attemptCount: 1, elapsedMs: 12,
+      };
+    },
   });
   const call = async (body: Row) => {
     const response = await handler(new Request("http://local.test", {
@@ -148,7 +222,8 @@ function replayEndpoint(targetAvailable = true, caseAutoIngest = false) {
     }));
     return { status: response.status, body: await response.json() as Row };
   };
-  return { proposals, faqs, samples, runs, rules, cases, call,
+  return { proposals, faqs, samples, runs, rules, cases, jev, call,
+    jevCalls: () => jevCalls,
     setCandidateAnswer: (value: string) => { candidateAnswer = value; } };
 }
 
@@ -285,5 +360,142 @@ describe("history replay proposal safeguards", () => {
     expect(app.cases).toHaveLength(0);
     expect(app.proposals[0].repair_kind).toBe("code_change_proposal");
     expect(app.proposals[0].reason).toBe("answer_logic_code_change_required");
+  });
+});
+
+function jevRunSample(overrides: Row = {}): Row {
+  return {
+    id: id(4), run_id: id(3), question: "有冇月餅？", context: [], ai_answer: "冇",
+    status: "scored", pairing: "confident", context_gap: false,
+    scenario_at: "2026-09-18T14:54:47Z",
+    trace: {
+      grounded: true, usedFallback: false, answerGuardPassed: true,
+      candidates: [{ id: id(99), question: "有月餅嗎", answer: "有，可訂" }],
+      faqSourceIds: [id(99)],
+      retrieval: { error: false, candidateCount: 1, selectedSourceIds: [id(99)] },
+    },
+    judgment: { stage: "llm", aiGrounding: "supported", comparison: "divergent", issues: [] },
+    lineage: { conversation_id: "conversation-a" },
+    ...overrides,
+  };
+}
+
+function jevRun(overrides: Row = {}): Row {
+  return { id: id(3), environment: "develop", scope: "answer_quality", status: "complete",
+    snapshot: {}, ...overrides };
+}
+
+describe("history replay Jev second judge", () => {
+  it("does nothing when the feature flag is off or the key is missing", async () => {
+    const disabled = replayEndpoint(true, false, { jevEnabled: false });
+    disabled.runs.push(jevRun());
+    disabled.samples.push(jevRunSample());
+    const off = await disabled.call({ action: "judge_jev", run_id: id(3) });
+    expect(off.status).toBe(503);
+    expect(off.body.error).toBe("jev_disabled");
+    expect(disabled.jevCalls()).toBe(0);
+
+    const unconfigured = replayEndpoint(true, false, { jevEnabled: true, jevKey: "" });
+    unconfigured.runs.push(jevRun());
+    unconfigured.samples.push(jevRunSample());
+    const missing = await unconfigured.call({ action: "judge_jev", run_id: id(3) });
+    expect(missing.status).toBe(503);
+    expect(missing.body.error).toBe("jev_not_configured");
+    expect(unconfigured.jevCalls()).toBe(0);
+  });
+
+  it("does not evaluate routing_safety samples", async () => {
+    const app = replayEndpoint();
+    app.runs.push(jevRun({ scope: "routing_safety" }));
+    app.samples.push(jevRunSample());
+    const response = await app.call({ action: "judge_jev", run_id: id(3) });
+    expect(response.status).toBe(200);
+    expect(response.body.note).toBe("routing_safety_not_applicable");
+    expect(app.jevCalls()).toBe(0);
+    expect(app.jev).toHaveLength(0);
+  });
+
+  it("stores an independent verdict and its comparison without touching the LLM judgment", async () => {
+    const app = replayEndpoint();
+    app.runs.push(jevRun());
+    app.samples.push(jevRunSample());
+    const response = await app.call({ action: "judge_jev", run_id: id(3) });
+    expect(response.status).toBe(200);
+    expect(response.body.evaluated).toBe(1);
+    expect(response.body.divergent).toBe(1);
+    expect(app.jev).toHaveLength(1);
+    expect(app.jev[0].status).toBe("complete");
+    expect(app.jev[0].model_resolved).toBe("jev-1.13.0");
+    expect(app.jev[0].agreement).toBe("divergent");
+    expect(app.jev[0].input_tokens).toBe(100);
+    expect((app.samples[0].judgment as Row).aiGrounding).toBe("supported");
+    expect(app.samples[0].judge_model).toBeUndefined();
+  });
+
+  it("does not re-request the same sample/rubric/model on a repeated call", async () => {
+    const app = replayEndpoint();
+    app.runs.push(jevRun());
+    app.samples.push(jevRunSample());
+    await app.call({ action: "judge_jev", run_id: id(3) });
+    const second = await app.call({ action: "judge_jev", run_id: id(3) });
+    expect(second.body.evaluated).toBe(0);
+    expect(second.body.remaining).toBe(0);
+    expect(app.jevCalls()).toBe(1);
+  });
+
+  it("skips guard-blocked samples and unresolved sources instead of guessing", async () => {
+    const app = replayEndpoint();
+    app.runs.push(jevRun());
+    app.samples.push(jevRunSample({ id: id(5),
+      trace: { grounded: true, answerGuardPassed: false,
+        candidates: [{ id: id(99), question: "q", answer: "a" }], faqSourceIds: [id(99)],
+        retrieval: { error: false, candidateCount: 1, selectedSourceIds: [id(99)] } } }));
+    app.samples.push(jevRunSample({ id: id(6),
+      trace: { grounded: true, answerGuardPassed: true,
+        candidates: [{ id: id(99), question: "q", answer: "a" }], faqSourceIds: [id(77)],
+        retrieval: { error: false, candidateCount: 1, selectedSourceIds: [id(77)] } } }));
+    const response = await app.call({ action: "judge_jev", run_id: id(3) });
+    expect(response.body.skipped).toBe(2);
+    const codes = app.jev.map((row) => row.error_code).sort();
+    expect(codes).toEqual(["answer_guard_blocked", "unverified_sources_not_evaluable"]);
+    expect(app.jevCalls()).toBe(0);
+  });
+
+  it("records a provider failure without writing a fake unknown verdict", async () => {    const app = replayEndpoint(true, false, { jevFail: true });
+    app.runs.push(jevRun());
+    app.samples.push(jevRunSample());
+    const response = await app.call({ action: "judge_jev", run_id: id(3) });
+    expect(response.body.failed).toBe(1);
+    expect(app.jev[0].status).toBe("failed");
+    expect(app.jev[0].error_code).toBe("provider_unavailable");
+    expect(app.jev[0].answers).toBeNull();
+    expect(app.jev[0].agreement).toBeNull();
+  });
+
+  it("stops the batch early on a TypeSafe configuration error and releases the lease", async () => {
+    const app = replayEndpoint(true, false, { jevErrorCode: "auth_failed" });
+    app.runs.push(jevRun());
+    app.samples.push(jevRunSample({ id: id(4) }));
+    app.samples.push(jevRunSample({ id: id(5) }));
+    const response = await app.call({ action: "judge_jev", run_id: id(3), concurrency: 1, limit: 10 });
+    expect(response.body.ok).toBe(false);
+    expect(response.body.config_error).toBe("auth_failed");
+    expect(app.jevCalls()).toBe(1);
+    expect(app.jev.map((row) => row.status).sort()).toEqual(["pending", "pending"]);
+  });
+
+  it("exposes jev_enabled and the jev summary through status and samples", async () => {
+    const app = replayEndpoint();
+    app.runs.push(jevRun());
+    app.samples.push(jevRunSample());
+    const status = await app.call({ action: "status" });
+    expect((status.body.capabilities as Row).jev_enabled).toBe(true);
+    await app.call({ action: "judge_jev", run_id: id(3) });
+    const samples = await app.call({ action: "samples", run_id: id(3) });
+    const row = (samples.body.samples as Row[])[0];
+    expect(row.conversation_id).toBe("conversation-a");
+    expect(row.agreement).toBe("divergent");
+    expect((row.jev as Row).status).toBe("complete");
+    expect(((row.jev as Row).answers as Row).grounding).toBeTruthy();
   });
 });

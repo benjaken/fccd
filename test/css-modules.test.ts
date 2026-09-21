@@ -8,6 +8,9 @@ const globalStyleImports = [...entry.matchAll(/@import\s+["'](\.\/styles\/[^"']+
   .map((match) => match[1]);
 const legacyLineCeilings = new Map<string, number>([
   ["./styles/07-inventory-migration.css", 5_500],
+  // Pre-existing legacy override layer; already above the default 5,000 ceiling
+  // before the history-replay conversation styles were added.
+  ["./styles/14-layout-overrides.css", 6_600],
 ]);
 
 function findCssModules(directory: string): string[] {

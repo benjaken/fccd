@@ -26,6 +26,13 @@ export type CustomerServiceContextMessageRow = {
   dialog_action: string | null;
   environment: string;
   created_at?: string;
+  /** Import-only: marks WATI broadcast blasts so learning never treats them as conversations. */
+  is_broadcast?: boolean;
+  /** Import-only: raw WATI sender metadata, kept so role classification is auditable. */
+  operator_name?: string | null;
+  operator_email?: string | null;
+  local_message_id?: string | null;
+  event_type?: string | null;
 };
 
 export function sanitizeCustomerServiceContextText(value: string) {
@@ -73,6 +80,10 @@ export function customerServiceContextMessageRow(input: {
   intentKey?: string | null;
   dialogAction?: string | null;
   occurredAt?: string | null;
+  operatorName?: string | null;
+  operatorEmail?: string | null;
+  localMessageId?: string | null;
+  eventType?: string | null;
 }): CustomerServiceContextMessageRow | null {
   const messageText = sanitizeCustomerServiceContextText(input.text);
   if (!messageText) return null;
@@ -88,5 +99,11 @@ export function customerServiceContextMessageRow(input: {
     ...(occurredAt && !Number.isNaN(Date.parse(occurredAt))
       ? { created_at: new Date(occurredAt).toISOString() }
       : {}),
+    // Only the import path provides these; the live bot omits them so its
+    // insert into customer_service_messages keeps working unchanged.
+    ...(input.operatorName !== undefined ? { operator_name: input.operatorName } : {}),
+    ...(input.operatorEmail !== undefined ? { operator_email: input.operatorEmail } : {}),
+    ...(input.localMessageId !== undefined ? { local_message_id: input.localMessageId } : {}),
+    ...(input.eventType !== undefined ? { event_type: input.eventType } : {}),
   };
 }

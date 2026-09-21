@@ -177,6 +177,7 @@ export type CustomerServiceDailyMetrics = {
   send_success_rate: number | null;
   average_latency_ms: number;
   human_learning_conversations?: number;
+  faq_suggestions_dropped?: number;
 };
 
 export type CustomerServiceDailyReport = {
@@ -549,6 +550,11 @@ export async function updateCustomerFaq(
   void refreshCustomerFaqEmbeddings();
 }
 
+export async function deleteCustomerFaq(id: string) {
+  const { error } = await supabase.from("customer_faqs").delete().eq("id", id);
+  if (error) throw error;
+}
+
 export async function fetchCustomerServiceControls(): Promise<CustomerServiceControls> {
   const { data, error } = await supabase.rpc("customer_service_controls_get");
   if (error) throw error;
@@ -891,6 +897,7 @@ export type CustomerServiceImportDay = {
   messageCount: number;
   humanCount: number;
   customerCount: number;
+  broadcastCount: number;
 };
 
 export type CustomerServiceImportProgress = {
@@ -912,16 +919,55 @@ export type CustomerServiceImportResult = {
  * function stops at a wall-clock budget and returns a cursor, so this loops
  * until every phone in the window has been fetched.
  */
+/**
+ * The backfill function must answer before the platform cuts the request off
+ * (~150s). Each call is bounded well below that and driven by `next_cursor`, so
+ * contact enumeration is the only unbounded step and it consumes the budget.
+ */
+const CUSTOMER_SERVICE_IMPORT_RUNTIME_MS = 110_000;
+const CUSTOMER_SERVICE_IMPORT_CONCURRENCY = 16;
+
+/**
+ * Turns a FunctionsHttpError into an Error whose message is the server error
+ * code (or `http_<status>`), so the UI can show an actionable reason instead of
+ * the generic "check WATI credentials" text.
+ */
+async function customerServiceImportError(error: unknown): Promise<Error> {
+  const candidate = error as { context?: Response; message?: string };
+  const context = candidate?.context;
+  if (context && typeof context.json === "function") {
+    let code = "";
+    let detail = "";
+    try {
+      const payload = (await context.json()) as { error?: unknown; detail?: unknown };
+      if (payload?.error) code = String(payload.error);
+      if (payload?.detail) detail = String(payload.detail);
+    } catch {
+      // Non-JSON body (e.g. a gateway error page).
+    }
+    if (code) return new Error(code);
+    if (detail) return new Error(detail.slice(0, 200));
+    if (typeof context.status === "number" && context.status > 0) {
+      return new Error(`http_${context.status}`);
+    }
+  }
+  return error instanceof Error ? error : new Error(String(error ?? "customer_service_import_failed"));
+}
+
 export async function importCustomerServiceHistory(
   input: {
     since?: string;
     until?: string;
     maxPhones?: number;
+    refreshContacts?: boolean;
+    activeOnly?: boolean;
     onProgress?: (progress: CustomerServiceImportProgress) => void;
   } = {},
 ): Promise<CustomerServiceImportResult> {
   let cursor: Record<string, unknown> | undefined;
-  let lastIndex = 0;
+  // -1 so an enumeration-only first response (phone_index 0) is not mistaken
+  // for "no progress" and does not stop the loop early.
+  let lastIndex = -1;
   let batches = 0;
   let messagesImported = 0;
   let phonesProcessed = 0;
@@ -935,11 +981,15 @@ export async function importCustomerServiceHistory(
           since: input.since || undefined,
           until: input.until || undefined,
           max_phones: input.maxPhones,
+          refresh_contacts: input.refreshContacts === true ? true : undefined,
+          active_only: input.activeOnly === true ? true : undefined,
+          max_runtime_ms: CUSTOMER_SERVICE_IMPORT_RUNTIME_MS,
+          concurrency: CUSTOMER_SERVICE_IMPORT_CONCURRENCY,
           cursor,
         },
       },
     );
-    if (error) throw error;
+    if (error) throw await customerServiceImportError(error);
     const payload = data as Record<string, unknown> | null;
     if (!payload || payload.ok !== true) {
       throw new Error("customer_service_import_invalid_response");
@@ -994,6 +1044,7 @@ export async function fetchCustomerServiceLearningImportSummary(
     messageCount: Number(row.message_count || 0),
     humanCount: Number(row.human_count || 0),
     customerCount: Number(row.customer_count || 0),
+    broadcastCount: Number(row.broadcast_count || 0),
   }));
 }
 
@@ -1213,11 +1264,13 @@ export type CustomerServiceHistoryReplayRun = {
   failed: number;
   skipped: number;
   completeSampleSet: boolean;
+  seed: string | null;
   createdAt: string;
   completedAt: string | null;
 };
 
 function mapHistoryReplayRun(row: Record<string, unknown>): CustomerServiceHistoryReplayRun {
+  const snapshot = (row.snapshot ?? {}) as Record<string, unknown>;
   return {
     id: String(row.id),
     environment: String(row.environment),
@@ -1229,6 +1282,7 @@ function mapHistoryReplayRun(row: Record<string, unknown>): CustomerServiceHisto
     failed: Number(row.failed || 0),
     skipped: Number(row.skipped || 0),
     completeSampleSet: row.complete_sample_set === true,
+    seed: typeof snapshot.seed === "string" ? snapshot.seed : null,
     createdAt: String(row.created_at),
     completedAt: typeof row.completed_at === "string" ? row.completed_at : null,
   };
@@ -1275,6 +1329,7 @@ export type CustomerServiceHistoryReplaySample = {
   id: string;
   question: string;
   context: Array<{ role: string; text: string }>;
+  conversationId: string | null;
   aiAnswer: string;
   referenceAnswer: string;
   status: string;
@@ -1283,7 +1338,76 @@ export type CustomerServiceHistoryReplaySample = {
   requiresHumanReview: boolean;
   issues: Array<Record<string, unknown>>;
   scenarioAt: string;
+  agreement: string | null;
+  jev: CustomerServiceHistoryJevSample | null;
 };
+
+export type CustomerServiceHistoryJevChoice = {
+  choice: string;
+  probabilities: Record<string, number>;
+  confidence: number;
+};
+
+export type CustomerServiceHistoryJevSample = {
+  status: string;
+  modelRequested: string;
+  modelResolved: string | null;
+  rubricVersion: string;
+  agreement: string | null;
+  errorCode: string | null;
+  outcomeUncertain: boolean;
+  attemptCount: number;
+  elapsedMs: number | null;
+  inputTokens: number | null;
+  outputTokens: number | null;
+  grounding: CustomerServiceHistoryJevChoice | null;
+  coverage: CustomerServiceHistoryJevChoice | null;
+  unverifiedAction: number | null;
+  humanReview: number | null;
+};
+
+function parseHistoryJevChoice(value: unknown): CustomerServiceHistoryJevChoice | null {
+  if (!value || typeof value !== "object") return null;
+  const row = value as Record<string, unknown>;
+  if (typeof row.choice !== "string") return null;
+  const probabilities: Record<string, number> = {};
+  if (row.probabilities && typeof row.probabilities === "object") {
+    for (const [key, raw] of Object.entries(row.probabilities as Record<string, unknown>)) {
+      if (typeof raw === "number" && Number.isFinite(raw)) probabilities[key] = raw;
+    }
+  }
+  return {
+    choice: row.choice,
+    probabilities,
+    confidence: typeof row.confidence === "number" ? row.confidence : 0,
+  };
+}
+
+function parseHistoryJevSample(value: unknown): CustomerServiceHistoryJevSample | null {
+  if (!value || typeof value !== "object") return null;
+  const row = value as Record<string, unknown>;
+  const answers = (row.answers ?? {}) as Record<string, unknown>;
+  if (!answers || typeof answers !== "object") return null;
+  return {
+    status: String(row.status ?? ""),
+    modelRequested: String(row.model_requested ?? ""),
+    modelResolved: typeof row.model_resolved === "string" ? row.model_resolved : null,
+    rubricVersion: String(row.rubric_version ?? ""),
+    agreement: typeof row.agreement === "string" ? row.agreement : null,
+    errorCode: typeof row.error_code === "string" ? row.error_code : null,
+    outcomeUncertain: row.outcome_uncertain === true,
+    attemptCount: Number(row.attempt_count || 0),
+    elapsedMs: typeof row.elapsed_ms === "number" ? row.elapsed_ms : null,
+    inputTokens: typeof row.input_tokens === "number" ? row.input_tokens : null,
+    outputTokens: typeof row.output_tokens === "number" ? row.output_tokens : null,
+    grounding: parseHistoryJevChoice(answers.grounding),
+    coverage: parseHistoryJevChoice(answers.coverage),
+    unverifiedAction: answers.unverified_action && typeof answers.unverified_action === "object"
+      ? Number((answers.unverified_action as Record<string, unknown>).noul ?? NaN) : null,
+    humanReview: answers.human_review && typeof answers.human_review === "object"
+      ? Number((answers.human_review as Record<string, unknown>).noul ?? NaN) : null,
+  };
+}
 
 export async function fetchCustomerServiceHistoryReplaySamples(
   runId: string,
@@ -1298,6 +1422,7 @@ export async function fetchCustomerServiceHistoryReplaySamples(
     context: Array.isArray(row.context)
       ? (row.context as Array<{ role: string; text: string }>)
       : [],
+    conversationId: typeof row.conversation_id === "string" ? row.conversation_id : null,
     aiAnswer: String(row.ai_answer ?? ""),
     referenceAnswer: String(row.reference_answer ?? ""),
     status: String(row.status ?? ""),
@@ -1306,7 +1431,40 @@ export async function fetchCustomerServiceHistoryReplaySamples(
     requiresHumanReview: row.requires_human_review === true,
     issues: Array.isArray(row.issues) ? (row.issues as Array<Record<string, unknown>>) : [],
     scenarioAt: String(row.scenario_at ?? ""),
+    agreement: typeof row.agreement === "string" ? row.agreement : null,
+    jev: parseHistoryJevSample(row.jev),
   }));
+}
+
+/** Non-sensitive capability flags for the replay panel (never the API key). */
+export async function fetchCustomerServiceHistoryReplayCapabilities(): Promise<{
+  jevEnabled: boolean;
+}> {
+  const payload = await invokeCustomerServiceHistoryReplay<{
+    capabilities?: { jev_enabled?: unknown };
+  } | null>({ action: "status", limit: 1 });
+  return { jevEnabled: payload?.capabilities?.jev_enabled === true };
+}
+
+/** Runs the independent TypeSafe Jev second judge over unjudged samples. */
+export async function judgeCustomerServiceHistoryReplayJev(
+  runId: string,
+  limit = 200,
+  concurrency = 4,
+) {
+  return invokeCustomerServiceHistoryReplay<{
+    evaluated?: number;
+    failed?: number;
+    skipped?: number;
+    divergent?: number;
+    remaining?: number;
+    model?: string;
+    rubric_version?: string;
+    items?: Array<Record<string, unknown>>;
+    note?: string;
+    config_error?: string | null;
+    error?: string;
+  }>({ action: "judge_jev", run_id: runId, limit, concurrency });
 }
 
 export type CustomerServiceRepairProposal = {

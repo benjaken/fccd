@@ -16,6 +16,8 @@ export type HistorySourceRow = {
   source_message_id: string;
   environment?: string;
   conversation_id?: string | null;
+  /** Import-only: broadcast blasts are excluded from replay samples. */
+  is_broadcast?: boolean;
 };
 
 export const HISTORY_SOURCE_MAPPER_VERSION = "history-source-v1";

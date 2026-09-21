@@ -5,6 +5,7 @@ import { customerServiceRagConfig } from "../_shared/customer-service-rag-config
 import {
   buildHistoryDecisionSamples,
   HISTORY_SAMPLE_BUILDER_VERSION,
+  selectHistorySampleManifest,
   type HistoryDecisionSample,
 } from "../_shared/customer-service-history-samples.ts";
 import {
@@ -24,6 +25,14 @@ import {
   HISTORY_JUDGE_RUBRIC_VERSION,
 } from "../_shared/customer-service-history-judge.ts";
 import { judgeHistoryDecisionPoint } from "../_shared/customer-service-history-judge-ai.ts";
+import {
+  historyJevAgreement,
+  HISTORY_JEV_RUBRIC_VERSION,
+  judgeHistoryDecisionPointWithJev,
+  resolveHistoryJevApprovedSources,
+  TYPESAFE_SYSTEMONE_ENDPOINT,
+  type HistoryJevConfig,
+} from "../_shared/customer-service-history-jev.ts";
 import {
   defaultRoutingConversation,
   evaluateRoutingResult,
@@ -66,6 +75,23 @@ function serviceRoleKey() {
 function deploymentEnvironment() {
   return env("CUSTOMER_SERVICE_ENVIRONMENT") ||
     (env("SUPABASE_URL").includes("vignxasvlxqnyvuhtjlu") ? "production" : "develop");
+}
+
+/**
+ * TypeSafe Jev second judge configuration. Read from backend secrets only; the
+ * key is never returned to the client or stored on a judgment row. Jev is an
+ * independent diagnostic judge, not a chat-completions model: it must not reuse
+ * CUSTOMER_SERVICE_AI_ENDPOINT.
+ */
+function historyJevConfig(): HistoryJevConfig {
+  return {
+    enabled: env("CUSTOMER_SERVICE_HISTORY_JEV_ENABLED").toLowerCase() === "true",
+    endpoint: TYPESAFE_SYSTEMONE_ENDPOINT,
+    apiKey: env("TYPESAFE_API_KEY"),
+    model: env("CUSTOMER_SERVICE_HISTORY_JEV_MODEL") || "jev-1.13.0",
+    timeoutMs: Math.max(1_000, Number(env("CUSTOMER_SERVICE_HISTORY_JEV_TIMEOUT_MS")) || 20_000),
+    maxRetries: Math.max(0, Math.min(3, Number(env("CUSTOMER_SERVICE_HISTORY_JEV_MAX_RETRIES")) || 1)),
+  };
 }
 
 /** Runs `worker` over `items` with at most `limit` in flight. */
@@ -186,12 +212,9 @@ async function readSourceRows(admin: AdminClient, table: string, columns: string
 
 function selectManifest(samples: HistoryDecisionSample[], sampleSize: number, seed: string) {
   // `samples` is ordered oldest first, so without a seed take the most recent
-  // decision points rather than the earliest.
-  if (!seed) return samples.slice(-sampleSize);
-  return [...samples]
-    .sort((left, right) =>
-      caseFingerprint(`${seed}\u0000${left.sampleKey}`).localeCompare(caseFingerprint(`${seed}\u0000${right.sampleKey}`)))
-    .slice(0, sampleSize);
+  // decision points rather than the earliest. With a seed, draw a reproducible
+  // pseudo-random subset across the whole time range.
+  return selectHistorySampleManifest(samples, sampleSize, seed);
 }
 
 Deno.serve(async (request) => {
@@ -269,10 +292,13 @@ Deno.serve(async (request) => {
           "id,phone_normalized,role,message_text,created_at,source_message_id,environment,conversation_id",
           environment, since, until),
         readSourceRows(admin, "customer_service_learning_import_messages",
-          "id,phone_normalized,role,message_text,created_at,source_message_id,environment",
+          "id,phone_normalized,role,message_text,created_at,source_message_id,environment,is_broadcast",
           environment, since, until),
       ]);
-      const messages = toHistoryMessages([...liveRows, ...importRows], { environment });
+      const messages = toHistoryMessages(
+        [...liveRows, ...importRows.filter((row) => row.is_broadcast !== true)],
+        { environment },
+      );
       const samples = buildHistoryDecisionSamples(messages);
       if (!samples.length) return json({ ok: false, error: "no_replay_samples" }, 422);
       const manifest = selectManifest(samples, Math.min(requested, samples.length), seed);
@@ -492,23 +518,195 @@ Deno.serve(async (request) => {
       return json({ ok: true, action, run_id: runId, judged, remaining, items });
     }
 
+    if (action === "judge_jev") {
+      // Independent second judge via TypeSafe Jev. Diagnostic only: it never
+      // generates replies, proposals or citations and cannot clear a
+      // deterministic blocker. Off unless the server flag and key are set.
+      const jevConfig = historyJevConfig();
+      if (!jevConfig.enabled) return json({ error: "jev_disabled" }, 503);
+      if (!jevConfig.apiKey) return json({ error: "jev_not_configured" }, 503);
+      const runId = String(body.run_id ?? "").trim();
+      if (!UUID.test(runId)) return json({ error: "invalid_run_id" }, 400);
+      const limit = Math.max(1, Math.min(MAX_PLAN, Number(body.limit) || MAX_PLAN));
+      const concurrency = readConcurrency(body.concurrency);
+      const { data: jevRun, error: jevRunError } = await admin.from("customer_service_history_eval_runs")
+        .select("scope,environment,status,snapshot").eq("id", runId).maybeSingle();
+      if (jevRunError) throw jevRunError;
+      if (!jevRun) return json({ error: "run_not_found" }, 404);
+      if (jevRun.environment !== environment) return json({ error: "environment_mismatch" }, 400);
+      if (jevRun.scope !== "answer_quality") {
+        return json({ ok: true, action, run_id: runId, evaluated: 0, note: "routing_safety_not_applicable" });
+      }
+      const { data: claimed, error: claimError } = await admin.rpc("customer_service_history_jev_claim", {
+        p_run_id: runId, p_environment: environment, p_model: jevConfig.model,
+        p_rubric_version: HISTORY_JEV_RUBRIC_VERSION, p_limit: limit,
+        p_lease_seconds: 120, p_max_attempts: 2,
+      });
+      if (claimError) throw claimError;
+      const claims = (claimed ?? []) as Array<Record<string, unknown>>;
+      const sampleIds = claims.map((claim) => String(claim.sample_id));
+      const sampleById = new Map<string, Record<string, unknown>>();
+      if (sampleIds.length) {
+        const { data: sampleRows, error: sampleError } = await admin.from("customer_service_history_eval_samples")
+          .select("id,question,context,ai_answer,status,pairing,context_gap,trace,judgment,scenario_at")
+          .in("id", sampleIds);
+        if (sampleError) throw sampleError;
+        for (const row of (sampleRows ?? []) as Array<Record<string, unknown>>) sampleById.set(String(row.id), row);
+      }
+      const deadlineAt = Date.now() + DEADLINE_MS;
+      let evaluated = 0, jevSkipped = 0, jevFailed = 0, divergent = 0;
+      let jevConfigError = "";
+      const jevItems: Array<Record<string, unknown>> = [];
+      await runWithConcurrency(claims, concurrency, async (claim) => {
+        if (Date.now() > deadlineAt) return;
+        const claimId = String(claim.id);
+        const sample = sampleById.get(String(claim.sample_id));
+        const settle = async (patch: Record<string, unknown>) => {
+          await admin.from("customer_service_history_jev_judgments")
+            .update({ ...patch, updated_at: new Date().toISOString() })
+            .eq("id", claimId).eq("status", "processing");
+        };
+        const skip = async (reason: string) => {
+          jevSkipped += 1;
+          await settle({ status: "skipped", error_code: reason });
+          jevItems.push({ sample_id: claim.sample_id, status: "skipped", reason });
+        };
+        // A configuration error (missing/invalid key or rejected request body)
+        // must stop the batch early instead of burning every sample. Release the
+        // lease so the rows can be retried after the secret/body is fixed.
+        if (jevConfigError) {
+          await settle({ status: "pending", error_code: jevConfigError, lease_until: null });
+          jevItems.push({ sample_id: claim.sample_id, status: "pending", reason: jevConfigError });
+          return;
+        }
+        if (!sample) { await skip("sample_missing"); return; }
+        const trace = (sample.trace ?? {}) as Record<string, unknown>;
+        const retrieval = (trace.retrieval ?? {}) as Record<string, unknown>;
+        const judgment = (sample.judgment ?? {}) as Record<string, unknown>;
+        const deterministic = Array.isArray(judgment.issues)
+          ? (judgment.issues as Array<Record<string, unknown>>) : [];
+        const blocked = deterministic.some((issue) =>
+          issue.layer === "sample" || issue.layer === "context" || issue.layer === "infrastructure" ||
+          issue.severity === "high" || issue.severity === "critical");
+        if (sample.status !== "scored") { await skip("sample_not_evaluable"); return; }
+        if (sample.pairing !== "confident") { await skip("pairing_uncertain"); return; }
+        if (sample.context_gap === true) { await skip("context_gap"); return; }
+        if (blocked) { await skip("deterministic_blocked"); return; }
+        if (retrieval.error === true) { await skip("retrieval_error"); return; }
+        if (trace.answerGuardPassed === false) { await skip("answer_guard_blocked"); return; }
+        const aiAnswer = String(sample.ai_answer ?? "");
+        if (!aiAnswer.trim()) { await skip("no_answer"); return; }
+        const candidates = Array.isArray(trace.candidates)
+          ? (trace.candidates as Array<{ id: string; question: string; answer: string }>) : [];
+        const selectedSourceIds = [
+          ...(Array.isArray(trace.faqSourceIds) ? (trace.faqSourceIds as string[]) : []),
+          ...(Array.isArray(retrieval.selectedSourceIds) ? (retrieval.selectedSourceIds as string[]) : []),
+        ];
+        const grounded = trace.grounded === true;
+        const resolved = resolveHistoryJevApprovedSources({ candidates, selectedSourceIds, grounded });
+        if (!resolved.complete) { await skip("unverified_sources_not_evaluable"); return; }
+        const inputFingerprint = caseFingerprint(JSON.stringify({
+          question: sample.question, aiAnswer, sources: resolved.sources.map((source) => source.id).sort(),
+          guard: trace.answerGuardPassed ?? null, rubric: HISTORY_JEV_RUBRIC_VERSION,
+        }));
+        const outcome = await judgeHistoryDecisionPointWithJev({
+          question: String(sample.question ?? ""),
+          context: Array.isArray(sample.context)
+            ? (sample.context as Array<{ role: string; text: string }>) : [],
+          aiAnswer,
+          approvedSources: resolved.sources,
+          traceSummary: {
+            grounded,
+            usedFallback: trace.usedFallback === true,
+            retrievalError: retrieval.error === true,
+            answerGuardPassed: trace.answerGuardPassed === true ? true
+              : trace.answerGuardPassed === false ? false : null,
+            candidateCount: Number(retrieval.candidateCount) || 0,
+            selectedSourceCount: resolved.sources.length,
+          },
+          config: jevConfig,
+          deadlineAt,
+        });
+        if (!outcome.ok) {
+          if (outcome.errorCode === "auth_failed" || outcome.errorCode === "invalid_request") {
+            jevConfigError = outcome.errorCode;
+            await settle({ status: "pending", error_code: outcome.errorCode, lease_until: null });
+            jevItems.push({ sample_id: claim.sample_id, status: "pending", reason: outcome.errorCode });
+            return;
+          }
+          jevFailed += 1;
+          await settle({
+            status: "failed", error_code: outcome.errorCode, model_resolved: null, answers: null,
+            agreement: null, input_fingerprint: inputFingerprint, elapsed_ms: outcome.elapsedMs,
+            outcome_uncertain: outcome.outcomeUncertain,
+          });
+          jevItems.push({ sample_id: claim.sample_id, status: "failed", reason: outcome.errorCode });
+          return;
+        }
+        const agreement = historyJevAgreement({
+          jevGrounding: outcome.answers.grounding.choice,
+          judgeGrounding: typeof judgment.aiGrounding === "string" ? judgment.aiGrounding : null,
+          jevComplete: true, sampleEvaluable: true,
+        });
+        evaluated += 1;
+        if (agreement === "divergent") divergent += 1;
+        await settle({
+          status: "complete", model_resolved: outcome.modelResolved,
+          answers: {
+            grounding: outcome.answers.grounding, coverage: outcome.answers.coverage,
+            unverified_action: outcome.answers.unverifiedAction, human_review: outcome.answers.humanReview,
+          },
+          agreement, error_code: null, input_fingerprint: inputFingerprint,
+          input_tokens: outcome.inputTokens, output_tokens: outcome.outputTokens,
+          elapsed_ms: outcome.elapsedMs, outcome_uncertain: false,
+        });
+        jevItems.push({ sample_id: claim.sample_id, status: "complete", agreement,
+          grounding: outcome.answers.grounding.choice });
+      });
+      const { data: jevPending } = await admin.from("customer_service_history_jev_judgments")
+        .select("id").eq("run_id", runId).eq("model_requested", jevConfig.model)
+        .eq("rubric_version", HISTORY_JEV_RUBRIC_VERSION)
+        .in("status", ["pending", "processing"]).limit(1);
+      return json({
+        ok: !jevConfigError, action, run_id: runId, model: jevConfig.model,
+        rubric_version: HISTORY_JEV_RUBRIC_VERSION, evaluated, failed: jevFailed, skipped: jevSkipped,
+        divergent, config_error: jevConfigError || null, remaining: (jevPending ?? []).length, items: jevItems,
+      });
+    }
+
     if (action === "samples") {
       const runId = String(body.run_id ?? "").trim();
       if (!UUID.test(runId)) return json({ error: "invalid_run_id" }, 400);
       const limit = Math.max(1, Math.min(MAX_PLAN, Number(body.limit) || MAX_PLAN));
       const offset = Math.max(0, Math.trunc(Number(body.offset) || 0));
       const { data, error, count } = await admin.from("customer_service_history_eval_samples")
-        .select("id, question, context, reference_answer, ai_answer, status, pairing, context_gap, judgment, scenario_at", { count: "exact" })
+        .select("id, question, context, reference_answer, ai_answer, status, pairing, context_gap, judgment, scenario_at, lineage", { count: "exact" })
         .eq("run_id", runId).order("scenario_at", { ascending: false }).range(offset, offset + limit - 1);
       if (error) throw error;
+      const jevConfig = historyJevConfig();
+      const jevBySample = new Map<string, Record<string, unknown>>();
+      const rowIds = (data ?? []).map((row: Record<string, unknown>) => String(row.id));
+      if (jevConfig.enabled && rowIds.length) {
+        const { data: jevRows, error: jevError } = await admin.from("customer_service_history_jev_judgments")
+          .select("sample_id,status,model_requested,model_resolved,rubric_version,answers,agreement,error_code,outcome_uncertain,attempt_count,elapsed_ms,input_tokens,output_tokens")
+          .eq("run_id", runId).eq("model_requested", jevConfig.model)
+          .eq("rubric_version", HISTORY_JEV_RUBRIC_VERSION).in("sample_id", rowIds);
+        if (jevError) throw jevError;
+        for (const jevRow of (jevRows ?? []) as Array<Record<string, unknown>>) {
+          jevBySample.set(String(jevRow.sample_id), jevRow);
+        }
+      }
       return json({
         ok: true, action, run_id: runId, total: count ?? 0,
         samples: (data ?? []).map((row: Record<string, unknown>) => {
           const judgment = (row.judgment ?? {}) as Record<string, unknown>;
+          const lineage = (row.lineage ?? {}) as Record<string, unknown>;
+          const jevRow = jevBySample.get(String(row.id));
           return {
             id: row.id,
             question: row.question,
             context: Array.isArray(row.context) ? row.context : [],
+            conversation_id: typeof lineage.conversation_id === "string" ? lineage.conversation_id : null,
             ai_answer: row.ai_answer ?? "",
             reference_answer: row.reference_answer ?? "",
             status: row.status,
@@ -521,6 +719,21 @@ Deno.serve(async (request) => {
             judge_stage: typeof judgment.stage === "string" ? judgment.stage : null,
             issues: Array.isArray(judgment.issues) ? judgment.issues : [],
             scenario_at: row.scenario_at,
+            agreement: jevConfig.enabled && typeof jevRow?.agreement === "string" ? jevRow.agreement : null,
+            jev: jevConfig.enabled && jevRow ? {
+              status: jevRow.status,
+              model_requested: jevRow.model_requested,
+              model_resolved: jevRow.model_resolved ?? null,
+              rubric_version: jevRow.rubric_version,
+              answers: jevRow.answers ?? null,
+              agreement: typeof jevRow.agreement === "string" ? jevRow.agreement : null,
+              error_code: typeof jevRow.error_code === "string" ? jevRow.error_code : null,
+              outcome_uncertain: jevRow.outcome_uncertain === true,
+              attempt_count: Number(jevRow.attempt_count) || 0,
+              elapsed_ms: jevRow.elapsed_ms ?? null,
+              input_tokens: jevRow.input_tokens ?? null,
+              output_tokens: jevRow.output_tokens ?? null,
+            } : null,
           };
         }),
       });
@@ -1129,6 +1342,7 @@ Deno.serve(async (request) => {
     }
 
     if (action === "status") {
+      const capabilities = { jev_enabled: historyJevConfig().enabled };
       const runId = String(body.run_id ?? "").trim();
       if (runId) {
         if (!UUID.test(runId)) return json({ error: "invalid_run_id" }, 400);
@@ -1138,12 +1352,12 @@ Deno.serve(async (request) => {
         const { data: counts } = await admin.from("customer_service_history_eval_samples").select("status").eq("run_id", runId);
         const byStatus: Record<string, number> = {};
         for (const row of counts ?? []) byStatus[row.status] = (byStatus[row.status] ?? 0) + 1;
-        return json({ ok: true, action, run, sample_status: byStatus });
+        return json({ ok: true, action, run, sample_status: byStatus, capabilities });
       }
       const { data: runs, error } = await admin.from("customer_service_history_eval_runs").select("*")
         .eq("environment", environment).order("created_at", { ascending: false }).limit(20);
       if (error) throw error;
-      return json({ ok: true, action, environment, runs: runs ?? [] });
+      return json({ ok: true, action, environment, runs: runs ?? [], capabilities });
     }
 
     return json({ error: "unsupported_action" }, 400);

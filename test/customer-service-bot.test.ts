@@ -480,6 +480,94 @@ describe("approved learning runtime policies", () => {
     expect(runtimeDeps.queueHandoff).not.toHaveBeenCalled();
   });
 
+  it("replies to a closing thanks once and stays silent on repeated closings", async () => {
+    const runtimeDeps = deps({
+      replyTemplates: { acknowledgement: "收到。", thanks: "唔使客氣。" },
+    });
+    const recentConversation = {
+      ...conversation,
+      recent_messages: [{
+        role: "assistant" as const,
+        text: "唔使客氣。",
+        occurredAt: new Date().toISOString(),
+      }],
+    };
+
+    const thanks = await handleCustomerServiceTurn({
+      phone: conversation.phone_normalized,
+      text: "多謝",
+      conversation: recentConversation,
+      deps: runtimeDeps,
+    });
+    expect(thanks.reply).toBeNull();
+
+    const emoji = await handleCustomerServiceTurn({
+      phone: conversation.phone_normalized,
+      text: "🙏",
+      conversation: recentConversation,
+      deps: runtimeDeps,
+    });
+    expect(emoji.reply).toBeNull();
+  });
+
+  it("replies to a closing thanks again once the cooldown has passed", async () => {
+    const runtimeDeps = deps({ replyTemplates: { thanks: "唔使客氣。" } });
+    const recentConversation = {
+      ...conversation,
+      recent_messages: [{
+        role: "assistant" as const,
+        text: "唔使客氣。",
+        occurredAt: new Date(Date.now() - 2 * 60 * 60 * 1_000).toISOString(),
+      }],
+    };
+
+    const thanks = await handleCustomerServiceTurn({
+      phone: conversation.phone_normalized,
+      text: "多謝",
+      conversation: recentConversation,
+      deps: runtimeDeps,
+    });
+    expect(thanks.reply).toBe("唔使客氣。");
+  });
+
+  it("still replies when the recent assistant message is not a closing reply", async () => {
+    const runtimeDeps = deps({
+      replyTemplates: { acknowledgement: "收到。", thanks: "唔使客氣。" },
+    });
+    const recentConversation = {
+      ...conversation,
+      recent_messages: [{
+        role: "assistant" as const,
+        text: "你的訂單 FCL2026090101 已安排送貨。",
+        occurredAt: new Date().toISOString(),
+      }],
+    };
+
+    const thanks = await handleCustomerServiceTurn({
+      phone: conversation.phone_normalized,
+      text: "多謝",
+      conversation: recentConversation,
+      deps: runtimeDeps,
+    });
+    expect(thanks.reply).toBe("唔使客氣。");
+  });
+
+  it("still replies when a recent closing reply has no timestamp", async () => {
+    const runtimeDeps = deps({ replyTemplates: { thanks: "唔使客氣。" } });
+    const recentConversation = {
+      ...conversation,
+      recent_messages: [{ role: "assistant" as const, text: "唔使客氣。" }],
+    };
+
+    const thanks = await handleCustomerServiceTurn({
+      phone: conversation.phone_normalized,
+      text: "多謝",
+      conversation: recentConversation,
+      deps: runtimeDeps,
+    });
+    expect(thanks.reply).toBe("唔使客氣。");
+  });
+
   it("collects a photo and queues product-quality complaints once approved", async () => {
     const runtimeDeps = deps({
       replyTemplates: {

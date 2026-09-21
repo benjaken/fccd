@@ -1712,6 +1712,38 @@ async function replyFaq(
   };
 }
 
+const CLOSING_REPLY_COOLDOWN_MS = 30 * 60 * 1_000;
+const DEFAULT_CLOSING_REPLY = "唔使客氣 😊 仲有咩可以幫到你？隨時同我哋講。";
+
+function normalizeClosingReply(value: string) {
+  return value.replace(/^【develop】/u, "").replace(/\s+/gu, "").trim();
+}
+
+function closingReplyTexts(deps: CustomerServiceBotDeps) {
+  return [
+    deps.replyTemplates?.acknowledgement,
+    deps.replyTemplates?.thanks,
+    DEFAULT_CLOSING_REPLY,
+  ].filter((value): value is string => typeof value === "string" && value.trim().length > 0);
+}
+
+/** True when the bot already sent a closing/thanks reply recently, so it should stay silent now. */
+function hasRecentClosingReply(
+  recentMessages: CustomerServiceRecentMessage[] | undefined,
+  texts: string[],
+  now = Date.now(),
+) {
+  if (!recentMessages?.length || !texts.length) return false;
+  const wanted = new Set(texts.map(normalizeClosingReply));
+  return recentMessages.some((message) => {
+    if (message.role !== "assistant" || !message.occurredAt) return false;
+    const occurredAt = Date.parse(message.occurredAt);
+    if (!Number.isFinite(occurredAt) || now - occurredAt < 0) return false;
+    if (now - occurredAt > CLOSING_REPLY_COOLDOWN_MS) return false;
+    return wanted.has(normalizeClosingReply(message.text));
+  });
+}
+
 export async function handleCustomerServiceTurn({
   phone,
   text,
@@ -1801,11 +1833,20 @@ export async function handleCustomerServiceTurn({
     deps.replyTemplates?.acknowledgement &&
     isCustomerServiceEmojiAcknowledgement(text)
   ) {
+    if (hasRecentClosingReply(conversation.recent_messages, closingReplyTexts(deps))) {
+      return guarded("acknowledgement_silent", {
+        reply: null,
+        conversation,
+        wroteInquiry: false,
+        notified: false,
+        usedModel: false,
+      });
+    }
     return guarded("acknowledgement", {
       reply: configuredReply(
         deps,
         "acknowledgement",
-        "唔使客氣 😊 仲有咩可以幫到你？隨時同我哋講。",
+        DEFAULT_CLOSING_REPLY,
       ),
       conversation,
       wroteInquiry: false,
@@ -1829,11 +1870,20 @@ export async function handleCustomerServiceTurn({
     deps.replyTemplates?.thanks &&
     isCustomerServiceThanks(text)
   ) {
+    if (hasRecentClosingReply(conversation.recent_messages, closingReplyTexts(deps))) {
+      return guarded("thanks_silent", {
+        reply: null,
+        conversation,
+        wroteInquiry: false,
+        notified: false,
+        usedModel: false,
+      });
+    }
     return guarded("thanks", {
       reply: configuredReply(
         deps,
         "thanks",
-        "唔使客氣 😊 仲有咩可以幫到你？隨時同我哋講。",
+        DEFAULT_CLOSING_REPLY,
       ),
       conversation,
       wroteInquiry: false,
