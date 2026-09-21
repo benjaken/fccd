@@ -8,6 +8,7 @@ import {
   sanitizeCustomerServiceContextText,
   type CustomerServiceContextMessageRow,
 } from "./customer-service-context.ts";
+import { isLegacyAutomatedReply } from "./customer-service-automated-replies.ts";
 
 export type WatiHistoryMessage = {
   id: string;
@@ -31,6 +32,12 @@ export type WatiHistoryFetchInput = {
   fetchImpl?: typeof fetch;
   pageSize?: number;
   maxPages?: number;
+  /**
+   * Wall-clock budget in epoch ms. Pagination stops once reached so one very
+   * long conversation cannot keep the whole import alive past the platform
+   * timeout; the caller resumes from the next cursor later.
+   */
+  deadlineAt?: number;
   /** Base backoff for retryable responses (429/5xx); mainly lowered in tests. */
   retryDelayMs?: number;
   log?: (...args: unknown[]) => void;
@@ -217,18 +224,32 @@ export function normalizeWatiHistoryItem(payload: unknown): WatiHistoryMessage |
 
 /**
  * Outbound bot replies carry the `fcc-bot-` local id prefix; other outbound
- * messages are operator replies. Broadcast/template events have no `owner`
- * flag in the v1 feed, so their event type marks them as outbound too.
+ * messages are operator replies. Older bots sent through the WATI API with an
+ * operator name such as `API Token 2552`, and broadcast/template events have no
+ * `owner` flag in the v1 feed, so those markers also mean automated.
  */
+const AUTOMATED_OPERATOR = /^(?:api token|api|bot|system|wati)\b/i;
+
 export function classifyWatiHistoryRole(message: WatiHistoryMessage): "customer" | "assistant" | "human" {
   const outbound = message.owner || /broadcast|template/i.test(message.eventType);
   if (!outbound) return "customer";
+  // Older bot/automation replies used a human-looking operator name, so match
+  // their wording before trusting the sender fields.
+  if (isLegacyAutomatedReply(message.text)) return "assistant";
   if (message.localMessageId.startsWith("fcc-bot-")) return "assistant";
+  if (AUTOMATED_OPERATOR.test(message.operatorName)) return "assistant";
   if (message.operatorEmail) return "human";
-  if (message.operatorName && !/^(api|bot|system|wati)$/i.test(message.operatorName)) {
-    return "human";
-  }
+  if (message.operatorName) return "human";
   return "assistant";
+}
+
+/**
+ * Broadcast campaigns are mass marketing sends (`eventType` = `broadcastMessage`)
+ * with no operator. They are stored as `assistant` for context but must be
+ * flagged so the learning summary, daily report, and replay can skip them.
+ */
+export function isWatiBroadcastMessage(message: WatiHistoryMessage) {
+  return /broadcast/i.test(message.eventType);
 }
 
 export function mapWatiHistoryMessages(
@@ -260,8 +281,14 @@ export function mapWatiHistoryMessages(
       text: message.text,
       environment: input.environment,
       occurredAt: message.occurredAt,
+      operatorName: message.operatorName || null,
+      operatorEmail: message.operatorEmail || null,
+      localMessageId: message.localMessageId || null,
+      eventType: message.eventType || null,
     });
-    if (row) rows.push(row);
+    if (!row) continue;
+    row.is_broadcast = isWatiBroadcastMessage(message);
+    rows.push(row);
   }
   return rows;
 }
@@ -288,6 +315,7 @@ export async function fetchWatiConversationMessages(
   const messages: WatiHistoryMessage[] = [];
 
   for (let page = 1; page <= maxPages; page += 1) {
+    if (input.deadlineAt && Date.now() >= input.deadlineAt) break;
     const url = `${base}/api/ext/v3/conversations/${encodeURIComponent(target)}/messages`
       + `?page_number=${page}&page_size=${pageSize}`;
     let items: unknown[];
@@ -320,6 +348,7 @@ export async function fetchWatiConversationMessagesV1(
   const target = resolveTarget(input);
   const messages: WatiHistoryMessage[] = [];
   for (let page = 1; page <= maxPages; page += 1) {
+    if (input.deadlineAt && Date.now() >= input.deadlineAt) break;
     const url = `${base}/api/v1/getMessages/${encodeURIComponent(target)}`
       + `?pageSize=${pageSize}&pageNumber=${page}`;
     const payload = asRecord(await getJson(url));
@@ -358,6 +387,7 @@ export async function fetchWatiConversationEvents(
   const target = resolveTarget(input);
   const events: WatiConversationEvent[] = [];
   for (let page = 1; page <= maxPages; page += 1) {
+    if (input.deadlineAt && Date.now() >= input.deadlineAt) break;
     const url = `${base}/api/v1/getMessages/${encodeURIComponent(target)}`
       + `?pageSize=${pageSize}&pageNumber=${page}`;
     const payload = asRecord(await getJson(url));
@@ -453,13 +483,45 @@ export async function probeWatiHistory(
 export async function fetchWatiContactPhones(
   input: WatiHistoryFetchInput,
 ): Promise<string[]> {
+  const records = await fetchWatiContactRecords(input);
+  return records.map((record) => record.phone);
+}
+
+export type WatiContactRecord = { phone: string; lastMessageAt: string };
+
+/** Reads `lastMessageTime`-style fields so inactive contacts can be skipped. */
+function contactLastMessageAt(record: Record<string, unknown>): string {
+  return normalizeWatiTimestamp(firstString(
+    record.lastMessageTime,
+    record.last_message_time,
+    record.lastMessageAt,
+    record.last_message_at,
+    record.lastUpdated,
+    record.last_updated,
+    record.updatedAt,
+    record.updated_at,
+  ));
+}
+
+export async function fetchWatiContactRecords(
+  input: WatiHistoryFetchInput,
+): Promise<WatiContactRecord[]> {
   const fetchImpl = input.fetchImpl ?? fetch;
   const base = resolveWatiApiBase(input.endpoint, input.tenantId ?? "");
   const pageSize = Math.min(Math.max(input.pageSize ?? DEFAULT_PAGE_SIZE, 1), 100);
   const maxPages = Math.max(input.maxPages ?? DEFAULT_MAX_PAGES, 1);
   const log = input.log ?? (() => {});
   const getJson = tokenFetcher(tokenList(input), fetchImpl, input.retryDelayMs);
-  const phones = new Set<string>();
+  const byPhone = new Map<string, WatiContactRecord>();
+  const absorb = (items: unknown[]) => {
+    for (const item of items) {
+      const record = asRecord(item);
+      const phone = normalizeWhatsAppChannel(
+        firstString(record.phone, record.wa_id, record.whatsappNumber),
+      );
+      if (phone) byPhone.set(phone, { phone, lastMessageAt: contactLastMessageAt(record) });
+    }
+  };
   for (let page = 1; page <= maxPages; page += 1) {
     const url = `${base}/api/ext/v3/contacts?page_number=${page}&page_size=${pageSize}`;
     let items: unknown[];
@@ -468,31 +530,25 @@ export async function fetchWatiContactPhones(
     } catch (error) {
       if (error instanceof WatiHistoryHttpError && [401, 403, 404, 405].includes(error.status)) {
         log("wati contacts v3 unavailable, falling back to v1", error.status);
-        return fetchWatiContactPhonesV1({ ...input, fetchImpl });
+        return fetchWatiContactRecordsV1({ ...input, fetchImpl });
       }
       throw error;
     }
-    for (const item of items) {
-      const record = asRecord(item);
-      const phone = normalizeWhatsAppChannel(
-        firstString(record.phone, record.wa_id, record.whatsappNumber),
-      );
-      if (phone) phones.add(phone);
-    }
+    absorb(items);
     if (items.length < pageSize) break;
   }
-  return [...phones];
+  return [...byPhone.values()];
 }
 
-async function fetchWatiContactPhonesV1(
+async function fetchWatiContactRecordsV1(
   input: WatiHistoryFetchInput,
-): Promise<string[]> {
+): Promise<WatiContactRecord[]> {
   const fetchImpl = input.fetchImpl ?? fetch;
   const base = resolveWatiApiBase(input.endpoint, input.tenantId ?? "");
   const pageSize = Math.min(Math.max(input.pageSize ?? DEFAULT_PAGE_SIZE, 1), 100);
   const maxPages = Math.max(input.maxPages ?? DEFAULT_MAX_PAGES, 1);
   const getJson = tokenFetcher(tokenList(input), fetchImpl, input.retryDelayMs);
-  const phones = new Set<string>();
+  const byPhone = new Map<string, WatiContactRecord>();
   for (let page = 1; page <= maxPages; page += 1) {
     const url = `${base}/api/v1/getContacts?pageSize=${pageSize}&pageNumber=${page}`;
     const payload = asRecord(await getJson(url));
@@ -502,9 +558,29 @@ async function fetchWatiContactPhonesV1(
       const phone = normalizeWhatsAppChannel(
         firstString(record.phone, record.wa_id, record.whatsappNumber),
       );
-      if (phone) phones.add(phone);
+      if (phone) byPhone.set(phone, { phone, lastMessageAt: contactLastMessageAt(record) });
     }
     if (items.length < pageSize) break;
   }
-  return [...phones];
+  return [...byPhone.values()];
+}
+
+/** Read-only raw contact sample used to confirm which activity fields WATI returns. */
+export async function probeWatiContacts(
+  input: WatiHistoryFetchInput,
+): Promise<Record<string, unknown>> {
+  const fetchImpl = input.fetchImpl ?? fetch;
+  const base = resolveWatiApiBase(input.endpoint, input.tenantId ?? "");
+  const getJson = tokenFetcher(tokenList(input), fetchImpl, input.retryDelayMs);
+  const report: Record<string, unknown> = {};
+  const attempt = async (label: string, url: string) => {
+    try {
+      report[label] = truncateForProbe(await getJson(url), 2);
+    } catch (error) {
+      report[label] = { error: error instanceof Error ? error.message.slice(0, 200) : String(error) };
+    }
+  };
+  await attempt("v3_contacts", `${base}/api/ext/v3/contacts?page_number=1&page_size=2`);
+  await attempt("v1_contacts", `${base}/api/v1/getContacts?pageSize=2&pageNumber=1`);
+  return report;
 }

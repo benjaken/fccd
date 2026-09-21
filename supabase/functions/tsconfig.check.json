@@ -33,6 +33,8 @@
     "_shared/customer-service-history-replay.ts",
     "_shared/customer-service-history-judge.ts",
     "_shared/customer-service-history-judge-ai.ts",
+    "_shared/customer-service-history-jev.ts",
+    "_shared/customer-service-automated-replies.ts",
     "_shared/customer-service-repair-proposals.ts",
     "customer-service-repair-admin/index.ts",
     "_shared/customer-service-history-source.ts",

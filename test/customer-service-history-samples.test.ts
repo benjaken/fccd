@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildHistoryDecisionSamples,
   HISTORY_SAMPLE_BUILDER_VERSION,
+  selectHistorySampleManifest,
   type HistoryMessage,
   type HistoryMessageRole,
 } from "../supabase/functions/_shared/customer-service-history-samples.ts";
@@ -127,5 +128,39 @@ describe("history decision-point samples", () => {
     expect(samples[0].question).not.toContain("9123 4567");
     expect(samples[0].referenceAnswer).not.toContain("九龍城某道18號");
     expect(JSON.stringify(samples[0].recentMessages)).not.toContain("nero@example.com");
+  });
+});
+
+function distinctDecisionSamples(count: number) {
+  const messages: HistoryMessage[] = [];
+  for (let index = 0; index < count; index += 1) {
+    messages.push(message(`q${index}`, "customer", `問題 ${index}`, index * 100_000,
+      { conversationId: `conv-${index}` }));
+    messages.push(message(`h${index}`, "human", `回覆 ${index}`, index * 100_000 + 1_000,
+      { conversationId: `conv-${index}` }));
+  }
+  return buildHistoryDecisionSamples(messages);
+}
+
+describe("history sample manifest selection", () => {
+  it("takes the most recent samples when no seed is given", () => {
+    const all = distinctDecisionSamples(5);
+    const manifest = selectHistorySampleManifest(all, 2, "");
+    expect(manifest.map((sample) => sample.question)).toEqual(["問題 3", "問題 4"]);
+  });
+
+  it("draws a reproducible subset across the whole range when seeded", () => {
+    const all = distinctDecisionSamples(5);
+    const first = selectHistorySampleManifest(all, 3, "seed-abc");
+    const again = selectHistorySampleManifest(all, 3, "seed-abc");
+    expect(first).toHaveLength(3);
+    expect(first.map((sample) => sample.sampleKey)).toEqual(again.map((sample) => sample.sampleKey));
+    expect(new Set(first.map((sample) => sample.sampleKey)).size).toBe(3);
+  });
+
+  it("returns every sample when the requested size exceeds the pool", () => {
+    const all = distinctDecisionSamples(3);
+    expect(selectHistorySampleManifest(all, 99, "seed-abc")).toHaveLength(3);
+    expect(selectHistorySampleManifest(all, 99, "")).toHaveLength(3);
   });
 });

@@ -212,6 +212,30 @@ describe("CustomerFaqPage", () => {
     expect(screen.getByText("輸入客人問題開始多輪測試。")).toBeInTheDocument();
   });
 
+  it("deletes a FAQ only after the confirmation dialog is accepted", async () => {
+    const user = userEvent.setup();
+    const deleteFaq = vi.fn().mockResolvedValue(undefined);
+    render(
+      <CustomerFaqPage
+        loadFaqs={vi.fn().mockResolvedValue({ items: [faq], total: 1 })}
+        deleteFaq={deleteFaq}
+        loadControls={vi.fn().mockResolvedValue({
+          botEnabled: false,
+          allowedPhones: [],
+          updatedAt: faq.updatedAt,
+        })}
+      />,
+    );
+
+    await screen.findByText("運費幾多？");
+    await user.click(screen.getByRole("button", { name: "刪除" }));
+    expect(deleteFaq).not.toHaveBeenCalled();
+    const dialog = await screen.findByRole("alertdialog", { name: "刪除 FAQ" });
+    expect(within(dialog).getByText("運費幾多？", { exact: false })).toBeInTheDocument();
+    await user.click(within(dialog).getByRole("button", { name: "刪除" }));
+    await waitFor(() => expect(deleteFaq).toHaveBeenCalledWith("faq-1"));
+  });
+
   it("renders the full execution trace and points at the failing step", async () => {
     const user = userEvent.setup();
     const previewTurn = vi.fn().mockResolvedValue({
@@ -325,6 +349,124 @@ describe("CustomerFaqPage", () => {
       await user.click(within(incomplete).getByRole("button", { name: "忽略" }));
       await waitFor(() => expect(review).toHaveBeenCalledWith("missing-answer", "rejected"));
       await waitFor(() => expect(screen.queryByText("缺少答案")).not.toBeInTheDocument());
+    } finally {
+      spies.forEach((spy) => spy.mockRestore());
+    }
+  });
+
+  it("filters learning suggestions by type", async () => {
+    const user = userEvent.setup();
+    const base = {
+      reportId: "report-1", reportDate: "2026-09-15", reason: "真人回覆佐證",
+      evidenceCount: 1, status: "draft", targetFaqId: null, runtimeTarget: null,
+      executionStatus: "pending" as const, executionResult: {}, executedAt: null,
+      createdAt: faq.updatedAt,
+    };
+    const suggestions: customerFaqApi.CustomerServiceLearningSuggestion[] = [
+      { ...base, id: "faq-1", title: "FAQ 建議", suggestionType: "faq",
+        proposedContent: { question: "幾點可以自取？", answer: "請先聯絡同事。", keywords: "" } },
+      { ...base, id: "intent-1", title: "意圖建議", suggestionType: "intent",
+        proposedContent: { runtime_changes: [{ target: "reply_template", key: "thanks", patch: { content: "多謝支持。", enabled: true } }] } },
+    ];
+    const spies = [
+      vi.spyOn(customerFaqApi, "fetchCustomerServiceDailyReports").mockResolvedValue([]),
+      vi.spyOn(customerFaqApi, "fetchCustomerServiceLearningSuggestions").mockResolvedValue(suggestions),
+      vi.spyOn(customerFaqApi, "fetchCustomerServiceConfigVersions").mockResolvedValue([]),
+      vi.spyOn(customerFaqApi, "fetchCustomerServiceEvaluationRuns").mockResolvedValue([]),
+      vi.spyOn(customerFaqApi, "fetchCustomerServiceOutboundMessages").mockResolvedValue([]),
+    ];
+    try {
+      render(<CustomerFaqPage loadFaqs={vi.fn().mockResolvedValue({ items: [], total: 0 })}
+        loadControls={vi.fn().mockResolvedValue({ botEnabled: false, allowedPhones: [], updatedAt: faq.updatedAt })} />);
+      await user.click(await screen.findByRole("tab", { name: "學習與覆核" }));
+      expect(await screen.findByText("FAQ 建議")).toBeInTheDocument();
+      expect(await screen.findByText("意圖建議")).toBeInTheDocument();
+
+      await user.selectOptions(screen.getByLabelText("類型"), "intent");
+      await waitFor(() => expect(screen.queryByText("FAQ 建議")).not.toBeInTheDocument());
+      expect(screen.getByText("意圖建議")).toBeInTheDocument();
+
+      await user.selectOptions(screen.getByLabelText("類型"), "all");
+      expect(await screen.findByText("FAQ 建議")).toBeInTheDocument();
+    } finally {
+      spies.forEach((spy) => spy.mockRestore());
+    }
+  });
+
+  it("batch approves selected suggestions and can hide incomplete ones", async () => {
+    const user = userEvent.setup();
+    const base = {
+      reportId: "report-1", reportDate: "2026-09-15", reason: "真人回覆佐證",
+      evidenceCount: 1, status: "draft", targetFaqId: null, runtimeTarget: null,
+      executionStatus: "pending" as const, executionResult: {}, executedAt: null,
+      createdAt: faq.updatedAt,
+    };
+    const suggestions: customerFaqApi.CustomerServiceLearningSuggestion[] = [
+      { ...base, id: "a", title: "建議甲", suggestionType: "faq",
+        proposedContent: { question: "甲問", answer: "甲答", keywords: "" } },
+      { ...base, id: "b", title: "建議乙", suggestionType: "faq",
+        proposedContent: { question: "乙問", answer: "乙答", keywords: "" } },
+      { ...base, id: "c", title: "建議丙", suggestionType: "faq",
+        proposedContent: { question: "丙問" } },
+    ];
+    const review = vi.spyOn(customerFaqApi, "reviewCustomerServiceLearningSuggestion")
+      .mockResolvedValue({ target_faq_id: null });
+    const spies = [
+      review,
+      vi.spyOn(customerFaqApi, "fetchCustomerServiceDailyReports").mockResolvedValue([]),
+      vi.spyOn(customerFaqApi, "fetchCustomerServiceLearningSuggestions").mockResolvedValue(suggestions),
+      vi.spyOn(customerFaqApi, "fetchCustomerServiceConfigVersions").mockResolvedValue([]),
+      vi.spyOn(customerFaqApi, "fetchCustomerServiceEvaluationRuns").mockResolvedValue([]),
+      vi.spyOn(customerFaqApi, "fetchCustomerServiceOutboundMessages").mockResolvedValue([]),
+    ];
+    try {
+      render(<CustomerFaqPage loadFaqs={vi.fn().mockResolvedValue({ items: [], total: 0 })}
+        loadControls={vi.fn().mockResolvedValue({ botEnabled: false, allowedPhones: [], updatedAt: faq.updatedAt })} />);
+      await user.click(await screen.findByRole("tab", { name: "學習與覆核" }));
+      expect(await screen.findByText("建議丙")).toBeInTheDocument();
+
+      await user.click(screen.getByLabelText("只顯示可批准"));
+      await waitFor(() => expect(screen.queryByText("建議丙")).not.toBeInTheDocument());
+
+      await user.click(screen.getByLabelText("全選本頁可批准建議"));
+      expect(screen.getByText(/已選\s*2\s*項/)).toBeInTheDocument();
+
+      await user.click(screen.getByRole("button", { name: "批准所選" }));
+      await waitFor(() => expect(review).toHaveBeenCalledWith("a", "approved"));
+      await waitFor(() => expect(review).toHaveBeenCalledWith("b", "approved"));
+      await waitFor(() => expect(screen.queryByText("建議甲")).not.toBeInTheDocument());
+    } finally {
+      spies.forEach((spy) => spy.mockRestore());
+    }
+  });
+
+  it("shows a real progress bar while generating learning suggestions", async () => {
+    const user = userEvent.setup();
+    let resolveReport: (() => void) | null = null;
+    const generate = vi.spyOn(customerFaqApi, "generateCustomerServiceDailyReport")
+      .mockImplementation(() => new Promise<void>((resolve) => { resolveReport = resolve; }));
+    const spies = [
+      generate,
+      vi.spyOn(customerFaqApi, "fetchCustomerServiceDailyReports").mockResolvedValue([]),
+      vi.spyOn(customerFaqApi, "fetchCustomerServiceLearningSuggestions").mockResolvedValue([]),
+      vi.spyOn(customerFaqApi, "fetchCustomerServiceConfigVersions").mockResolvedValue([]),
+      vi.spyOn(customerFaqApi, "fetchCustomerServiceEvaluationRuns").mockResolvedValue([]),
+      vi.spyOn(customerFaqApi, "fetchCustomerServiceOutboundMessages").mockResolvedValue([]),
+      vi.spyOn(customerFaqApi, "fetchCustomerServiceLearningImportSummary").mockResolvedValue([
+        { date: "2026-09-15", messageCount: 12, humanCount: 4, customerCount: 9, broadcastCount: 1 },
+      ]),
+    ];
+    try {
+      render(<CustomerFaqPage loadFaqs={vi.fn().mockResolvedValue({ items: [], total: 0 })}
+        loadControls={vi.fn().mockResolvedValue({ botEnabled: false, allowedPhones: [], updatedAt: faq.updatedAt })} />);
+      await user.click(await screen.findByRole("tab", { name: "歷史對話" }));
+      await user.click(await screen.findByRole("button", { name: "產生學習建議" }));
+
+      const bar = await screen.findByRole("progressbar", { name: "學習進度" });
+      expect(bar).toHaveAttribute("aria-valuenow", "0");
+      resolveReport?.();
+      await waitFor(() => expect(bar).toHaveAttribute("aria-valuenow", "100"));
+      expect(await screen.findByText(/已完成 1 個日期/)).toBeInTheDocument();
     } finally {
       spies.forEach((spy) => spy.mockRestore());
     }

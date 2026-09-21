@@ -35,6 +35,7 @@ import {
   SlidersHorizontal,
   Smile,
   Sparkles,
+  Trash2,
   UserRound,
   X,
 } from "lucide-react";
@@ -46,6 +47,7 @@ import { CustomerServiceHistoryReplayPanel } from "@/components/settings/Custome
 import { FilterableSelect } from "@/components/ui/filterable-select";
 import { ListSearchBar } from "@/components/ui/list-search-bar";
 import { Modal } from "@/components/ui/modal";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { TablePagination } from "@/components/ui/table-pagination";
 import { ListTable } from "@/components/ui/list-table";
 import {
@@ -63,6 +65,7 @@ import {
   activateCustomerServiceConfig,
   createCustomerServiceConfig,
   createCustomerFaq,
+  deleteCustomerFaq,
   evaluateCustomerServiceConfig,
   fetchCustomerServiceConfigVersions,
   fetchCustomerServiceDailyReports,
@@ -188,8 +191,50 @@ function hongKongDateOffset(offsetDays = 0) {
     .slice(0, 10);
 }
 
-const CUSTOMER_SERVICE_IMPORT_MAX_DAYS = 14;
+/** Shifts a `YYYY-MM-DD` Hong Kong date by whole days. */
+function shiftHongKongDate(date: string, offsetDays: number) {
+  const parsed = Date.parse(`${date}T00:00:00+08:00`);
+  if (!Number.isFinite(parsed)) return date;
+  return new Date(parsed + offsetDays * 86_400_000 + 8 * 60 * 60 * 1_000)
+    .toISOString()
+    .slice(0, 10);
+}
+
+/** Inclusive day count between two `YYYY-MM-DD` dates; 0 when either is empty. */
+function historyImportRangeDays(since: string, until: string) {
+  if (!since || !until) return 0;
+  const start = Date.parse(`${since}T00:00:00+08:00`);
+  const end = Date.parse(`${until}T00:00:00+08:00`);
+  if (!Number.isFinite(start) || !Number.isFinite(end)) return 0;
+  return Math.round((end - start) / 86_400_000) + 1;
+}
+
+const CUSTOMER_SERVICE_LEARN_MAX_DAYS = 90;
+/** The history-conversation date picker is capped to a one-week window. */
+const CUSTOMER_SERVICE_IMPORT_MAX_RANGE_DAYS = 31;
 const CUSTOMER_SERVICE_LEARN_CONCURRENCY = 3;
+
+const CUSTOMER_SERVICE_IMPORT_ERROR_MESSAGES: Record<string, string> = {
+  wati_credentials_missing:
+    "WATI 憑證未設定：請由管理員設定 WATI_API_ENDPOINT 及 WATI_ACCESS_TOKEN／WATI_API_TOKEN。",
+  authentication_required: "登入狀態已失效，請重新登入後再匯入。",
+  page_access_required: "沒有客服 FAQ 頁面權限，無法匯入歷史對話。",
+  wati_customer_service_backfill_failed:
+    "匯入函式執行出錯（詳見函式記錄），請稍後再試。",
+  wati_history_http_401: "WATI 拒絕存取（401）：憑證可能已失效，請更新 WATI token。",
+  wati_history_http_403: "WATI 拒絕存取（403）：請確認方案權限。",
+  customer_service_import_invalid_response: "匯入回應格式不正確，請重試或查看函式記錄。",
+  http_504: "匯入函式逾時（504）。已縮短每次匯入時間，請再按一次繼續匯入。",
+  http_546: "匯入函式超出執行時間，請再按一次繼續匯入。",
+};
+
+function customerServiceImportErrorMessage(error: unknown) {
+  const code = error instanceof Error ? error.message : String(error);
+  return (
+    CUSTOMER_SERVICE_IMPORT_ERROR_MESSAGES[code] ||
+    `匯入歷史對話失敗（${code || "未知錯誤"}），請稍後再試或查看函式記錄。`
+  );
+}
 
 const SKELETON_COLUMNS = [
   { width: "7rem" },
@@ -740,6 +785,7 @@ export function CustomerFaqPage({
   loadFaqs = fetchCustomerFaqs,
   createFaq = createCustomerFaq,
   updateFaq = updateCustomerFaq,
+  deleteFaq = deleteCustomerFaq,
   loadControls = fetchCustomerServiceControls,
   setBotEnabled = setCustomerServiceBotEnabled,
   previewTurn = previewCustomerServiceTurn,
@@ -753,6 +799,7 @@ export function CustomerFaqPage({
   loadFaqs?: typeof fetchCustomerFaqs;
   createFaq?: typeof createCustomerFaq;
   updateFaq?: typeof updateCustomerFaq;
+  deleteFaq?: typeof deleteCustomerFaq;
   loadControls?: typeof fetchCustomerServiceControls;
   setBotEnabled?: typeof setCustomerServiceBotEnabled;
   previewTurn?: (input: {
@@ -786,6 +833,9 @@ export function CustomerFaqPage({
   const [draft, setDraft] = useState(EMPTY_DRAFT);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
+  const [deleteTarget, setDeleteTarget] = useState<CustomerFaq | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
   const [controls, setControls] = useState<CustomerServiceControls | null>(
     null,
   );
@@ -823,6 +873,9 @@ export function CustomerFaqPage({
   const [suggestionStatus, setSuggestionStatus] = useState<
     "all" | "pending" | "incomplete" | "approved" | "rejected"
   >("all");
+  const [suggestionType, setSuggestionType] = useState<
+    "all" | "faq" | "intent" | "policy"
+  >("all");
   const [suggestionPage, setSuggestionPage] = useState(1);
   const [reviewTurns, setReviewTurns] = useState<CustomerServiceReviewTurn[]>(
     [],
@@ -840,10 +893,19 @@ export function CustomerFaqPage({
   const [reviewError, setReviewError] = useState("");
   const [reportDate, setReportDate] = useState(previousHongKongDate);
   const [generatingReport, setGeneratingReport] = useState(false);
-  const [importSince, setImportSince] = useState(() => hongKongDateOffset(-90));
+  const [importSince, setImportSince] = useState(() =>
+    hongKongDateOffset(-(CUSTOMER_SERVICE_IMPORT_MAX_RANGE_DAYS - 1)));
   const [importUntil, setImportUntil] = useState(hongKongDateOffset);
+  const [importActiveOnly, setImportActiveOnly] = useState(false);
   const [importBusy, setImportBusy] = useState(false);
   const [learningDates, setLearningDates] = useState(false);
+  const [learnDialogOpen, setLearnDialogOpen] = useState(false);
+  const [learnProgress, setLearnProgress] = useState({
+    completed: 0,
+    total: 0,
+    failed: 0,
+    current: "",
+  });
   const [importProgress, setImportProgress] = useState("");
   const [importResult, setImportResult] = useState<CustomerServiceImportResult | null>(null);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
@@ -857,6 +919,11 @@ export function CustomerFaqPage({
   const [importDays, setImportDays] = useState<CustomerServiceImportDay[]>([]);
   const [importDaysPage, setImportDaysPage] = useState(1);
   const [reviewingSuggestion, setReviewingSuggestion] = useState("");
+  const [bulkReviewing, setBulkReviewing] = useState(false);
+  const [onlyApprovable, setOnlyApprovable] = useState(false);
+  const [selectedSuggestionIds, setSelectedSuggestionIds] = useState<Set<string>>(
+    () => new Set(),
+  );
   const [feedbackDrafts, setFeedbackDrafts] = useState<Record<string, string>>(
     {},
   );
@@ -983,6 +1050,32 @@ export function CustomerFaqPage({
       setSaveError(t("settings.customerFaq.saveError"));
     } finally {
       setSaving(false);
+    }
+  };
+
+  const openDelete = (faq: CustomerFaq) => {
+    setDeleteError("");
+    setDeleteTarget(faq);
+  };
+
+  const closeDelete = () => {
+    if (deleting) return;
+    setDeleteTarget(null);
+    setDeleteError("");
+  };
+
+  const confirmDelete = async () => {
+    if (!canEdit || !deleteTarget || deleting) return;
+    setDeleting(true);
+    setDeleteError("");
+    try {
+      await deleteFaq(deleteTarget.id);
+      setDeleteTarget(null);
+      setReloadKey((value) => value + 1);
+    } catch {
+      setDeleteError(t("settings.customerFaq.deleteError"));
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -1285,6 +1378,26 @@ export function CustomerFaqPage({
       setGeneratingReport(false);
     }
   };
+  const applyImportSince = (value: string) => {
+    setImportSince(value);
+    setImportUntil((current) => {
+      if (!value || !current) return current;
+      if (value > current) return value;
+      return historyImportRangeDays(value, current) > CUSTOMER_SERVICE_IMPORT_MAX_RANGE_DAYS
+        ? shiftHongKongDate(value, CUSTOMER_SERVICE_IMPORT_MAX_RANGE_DAYS - 1)
+        : current;
+    });
+  };
+  const applyImportUntil = (value: string) => {
+    setImportUntil(value);
+    setImportSince((current) => {
+      if (!value || !current) return current;
+      if (value < current) return value;
+      return historyImportRangeDays(current, value) > CUSTOMER_SERVICE_IMPORT_MAX_RANGE_DAYS
+        ? shiftHongKongDate(value, -(CUSTOMER_SERVICE_IMPORT_MAX_RANGE_DAYS - 1))
+        : current;
+    });
+  };
   const runHistoryImport = async () => {
     if (!canEdit || importBusy || learningDates) return;
     setImportBusy(true);
@@ -1299,14 +1412,19 @@ export function CustomerFaqPage({
     });
     setImportDialogOpen(true);
     setImportProgress("正在向 WATI 取得歷史對話…");
+    const rangeUntil = importSince && importUntil &&
+      historyImportRangeDays(importSince, importUntil) > CUSTOMER_SERVICE_IMPORT_MAX_RANGE_DAYS
+      ? shiftHongKongDate(importSince, CUSTOMER_SERVICE_IMPORT_MAX_RANGE_DAYS - 1)
+      : importUntil;
     try {
       const result = await importCustomerServiceHistory({
         since: importSince ? `${importSince}T00:00:00+08:00` : undefined,
-        until: importUntil
+        until: rangeUntil
           ? new Date(
-              new Date(`${importUntil}T00:00:00+08:00`).getTime() + 86_400_000,
+              new Date(`${rangeUntil}T00:00:00+08:00`).getTime() + 86_400_000,
             ).toISOString()
           : undefined,
+        activeOnly: importActiveOnly,
         onProgress: (progress) => {
           setImportStats(progress);
           setImportProgress(
@@ -1318,18 +1436,20 @@ export function CustomerFaqPage({
       });
       setImportResult(result);
       setImportDays(await fetchCustomerServiceLearningImportSummary());
-    } catch {
-      setImportError("匯入歷史對話失敗，請檢查 WATI 憑證及函式設定。");
+    } catch (error) {
+      setImportError(customerServiceImportErrorMessage(error));
     } finally {
       setImportProgress("");
       setImportBusy(false);
     }
   };
   const learnImportDates = async (dates: string[]) => {
-    const targets = dates.filter(Boolean).slice(0, CUSTOMER_SERVICE_IMPORT_MAX_DAYS);
+    const targets = dates.filter(Boolean).slice(0, CUSTOMER_SERVICE_LEARN_MAX_DAYS);
     if (!canEdit || learningDates || !targets.length) return;
     setLearningDates(true);
     setInsightsError("");
+    setLearnProgress({ completed: 0, total: targets.length, failed: 0, current: targets[0] ?? "" });
+    setLearnDialogOpen(true);
     let completed = 0;
     let failed = 0;
     let next = 0;
@@ -1343,9 +1463,7 @@ export function CustomerFaqPage({
           failed += 1;
         } finally {
           completed += 1;
-          setImportProgress(
-            `正在學習 ${date}（${completed}/${targets.length}）…`,
-          );
+          setLearnProgress({ completed, total: targets.length, failed, current: date });
         }
       }
     };
@@ -1361,7 +1479,6 @@ export function CustomerFaqPage({
     } catch {
       setInsightsError("產生學習建議時出錯，部分日期可能未完成。");
     } finally {
-      setImportProgress("");
       setLearningDates(false);
     }
   };
@@ -1397,11 +1514,59 @@ export function CustomerFaqPage({
           ? "建議內容尚未完整，未有作出任何變更。"
           : message.includes("suggestion_faq_conflict")
             ? "已有同名 FAQ，內容與這項建議不同；請先在 FAQ 編輯頁核對。"
+            : message.includes("suggestion_faq_gate_failed")
+            ? "此 FAQ 未通過開場／急單／衝突檢查，未有錄入。"
             : "審核學習建議失敗，未有作出任何變更。",
       );
     } finally {
       setReviewingSuggestion("");
     }
+  };
+  const toggleSuggestionSelection = (id: string, checked: boolean) => {
+    setSelectedSuggestionIds((current) => {
+      const next = new Set(current);
+      if (checked) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  };
+  const toggleAllVisibleSuggestions = (checked: boolean) => {
+    setSelectedSuggestionIds((current) => {
+      const next = new Set(current);
+      for (const id of selectableSuggestionIds) {
+        if (checked) next.add(id);
+        else next.delete(id);
+      }
+      return next;
+    });
+  };
+  const bulkReviewSuggestions = async (status: "approved" | "rejected") => {
+    if (!canEdit || bulkReviewing || !selectedVisibleSuggestionIds.length) return;
+    setBulkReviewing(true);
+    setInsightsError("");
+    let failed = 0;
+    let reloadFaq = false;
+    for (const id of selectedVisibleSuggestionIds) {
+      try {
+        const result = await reviewCustomerServiceLearningSuggestion(id, status);
+        if (result?.target_faq_id) reloadFaq = true;
+        setSuggestions((current) => current.filter((item) => item.id !== id));
+        setSelectedSuggestionIds((current) => {
+          const next = new Set(current);
+          next.delete(id);
+          return next;
+        });
+      } catch {
+        failed += 1;
+      }
+    }
+    if (reloadFaq) setReloadKey((value) => value + 1);
+    if (failed) {
+      setInsightsError(
+        `有 ${failed} 項未能處理（內容未完整、已有同名 FAQ 或未通過開場／急單檢查），其餘已${status === "approved" ? "批准" : "忽略"}。`,
+      );
+    }
+    setBulkReviewing(false);
   };
   const reviewTurn = async (
     turn: CustomerServiceReviewTurn,
@@ -1558,13 +1723,16 @@ export function CustomerFaqPage({
     : "—";
   const learnableImportDates = importDays
     .filter((day) => day.humanCount > 0)
-    .slice(0, CUSTOMER_SERVICE_IMPORT_MAX_DAYS)
+    .slice(0, CUSTOMER_SERVICE_LEARN_MAX_DAYS)
     .map((day) => day.date);
   const allLearningSuggestions = [...suggestions, ...reviewedSuggestions];
   const learningQuery = suggestionSearch.trim().toLowerCase();
   const filteredLearningSuggestions = allLearningSuggestions.filter((item) => {
     const state = learningSuggestionState(item);
     if (suggestionStatus !== "all" && state !== suggestionStatus) return false;
+    if (suggestionType !== "all" && item.suggestionType !== suggestionType) return false;
+    if (onlyApprovable && !hasCompleteLearningProposal(item)) return false;
+    if (onlyApprovable && state !== "pending" && state !== "incomplete") return false;
     if (!learningQuery) return true;
     const proposal = item.proposedContent;
     return [
@@ -1585,6 +1753,20 @@ export function CustomerFaqPage({
     (currentLearningPage - 1) * LEARNING_PAGE_SIZE,
     currentLearningPage * LEARNING_PAGE_SIZE,
   );
+  const selectableSuggestionIds = canEdit
+    ? visibleLearningSuggestions
+        .filter((item) => {
+          const state = learningSuggestionState(item);
+          return hasCompleteLearningProposal(item) &&
+            (state === "pending" || state === "incomplete");
+        })
+        .map((item) => item.id)
+    : [];
+  const selectedVisibleSuggestionIds = selectableSuggestionIds.filter((id) =>
+    selectedSuggestionIds.has(id));
+  const allVisibleSuggestionsSelected =
+    selectableSuggestionIds.length > 0 &&
+    selectedVisibleSuggestionIds.length === selectableSuggestionIds.length;
   const IMPORT_DAYS_PAGE_SIZE = 15;
   const importDaysPageCount = Math.max(
     1,
@@ -1611,6 +1793,12 @@ export function CustomerFaqPage({
         Math.round(
           (importStats.phonesProcessed / importStats.phonesTotal) * 100,
         ),
+      )
+    : 0;
+  const learnPercent = learnProgress.total
+    ? Math.min(
+        100,
+        Math.round((learnProgress.completed / learnProgress.total) * 100),
       )
     : 0;
   const formatRate = (value: number | null | undefined) =>
@@ -1892,6 +2080,14 @@ export function CustomerFaqPage({
                           onClick={() => openEditor(faq)}
                         >
                           <Pencil />
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="outline"
+                          aria-label={t("settings.customerFaq.delete")}
+                          onClick={() => openDelete(faq)}
+                        >
+                          <Trash2 />
                         </Button>
                       </div>
                     </td>
@@ -2282,6 +2478,24 @@ export function CustomerFaqPage({
         </form>
       </SidePanel>
 
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        title={t("settings.customerFaq.deleteTitle")}
+        description={t("settings.customerFaq.deleteConfirm", {
+          question: deleteTarget?.question ?? "",
+        })}
+        confirmLabel={t("settings.customerFaq.delete")}
+        cancelLabel={t("common.cancel")}
+        closeLabel={t("common.close")}
+        variant="destructive"
+        busy={deleting}
+        busyLabel={t("common.saving")}
+        onCancel={closeDelete}
+        onConfirm={() => void confirmDelete()}
+      >
+        {deleteError ? <p role="alert">{deleteError}</p> : null}
+      </ConfirmDialog>
+
       {activeSection !== "faq" ? (
       <div className="customer-faq-section-scroll">
       {activeSection === "insights" || activeSection === "learning" || activeSection === "history" || activeSection === "model" ? (
@@ -2567,25 +2781,78 @@ export function CustomerFaqPage({
                 label="搜尋學習建議"
                 placeholder={t("settings.customerFaq.searchPlaceholder")}
                 filters={
-                  <label className="cs-review-filter-field">
-                    <FilterableSelect
-                      value={suggestionStatus}
-                      onChange={(event) => {
-                        setSuggestionStatus(
-                          event.target.value as typeof suggestionStatus,
-                        );
-                        setSuggestionPage(1);
-                      }}
-                    >
-                      <option value="all">全部狀態</option>
-                      <option value="pending">待審核</option>
-                      <option value="incomplete">需補充建議</option>
-                      <option value="approved">已批准</option>
-                      <option value="rejected">已忽略</option>
-                    </FilterableSelect>
-                  </label>
+                  <>
+                    <label className="cs-review-filter-field">
+                      <FilterableSelect
+                        aria-label="類型"
+                        value={suggestionType}
+                        onChange={(event) => {
+                          setSuggestionType(
+                            event.target.value as typeof suggestionType,
+                          );
+                          setSuggestionPage(1);
+                        }}
+                      >
+                        <option value="all">全部類型</option>
+                        <option value="faq">FAQ</option>
+                        <option value="intent">意圖</option>
+                        <option value="policy">規則</option>
+                      </FilterableSelect>
+                    </label>
+                    <label className="cs-review-filter-field">
+                      <FilterableSelect
+                        aria-label="狀態"
+                        value={suggestionStatus}
+                        onChange={(event) => {
+                          setSuggestionStatus(
+                            event.target.value as typeof suggestionStatus,
+                          );
+                          setSuggestionPage(1);
+                        }}
+                      >
+                        <option value="all">全部狀態</option>
+                        <option value="pending">待審核</option>
+                        <option value="incomplete">需補充建議</option>
+                        <option value="approved">已批准</option>
+                        <option value="rejected">已忽略</option>
+                      </FilterableSelect>
+                    </label>
+                  </>
                 }
               />
+              <div className="cs-review-bulk-bar">
+                <label className="cs-review-only-approvable">
+                  <input
+                    type="checkbox"
+                    checked={onlyApprovable}
+                    onChange={(event) => {
+                      setOnlyApprovable(event.target.checked);
+                      setSuggestionPage(1);
+                    }}
+                  />
+                  只顯示可批准
+                </label>
+                <span className="cs-review-bulk-count">
+                  已選 {selectedVisibleSuggestionIds.length} 項
+                </span>
+                <Button
+                  size="sm"
+                  disabled={!canEdit || bulkReviewing || !selectedVisibleSuggestionIds.length}
+                  onClick={() => void bulkReviewSuggestions("approved")}
+                >
+                  <Check />
+                  {bulkReviewing ? "處理中…" : "批准所選"}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={!canEdit || bulkReviewing || !selectedVisibleSuggestionIds.length}
+                  onClick={() => void bulkReviewSuggestions("rejected")}
+                >
+                  <X />
+                  忽略所選
+                </Button>
+              </div>
             </header>
 
             <div className="cs-review-table-card">
@@ -2596,14 +2863,24 @@ export function CustomerFaqPage({
                 loadingLabel="載入學習建議"
                 skeletonRows={6}
                 skeletonColumns={[
-                  { width: "90px" },
-                  { width: "220px" },
-                  { width: "40%" },
-                  { width: "72px" },
-                  { width: "236px", variant: "action" },
+                  { width: "16px" },
+                  { width: "60%" },
+                  { width: "85%" },
+                  { width: "90%" },
+                  { width: "50%" },
+                  { width: "80%", variant: "action" },
                 ]}
                 header={
                   <tr>
+                    <th className="cs-review-select-cell">
+                      <input
+                        type="checkbox"
+                        aria-label="全選本頁可批准建議"
+                        checked={allVisibleSuggestionsSelected}
+                        disabled={!canEdit || selectableSuggestionIds.length === 0}
+                        onChange={(event) => toggleAllVisibleSuggestions(event.target.checked)}
+                      />
+                    </th>
                     <th>類型</th>
                     <th>標題／原因</th>
                     <th>建議內容</th>
@@ -2618,6 +2895,18 @@ export function CustomerFaqPage({
                     const reviewable = state === "pending" || state === "incomplete";
                     return (
                       <tr key={suggestion.id}>
+                        <td className="cs-review-select-cell">
+                          {selectableSuggestionIds.includes(suggestion.id) ? (
+                            <input
+                              type="checkbox"
+                              aria-label={`選取 ${suggestion.title}`}
+                              checked={selectedSuggestionIds.has(suggestion.id)}
+                              onChange={(event) =>
+                                toggleSuggestionSelection(suggestion.id, event.target.checked)
+                              }
+                            />
+                          ) : null}
+                        </td>
                         <td>
                           <span className="status-badge neutral">
                             {suggestion.suggestionType.toUpperCase()}
@@ -2692,7 +2981,7 @@ export function CustomerFaqPage({
                   })}
                   {!insightsLoading && visibleLearningSuggestions.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="customer-service-review-empty">
+                      <td colSpan={6} className="customer-service-review-empty">
                         目前沒有符合條件的學習建議。
                       </td>
                     </tr>
@@ -2737,13 +3026,12 @@ export function CustomerFaqPage({
               <h2 className="sr-only">歷史對話學習</h2>
               <div className="customer-service-import-controls">
                 <label>
-                  <span>起始日期</span>
+                  <span>起始日期（最多 31 天）</span>
                   <input
                     type="date"
                     value={importSince}
-                    max={importUntil || undefined}
                     disabled={importBusy || learningDates}
-                    onChange={(event) => setImportSince(event.target.value)}
+                    onChange={(event) => applyImportSince(event.target.value)}
                   />
                 </label>
                 <label>
@@ -2751,10 +3039,42 @@ export function CustomerFaqPage({
                   <input
                     type="date"
                     value={importUntil}
-                    min={importSince || undefined}
                     disabled={importBusy || learningDates}
-                    onChange={(event) => setImportUntil(event.target.value)}
+                    onChange={(event) => applyImportUntil(event.target.value)}
                   />
+                </label>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={importBusy || learningDates}
+                  onClick={() => {
+                    setImportSince(hongKongDateOffset(-6));
+                    setImportUntil(hongKongDateOffset());
+                  }}
+                >
+                  最近 7 日
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={importBusy || learningDates}
+                  onClick={() => {
+                    setImportSince(hongKongDateOffset(-29));
+                    setImportUntil(hongKongDateOffset());
+                  }}
+                >
+                  最近 30 日
+                </Button>
+                <label className="customer-service-import-active-only">
+                  <input
+                    type="checkbox"
+                    checked={importActiveOnly}
+                    disabled={importBusy || learningDates}
+                    onChange={(event) => setImportActiveOnly(event.target.checked)}
+                  />
+                  <span>只查近期活躍聯絡人（較快，可能漏訊息）</span>
                 </label>
                 <Button
                   type="button"
@@ -2803,6 +3123,12 @@ export function CustomerFaqPage({
                         <td>{day.date}</td>
                         <td>
                           訊息 {day.messageCount} · 真人 {day.humanCount}
+                          {day.broadcastCount > 0 ? (
+                            <span className="cs-history-broadcast-note">
+                              {" "}
+                              （已排除廣播 {day.broadcastCount}）
+                            </span>
+                          ) : null}
                         </td>
                         <td className="cs-history-actions">
                           <Button
@@ -3726,6 +4052,63 @@ export function CustomerFaqPage({
               {importProgress}
             </p>
           )}
+        </div>
+      </Modal>
+
+      <Modal
+        open={learnDialogOpen}
+        title="產生學習建議"
+        description="正在分析指定日期的真人對話並產生學習建議草稿；不會即時改動線上 FAQ 或對話邏輯。"
+        closeLabel="關閉"
+        size="sm"
+        closeOnBackdrop={!learningDates}
+        closeOnEscape={!learningDates}
+        onClose={() => {
+          if (!learningDates) setLearnDialogOpen(false);
+        }}
+        footer={
+          learningDates ? null : (
+            <Button type="button" onClick={() => setLearnDialogOpen(false)}>
+              完成
+            </Button>
+          )
+        }
+      >
+        <div className="cs-import-dialog">
+          {learnProgress.total > 0 ? (
+            <div className="cs-import-progress">
+              <div
+                className="cs-import-bar"
+                role="progressbar"
+                aria-label="學習進度"
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={learnPercent}
+              >
+                <span style={{ width: `${learnPercent}%` }} />
+              </div>
+              <span className="cs-import-percent">{learnPercent}%</span>
+            </div>
+          ) : null}
+          <ul className="cs-import-stats">
+            <li>
+              <span>完成</span>
+              <strong>
+                {learnProgress.completed} / {learnProgress.total}
+              </strong>
+            </li>
+            <li>
+              <span>失敗</span>
+              <strong>{learnProgress.failed}</strong>
+            </li>
+          </ul>
+          <p className="cs-import-message" role="status">
+            {learningDates
+              ? `正在學習 ${learnProgress.current}…（${learnProgress.completed}/${learnProgress.total}）`
+              : learnProgress.failed
+                ? `已完成 ${learnProgress.completed} 個日期，當中有 ${learnProgress.failed} 個出錯。`
+                : `已完成 ${learnProgress.completed} 個日期，建議已加入「學習與覆核」待審核。`}
+          </p>
         </div>
       </Modal>
     </section>

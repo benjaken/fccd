@@ -108,7 +108,7 @@ export function createCustomerServiceFaqRagDeps({
           if (Date.now()>=deadlineAt) throw new Error("rag_deadline");
           if (embeddingConfig.dimensions!==CUSTOMER_SERVICE_EMBEDDING_DIMENSIONS) throw new CustomerServiceEmbeddingError("embedding_storage_dimension_mismatch");
           profile=await customerServiceEmbeddingProfile(embeddingConfig);
-          const [vector]=await embedCustomerServiceTexts([lookupQuery],{config:{...embeddingConfig,maxRetries:0,timeoutMs:remaining(Math.min(4_000,embeddingConfig.timeoutMs))},fetchImpl,deadlineAt});
+          const [vector]=await embedCustomerServiceTexts([lookupQuery],{config:{...embeddingConfig,maxRetries:0,timeoutMs:remaining(Math.min(12_000,embeddingConfig.timeoutMs))},fetchImpl,deadlineAt});
           const data=await ragRpc(db,"search_published_customer_faqs_by_vector_v2",{
             p_query_embedding:JSON.stringify(vector),p_model:embeddingConfig.model,p_profile:profile,
             p_limit:ragConfig.vectorTopK,p_threshold:ragConfig.vectorThreshold,
