@@ -59,11 +59,13 @@ export function customerServiceEmbeddingConfig(): CustomerServiceEmbeddingConfig
 export class CustomerServiceEmbeddingError extends Error {
   readonly code: string;
   readonly retryable: boolean;
-  constructor(code: string, retryable = false) {
+  readonly retryAfterMs: number | null;
+  constructor(code: string, retryable = false, retryAfterMs: number | null = null) {
     super(code);
     this.name = "CustomerServiceEmbeddingError";
     this.code = code;
     this.retryable = retryable;
+    this.retryAfterMs = retryAfterMs;
   }
 }
 function cleanInput(text: string): string {
@@ -110,8 +112,10 @@ type EmbedOptions = {
   fetchImpl?: typeof fetch;
   /** Whole operation budget, including retries. */
   deadlineAt?: number;
+  /** Provider-side retrieval task (Jina v3): retrieval.query or retrieval.passage. */
+  task?: string;
 };
-async function embedBatch(texts: string[], config: CustomerServiceEmbeddingConfig, fetchImpl: typeof fetch, deadlineAt: number): Promise<number[][]> {
+async function embedBatch(texts: string[], config: CustomerServiceEmbeddingConfig, fetchImpl: typeof fetch, deadlineAt: number, task?: string): Promise<number[][]> {
   const retries = Math.min(2, Math.max(0, Math.trunc(config.maxRetries ?? 0)));
   for (let attempt = 0; ; attempt += 1) {
     const remaining = deadlineAt - Date.now();
@@ -123,7 +127,7 @@ async function embedBatch(texts: string[], config: CustomerServiceEmbeddingConfi
       const dimensions = config.sendDimensions ? { dimensions: config.dimensions } : {};
       const body = config.apiStyle === "ark_multimodal"
         ? { model: config.model, encoding_format: "float", input: [{ type: "text", text: texts[0] }], ...dimensions }
-        : { model: config.model, input: texts, ...dimensions };
+        : { model: config.model, input: texts, ...dimensions, ...(task ? { task } : {}) };
       const response = await fetchImpl(config.endpoint, {
         method: "POST", signal: controller.signal,
         headers: { Authorization: `Bearer ${config.apiKey.replace(/^Bearer\s+/i, "")}`, "Content-Type": "application/json" },
@@ -131,7 +135,21 @@ async function embedBatch(texts: string[], config: CustomerServiceEmbeddingConfi
       });
       if (!response.ok) {
         // Do not copy provider response bodies/credentials/customer data into logs.
-        throw new CustomerServiceEmbeddingError(`customer_service_embedding_${response.status}`, response.status === 429 || response.status >= 500);
+        let retryAfterMs: number | null = null;
+        const header = response.headers.get("retry-after");
+        if (header) {
+          const seconds = Number(header);
+          if (Number.isFinite(seconds) && seconds >= 0) retryAfterMs = Math.round(seconds * 1_000);
+          else {
+            const at = Date.parse(header);
+            if (!Number.isNaN(at)) retryAfterMs = Math.max(0, at - Date.now());
+          }
+        }
+        throw new CustomerServiceEmbeddingError(
+          `customer_service_embedding_${response.status}`,
+          response.status === 429 || response.status >= 500,
+          retryAfterMs,
+        );
       }
       return extractEmbeddings(await response.json(), texts.length, config.dimensions);
     } catch (error) {
@@ -140,7 +158,11 @@ async function embedBatch(texts: string[], config: CustomerServiceEmbeddingConfi
           ? "customer_service_embedding_timeout" : "customer_service_embedding_transport_error", true);
     } finally { clearTimeout(timeout); }
     if (!failure.retryable || attempt >= retries) throw failure;
-    const delay = Math.min(1_000, 200 * 2 ** attempt);
+    // Honour the provider's Retry-After, otherwise exponential backoff with jitter.
+    const base = failure.retryAfterMs !== null
+      ? Math.min(5_000, failure.retryAfterMs)
+      : Math.min(3_000, 500 * 2 ** attempt);
+    const delay = base + Math.floor(Math.random() * 250);
     if (Date.now() + delay >= deadlineAt) throw new CustomerServiceEmbeddingError("customer_service_embedding_deadline");
     await new Promise((resolve) => setTimeout(resolve, delay));
   }
@@ -165,7 +187,7 @@ export async function embedCustomerServiceTexts(texts: string[], options: EmbedO
     while (!failure) {
       const index = next++;
       if (index >= batches.length) return;
-      try { output[index] = await embedBatch(batches[index], config, fetchImpl, deadlineAt); }
+      try { output[index] = await embedBatch(batches[index], config, fetchImpl, deadlineAt, options.task); }
       catch (error) { failure = error; }
     }
   }));

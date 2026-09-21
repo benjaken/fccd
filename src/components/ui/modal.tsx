@@ -17,6 +17,7 @@ export function Modal({
   role = "dialog",
   closeOnBackdrop = true,
   closeOnEscape = true,
+  showClose = true,
   className,
   rootClassName,
 }: {
@@ -31,6 +32,7 @@ export function Modal({
   role?: "dialog" | "alertdialog";
   closeOnBackdrop?: boolean;
   closeOnEscape?: boolean;
+  showClose?: boolean;
   className?: string;
   rootClassName?: string;
 }) {
@@ -86,16 +88,18 @@ export function Modal({
                   </DialogPrimitive.Description>
                 ) : null}
               </div>
-              <DialogPrimitive.Close asChild>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon"
-                  aria-label={closeLabel}
-                >
-                  <X />
-                </Button>
-              </DialogPrimitive.Close>
+              {showClose ? (
+                <DialogPrimitive.Close asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    aria-label={closeLabel}
+                  >
+                    <X />
+                  </Button>
+                </DialogPrimitive.Close>
+              ) : null}
             </header>
             {children ? <div className="modal-body">{children}</div> : null}
             {footer ? <footer className="modal-footer">{footer}</footer> : null}

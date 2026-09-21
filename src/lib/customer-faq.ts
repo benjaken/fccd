@@ -898,6 +898,7 @@ export type CustomerServiceImportDay = {
   humanCount: number;
   customerCount: number;
   broadcastCount: number;
+  learned: boolean;
 };
 
 export type CustomerServiceImportProgress = {
@@ -1045,6 +1046,7 @@ export async function fetchCustomerServiceLearningImportSummary(
     humanCount: Number(row.human_count || 0),
     customerCount: Number(row.customer_count || 0),
     broadcastCount: Number(row.broadcast_count || 0),
+    learned: row.learned === true,
   }));
 }
 
@@ -1069,6 +1071,21 @@ export async function reviewCustomerServiceLearningSuggestion(
   if (error) throw error;
   if (status === "approved") void refreshCustomerFaqEmbeddings();
   return (data as Array<{ target_faq_id: string | null }> | null)?.[0];
+}
+
+export async function updateCustomerServiceLearningSuggestion(
+  id: string,
+  content: CustomerServiceLearningSuggestion["proposedContent"],
+) {
+  const { data, error } = await supabase.rpc(
+    "customer_service_learning_suggestion_update",
+    { p_id: id, p_content: content },
+  );
+  if (error) throw error;
+  const row = (data as Array<{ proposed_content: unknown }> | null)?.[0];
+  return row?.proposed_content && typeof row.proposed_content === "object"
+    ? (row.proposed_content as CustomerServiceLearningSuggestion["proposedContent"])
+    : content;
 }
 
 export async function fetchCustomerServiceReviewTurns(
@@ -1338,76 +1355,7 @@ export type CustomerServiceHistoryReplaySample = {
   requiresHumanReview: boolean;
   issues: Array<Record<string, unknown>>;
   scenarioAt: string;
-  agreement: string | null;
-  jev: CustomerServiceHistoryJevSample | null;
 };
-
-export type CustomerServiceHistoryJevChoice = {
-  choice: string;
-  probabilities: Record<string, number>;
-  confidence: number;
-};
-
-export type CustomerServiceHistoryJevSample = {
-  status: string;
-  modelRequested: string;
-  modelResolved: string | null;
-  rubricVersion: string;
-  agreement: string | null;
-  errorCode: string | null;
-  outcomeUncertain: boolean;
-  attemptCount: number;
-  elapsedMs: number | null;
-  inputTokens: number | null;
-  outputTokens: number | null;
-  grounding: CustomerServiceHistoryJevChoice | null;
-  coverage: CustomerServiceHistoryJevChoice | null;
-  unverifiedAction: number | null;
-  humanReview: number | null;
-};
-
-function parseHistoryJevChoice(value: unknown): CustomerServiceHistoryJevChoice | null {
-  if (!value || typeof value !== "object") return null;
-  const row = value as Record<string, unknown>;
-  if (typeof row.choice !== "string") return null;
-  const probabilities: Record<string, number> = {};
-  if (row.probabilities && typeof row.probabilities === "object") {
-    for (const [key, raw] of Object.entries(row.probabilities as Record<string, unknown>)) {
-      if (typeof raw === "number" && Number.isFinite(raw)) probabilities[key] = raw;
-    }
-  }
-  return {
-    choice: row.choice,
-    probabilities,
-    confidence: typeof row.confidence === "number" ? row.confidence : 0,
-  };
-}
-
-function parseHistoryJevSample(value: unknown): CustomerServiceHistoryJevSample | null {
-  if (!value || typeof value !== "object") return null;
-  const row = value as Record<string, unknown>;
-  const answers = (row.answers ?? {}) as Record<string, unknown>;
-  if (!answers || typeof answers !== "object") return null;
-  return {
-    status: String(row.status ?? ""),
-    modelRequested: String(row.model_requested ?? ""),
-    modelResolved: typeof row.model_resolved === "string" ? row.model_resolved : null,
-    rubricVersion: String(row.rubric_version ?? ""),
-    agreement: typeof row.agreement === "string" ? row.agreement : null,
-    errorCode: typeof row.error_code === "string" ? row.error_code : null,
-    outcomeUncertain: row.outcome_uncertain === true,
-    attemptCount: Number(row.attempt_count || 0),
-    elapsedMs: typeof row.elapsed_ms === "number" ? row.elapsed_ms : null,
-    inputTokens: typeof row.input_tokens === "number" ? row.input_tokens : null,
-    outputTokens: typeof row.output_tokens === "number" ? row.output_tokens : null,
-    grounding: parseHistoryJevChoice(answers.grounding),
-    coverage: parseHistoryJevChoice(answers.coverage),
-    unverifiedAction: answers.unverified_action && typeof answers.unverified_action === "object"
-      ? Number((answers.unverified_action as Record<string, unknown>).noul ?? NaN) : null,
-    humanReview: answers.human_review && typeof answers.human_review === "object"
-      ? Number((answers.human_review as Record<string, unknown>).noul ?? NaN) : null,
-  };
-}
 
 export async function fetchCustomerServiceHistoryReplaySamples(
   runId: string,
@@ -1431,40 +1379,7 @@ export async function fetchCustomerServiceHistoryReplaySamples(
     requiresHumanReview: row.requires_human_review === true,
     issues: Array.isArray(row.issues) ? (row.issues as Array<Record<string, unknown>>) : [],
     scenarioAt: String(row.scenario_at ?? ""),
-    agreement: typeof row.agreement === "string" ? row.agreement : null,
-    jev: parseHistoryJevSample(row.jev),
   }));
-}
-
-/** Non-sensitive capability flags for the replay panel (never the API key). */
-export async function fetchCustomerServiceHistoryReplayCapabilities(): Promise<{
-  jevEnabled: boolean;
-}> {
-  const payload = await invokeCustomerServiceHistoryReplay<{
-    capabilities?: { jev_enabled?: unknown };
-  } | null>({ action: "status", limit: 1 });
-  return { jevEnabled: payload?.capabilities?.jev_enabled === true };
-}
-
-/** Runs the independent TypeSafe Jev second judge over unjudged samples. */
-export async function judgeCustomerServiceHistoryReplayJev(
-  runId: string,
-  limit = 200,
-  concurrency = 4,
-) {
-  return invokeCustomerServiceHistoryReplay<{
-    evaluated?: number;
-    failed?: number;
-    skipped?: number;
-    divergent?: number;
-    remaining?: number;
-    model?: string;
-    rubric_version?: string;
-    items?: Array<Record<string, unknown>>;
-    note?: string;
-    config_error?: string | null;
-    error?: string;
-  }>({ action: "judge_jev", run_id: runId, limit, concurrency });
 }
 
 export type CustomerServiceRepairProposal = {
@@ -1475,6 +1390,13 @@ export type CustomerServiceRepairProposal = {
   reason: string;
   sourceSampleIds: string[];
   candidatePatch: Record<string, unknown>;
+  codeChangeDraft: Record<string, unknown> | null;
+  prUrl: string | null;
+  draftedAt: string | null;
+  runtimeChangeDraft: Record<string, unknown> | null;
+  runtimeChangeDraftedAt: string | null;
+  runtimeChangeAppliedAt: string | null;
+  runtimeChangeResult: Record<string, unknown> | null;
   validation: Record<string, unknown> | null;
   createdAt: string;
 };
@@ -1521,9 +1443,67 @@ export async function fetchCustomerServiceRepairProposals(
       ? (row.source_sample_ids as string[])
       : [],
     candidatePatch: (row.candidate_patch ?? {}) as Record<string, unknown>,
+    codeChangeDraft: (row.code_change_draft ?? null) as Record<string, unknown> | null,
+    prUrl: typeof row.pr_url === "string" && row.pr_url ? row.pr_url : null,
+    draftedAt: typeof row.drafted_at === "string" && row.drafted_at ? row.drafted_at : null,
+    runtimeChangeDraft: (row.runtime_change_draft ?? null) as Record<string, unknown> | null,
+    runtimeChangeDraftedAt: typeof row.runtime_change_drafted_at === "string" && row.runtime_change_drafted_at
+      ? row.runtime_change_drafted_at : null,
+    runtimeChangeAppliedAt: typeof row.runtime_change_applied_at === "string" && row.runtime_change_applied_at
+      ? row.runtime_change_applied_at : null,
+    runtimeChangeResult: (row.runtime_change_result ?? null) as Record<string, unknown> | null,
     validation: (row.validation ?? null) as Record<string, unknown> | null,
     createdAt: String(row.created_at ?? ""),
   }));
+}
+
+/**
+ * R3 only: generates a reviewable code-change draft (diff) for a repair
+ * proposal. It never applies the change; a human reviews it and opens a PR.
+ */
+export async function draftCustomerServiceRepairCodeChange(proposalId: string) {
+  return invokeCustomerServiceHistoryReplay<{
+    status?: string;
+    draft?: Record<string, unknown>;
+    brief?: string;
+    version?: string;
+    error?: string;
+  }>({ action: "draft_code_change", proposal_id: proposalId });
+}
+
+/**
+ * R2 only: drafts a structured intent/workflow-policy/reply-template patch for a
+ * repair proposal. It never applies the change; a human reviews it first.
+ */
+export async function draftCustomerServiceRepairRuntimeChange(proposalId: string) {
+  return invokeCustomerServiceHistoryReplay<{
+    status?: string;
+    draft?: Record<string, unknown>;
+    brief?: string;
+    version?: string;
+    error?: string;
+  }>({ action: "draft_runtime_change", proposal_id: proposalId });
+}
+
+/** Applies or rejects a drafted runtime patch through the allow-listed executor. */
+export async function reviewCustomerServiceRepairRuntimeChange(
+  proposalId: string,
+  decision: "apply" | "reject",
+) {
+  return invokeCustomerServiceHistoryReplay<{
+    status?: string;
+    change_count?: number;
+    error?: string;
+  }>({ action: "review_runtime_change", proposal_id: proposalId, decision });
+}
+
+/** Records the PR link a human opened for a code-change draft. It does not push or merge. */
+export async function recordCustomerServiceRepairCodeChangePr(proposalId: string, prUrl: string) {
+  return invokeCustomerServiceHistoryReplay<{
+    status?: string;
+    pr_url?: string;
+    error?: string;
+  }>({ action: "record_code_change_pr", proposal_id: proposalId, pr_url: prUrl });
 }
 
 /** Re-runs the source samples in isolation with the candidate FAQ overlay. */

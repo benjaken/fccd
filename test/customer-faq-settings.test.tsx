@@ -354,6 +354,50 @@ describe("CustomerFaqPage", () => {
     }
   });
 
+  it("edits a FAQ answer in place and keeps it for approval", async () => {
+    const user = userEvent.setup();
+    const base = {
+      reportId: "report-1", reportDate: "2026-09-15", reason: "真人回覆佐證",
+      evidenceCount: 1, status: "draft", targetFaqId: null, runtimeTarget: null,
+      executionStatus: "pending" as const, executionResult: {}, executedAt: null,
+      createdAt: faq.updatedAt,
+    };
+    const suggestion: customerFaqApi.CustomerServiceLearningSuggestion = {
+      ...base, id: "faq-edit", title: "自取安排", suggestionType: "faq",
+      proposedContent: { question: "幾點可以自取？", answer: "請先聯絡同事。", keywords: "自取", category: "ordering" },
+    };
+    const update = vi.spyOn(customerFaqApi, "updateCustomerServiceLearningSuggestion")
+      .mockResolvedValue({ question: "幾點可以自取？", answer: "請於營業時間內到店自取。", keywords: "自取", category: "ordering" });
+    const spies = [
+      update,
+      vi.spyOn(customerFaqApi, "fetchCustomerServiceDailyReports").mockResolvedValue([]),
+      vi.spyOn(customerFaqApi, "fetchCustomerServiceLearningSuggestions").mockResolvedValue([suggestion]),
+      vi.spyOn(customerFaqApi, "fetchCustomerServiceConfigVersions").mockResolvedValue([]),
+      vi.spyOn(customerFaqApi, "fetchCustomerServiceEvaluationRuns").mockResolvedValue([]),
+      vi.spyOn(customerFaqApi, "fetchCustomerServiceOutboundMessages").mockResolvedValue([]),
+    ];
+    try {
+      render(<CustomerFaqPage loadFaqs={vi.fn().mockResolvedValue({ items: [], total: 0 })}
+        loadControls={vi.fn().mockResolvedValue({ botEnabled: false, allowedPhones: [], updatedAt: faq.updatedAt })} />);
+      await user.click(await screen.findByRole("tab", { name: "學習與覆核" }));
+      const row = (await screen.findByText("自取安排")).closest("tr")!;
+      await user.click(within(row).getByRole("button", { name: "編輯" }));
+      const answerBox = await screen.findByLabelText("答案");
+      await user.clear(answerBox);
+      await user.type(answerBox, "請於營業時間內到店自取。");
+      await user.click(screen.getByRole("button", { name: "儲存修改" }));
+      await waitFor(() => expect(update).toHaveBeenCalledWith("faq-edit", expect.objectContaining({
+        answer: "請於營業時間內到店自取。", category: "ordering",
+      })));
+      await waitFor(() => expect(screen.getByText("請於營業時間內到店自取。")).toBeInTheDocument());
+      expect(
+        within(screen.getByText("自取安排").closest("tr")!).getByRole("button", { name: "批准並發布" }),
+      ).toBeEnabled();
+    } finally {
+      spies.forEach((spy) => spy.mockRestore());
+    }
+  });
+
   it("filters learning suggestions by type", async () => {
     const user = userEvent.setup();
     const base = {

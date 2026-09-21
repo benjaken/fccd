@@ -138,17 +138,50 @@ describe("customer-service history import client", () => {
           human_count: 3,
           customer_count: 9,
           broadcast_count: 2855,
+          learned: true,
         },
       ],
       error: null,
     });
     await expect(fetchCustomerServiceLearningImportSummary()).resolves.toEqual([
-      { date: "2026-08-01", messageCount: 12, humanCount: 3, customerCount: 9, broadcastCount: 2855 },
+      {
+        date: "2026-08-01",
+        messageCount: 12,
+        humanCount: 3,
+        customerCount: 9,
+        broadcastCount: 2855,
+        learned: true,
+      },
     ]);
     expect(rpcMock).toHaveBeenCalledWith(
       "customer_service_learning_import_summary",
       { p_limit: 90 },
     );
+  });
+
+  it("treats a missing learned flag as not yet learned", async () => {
+    rpcMock.mockResolvedValue({
+      data: [
+        {
+          import_date: "2026-08-02",
+          message_count: 4,
+          human_count: 1,
+          customer_count: 3,
+          broadcast_count: 0,
+        },
+      ],
+      error: null,
+    });
+    await expect(fetchCustomerServiceLearningImportSummary()).resolves.toEqual([
+      {
+        date: "2026-08-02",
+        messageCount: 4,
+        humanCount: 1,
+        customerCount: 3,
+        broadcastCount: 0,
+        learned: false,
+      },
+    ]);
   });
 });
 
@@ -171,12 +204,32 @@ describe("history import UI wiring", () => {
     expect(page).toContain("historyImportRangeDays");
   });
 
+  it("skips already-learned days in the one-click learn action", () => {
+    const page = readFileSync(
+      "src/components/settings/CustomerFaqPage.tsx",
+      "utf8",
+    );
+    expect(page).toContain("day.humanCount > 0 && !day.learned");
+    expect(page).toContain("已學習");
+  });
+
   it("gates the import summary RPC behind customer FAQ page access", () => {
     const sql = readFileSync(
       "supabase/migrations/20260919160000_customer_service_learning_import_summary.sql",
       "utf8",
     );
     expect(sql).toContain("customer_service_learning_import_summary");
+    expect(sql).toContain("private.has_page_access('settings.customer_faq')");
+  });
+
+  it("flags learned import days from non-failed daily reports", () => {
+    const sql = readFileSync(
+      "supabase/migrations/20260921230000_customer_service_learning_import_summary_learned.sql",
+      "utf8",
+    );
+    expect(sql).toContain("learned boolean");
+    expect(sql).toContain("public.customer_service_daily_reports");
+    expect(sql).toContain("reports.status <> 'failed'");
     expect(sql).toContain("private.has_page_access('settings.customer_faq')");
   });
 });

@@ -54,7 +54,8 @@ export async function runFaqEmbeddingBackfill({ db, config, faqIds = [], force =
         }
         const text = buildFaqEmbeddingText({ question: claim.question, aliases: claim.aliases });
         const [vector] = await embedCustomerServiceTexts([text], {
-          config: { ...config, concurrency: 1 }, fetchImpl, deadlineAt: deadlineAt - 1_000,
+          config: { ...config, concurrency: 1, maxRetries: 2 }, fetchImpl, deadlineAt: deadlineAt - 1_000,
+          task: "retrieval.passage",
         });
         const committed = await ragRpc(db, "customer_service_complete_faq_embedding", {
           p_id: claim.id, p_revision: claim.revision, p_claim_token: claim.claim_token,

@@ -17,22 +17,27 @@ import {
   canDraftHistoryCaseGuidance, diagnoseHistoryRepair, evaluateRepairTrials, normalizedRepairQuestion,
   type RepairTrial,
 } from "../_shared/customer-service-history-auto-repair.ts";
+import {
+  autoRepairMode, codeChangeDraftAllowed, renderCodeChangeDraftBrief,
+  CODE_CHANGE_DRAFT_VERSION, renderRuntimeChangeDraftBrief, runtimeChangeDraftAllowed,
+  RUNTIME_CHANGE_DRAFT_VERSION, type CodeChangeDraft, type RepairKind, type RepairRiskLevel,
+  type RuntimeChangeDraft,
+} from "../_shared/customer-service-repair-proposals.ts";
+import { draftHistoryCodeChange } from "../_shared/customer-service-history-code-change.ts";
+import { draftHistoryRuntimeChange } from "../_shared/customer-service-history-runtime-change.ts";
+import {
+  EMPTY_LEARNING_RUNTIME_TARGETS,
+  type LearningRuntimeTargets,
+} from "../_shared/customer-service-learning.ts";
 import { HISTORY_CASE_INTENTS, recognizeHistoryCase } from "../_shared/customer-service-history-case-recognition.ts";
 import { parseCustomerServiceCaseInput } from "../_shared/customer-service-cases.ts";
 import {
   deterministicHistoryIssues,
   mergeHistoryJudgment,
   HISTORY_JUDGE_RUBRIC_VERSION,
+  type HistoryIssue,
 } from "../_shared/customer-service-history-judge.ts";
 import { judgeHistoryDecisionPoint } from "../_shared/customer-service-history-judge-ai.ts";
-import {
-  historyJevAgreement,
-  HISTORY_JEV_RUBRIC_VERSION,
-  judgeHistoryDecisionPointWithJev,
-  resolveHistoryJevApprovedSources,
-  TYPESAFE_SYSTEMONE_ENDPOINT,
-  type HistoryJevConfig,
-} from "../_shared/customer-service-history-jev.ts";
 import {
   defaultRoutingConversation,
   evaluateRoutingResult,
@@ -75,23 +80,6 @@ function serviceRoleKey() {
 function deploymentEnvironment() {
   return env("CUSTOMER_SERVICE_ENVIRONMENT") ||
     (env("SUPABASE_URL").includes("vignxasvlxqnyvuhtjlu") ? "production" : "develop");
-}
-
-/**
- * TypeSafe Jev second judge configuration. Read from backend secrets only; the
- * key is never returned to the client or stored on a judgment row. Jev is an
- * independent diagnostic judge, not a chat-completions model: it must not reuse
- * CUSTOMER_SERVICE_AI_ENDPOINT.
- */
-function historyJevConfig(): HistoryJevConfig {
-  return {
-    enabled: env("CUSTOMER_SERVICE_HISTORY_JEV_ENABLED").toLowerCase() === "true",
-    endpoint: TYPESAFE_SYSTEMONE_ENDPOINT,
-    apiKey: env("TYPESAFE_API_KEY"),
-    model: env("CUSTOMER_SERVICE_HISTORY_JEV_MODEL") || "jev-1.13.0",
-    timeoutMs: Math.max(1_000, Number(env("CUSTOMER_SERVICE_HISTORY_JEV_TIMEOUT_MS")) || 20_000),
-    maxRetries: Math.max(0, Math.min(3, Number(env("CUSTOMER_SERVICE_HISTORY_JEV_MAX_RETRIES")) || 1)),
-  };
 }
 
 /** Runs `worker` over `items` with at most `limit` in flight. */
@@ -176,6 +164,32 @@ async function loadReplayConfig(admin: AdminClient, environment: string) {
   }));
   return { tiers, ragConfig, fingerprint,
     configId: active?.id ?? null, configUpdatedAt: active?.updated_at ?? null };
+}
+
+/**
+ * Live runtime rows a repair proposal may patch. Keys come from the database, so
+ * the model can only draft edits the allow-listed executor accepts.
+ */
+async function loadRuntimeTargets(admin: AdminClient): Promise<LearningRuntimeTargets> {
+  const [intents, templates, policies] = await Promise.all([
+    admin.from("customer_service_intents").select("intent_key,display_name,description").order("priority"),
+    admin.from("customer_service_reply_templates").select("template_key,display_name").order("template_key"),
+    admin.from("customer_service_workflow_policies").select("goal_key,display_name,instructions").order("goal_key"),
+  ]);
+  if (intents.error || templates.error || policies.error) return EMPTY_LEARNING_RUNTIME_TARGETS;
+  return {
+    intents: (intents.data ?? []).map((row: Record<string, unknown>) => ({
+      key: String(row.intent_key), displayName: String(row.display_name ?? ""),
+      detail: String(row.description ?? "").slice(0, 400),
+    })),
+    replyTemplates: (templates.data ?? []).map((row: Record<string, unknown>) => ({
+      key: String(row.template_key), displayName: String(row.display_name ?? ""), detail: "",
+    })),
+    workflowPolicies: (policies.data ?? []).map((row: Record<string, unknown>) => ({
+      key: String(row.goal_key), displayName: String(row.display_name ?? ""),
+      detail: String(row.instructions ?? "").slice(0, 400),
+    })),
+  };
 }
 
 async function authorize(request: Request, admin: AdminClient): Promise<string | null> {
@@ -518,162 +532,6 @@ Deno.serve(async (request) => {
       return json({ ok: true, action, run_id: runId, judged, remaining, items });
     }
 
-    if (action === "judge_jev") {
-      // Independent second judge via TypeSafe Jev. Diagnostic only: it never
-      // generates replies, proposals or citations and cannot clear a
-      // deterministic blocker. Off unless the server flag and key are set.
-      const jevConfig = historyJevConfig();
-      if (!jevConfig.enabled) return json({ error: "jev_disabled" }, 503);
-      if (!jevConfig.apiKey) return json({ error: "jev_not_configured" }, 503);
-      const runId = String(body.run_id ?? "").trim();
-      if (!UUID.test(runId)) return json({ error: "invalid_run_id" }, 400);
-      const limit = Math.max(1, Math.min(MAX_PLAN, Number(body.limit) || MAX_PLAN));
-      const concurrency = readConcurrency(body.concurrency);
-      const { data: jevRun, error: jevRunError } = await admin.from("customer_service_history_eval_runs")
-        .select("scope,environment,status,snapshot").eq("id", runId).maybeSingle();
-      if (jevRunError) throw jevRunError;
-      if (!jevRun) return json({ error: "run_not_found" }, 404);
-      if (jevRun.environment !== environment) return json({ error: "environment_mismatch" }, 400);
-      if (jevRun.scope !== "answer_quality") {
-        return json({ ok: true, action, run_id: runId, evaluated: 0, note: "routing_safety_not_applicable" });
-      }
-      const { data: claimed, error: claimError } = await admin.rpc("customer_service_history_jev_claim", {
-        p_run_id: runId, p_environment: environment, p_model: jevConfig.model,
-        p_rubric_version: HISTORY_JEV_RUBRIC_VERSION, p_limit: limit,
-        p_lease_seconds: 120, p_max_attempts: 2,
-      });
-      if (claimError) throw claimError;
-      const claims = (claimed ?? []) as Array<Record<string, unknown>>;
-      const sampleIds = claims.map((claim) => String(claim.sample_id));
-      const sampleById = new Map<string, Record<string, unknown>>();
-      if (sampleIds.length) {
-        const { data: sampleRows, error: sampleError } = await admin.from("customer_service_history_eval_samples")
-          .select("id,question,context,ai_answer,status,pairing,context_gap,trace,judgment,scenario_at")
-          .in("id", sampleIds);
-        if (sampleError) throw sampleError;
-        for (const row of (sampleRows ?? []) as Array<Record<string, unknown>>) sampleById.set(String(row.id), row);
-      }
-      const deadlineAt = Date.now() + DEADLINE_MS;
-      let evaluated = 0, jevSkipped = 0, jevFailed = 0, divergent = 0;
-      let jevConfigError = "";
-      const jevItems: Array<Record<string, unknown>> = [];
-      await runWithConcurrency(claims, concurrency, async (claim) => {
-        if (Date.now() > deadlineAt) return;
-        const claimId = String(claim.id);
-        const sample = sampleById.get(String(claim.sample_id));
-        const settle = async (patch: Record<string, unknown>) => {
-          await admin.from("customer_service_history_jev_judgments")
-            .update({ ...patch, updated_at: new Date().toISOString() })
-            .eq("id", claimId).eq("status", "processing");
-        };
-        const skip = async (reason: string) => {
-          jevSkipped += 1;
-          await settle({ status: "skipped", error_code: reason });
-          jevItems.push({ sample_id: claim.sample_id, status: "skipped", reason });
-        };
-        // A configuration error (missing/invalid key or rejected request body)
-        // must stop the batch early instead of burning every sample. Release the
-        // lease so the rows can be retried after the secret/body is fixed.
-        if (jevConfigError) {
-          await settle({ status: "pending", error_code: jevConfigError, lease_until: null });
-          jevItems.push({ sample_id: claim.sample_id, status: "pending", reason: jevConfigError });
-          return;
-        }
-        if (!sample) { await skip("sample_missing"); return; }
-        const trace = (sample.trace ?? {}) as Record<string, unknown>;
-        const retrieval = (trace.retrieval ?? {}) as Record<string, unknown>;
-        const judgment = (sample.judgment ?? {}) as Record<string, unknown>;
-        const deterministic = Array.isArray(judgment.issues)
-          ? (judgment.issues as Array<Record<string, unknown>>) : [];
-        const blocked = deterministic.some((issue) =>
-          issue.layer === "sample" || issue.layer === "context" || issue.layer === "infrastructure" ||
-          issue.severity === "high" || issue.severity === "critical");
-        if (sample.status !== "scored") { await skip("sample_not_evaluable"); return; }
-        if (sample.pairing !== "confident") { await skip("pairing_uncertain"); return; }
-        if (sample.context_gap === true) { await skip("context_gap"); return; }
-        if (blocked) { await skip("deterministic_blocked"); return; }
-        if (retrieval.error === true) { await skip("retrieval_error"); return; }
-        if (trace.answerGuardPassed === false) { await skip("answer_guard_blocked"); return; }
-        const aiAnswer = String(sample.ai_answer ?? "");
-        if (!aiAnswer.trim()) { await skip("no_answer"); return; }
-        const candidates = Array.isArray(trace.candidates)
-          ? (trace.candidates as Array<{ id: string; question: string; answer: string }>) : [];
-        const selectedSourceIds = [
-          ...(Array.isArray(trace.faqSourceIds) ? (trace.faqSourceIds as string[]) : []),
-          ...(Array.isArray(retrieval.selectedSourceIds) ? (retrieval.selectedSourceIds as string[]) : []),
-        ];
-        const grounded = trace.grounded === true;
-        const resolved = resolveHistoryJevApprovedSources({ candidates, selectedSourceIds, grounded });
-        if (!resolved.complete) { await skip("unverified_sources_not_evaluable"); return; }
-        const inputFingerprint = caseFingerprint(JSON.stringify({
-          question: sample.question, aiAnswer, sources: resolved.sources.map((source) => source.id).sort(),
-          guard: trace.answerGuardPassed ?? null, rubric: HISTORY_JEV_RUBRIC_VERSION,
-        }));
-        const outcome = await judgeHistoryDecisionPointWithJev({
-          question: String(sample.question ?? ""),
-          context: Array.isArray(sample.context)
-            ? (sample.context as Array<{ role: string; text: string }>) : [],
-          aiAnswer,
-          approvedSources: resolved.sources,
-          traceSummary: {
-            grounded,
-            usedFallback: trace.usedFallback === true,
-            retrievalError: retrieval.error === true,
-            answerGuardPassed: trace.answerGuardPassed === true ? true
-              : trace.answerGuardPassed === false ? false : null,
-            candidateCount: Number(retrieval.candidateCount) || 0,
-            selectedSourceCount: resolved.sources.length,
-          },
-          config: jevConfig,
-          deadlineAt,
-        });
-        if (!outcome.ok) {
-          if (outcome.errorCode === "auth_failed" || outcome.errorCode === "invalid_request") {
-            jevConfigError = outcome.errorCode;
-            await settle({ status: "pending", error_code: outcome.errorCode, lease_until: null });
-            jevItems.push({ sample_id: claim.sample_id, status: "pending", reason: outcome.errorCode });
-            return;
-          }
-          jevFailed += 1;
-          await settle({
-            status: "failed", error_code: outcome.errorCode, model_resolved: null, answers: null,
-            agreement: null, input_fingerprint: inputFingerprint, elapsed_ms: outcome.elapsedMs,
-            outcome_uncertain: outcome.outcomeUncertain,
-          });
-          jevItems.push({ sample_id: claim.sample_id, status: "failed", reason: outcome.errorCode });
-          return;
-        }
-        const agreement = historyJevAgreement({
-          jevGrounding: outcome.answers.grounding.choice,
-          judgeGrounding: typeof judgment.aiGrounding === "string" ? judgment.aiGrounding : null,
-          jevComplete: true, sampleEvaluable: true,
-        });
-        evaluated += 1;
-        if (agreement === "divergent") divergent += 1;
-        await settle({
-          status: "complete", model_resolved: outcome.modelResolved,
-          answers: {
-            grounding: outcome.answers.grounding, coverage: outcome.answers.coverage,
-            unverified_action: outcome.answers.unverifiedAction, human_review: outcome.answers.humanReview,
-          },
-          agreement, error_code: null, input_fingerprint: inputFingerprint,
-          input_tokens: outcome.inputTokens, output_tokens: outcome.outputTokens,
-          elapsed_ms: outcome.elapsedMs, outcome_uncertain: false,
-        });
-        jevItems.push({ sample_id: claim.sample_id, status: "complete", agreement,
-          grounding: outcome.answers.grounding.choice });
-      });
-      const { data: jevPending } = await admin.from("customer_service_history_jev_judgments")
-        .select("id").eq("run_id", runId).eq("model_requested", jevConfig.model)
-        .eq("rubric_version", HISTORY_JEV_RUBRIC_VERSION)
-        .in("status", ["pending", "processing"]).limit(1);
-      return json({
-        ok: !jevConfigError, action, run_id: runId, model: jevConfig.model,
-        rubric_version: HISTORY_JEV_RUBRIC_VERSION, evaluated, failed: jevFailed, skipped: jevSkipped,
-        divergent, config_error: jevConfigError || null, remaining: (jevPending ?? []).length, items: jevItems,
-      });
-    }
-
     if (action === "samples") {
       const runId = String(body.run_id ?? "").trim();
       if (!UUID.test(runId)) return json({ error: "invalid_run_id" }, 400);
@@ -683,25 +541,11 @@ Deno.serve(async (request) => {
         .select("id, question, context, reference_answer, ai_answer, status, pairing, context_gap, judgment, scenario_at, lineage", { count: "exact" })
         .eq("run_id", runId).order("scenario_at", { ascending: false }).range(offset, offset + limit - 1);
       if (error) throw error;
-      const jevConfig = historyJevConfig();
-      const jevBySample = new Map<string, Record<string, unknown>>();
-      const rowIds = (data ?? []).map((row: Record<string, unknown>) => String(row.id));
-      if (jevConfig.enabled && rowIds.length) {
-        const { data: jevRows, error: jevError } = await admin.from("customer_service_history_jev_judgments")
-          .select("sample_id,status,model_requested,model_resolved,rubric_version,answers,agreement,error_code,outcome_uncertain,attempt_count,elapsed_ms,input_tokens,output_tokens")
-          .eq("run_id", runId).eq("model_requested", jevConfig.model)
-          .eq("rubric_version", HISTORY_JEV_RUBRIC_VERSION).in("sample_id", rowIds);
-        if (jevError) throw jevError;
-        for (const jevRow of (jevRows ?? []) as Array<Record<string, unknown>>) {
-          jevBySample.set(String(jevRow.sample_id), jevRow);
-        }
-      }
       return json({
         ok: true, action, run_id: runId, total: count ?? 0,
         samples: (data ?? []).map((row: Record<string, unknown>) => {
           const judgment = (row.judgment ?? {}) as Record<string, unknown>;
           const lineage = (row.lineage ?? {}) as Record<string, unknown>;
-          const jevRow = jevBySample.get(String(row.id));
           return {
             id: row.id,
             question: row.question,
@@ -719,21 +563,6 @@ Deno.serve(async (request) => {
             judge_stage: typeof judgment.stage === "string" ? judgment.stage : null,
             issues: Array.isArray(judgment.issues) ? judgment.issues : [],
             scenario_at: row.scenario_at,
-            agreement: jevConfig.enabled && typeof jevRow?.agreement === "string" ? jevRow.agreement : null,
-            jev: jevConfig.enabled && jevRow ? {
-              status: jevRow.status,
-              model_requested: jevRow.model_requested,
-              model_resolved: jevRow.model_resolved ?? null,
-              rubric_version: jevRow.rubric_version,
-              answers: jevRow.answers ?? null,
-              agreement: typeof jevRow.agreement === "string" ? jevRow.agreement : null,
-              error_code: typeof jevRow.error_code === "string" ? jevRow.error_code : null,
-              outcome_uncertain: jevRow.outcome_uncertain === true,
-              attempt_count: Number(jevRow.attempt_count) || 0,
-              elapsed_ms: jevRow.elapsed_ms ?? null,
-              input_tokens: jevRow.input_tokens ?? null,
-              output_tokens: jevRow.output_tokens ?? null,
-            } : null,
           };
         }),
       });
@@ -891,21 +720,31 @@ Deno.serve(async (request) => {
             continue;
           }
         }
-        const reason = !target && diagnosis.outcome === "candidate"
-          ? "verified_faq_not_independent" : diagnosis.reason;
-        const initialStatus = target ? "candidate" : diagnosis.outcome === "unsupported_repair"
-          ? "unsupported_repair" : "insufficient_evidence";
+        // A policy/product/coverage gap becomes an R2 runtime-policy candidate:
+        // a reviewed intent/policy/reply-template patch, never a code draft.
+        const runtimeCandidate = !target && diagnosis.cause === "policy";
+        const reason = runtimeCandidate ? diagnosis.reason
+          : !target && diagnosis.outcome === "candidate" ? "verified_faq_not_independent"
+          : diagnosis.reason;
+        const initialStatus = target ? "candidate" : runtimeCandidate ? "candidate"
+          : diagnosis.outcome === "unsupported_repair" ? "unsupported_repair" : "insufficient_evidence";
+        const repairKind = target ? "alias_candidate"
+          : runtimeCandidate ? "runtime_policy_candidate" : "code_change_proposal";
+        const riskLevel = target ? "R1" : runtimeCandidate ? "R2" : "R3";
+        const candidatePatch = target
+          ? { kind: "verified_faq_rewrite", faq_id: target.id,
+            question: sample.question, canonical_question: target.question }
+          : runtimeCandidate ? { kind: "runtime_policy_pending" } : { kind: "diagnosis_only" };
         const { data: inserted, error: insertError } = await admin.from("customer_service_repair_proposals")
           .insert({
-            environment, repair_kind: target ? "alias_candidate" : "code_change_proposal",
-            risk_level: target ? "R1" : "R3", target_type: target ? "faq" : "diagnosis",
+            environment, repair_kind: repairKind,
+            risk_level: riskLevel, target_type: target ? "faq" : runtimeCandidate ? "policy" : "diagnosis",
             target_id: target?.id ?? null, base_hash: target?.content_hash ?? null,
             scope: { environment, run_id: runId, conversation_id: conversationId(sample) },
             source_sample_ids: [sample.id], reason,
             evidence: { diagnosis, issue_categories: Array.isArray(judgment.issues)
               ? (judgment.issues as Array<{ category?: string }>).map((issue) => issue.category) : [] },
-            candidate_patch: target ? { kind: "verified_faq_rewrite", faq_id: target.id,
-              question: sample.question, canonical_question: target.question } : { kind: "diagnosis_only" },
+            candidate_patch: candidatePatch,
             validation: {}, status: initialStatus, idempotency_key: idempotencyKey,
             preauthorized: Boolean(target),
           }).select("id").single();
@@ -1109,7 +948,7 @@ Deno.serve(async (request) => {
       const runId = String(body.run_id ?? "").trim();
       if (!UUID.test(runId)) return json({ error: "invalid_run_id" }, 400);
       const { data, error } = await admin.from("customer_service_repair_proposals")
-        .select("id, repair_kind, risk_level, status, reason, source_sample_ids, candidate_patch, validation, rollback, executed_at, created_at")
+        .select("id, repair_kind, risk_level, status, reason, source_sample_ids, candidate_patch, code_change_draft, pr_url, drafted_at, runtime_change_draft, runtime_change_drafted_at, runtime_change_applied_at, runtime_change_result, validation, rollback, executed_at, created_at")
         .eq("environment", environment).eq("scope->>run_id", runId)
         .order("created_at", { ascending: false }).limit(MAX_PLAN);
       if (error) throw error;
@@ -1127,12 +966,16 @@ Deno.serve(async (request) => {
       if (error) throw error;
       if (!proposal) return json({ error: "proposal_not_found" }, 404);
       if (proposal.environment !== environment) return json({ error: "environment_mismatch" }, 400);
-      if (proposal.status !== "proposed" && proposal.status !== "blocked") {
+      if (!["proposed", "blocked", "drafted"].includes(String(proposal.status))) {
         return json({ error: "proposal_not_reviewable", status: proposal.status }, 409);
       }
       if (decision === "approve" && !actorId) return json({ error: "reviewer_required" }, 403);
       const validated = (proposal.validation as Record<string, unknown> | null)?.passed === true;
-      const reviewedStatus = decision === "approve" && !validated ? "proposed" : nextStatus;
+      // An R3 code-change draft has no isolated index to validate against; a
+      // reviewer's approval of the draft is the gate before a human opens the PR.
+      const reviewedStatus = decision === "approve"
+        ? (validated || proposal.status === "drafted" ? "ready" : "proposed")
+        : nextStatus;
       const { error: updateError } = await admin.from("customer_service_repair_proposals").update({
         status: reviewedStatus,
         approved_by: decision === "approve" ? actorId : null,
@@ -1235,6 +1078,200 @@ Deno.serve(async (request) => {
       return json({ ok: true, action, proposal_id: proposalId, status: validatedStatus, validation });
     }
 
+    if (action === "draft_code_change") {
+      // R3 only. Generates a reviewable diff/PR draft and stores it on the
+      // proposal. It never writes code, never runs SQL, never opens a PR and
+      // never touches production data. `repairExecutionAllowed` still refuses
+      // R3, so a draft can never be auto-applied from here.
+      const mode = autoRepairMode(env("CUSTOMER_SERVICE_AUTO_REPAIR_MODE"));
+      if (!codeChangeDraftAllowed(mode, "R3", "code_change_proposal")) {
+        return json({ error: "code_change_draft_disabled" }, 503);
+      }
+      const proposalId = String(body.proposal_id ?? "").trim();
+      if (!UUID.test(proposalId)) return json({ error: "invalid_proposal_id" }, 400);
+      const { data: proposal, error } = await admin.from("customer_service_repair_proposals")
+        .select("id, environment, repair_kind, risk_level, status, source_sample_ids, scope")
+        .eq("id", proposalId).maybeSingle();
+      if (error) throw error;
+      if (!proposal) return json({ error: "proposal_not_found" }, 404);
+      if (proposal.environment !== environment) return json({ error: "environment_mismatch" }, 400);
+      if (proposal.repair_kind !== "code_change_proposal" || proposal.risk_level !== "R3") {
+        return json({ error: "not_a_code_change_proposal" }, 409);
+      }
+      if (["applied", "applying", "rolled_back"].includes(String(proposal.status))) {
+        return json({ error: "proposal_not_draftable", status: proposal.status }, 409);
+      }
+      const scope = (proposal.scope ?? {}) as Record<string, unknown>;
+      const sourceRunId = typeof scope.run_id === "string" ? scope.run_id : "";
+      const sampleIds = Array.isArray(proposal.source_sample_ids)
+        ? (proposal.source_sample_ids as string[]).slice(0, 3) : [];
+      let question = ""; let aiAnswer = ""; let referenceAnswer = "";
+      const context: Array<{ role: string; text: string }> = [];
+      const issues: HistoryIssue[] = [];
+      if (UUID.test(sourceRunId) && sampleIds.length) {
+        const { data: rows, error: sampleError } = await admin.from("customer_service_history_eval_samples")
+          .select("id, question, context, ai_answer, reference_answer, judgment")
+          .eq("run_id", sourceRunId).in("id", sampleIds);
+        if (sampleError) throw sampleError;
+        for (const row of rows ?? []) {
+          if (!question) {
+            question = String(row.question ?? "");
+            aiAnswer = String(row.ai_answer ?? "");
+            referenceAnswer = String(row.reference_answer ?? "");
+            if (Array.isArray(row.context)) {
+              context.push(...(row.context as Array<{ role: string; text: string }>).slice(0, 12));
+            }
+          }
+          const judgment = (row.judgment ?? {}) as Record<string, unknown>;
+          if (Array.isArray(judgment.issues)) issues.push(...(judgment.issues as HistoryIssue[]));
+        }
+      }
+      if (!question || !issues.length) return json({ error: "no_diagnosis_evidence" }, 422);
+      const replayConfig = await loadReplayConfig(admin, environment);
+      const draft = await draftHistoryCodeChange({
+        question, context, aiAnswer, referenceAnswer,
+        issues, area: "customer_service_reply", config: replayConfig.tiers.primary,
+      });
+      if (!draft) return json({ error: "draft_generation_unavailable" }, 502);
+      const { error: storeError } = await admin.from("customer_service_repair_proposals").update({
+        code_change_draft: draft, status: "drafted", drafted_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      }).eq("id", proposalId);
+      if (storeError) throw storeError;
+      return json({
+        ok: true, action, proposal_id: proposalId, status: "drafted", version: CODE_CHANGE_DRAFT_VERSION,
+        draft: draft as CodeChangeDraft, brief: renderCodeChangeDraftBrief(draft),
+      });
+    }
+
+    if (action === "record_code_change_pr") {
+      // A human has opened the PR. This only records the link for audit; it does
+      // not push, merge or deploy anything.
+      const proposalId = String(body.proposal_id ?? "").trim();
+      if (!UUID.test(proposalId)) return json({ error: "invalid_proposal_id" }, 400);
+      const prUrl = String(body.pr_url ?? "").trim();
+      if (!/^https:\/\/github\.com\/[\w.-]+\/[\w.-]+\/pull\/\d+\/?$/.test(prUrl)) {
+        return json({ error: "invalid_pr_url" }, 400);
+      }
+      const { data: proposal, error } = await admin.from("customer_service_repair_proposals")
+        .select("id, environment, repair_kind, risk_level, status").eq("id", proposalId).maybeSingle();
+      if (error) throw error;
+      if (!proposal) return json({ error: "proposal_not_found" }, 404);
+      if (proposal.environment !== environment) return json({ error: "environment_mismatch" }, 400);
+      if (proposal.repair_kind !== "code_change_proposal" || proposal.risk_level !== "R3") {
+        return json({ error: "not_a_code_change_proposal" }, 409);
+      }
+      if (!["drafted", "ready"].includes(String(proposal.status))) {
+        return json({ error: "proposal_not_reviewable", status: proposal.status }, 409);
+      }
+      const { error: updateError } = await admin.from("customer_service_repair_proposals").update({
+        pr_url: prUrl, updated_at: new Date().toISOString(),
+      }).eq("id", proposalId);
+      if (updateError) throw updateError;
+      return json({ ok: true, action, proposal_id: proposalId, status: proposal.status, pr_url: prUrl });
+    }
+
+    if (action === "draft_runtime_change") {
+      // R2 only. Drafts a structured intent/policy/reply-template patch from the
+      // judge's evidence and the live target options. It never writes a row: a
+      // human reviews the draft and applies it through `review_runtime_change`.
+      const mode = autoRepairMode(env("CUSTOMER_SERVICE_AUTO_REPAIR_MODE"));
+      const proposalId = String(body.proposal_id ?? "").trim();
+      if (!UUID.test(proposalId)) return json({ error: "invalid_proposal_id" }, 400);
+      const { data: proposal, error } = await admin.from("customer_service_repair_proposals")
+        .select("id, environment, repair_kind, risk_level, status, source_sample_ids, scope")
+        .eq("id", proposalId).maybeSingle();
+      if (error) throw error;
+      if (!proposal) return json({ error: "proposal_not_found" }, 404);
+      if (proposal.environment !== environment) return json({ error: "environment_mismatch" }, 400);
+      if (!runtimeChangeDraftAllowed(proposal.repair_kind as RepairKind, proposal.risk_level as RepairRiskLevel)) {
+        return json({ error: "not_a_runtime_change_proposal" }, 409);
+      }
+      if (mode === "off") return json({ error: "runtime_change_draft_disabled" }, 503);
+      if (["applied", "applying", "rolled_back", "rejected"].includes(String(proposal.status))) {
+        return json({ error: "proposal_not_draftable", status: proposal.status }, 409);
+      }
+      const scope = (proposal.scope ?? {}) as Record<string, unknown>;
+      const sourceRunId = typeof scope.run_id === "string" ? scope.run_id : "";
+      const sampleIds = Array.isArray(proposal.source_sample_ids)
+        ? (proposal.source_sample_ids as string[]).slice(0, 3) : [];
+      let question = ""; let aiAnswer = ""; let referenceAnswer = "";
+      const context: Array<{ role: string; text: string }> = [];
+      const issues: HistoryIssue[] = [];
+      if (UUID.test(sourceRunId) && sampleIds.length) {
+        const { data: rows, error: sampleError } = await admin.from("customer_service_history_eval_samples")
+          .select("id, question, context, ai_answer, reference_answer, judgment")
+          .eq("run_id", sourceRunId).in("id", sampleIds);
+        if (sampleError) throw sampleError;
+        for (const row of rows ?? []) {
+          if (!question) {
+            question = String(row.question ?? "");
+            aiAnswer = String(row.ai_answer ?? "");
+            referenceAnswer = String(row.reference_answer ?? "");
+            if (Array.isArray(row.context)) {
+              context.push(...(row.context as Array<{ role: string; text: string }>).slice(0, 12));
+            }
+          }
+          const judgment = (row.judgment ?? {}) as Record<string, unknown>;
+          if (Array.isArray(judgment.issues)) issues.push(...(judgment.issues as HistoryIssue[]));
+        }
+      }
+      if (!question || !issues.length) return json({ error: "no_diagnosis_evidence" }, 422);
+      const [replayConfig, targets] = await Promise.all([
+        loadReplayConfig(admin, environment), loadRuntimeTargets(admin),
+      ]);
+      if (!targets.intents.length && !targets.replyTemplates.length && !targets.workflowPolicies.length) {
+        return json({ error: "no_runtime_targets" }, 422);
+      }
+      const draft = await draftHistoryRuntimeChange({
+        question, context, aiAnswer, referenceAnswer,
+        issues, targets, area: "customer_service_reply", config: replayConfig.tiers.primary,
+      });
+      if (!draft) return json({ error: "draft_generation_unavailable" }, 502);
+      const { error: storeError } = await admin.from("customer_service_repair_proposals").update({
+        runtime_change_draft: draft, status: "drafted", runtime_change_drafted_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      }).eq("id", proposalId);
+      if (storeError) throw storeError;
+      return json({
+        ok: true, action, proposal_id: proposalId, status: "drafted", version: RUNTIME_CHANGE_DRAFT_VERSION,
+        draft: draft as RuntimeChangeDraft, brief: renderRuntimeChangeDraftBrief(draft),
+      });
+    }
+
+    if (action === "review_runtime_change") {
+      // Applies or rejects a drafted runtime patch through the allow-listed RPC.
+      // Apply edits live intent/policy/template rows; reject leaves them alone.
+      const proposalId = String(body.proposal_id ?? "").trim();
+      if (!UUID.test(proposalId)) return json({ error: "invalid_proposal_id" }, 400);
+      const decision = String(body.decision ?? "");
+      if (decision !== "apply" && decision !== "reject") return json({ error: "invalid_decision" }, 400);
+      if (decision === "apply" && !actorId) return json({ error: "reviewer_required" }, 403);
+      const { data: proposal, error } = await admin.from("customer_service_repair_proposals")
+        .select("id, environment, repair_kind, risk_level, status, runtime_change_draft")
+        .eq("id", proposalId).maybeSingle();
+      if (error) throw error;
+      if (!proposal) return json({ error: "proposal_not_found" }, 404);
+      if (proposal.environment !== environment) return json({ error: "environment_mismatch" }, 400);
+      if (proposal.repair_kind !== "runtime_policy_candidate" || proposal.risk_level !== "R2") {
+        return json({ error: "not_a_runtime_change_proposal" }, 409);
+      }
+      if (proposal.status !== "drafted") return json({ error: "proposal_not_drafted", status: proposal.status }, 409);
+      const changes = ((proposal.runtime_change_draft ?? {}) as Record<string, unknown>).changes;
+      if (!Array.isArray(changes) || !changes.length) return json({ error: "no_runtime_change_draft" }, 422);
+      const { data, error: reviewError } = await admin.rpc("customer_service_repair_runtime_change_review", {
+        p_proposal_id: proposalId, p_environment: environment,
+        p_actor: decision === "apply" ? actorId : null, p_decision: decision,
+      });
+      if (reviewError) throw reviewError;
+      const row = Array.isArray(data) ? data[0] as Record<string, unknown> | undefined : undefined;
+      return json({
+        ok: true, action, proposal_id: proposalId,
+        status: row?.proposal_status ?? (decision === "apply" ? "applied" : "rejected"),
+        change_count: Number(row?.change_count ?? 0),
+      });
+    }
+
     if (action === "apply_proposal") {
       // Controlled apply. Requires explicit server opt-in and a passed validation.
       if (env("CUSTOMER_SERVICE_AUTO_REPAIR_MODE").toLowerCase() !== "apply_allowlist") {
@@ -1303,10 +1340,15 @@ Deno.serve(async (request) => {
       const proposalId = String(body.proposal_id ?? "").trim();
       if (!UUID.test(proposalId)) return json({ error: "invalid_proposal_id" }, 400);
       const { data: proposal, error } = await admin.from("customer_service_repair_proposals")
-        .select("id, environment, status, rollback").eq("id", proposalId).maybeSingle();
+        .select("id, environment, repair_kind, status, rollback").eq("id", proposalId).maybeSingle();
       if (error) throw error;
       if (!proposal) return json({ error: "proposal_not_found" }, 404);
       if (proposal.environment !== environment) return json({ error: "environment_mismatch" }, 400);
+      // A live runtime patch has no safe auto-revert here; it is corrected by a
+      // new reviewed draft instead of flipping a status flag.
+      if (proposal.repair_kind === "runtime_policy_candidate") {
+        return json({ error: "runtime_change_not_auto_rollback" }, 409);
+      }
       if (proposal.status === "active" || proposal.status === "canary") {
         const { data: finished, error: finishError } = await admin.rpc(
           "customer_service_finish_verified_rewrite", {
@@ -1342,7 +1384,6 @@ Deno.serve(async (request) => {
     }
 
     if (action === "status") {
-      const capabilities = { jev_enabled: historyJevConfig().enabled };
       const runId = String(body.run_id ?? "").trim();
       if (runId) {
         if (!UUID.test(runId)) return json({ error: "invalid_run_id" }, 400);
@@ -1352,12 +1393,12 @@ Deno.serve(async (request) => {
         const { data: counts } = await admin.from("customer_service_history_eval_samples").select("status").eq("run_id", runId);
         const byStatus: Record<string, number> = {};
         for (const row of counts ?? []) byStatus[row.status] = (byStatus[row.status] ?? 0) + 1;
-        return json({ ok: true, action, run, sample_status: byStatus, capabilities });
+        return json({ ok: true, action, run, sample_status: byStatus });
       }
       const { data: runs, error } = await admin.from("customer_service_history_eval_runs").select("*")
         .eq("environment", environment).order("created_at", { ascending: false }).limit(20);
       if (error) throw error;
-      return json({ ok: true, action, environment, runs: runs ?? [], capabilities });
+      return json({ ok: true, action, environment, runs: runs ?? [] });
     }
 
     return json({ error: "unsupported_action" }, 400);

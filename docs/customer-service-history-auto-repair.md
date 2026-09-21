@@ -18,6 +18,28 @@
 
 候选在相同配置下对原样本、另一会话中的同问题样本和不同问题的对照样本做隔离回放。必须找到目标 FAQ、通过回答依据保护、对照样本无退化，才进入 `eligible`。缺少独立样本或正式依据时停在 `insufficient_evidence`。系统按 run 限制候选数，重复执行按样本和配置去重。
 
+## R3 程式修改草稿
+
+需要改程式（上下文遗漏、重复提问、金额日期守卫）的问题属 R3 `code_change_proposal`；覆盖不足、政策／产品错误及无依据承诺属 R2 runtime 通道（见下节）。系统**永不自动发布或套用** R3：`repair_execution` 白名单只放行 R1 索引恢复。R3 只会产生**待审查的最小 diff／PR 草稿**，由人工在本机套用并走正常 CI／PR。
+
+流程：判定为 R3 → 管理员在修复记录按「产生程式修改草稿」→ 系统用判官建议产生结构化草稿（摘要、逐档 before／after、建议测试、风险），存回提案并标为 `drafted`；草稿从不写入程式、不执行 SQL、不推 PR。人工审查 diff 后可「核准」或「驳回」，核准后自行开 PR，并在记录填回 PR 链接以供稽核。
+
+草稿路径只允许 `src/`、`supabase/`、`scripts/`、`docs/`、`test/` 下的相对路径；模型被明确告知没有仓库存取权，结果是 hypothesis，须人工核实。`draft_code_change` 需要 `CUSTOMER_SERVICE_AUTO_REPAIR_MODE` 为 `propose` 或 `apply_allowlist`；`off` 时不可产生草稿。此草稿能力不影响 R1 的自动生效白名单。
+
+## R2 政策／意圖 runtime 修改
+
+可由提示詞或政策描述修正的問題（覆蓋不足、政策／產品錯誤、無依據承諾）屬 R2 `runtime_policy_candidate`，與學習建議走同一條 runtime 通道，不需要改程式或開 PR。系統**永不自動套用**這類修改。
+
+流程：判定為 R2 → 管理員在修復記錄按「產生政策／意圖修改草稿」→ 系統以判官建議及**現存**意圖、流程政策、回覆模板為限，產生結構化 patch（摘要、逐項 target／key／patch、建議驗證、風險），標為 `drafted`。管理員檢視後可「核准並套用」或「駁回」。套用由 `customer_service_repair_runtime_change_review`（security definer，只授予 `service_role`，經邊緣函式驗證 `settings.customer_faq.edit` 後呼叫）執行，只允許：
+
+- `intent`：`description_append`、`examples_append`
+- `reply_template`：`content`、`display_name`、`enabled`
+- `workflow_policy`：`instructions_append`、`context_window`、`clarification_threshold`、`auto_resume`、`enabled`
+
+清單與 `20260915143000_customer_service_learning_safety.sql` 完全一致，key 必須是現存資料列，未知 target／key 一律拒絕。套用前會逐項記錄 before 值於 `runtime_change_rollback` 供稽核；套用後 `status='applied'`，駁回則 `status='rejected'` 且不改動任何資料列。runtime 修改不支援自動撤回，需以新的草稿修正。
+
+ `draft_runtime_change` 需要 `CUSTOMER_SERVICE_AUTO_REPAIR_MODE` 非 `off`。此通道不影響 R1 的自動生效白名單，也不改動 R3 的程式草稿路徑。
+
 ## 开关
 
 - `CUSTOMER_SERVICE_HISTORY_EVAL_ENABLED=true`：允许启动和处理历史回放。

@@ -6227,6 +6227,11 @@ body:has(.shop-order-product-panel) .restaurant-workspace-body > .shop-order-pag
   flex: 0 0 auto;
 }
 
+.cs-history-learned-note {
+  color: #1f8a52;
+  font-weight: 600;
+}
+
 .customer-service-review-table-wrap {
   max-height: min(62vh, 700px);
   overflow: auto;

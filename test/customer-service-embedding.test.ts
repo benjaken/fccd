@@ -58,6 +58,39 @@ describe("customer-service embedding client", () => {
     vi.unstubAllGlobals();
   });
 
+  it("retries a timed-out attempt instead of failing retrieval", async () => {
+    let calls = 0;
+    const vectors = await embedCustomerServiceTexts(["月餅"], {
+      config: { ...config, maxRetries: 2, timeoutMs: 3_000 },
+      fetchImpl: async () => {
+        calls += 1;
+        if (calls === 1) {
+          const error = new Error("aborted");
+          error.name = "AbortError";
+          throw error;
+        }
+        return embeddingResponse(1);
+      },
+    });
+    expect(calls).toBe(2);
+    expect(vectors).toHaveLength(1);
+  });
+
+  it("honours Retry-After when the provider rate-limits", async () => {
+    let calls = 0;
+    const vectors = await embedCustomerServiceTexts(["月餅"], {
+      config: { ...config, maxRetries: 1 },
+      fetchImpl: async () => {
+        calls += 1;
+        return calls === 1
+          ? new Response("", { status: 429, headers: { "retry-after": "0" } })
+          : embeddingResponse(1);
+      },
+    });
+    expect(calls).toBe(2);
+    expect(vectors).toHaveLength(1);
+  });
+
   it("embeds a query with the configured model and dimensions", async () => {
     const fetchMock = vi.fn().mockResolvedValue(embeddingResponse(1));
     const embedding = await embedCustomerServiceQuery("點樣退錢？", {
