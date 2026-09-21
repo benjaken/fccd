@@ -13,14 +13,18 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import {
-  fetchCustomerServiceHistoryReplayCapabilities,
+  draftCustomerServiceRepairCodeChange,
+  draftCustomerServiceRepairRuntimeChange,
+  applyCustomerServiceRepairProposal,
   fetchCustomerServiceHistoryReplayRuns,
   fetchCustomerServiceHistoryReplaySamples,
   fetchCustomerServiceRepairProposals,
   judgeCustomerServiceHistoryReplay,
-  judgeCustomerServiceHistoryReplayJev,
   processCustomerServiceHistoryReplay,
+  recordCustomerServiceRepairCodeChangePr,
   runCustomerServiceHistoryAutoRepair,
+  reviewCustomerServiceRepairProposal,
+  reviewCustomerServiceRepairRuntimeChange,
   rollbackCustomerServiceRepairProposal,
   startCustomerServiceHistoryReplay,
   type CustomerServiceHistoryReplayRun,
@@ -31,12 +35,6 @@ import {
 const HISTORY_REPLAY_ERROR_MESSAGES: Record<string, string> = {
   history_eval_disabled:
     "歷史評估尚未啟用。請由管理員設定 Supabase 密鑰 CUSTOMER_SERVICE_HISTORY_EVAL_ENABLED=true 後再試。",
-  jev_disabled:
-    "Jev 第二評判尚未啟用。請由管理員設定 Supabase 密鑰 CUSTOMER_SERVICE_HISTORY_JEV_ENABLED=true 後再試。",
-  jev_not_configured:
-    "還未設定 TypeSafe API key。請由管理員在 Supabase 密鑰加入 TYPESAFE_API_KEY（只留在後端）。",
-  jev_configuration_error:
-    "TypeSafe 配置有問題（API key 無效或請求被拒）。批次已停止，請檢查後端設定後重試。",
   no_replay_samples:
     "找不到可回放的歷史對話。請先在「歷史對話」匯入對話後再試。",
   no_routing_samples: "沒有可用的路由樣本。",
@@ -61,6 +59,19 @@ const HISTORY_REPLAY_ERROR_MESSAGES: Record<string, string> = {
   rollback_not_deleted: "草稿狀態已改變，請重新載入後再試。",
   no_candidate_guidance: "提案沒有可用的候選內容。",
   no_source_samples: "提案沒有來源樣本。",
+  code_change_draft_disabled:
+    "程式修改草稿未啟用。請由管理員設定 CUSTOMER_SERVICE_AUTO_REPAIR_MODE=propose 或 apply_allowlist。",
+  not_a_code_change_proposal: "此提案不是 R3 程式修改提案。",
+  proposal_not_draftable: "提案目前的狀態不可產生草稿。",
+  no_diagnosis_evidence: "來源樣本沒有可用的判官建議，無法產生程式修改草稿。",
+  draft_generation_unavailable: "模型暫時未能產生程式修改草稿，請稍後再試。",
+  invalid_pr_url: "PR 連結格式不正確（需為 GitHub pull request 網址）。",
+  not_a_runtime_change_proposal: "此提案不是 R2 政策／意圖修改提案。",
+  runtime_change_draft_disabled: "政策／意圖修改草稿未啟用。請由管理員設定修復模式。",
+  no_runtime_targets: "找不到可修改的意圖、政策或回覆模板。",
+  no_runtime_change_draft: "提案沒有可套用的政策／意圖修改草稿。",
+  proposal_not_drafted: "提案尚未產生草稿，或已審核。",
+  runtime_change_not_auto_rollback: "政策／意圖修改不支援自動撤回，請以新的修改草稿修正。",
   page_access_required: "沒有編輯權限，無法執行歷史回放。",
   authentication_required: "登入狀態已失效，請重新登入。",
 };
@@ -71,6 +82,116 @@ function historyReplayErrorMessage(error: unknown) {
     HISTORY_REPLAY_ERROR_MESSAGES[code] ||
     `歷史回放失敗${code ? `（${code}）` : ""}，請稍後再試。`
   );
+}
+
+type CodeChangeDraftView = {
+  summary: string;
+  files: Array<{ path: string; rationale: string; before: string; after: string }>;
+  tests: string[];
+  risks: string[];
+};
+
+/** Reads the stored R3 draft into a display shape. Never executes anything. */
+function codeChangeDraftView(draft: Record<string, unknown> | null): CodeChangeDraftView | null {
+  if (!draft || typeof draft !== "object") return null;
+  const summary = typeof draft.summary === "string" ? draft.summary : "";
+  const files = (Array.isArray(draft.files) ? draft.files : [])
+    .filter((file): file is Record<string, unknown> => Boolean(file) && typeof file === "object")
+    .map((file) => ({
+      path: typeof file.path === "string" ? file.path : "",
+      rationale: typeof file.rationale === "string" ? file.rationale : "",
+      before: typeof file.before === "string" ? file.before : "",
+      after: typeof file.after === "string" ? file.after : "",
+    }));
+  if (!summary && !files.length) return null;
+  return {
+    summary,
+    files,
+    tests: Array.isArray(draft.tests) ? draft.tests.map((item) => String(item)) : [],
+    risks: Array.isArray(draft.risks) ? draft.risks.map((item) => String(item)) : [],
+  };
+}
+
+function codeChangeDraftDiff(view: CodeChangeDraftView) {
+  return view.files.map((file) => {
+    const removed = file.before ? file.before.split("\n").map((line) => `-${line}`) : [];
+    const added = file.after ? file.after.split("\n").map((line) => `+${line}`) : [];
+    return [
+      `--- a/${file.path}`,
+      `+++ b/${file.path}`,
+      ...(file.rationale ? [`# ${file.rationale}`] : []),
+      "@@ draft @@",
+      ...removed,
+      ...added,
+    ].join("\n");
+  }).join("\n\n");
+}
+
+function codeChangeDraftBrief(view: CodeChangeDraftView) {
+  const lines = ["# 修復草稿 — 需人工審查，未套用", "", view.summary, "", "## 變更", codeChangeDraftDiff(view)];
+  if (view.tests.length) lines.push("", "## 建議測試", ...view.tests.map((item) => `- ${item}`));
+  if (view.risks.length) lines.push("", "## 風險", ...view.risks.map((item) => `- ${item}`));
+  return lines.join("\n");
+}
+
+type RuntimeChange = { target: string; key: string; patch: Record<string, unknown> };
+
+type RuntimeChangeDraftView = {
+  summary: string;
+  changes: RuntimeChange[];
+  tests: string[];
+  risks: string[];
+};
+
+const RUNTIME_TARGET_LABELS: Record<string, string> = {
+  intent: "意圖", reply_template: "回覆模板", workflow_policy: "流程政策",
+};
+
+/** Reads the stored R2 runtime-change draft into a display shape. Never applies anything. */
+function runtimeChangeDraftView(draft: Record<string, unknown> | null): RuntimeChangeDraftView | null {
+  if (!draft || typeof draft !== "object") return null;
+  const summary = typeof draft.summary === "string" ? draft.summary : "";
+  const changes = (Array.isArray(draft.changes) ? draft.changes : [])
+    .filter((change): change is Record<string, unknown> => Boolean(change) && typeof change === "object")
+    .map((change) => ({
+      target: typeof change.target === "string" ? change.target : "",
+      key: typeof change.key === "string" ? change.key : "",
+      patch: (change.patch && typeof change.patch === "object" ? change.patch : {}) as Record<string, unknown>,
+    }))
+    .filter((change) => change.target && change.key);
+  if (!summary && !changes.length) return null;
+  return {
+    summary,
+    changes,
+    tests: Array.isArray(draft.tests) ? draft.tests.map((item) => String(item)) : [],
+    risks: Array.isArray(draft.risks) ? draft.risks.map((item) => String(item)) : [],
+  };
+}
+
+function runtimeChangeText(change: RuntimeChange) {
+  const lines: string[] = [];
+  const patch = change.patch;
+  if (typeof patch.description_append === "string") lines.push(`+ description: ${patch.description_append}`);
+  if (typeof patch.instructions_append === "string") lines.push(`+ instructions: ${patch.instructions_append}`);
+  if (typeof patch.content === "string") lines.push(`+ content: ${patch.content}`);
+  if (typeof patch.display_name === "string") lines.push(`display_name: ${patch.display_name}`);
+  for (const example of Array.isArray(patch.examples_append) ? patch.examples_append : []) {
+    lines.push(`+ example: ${String(example)}`);
+  }
+  for (const key of ["context_window", "clarification_threshold", "auto_resume", "enabled"] as const) {
+    if (patch[key] !== undefined) lines.push(`${key}: ${String(patch[key])}`);
+  }
+  return lines.join("\n");
+}
+
+function runtimeChangeDraftBrief(view: RuntimeChangeDraftView) {
+  const lines = ["# 政策／意圖修改草稿 — 需人工審查，未套用", "", view.summary, "", "## 變更"];
+  for (const change of view.changes) {
+    lines.push(`### ${RUNTIME_TARGET_LABELS[change.target] ?? change.target} · ${change.key}`, runtimeChangeText(change));
+  }
+  if (view.tests.length) lines.push("", "## 建議驗證", ...view.tests.map((item) => `- ${item}`));
+  if (view.risks.length) lines.push("", "## 風險", ...view.risks.map((item) => `- ${item}`));
+  return lines.join("\n");
 }
 
 const REPLAY_CALL_LIMIT = 8;
@@ -88,30 +209,6 @@ const JUDGE_COMPARISON_LABELS: Record<string, string> = {
   partial: "部分一致",
   divergent: "有差異",
   inconclusive: "未能判定",
-};
-const JEV_AGREEMENT_LABELS: Record<string, string> = {
-  agree: "兩者一致",
-  divergent: "兩者分歧",
-  incomparable: "無法比較",
-};
-const JEV_GROUNDING_LABELS: Record<string, string> = {
-  supported: "有依據",
-  unsupported: "無依據",
-  conflicting: "有衝突",
-  unknown: "不明",
-};
-const JEV_COVERAGE_LABELS: Record<string, string> = {
-  complete: "完整",
-  partial: "部分",
-  missed: "漏答",
-  unknown: "不明",
-};
-const JEV_STATUS_LABELS: Record<string, string> = {
-  pending: "待處理",
-  processing: "處理中",
-  complete: "已完成",
-  skipped: "已跳過",
-  failed: "服務錯誤",
 };
 const HISTORY_ISSUE_LAYER_LABELS: Record<string, string> = {
   sample: "樣本",
@@ -150,11 +247,6 @@ const HISTORY_ISSUE_SEVERITY_LABELS: Record<string, string> = {
   high: "嚴重",
   critical: "極嚴重",
 };
-
-function formatJevPercent(value: number | null | undefined) {
-  if (typeof value !== "number" || !Number.isFinite(value)) return "—";
-  return `${Math.round(value * 100)}%`;
-}
 
 function replayRoleLabel(role: string) {
   return role === "customer" ? "客" : role === "human" ? "真人" : "AI";
@@ -285,65 +377,8 @@ function buildReplayThread(samples: CustomerServiceHistoryReplaySample[]): Repla
   return entries;
 }
 
-function HistoryJevBlock({ sample }: { sample: CustomerServiceHistoryReplaySample }) {
-  if (!sample.jev) {
-    return (
-      <p>
-        <strong>Jev 判斷：</strong>未運行
-      </p>
-    );
-  }
-  return (
-    <>
-      <div className="customer-service-replay-jev">
-        <p>
-          <strong>Jev 判斷：</strong>
-          {JEV_STATUS_LABELS[sample.jev.status] ?? sample.jev.status} ·{" "}
-          {sample.jev.modelResolved ?? sample.jev.modelRequested} · {sample.jev.rubricVersion}
-        </p>
-        {sample.jev.status === "complete" ? (
-          <>
-            <p>
-              <strong>依據：</strong>
-              {JEV_GROUNDING_LABELS[sample.jev.grounding?.choice ?? ""] ?? sample.jev.grounding?.choice ?? "—"}
-              {" · "}
-              <strong>覆蓋：</strong>
-              {JEV_COVERAGE_LABELS[sample.jev.coverage?.choice ?? ""] ?? sample.jev.coverage?.choice ?? "—"}
-            </p>
-            <p>
-              <strong>未證實操作概率：</strong>
-              {formatJevPercent(sample.jev.unverifiedAction)}
-              {" · "}
-              <strong>人工覆核概率：</strong>
-              {formatJevPercent(sample.jev.humanReview)}
-            </p>
-            <p className="customer-service-import-progress">
-              概率為模型估計，需以本地標註集校準後才作業務門檻。
-            </p>
-          </>
-        ) : sample.jev.status === "skipped" ? (
-          <p>樣本未送 Jev（{sample.jev.errorCode ?? "不可評估"}）。</p>
-        ) : sample.jev.status === "failed" ? (
-          <p>
-            服務錯誤（{sample.jev.errorCode ?? "failed"}）
-            {sample.jev.outcomeUncertain ? "，逾時結果不確定，重試可能增加用量" : ""}。
-          </p>
-        ) : (
-          <p>正待執行。</p>
-        )}
-      </div>
-      <p>
-        <strong>兩者比較：</strong>
-        {JEV_AGREEMENT_LABELS[sample.agreement ?? "incomparable"] ?? "無法比較"}
-        {sample.agreement === "divergent" ? "（需覆核）" : ""}
-      </p>
-    </>
-  );
-}
-
 type ReplaySampleFilter =
-  | "all" | "needs_review" | "divergent" | "partial" | "match" | "inconclusive" | "none"
-  | "jev_divergent" | "jev_unfinished";
+  | "all" | "needs_review" | "divergent" | "partial" | "match" | "inconclusive" | "none";
 const REPLAY_FILTERS: Array<{ value: ReplaySampleFilter; label: string }> = [
   { value: "all", label: "全部" },
   { value: "needs_review", label: "需覆核（分歧／高風險／阻擋）" },
@@ -352,8 +387,6 @@ const REPLAY_FILTERS: Array<{ value: ReplaySampleFilter; label: string }> = [
   { value: "match", label: "一致" },
   { value: "inconclusive", label: "未能判定" },
   { value: "none", label: "未判定" },
-  { value: "jev_divergent", label: "評判分歧" },
-  { value: "jev_unfinished", label: "Jev 未完成／失敗" },
 ];
 
 function hongKongDate(offsetDays = 0) {
@@ -395,9 +428,8 @@ export function CustomerServiceHistoryReplayPanel({ canEdit = false }: { canEdit
   const [resultsOpen, setResultsOpen] = useState(false);
   const [sheetTab, setSheetTab] = useState<"diagnosis" | "proposals">("diagnosis");
   const [reviewBusy, setReviewBusy] = useState("");
-  const [jevEnabled, setJevEnabled] = useState(false);
-  const [jevBusy, setJevBusy] = useState(false);
-  const [jevMessage, setJevMessage] = useState("");
+  const [codeChangeBusy, setCodeChangeBusy] = useState("");
+  const [prInputs, setPrInputs] = useState<Record<string, string>>({});
   const [expandedConversations, setExpandedConversations] = useState<Record<string, boolean>>({});
   const cancelRef = useRef(false);
 
@@ -450,14 +482,6 @@ export function CustomerServiceHistoryReplayPanel({ canEdit = false }: { canEdit
   }, [load]);
 
   useEffect(() => {
-    let cancelled = false;
-    void fetchCustomerServiceHistoryReplayCapabilities()
-      .then((capabilities) => { if (!cancelled) setJevEnabled(capabilities.jevEnabled); })
-      .catch(() => { if (!cancelled) setJevEnabled(false); });
-    return () => { cancelled = true; };
-  }, []);
-
-  useEffect(() => {
     void loadSamples();
   }, [loadSamples]);
 
@@ -470,48 +494,13 @@ export function CustomerServiceHistoryReplayPanel({ canEdit = false }: { canEdit
     if (sampleFilter === "needs_review") {
       return sample.requiresHumanReview
         || sample.status === "not_evaluable"
-        || sample.agreement === "divergent"
         || sample.comparison === "divergent";
     }
     if (sampleFilter === "none") return !sample.comparison;
-    if (sampleFilter === "jev_divergent") return sample.agreement === "divergent";
-    if (sampleFilter === "jev_unfinished") {
-      return !sample.jev || sample.jev.status === "failed" || sample.jev.status === "skipped";
-    }
     return sample.comparison === sampleFilter;
   });
 
   const conversationGroups = groupReplaySamples(filteredSamples);
-
-  const runJev = async () => {
-    if (!canEdit || jevBusy || !activeRunId) return;
-    setJevBusy(true);
-    setJevMessage("");
-    try {
-      for (let step = 0; step < 200; step += 1) {
-        const result = await judgeCustomerServiceHistoryReplayJev(
-          activeRunId, REPLAY_CALL_LIMIT, REPLAY_CONCURRENCY,
-        );
-        if (result?.error) throw new Error(result.error);
-        if (result?.config_error) throw new Error("jev_configuration_error");
-        if (result?.note === "routing_safety_not_applicable") {
-          setJevMessage("路由安全集合只作確定性判定，不適用 Jev 第二評判。");
-          break;
-        }
-        const evaluated = result?.evaluated ?? 0;
-        setJevMessage(
-          `Jev 第二評判：完成 ${evaluated} · 分歧 ${result?.divergent ?? 0} · 失敗 ${result?.failed ?? 0} · 跳過 ${result?.skipped ?? 0}。`,
-        );
-        if ((result?.remaining ?? 0) <= 0) break;
-        if (evaluated === 0 && (result?.failed ?? 0) === 0 && (result?.skipped ?? 0) === 0) break;
-      }
-      await loadSamples();
-    } catch (error) {
-      setJevMessage(historyReplayErrorMessage(error));
-    } finally {
-      setJevBusy(false);
-    }
-  };
 
   const runAutoRepair = async () => {
     if (!canEdit || proposalBusy || !activeRunId) return;
@@ -544,6 +533,131 @@ export function CustomerServiceHistoryReplayPanel({ canEdit = false }: { canEdit
       setProposalMessage(historyReplayErrorMessage(error));
     } finally {
       setReviewBusy("");
+    }
+  };
+
+  const reviewAliasProposal = async (proposalId: string, decision: "approve" | "reject") => {
+    if (!canEdit || reviewBusy || !activeRunId) return;
+    setReviewBusy(proposalId);
+    setProposalMessage("");
+    try {
+      const reviewed = await reviewCustomerServiceRepairProposal({ proposalId, decision });
+      if (reviewed?.error) throw new Error(reviewed.error);
+      if (decision === "approve") {
+        const applied = await applyCustomerServiceRepairProposal(proposalId);
+        if (applied?.error) throw new Error(applied.error);
+        setProposalMessage("已核准並啟用相似問修復。");
+      } else {
+        setProposalMessage("已駁回相似問修復。");
+      }
+      await loadProposals();
+    } catch (error) {
+      setProposalMessage(historyReplayErrorMessage(error));
+      await loadProposals();
+    } finally {
+      setReviewBusy("");
+    }
+  };
+
+  const draftCodeChange = async (proposalId: string) => {
+    if (!canEdit || codeChangeBusy || !activeRunId) return;
+    setCodeChangeBusy(proposalId);
+    setProposalMessage("");
+    try {
+      const result = await draftCustomerServiceRepairCodeChange(proposalId);
+      if (result?.error) throw new Error(result.error);
+      setProposalMessage("已產生程式修改草稿，請審查 diff 後自行開 PR。系統不會自動改程式。");
+      await loadProposals();
+    } catch (error) {
+      setProposalMessage(historyReplayErrorMessage(error));
+    } finally {
+      setCodeChangeBusy("");
+    }
+  };
+
+  const reviewCodeChange = async (proposalId: string, decision: "approve" | "reject") => {
+    if (!canEdit || codeChangeBusy) return;
+    setCodeChangeBusy(proposalId);
+    setProposalMessage("");
+    try {
+      const result = await reviewCustomerServiceRepairProposal({ proposalId, decision });
+      if (result?.error) throw new Error(result.error);
+      setProposalMessage(decision === "approve" ? "已核准草稿，請開 PR 並在 CI 通過後合併。" : "已駁回此草稿。");
+      await loadProposals();
+    } catch (error) {
+      setProposalMessage(historyReplayErrorMessage(error));
+    } finally {
+      setCodeChangeBusy("");
+    }
+  };
+
+  const savePrLink = async (proposalId: string) => {
+    if (!canEdit || codeChangeBusy) return;
+    const prUrl = (prInputs[proposalId] ?? "").trim();
+    if (!prUrl) return;
+    setCodeChangeBusy(proposalId);
+    setProposalMessage("");
+    try {
+      const result = await recordCustomerServiceRepairCodeChangePr(proposalId, prUrl);
+      if (result?.error) throw new Error(result.error);
+      setProposalMessage("已記錄 PR 連結。");
+      await loadProposals();
+    } catch (error) {
+      setProposalMessage(historyReplayErrorMessage(error));
+    } finally {
+      setCodeChangeBusy("");
+    }
+  };
+
+  const copyCodeChangeBrief = async (view: CodeChangeDraftView) => {
+    try {
+      await navigator.clipboard.writeText(codeChangeDraftBrief(view));
+      setProposalMessage("已複製修復草稿，可在本機套用後開 PR。");
+    } catch {
+      setProposalMessage("複製失敗，請手動選取。");
+    }
+  };
+
+  const draftRuntimeChange = async (proposalId: string) => {
+    if (!canEdit || codeChangeBusy || !activeRunId) return;
+    setCodeChangeBusy(proposalId);
+    setProposalMessage("");
+    try {
+      const result = await draftCustomerServiceRepairRuntimeChange(proposalId);
+      if (result?.error) throw new Error(result.error);
+      setProposalMessage("已產生政策／意圖修改草稿，請審查後核准套用；系統不會自動改動。");
+      await loadProposals();
+    } catch (error) {
+      setProposalMessage(historyReplayErrorMessage(error));
+    } finally {
+      setCodeChangeBusy("");
+    }
+  };
+
+  const reviewRuntimeChange = async (proposalId: string, decision: "apply" | "reject") => {
+    if (!canEdit || codeChangeBusy) return;
+    setCodeChangeBusy(proposalId);
+    setProposalMessage("");
+    try {
+      const result = await reviewCustomerServiceRepairRuntimeChange(proposalId, decision);
+      if (result?.error) throw new Error(result.error);
+      setProposalMessage(decision === "apply"
+        ? `已套用政策／意圖修改（${result?.change_count ?? 0} 項）。`
+        : "已駁回此政策／意圖修改草稿。");
+      await loadProposals();
+    } catch (error) {
+      setProposalMessage(historyReplayErrorMessage(error));
+    } finally {
+      setCodeChangeBusy("");
+    }
+  };
+
+  const copyRuntimeChangeBrief = async (view: RuntimeChangeDraftView) => {
+    try {
+      await navigator.clipboard.writeText(runtimeChangeDraftBrief(view));
+      setProposalMessage("已複製政策／意圖修改草稿。");
+    } catch {
+      setProposalMessage("複製失敗，請手動選取。");
     }
   };
 
@@ -660,6 +774,7 @@ export function CustomerServiceHistoryReplayPanel({ canEdit = false }: { canEdit
   };
   const stopRunAll = () => {
     cancelRef.current = true;
+    setProgressOpen(false);
   };
 
   const totalForBar = counts.processed + counts.remaining;
@@ -739,7 +854,7 @@ export function CustomerServiceHistoryReplayPanel({ canEdit = false }: { canEdit
         </label>
         <Button type="button" disabled={!canEdit || busy !== ""} onClick={() => void start()}>
           <Sparkles />
-          {busy === "start" ? "建立中…" : "開始歷史回放"}
+          {busy === "start" ? "建立中…" : "建立歷史回放"}
         </Button>
         <Button
           type="button"
@@ -749,12 +864,6 @@ export function CustomerServiceHistoryReplayPanel({ canEdit = false }: { canEdit
           <Zap />
           {busy === "all" ? "跑緊…" : "一鍵跑完"}
         </Button>
-        {busy === "all" ? (
-          <Button type="button" variant="outline" onClick={stopRunAll}>
-            <Square />
-            停止
-          </Button>
-        ) : null}
       </div>
       {progress ? (
         <p className="customer-service-import-progress" role="status">
@@ -791,7 +900,7 @@ export function CustomerServiceHistoryReplayPanel({ canEdit = false }: { canEdit
           ))
         ) : (
           <p className="customer-service-import-progress">
-            尚無歷史回放記錄。按「開始歷史回放」建立固定樣本集。
+            尚無歷史回放記錄。按「建立歷史回放」建立固定樣本集。
           </p>
         )}
       </div>
@@ -821,9 +930,26 @@ export function CustomerServiceHistoryReplayPanel({ canEdit = false }: { canEdit
         open={progressOpen}
         title="歷史回放進度"
         description={`階段：${phase}`}
-        onClose={() => setProgressOpen(false)}
+        onClose={() => {
+          if (busy !== "all") setProgressOpen(false);
+        }}
         closeLabel="關閉進度視窗"
+        closeOnBackdrop={false}
+        closeOnEscape={false}
+        showClose={false}
         size="lg"
+        footer={
+          busy === "all" ? (
+            <Button type="button" variant="outline" onClick={stopRunAll}>
+              <Square />
+              停止
+            </Button>
+          ) : (
+            <Button type="button" variant="outline" onClick={() => setProgressOpen(false)}>
+              關閉
+            </Button>
+          )
+        }
       >
         <div className="customer-service-replay-progress" role="status" aria-live="polite">
           <p className="customer-service-import-progress">
@@ -868,16 +994,6 @@ export function CustomerServiceHistoryReplayPanel({ canEdit = false }: { canEdit
                   <Button
                     type="button"
                     size="sm"
-                    variant="outline"
-                    disabled={!canEdit || jevBusy || !activeRunId || !jevEnabled}
-                    onClick={() => void runJev()}
-                    title={jevEnabled ? undefined : "管理員未設定 CUSTOMER_SERVICE_HISTORY_JEV_ENABLED 或 TYPESAFE_API_KEY"}
-                  >
-                    {jevBusy ? "Jev 執行中…" : "執行 Jev 第二評判"}
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
                     disabled={!canEdit || proposalBusy || !activeRunId}
                     onClick={() => void runAutoRepair()}
                   >
@@ -886,16 +1002,6 @@ export function CustomerServiceHistoryReplayPanel({ canEdit = false }: { canEdit
                 </div>
               ) : null}
             </div>
-            {jevMessage ? (
-              <p className="customer-service-import-progress" role="status">
-                {jevMessage}
-              </p>
-            ) : null}
-            {!jevEnabled ? (
-              <p className="customer-service-import-progress">
-                Jev 第二評判未啟用；現有診斷與修復記錄不受影響。
-              </p>
-            ) : null}
             {proposalMessage ? (
               <p className="customer-service-import-progress" role="status">
                 {proposalMessage}
@@ -978,7 +1084,6 @@ export function CustomerServiceHistoryReplayPanel({ canEdit = false }: { canEdit
                                   <span className="cs-thread-text">{entry.sample.referenceAnswer || "（冇）"}</span>
                                 </li>
                               </ol>
-                              <HistoryJevBlock sample={entry.sample} />
                               {entry.sample.issues.length ? (
                                 <div className="customer-service-replay-diagnosis">
                                   <strong>要改什麼（判官建議）：</strong>
@@ -1076,9 +1181,218 @@ export function CustomerServiceHistoryReplayPanel({ canEdit = false }: { canEdit
                         </ul>
                       </div>
                     ) : null}
+                    {proposal.repairKind === "alias_candidate" && proposal.status === "proposed" &&
+                    proposal.validation?.passed === true && canEdit ? (
+                      <div className="customer-service-replay-case-actions">
+                        <Button
+                          type="button"
+                          size="sm"
+                          disabled={Boolean(reviewBusy)}
+                          onClick={() => void reviewAliasProposal(proposal.id, "approve")}
+                        >
+                          核准並啟用
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          disabled={Boolean(reviewBusy)}
+                          onClick={() => void reviewAliasProposal(proposal.id, "reject")}
+                        >
+                          駁回
+                        </Button>
+                      </div>
+                    ) : null}
+                    {proposal.repairKind === "code_change_proposal" ? (() => {
+                      const view = codeChangeDraftView(proposal.codeChangeDraft);
+                      if (!view) {
+                        return (
+                          <div className="customer-service-replay-diagnosis">
+                            <strong>程式修改草稿：</strong>
+                            {canEdit ? (
+                              <div className="customer-service-replay-case-actions">
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  disabled={Boolean(codeChangeBusy)}
+                                  onClick={() => void draftCodeChange(proposal.id)}
+                                >
+                                  {codeChangeBusy === proposal.id ? "產生中…" : "產生程式修改草稿"}
+                                </Button>
+                              </div>
+                            ) : (
+                              <span className="cs-issue-fix">尚未產生草稿。</span>
+                            )}
+                          </div>
+                        );
+                      }
+                      return (
+                        <div className="customer-service-replay-diagnosis">
+                          <strong>程式修改草稿（{proposal.draftedAt?.slice(0, 16).replace("T", " ") ?? ""}·需人工審查）：</strong>
+                          <p>{view.summary}</p>
+                          {view.files.map((file) => (
+                            <div key={file.path}>
+                              <p>
+                                <strong>{file.path}</strong>
+                                {file.rationale ? ` — ${file.rationale}` : ""}
+                              </p>
+                              <pre style={{ whiteSpace: "pre-wrap", overflowX: "auto" }}>
+                                {codeChangeDraftDiff({ ...view, files: [file] })}
+                              </pre>
+                            </div>
+                          ))}
+                          {view.tests.length ? <p>建議測試：{view.tests.join("；")}</p> : null}
+                          {view.risks.length ? <p>風險：{view.risks.join("；")}</p> : null}
+                          {proposal.prUrl ? (
+                            <p>
+                              PR：
+                              <a href={proposal.prUrl} target="_blank" rel="noreferrer">{proposal.prUrl}</a>
+                            </p>
+                          ) : null}
+                          {canEdit ? (
+                            <div className="customer-service-replay-case-actions">
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                onClick={() => void copyCodeChangeBrief(view)}
+                              >
+                                複製草稿
+                              </Button>
+                              {proposal.status === "drafted" ? (
+                                <>
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    disabled={Boolean(codeChangeBusy)}
+                                    onClick={() => void reviewCodeChange(proposal.id, "approve")}
+                                  >
+                                    核准
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="outline"
+                                    disabled={Boolean(codeChangeBusy)}
+                                    onClick={() => void reviewCodeChange(proposal.id, "reject")}
+                                  >
+                                    駁回
+                                  </Button>
+                                </>
+                              ) : null}
+                              {["drafted", "ready"].includes(proposal.status) && !proposal.prUrl ? (
+                                <span style={{ display: "inline-flex", gap: "0.5rem", alignItems: "center" }}>
+                                  <input
+                                    type="url"
+                                    value={prInputs[proposal.id] ?? ""}
+                                    placeholder={t("settings.customerFaq.historyReplayPrUrlPlaceholder")}
+                                    aria-label={t("settings.customerFaq.historyReplayPrUrlPlaceholder")}
+                                    onChange={(event) => setPrInputs((current) => ({
+                                      ...current, [proposal.id]: event.target.value,
+                                    }))}
+                                  />
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="outline"
+                                    disabled={Boolean(codeChangeBusy)}
+                                    onClick={() => void savePrLink(proposal.id)}
+                                  >
+                                    記錄 PR
+                                  </Button>
+                                </span>
+                              ) : null}
+                            </div>
+                          ) : null}
+                        </div>
+                      );
+                    })() : null}
+                    {proposal.repairKind === "runtime_policy_candidate" ? (() => {
+                      const view = runtimeChangeDraftView(proposal.runtimeChangeDraft);
+                      if (!view) {
+                        return (
+                          <div className="customer-service-replay-diagnosis">
+                            <strong>政策／意圖修改草稿：</strong>
+                            {canEdit ? (
+                              <div className="customer-service-replay-case-actions">
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  disabled={Boolean(codeChangeBusy)}
+                                  onClick={() => void draftRuntimeChange(proposal.id)}
+                                >
+                                  {codeChangeBusy === proposal.id ? "產生中…" : "產生政策／意圖修改草稿"}
+                                </Button>
+                              </div>
+                            ) : (
+                              <span className="cs-issue-fix">尚未產生草稿。</span>
+                            )}
+                          </div>
+                        );
+                      }
+                      const appliedAt = proposal.runtimeChangeAppliedAt?.slice(0, 16).replace("T", " ");
+                      return (
+                        <div className="customer-service-replay-diagnosis">
+                          <strong>
+                            政策／意圖修改草稿（{proposal.runtimeChangeDraftedAt?.slice(0, 16).replace("T", " ") ?? ""}·需人工審查）：
+                          </strong>
+                          <p>{view.summary}</p>
+                          {view.changes.map((change) => (
+                            <div key={`${change.target}:${change.key}`}>
+                              <p>
+                                <strong>{RUNTIME_TARGET_LABELS[change.target] ?? change.target}</strong>
+                                {` · ${change.key}`}
+                              </p>
+                              <pre style={{ whiteSpace: "pre-wrap", overflowX: "auto" }}>
+                                {runtimeChangeText(change) || "（無可顯示內容）"}
+                              </pre>
+                            </div>
+                          ))}
+                          {view.tests.length ? <p>建議驗證：{view.tests.join("；")}</p> : null}
+                          {view.risks.length ? <p>風險：{view.risks.join("；")}</p> : null}
+                          {proposal.runtimeChangeAppliedAt ? (
+                            <p>已套用時間：{appliedAt}（此修改已生效於線上客服邏輯）。</p>
+                          ) : null}
+                          {canEdit ? (
+                            <div className="customer-service-replay-case-actions">
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                onClick={() => void copyRuntimeChangeBrief(view)}
+                              >
+                                複製草稿
+                              </Button>
+                              {proposal.status === "drafted" ? (
+                                <>
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    disabled={Boolean(codeChangeBusy)}
+                                    onClick={() => void reviewRuntimeChange(proposal.id, "apply")}
+                                  >
+                                    核准並套用
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="outline"
+                                    disabled={Boolean(codeChangeBusy)}
+                                    onClick={() => void reviewRuntimeChange(proposal.id, "reject")}
+                                  >
+                                    駁回
+                                  </Button>
+                                </>
+                              ) : null}
+                            </div>
+                          ) : null}
+                        </div>
+                      );
+                    })() : null}
                     {canEdit ? (
                       <div className="customer-service-replay-case-actions">
-                        {["active", "canary", "applied"].includes(proposal.status) ? (
+                        {proposal.repairKind !== "runtime_policy_candidate" &&
+                        ["active", "canary", "applied"].includes(proposal.status) ? (
                           <Button
                             type="button"
                             size="sm"

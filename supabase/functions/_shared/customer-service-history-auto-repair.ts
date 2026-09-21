@@ -1,9 +1,11 @@
 import type { HistoryIssue } from "./customer-service-history-judge.ts";
+import { RUNTIME_ADDRESSABLE_CATEGORIES } from "./customer-service-repair-proposals.ts";
 
 export const HISTORY_AUTO_REPAIR_GATE_VERSION = "verified-faq-rewrite-v1";
 
 export type HistoryRepairDiagnosis = {
-  cause: "retrieval" | "context" | "routing" | "knowledge" | "generation" | "infrastructure" | "reference_unreliable" | "unknown";
+  cause: "retrieval" | "context" | "routing" | "knowledge" | "policy" | "generation"
+    | "infrastructure" | "reference_unreliable" | "unknown";
   outcome: "candidate" | "insufficient_evidence" | "unsupported_repair";
   faqId: string | null;
   reason: string;
@@ -25,9 +27,6 @@ export function diagnoseHistoryRepair(input: {
   if (input.pairing !== "confident" || input.contextGap || input.status !== "scored") {
     return { cause: "context", outcome: "insufficient_evidence", faqId: null, reason: "sample_not_reliable" };
   }
-  if (input.judgment.status !== "scored") {
-    return { cause: "unknown", outcome: "insufficient_evidence", faqId: null, reason: "judge_not_evaluable" };
-  }
   const issues = Array.isArray(input.judgment.issues) ? input.judgment.issues as HistoryIssue[] : [];
   if (issues.some((issue) => issue.layer === "infrastructure")) {
     return { cause: "infrastructure", outcome: "insufficient_evidence", faqId: null, reason: "infrastructure_failure" };
@@ -39,7 +38,12 @@ export function diagnoseHistoryRepair(input: {
   if (issues.some((issue) => issue.layer === "routing")) {
     return { cause: "routing", outcome: "unsupported_repair", faqId: null, reason: "routing_code_change_required" };
   }
-  const retrieval = issues.find((issue) => issue.category === "retrieval_miss" || issue.layer === "retrieval");
+  // Only an explicit retrieval miss, or a retrieval-layer issue that cites an
+  // approved source, is a retrieval cause. A high-severity issue elsewhere can
+  // force `judgment.status` to `not_evaluable` (mergeHistoryJudgment) without
+  // making the finding itself a retrieval miss.
+  const retrieval = issues.find((issue) => issue.category === "retrieval_miss" ||
+    (issue.layer === "retrieval" && (issue.evidence ?? []).some((item) => item.sourceType === "approved_source")));
   if (retrieval) {
     const faqIds = [...new Set((retrieval.evidence ?? [])
       .filter((item) => item.sourceType === "approved_source")
@@ -49,11 +53,21 @@ export function diagnoseHistoryRepair(input: {
     }
     return { cause: "retrieval", outcome: "insufficient_evidence", faqId: null, reason: "verified_faq_missing_or_ambiguous" };
   }
+  // A policy/product/coverage gap can be corrected by a reviewed runtime patch
+  // (intent description, workflow policy instruction or reply template). A
+  // critical guard failure (e.g. a wrong amount/date) is never downgraded here.
+  if (issues.some((issue) => RUNTIME_ADDRESSABLE_CATEGORIES.has(issue.category)) &&
+      !issues.some((issue) => issue.severity === "critical")) {
+    return { cause: "policy", outcome: "candidate", faqId: null, reason: "runtime_policy_change_required" };
+  }
   if (issues.some((issue) => issue.layer === "knowledge")) {
     return { cause: "knowledge", outcome: "insufficient_evidence", faqId: null, reason: "authoritative_knowledge_required" };
   }
   if (issues.some((issue) => issue.layer === "generation" || issue.layer === "validation")) {
     return { cause: "generation", outcome: "unsupported_repair", faqId: null, reason: "answer_logic_code_change_required" };
+  }
+  if (input.judgment.status !== "scored") {
+    return { cause: "unknown", outcome: "insufficient_evidence", faqId: null, reason: "judge_not_evaluable" };
   }
   return { cause: "unknown", outcome: "insufficient_evidence", faqId: null, reason: "no_supported_diagnosis" };
 }

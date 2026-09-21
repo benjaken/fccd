@@ -18,7 +18,7 @@ const CORS_HEADERS = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-cron-secret",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
-const PROMPT_VERSION = "customer-service-daily/4-faq-gate";
+const PROMPT_VERSION = "customer-service-daily/5-faq-keywords";
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -211,7 +211,8 @@ async function analyzeWithAi(
             "Never invent company prices, policies, dates, or promises. For FAQ suggestions, copy the exact customer question and its successful bot answer or paired human answer; otherwise omit the FAQ. Cite both customer and human message IDs for human evidence. Do not suggest FAQs for greetings, same-day or urgent orders, brand introductions, workflow clarifications, or answers that only ask a follow-up question; omit those instead of recategorizing them.",
             "Return JSON only with summary, failureThemes, evaluations, and suggestions.",
             "Each evaluation must contain turnId, outcome, score from 0 to 1, and a concise Traditional Chinese reason.",
-            "Each suggestion contains type faq|intent|policy, title, reason, optional question/answer/category/keywords, and evidenceTurnIds/evidenceMessageIds. Human-only conversations can cite evidenceMessageIds without a turn ID.",
+            "Each suggestion contains type faq|intent|policy, title, reason, optional question/answer/category, evidenceTurnIds/evidenceMessageIds, and keywords for FAQ suggestions. Human-only conversations can cite evidenceMessageIds without a turn ID.",
+            "Every FAQ suggestion must include keywords: 3 to 8 short comma-separated Cantonese/HK terms a customer would actually type, covering the question's topic, synonyms and common phrasings (for example 訂金, 尾款, 先付, 到會付款, 付款安排). Base every term on the cited question or answer; never add dates, prices, order numbers, names, or any term the answer does not support. Omit the FAQ suggestion instead of leaving keywords empty.",
             "FAQ suggestions must not include runtime_changes. Intent/policy suggestions must instead include runtime_changes: an array of {target, key, patch} that edits only the provided runtimeTargets catalog; never invent keys, and omit a suggestion when no valid change exists.",
             "Allowed patches: target=intent (existing key) with description_append and/or examples_append; target=reply_template (existing key only) with a non-empty content plus optional display_name/enabled; target=workflow_policy with instructions_append and/or context_window (1-12), clarification_threshold (0-1), auto_resume, enabled. Prefer appending guidance or adding an example over rewriting existing text.",
           ].join(" "),
@@ -324,6 +325,140 @@ async function updateEvaluations(admin: AdminClient, evaluations: Evaluation[]) 
   }
 }
 
+type KeywordBackfillItem = { id: string; question: string; answer: string };
+
+function sanitizeBackfillKeywords(raw: unknown): string {
+  const list = Array.isArray(raw) ? raw : typeof raw === "string" ? raw.split(/[,，、;；]+/) : [];
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const value of list) {
+    const term = String(value ?? "").trim().replace(/[?？!！。.\s]+$/u, "");
+    if (!term || term.length > 20 || seen.has(term)) continue;
+    seen.add(term);
+    out.push(term);
+    if (out.length >= 8) break;
+  }
+  return out.join(", ");
+}
+
+function extractKeywordTerms(value: unknown): string {
+  if (value && typeof value === "object") {
+    const record = value as Record<string, unknown>;
+    return sanitizeBackfillKeywords(record.keywords ?? record.keyword ?? record.terms ?? record.term);
+  }
+  return sanitizeBackfillKeywords(value);
+}
+
+async function generateFaqKeywords(
+  config: ReturnType<typeof aiConfig>,
+  items: KeywordBackfillItem[],
+): Promise<{ map: Map<string, string>; raw: string }> {
+  const response = await fetch(config.endpoint, {
+    method: "POST",
+    signal: AbortSignal.timeout(60_000),
+    headers: {
+      Authorization: `Bearer ${config.apiKey.replace(/^Bearer\s+/i, "")}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: config.model,
+      stream: false,
+      temperature: 0.1,
+      max_tokens: 4_000,
+      response_format: { type: "json_object" },
+      messages: [
+        {
+          role: "system",
+          content: [
+            "You generate retrieval keywords for a Cantonese/HK WhatsApp catering FAQ knowledge base.",
+            "For each FAQ, return 3 to 8 short comma-separated Cantonese/HK terms a customer would actually type, covering the topic, synonyms and common phrasings.",
+            "Base every term only on the given question and answer. Never include dates, prices, order numbers, names, URLs, or terms the answer does not support.",
+            'Return JSON only: {"items":[{"id":"<id>","keywords":["term","term"]}]} using the exact input ids.',
+          ].join(" "),
+        },
+        { role: "user", content: JSON.stringify({ faqs: items }) },
+      ],
+    }),
+  });
+  if (!response.ok) throw new Error(`faq_keywords_ai_${response.status}`);
+  const payload = await response.json() as { choices?: Array<{ message?: { content?: string | null } }> };
+  const content = payload?.choices?.[0]?.message?.content?.trim() ?? "";
+  const ids = new Set(items.map((row) => row.id));
+  const map = new Map<string, string>();
+  if (!content) return { map, raw: "" };
+  const parsed = JSON.parse(content.match(/\{[\s\S]*\}/)?.[0] ?? content) as unknown;
+  let list: unknown[] = [];
+  if (Array.isArray(parsed)) list = parsed;
+  else if (parsed && typeof parsed === "object") {
+    const record = parsed as Record<string, unknown>;
+    for (const key of ["items", "faqs", "results", "keywords"]) {
+      if (Array.isArray(record[key])) { list = record[key] as unknown[]; break; }
+    }
+    if (!list.length) {
+      for (const [key, value] of Object.entries(record)) {
+        if (ids.has(key)) {
+          const keywords = extractKeywordTerms(value);
+          if (keywords) map.set(key, keywords);
+        }
+      }
+    }
+  }
+  for (const value of list) {
+    const id = String((value as { id?: unknown; faq_id?: unknown })?.id
+      ?? (value as { faq_id?: unknown })?.faq_id ?? "");
+    if (!ids.has(id)) continue;
+    const keywords = extractKeywordTerms(value);
+    if (keywords) map.set(id, keywords);
+  }
+  if (!map.size && list.length === items.length) {
+    list.forEach((value, index) => {
+      const keywords = extractKeywordTerms(value);
+      if (keywords) map.set(items[index].id, keywords);
+    });
+  }
+  return { map, raw: content.slice(0, 800) };
+}
+
+async function readEmptyKeywordSuggestions(admin: AdminClient) {
+  const { data, error } = await admin
+    .from("customer_service_learning_suggestions")
+    .select("id,proposed_content")
+    .eq("suggestion_type", "faq")
+    .in("status", ["draft", "approved"])
+    .order("created_at", { ascending: true })
+    .limit(1_000);
+  if (error) throw error;
+  const rows = (data ?? []) as Array<{ id: string; proposed_content: Record<string, unknown> | null }>;
+  return rows.filter((row) => !String(row.proposed_content?.keywords ?? "").trim());
+}
+
+async function backfillFaqKeywords(admin: AdminClient, batchSize: number, maxBatches: number) {
+  const config = aiConfig();
+  if (!config.enabled || !config.endpoint || !config.apiKey) throw new Error("ai_disabled");
+  const updates: Array<{ id: string; keywords: string }> = [];
+  let raw = "";
+  for (let batch = 0; batch < maxBatches; batch += 1) {
+    const pending = (await readEmptyKeywordSuggestions(admin)).slice(0, batchSize);
+    if (!pending.length) break;
+    const items: KeywordBackfillItem[] = pending.map((row) => {
+      const content = row.proposed_content as Record<string, unknown> | null;
+      return {
+        id: String(row.id),
+        question: String(content?.question ?? "").slice(0, 500),
+        answer: String(content?.answer ?? "").slice(0, 2_000),
+      };
+    });
+    const result = await generateFaqKeywords(config, items);
+    if (!raw) raw = result.raw;
+    if (!result.map.size) break;
+    for (const item of items) {
+      const keywords = result.map.get(item.id);
+      if (keywords) updates.push({ id: item.id, keywords });
+    }
+  }
+  return { updates, remaining: (await readEmptyKeywordSuggestions(admin)).length, raw };
+}
+
 Deno.serve(async (request) => {
   if (request.method === "OPTIONS") return new Response("ok", { headers: CORS_HEADERS });
   if (request.method !== "POST") return jsonResponse({ error: "method_not_allowed" }, 405);
@@ -333,7 +468,18 @@ Deno.serve(async (request) => {
   });
   try {
     await authorize(request, admin);
-    const body = await request.json().catch(() => ({})) as { report_date?: unknown };
+    const body = await request.json().catch(() => ({})) as {
+      report_date?: unknown;
+      backfill_keywords?: unknown;
+      batch_size?: unknown;
+      max_batches?: unknown;
+    };
+    if (body.backfill_keywords === true) {
+      const batchSize = Math.max(1, Math.min(50, Number(body.batch_size) || 25));
+      const maxBatches = Math.max(1, Math.min(8, Number(body.max_batches) || 2));
+      const result = await backfillFaqKeywords(admin, batchSize, maxBatches);
+      return jsonResponse({ ok: true, backfill: result });
+    }
     const reportDate = typeof body.report_date === "string" ? body.report_date : previousHongKongDate();
     const period = reportPeriod(reportDate);
     const environment = deploymentEnvironment();

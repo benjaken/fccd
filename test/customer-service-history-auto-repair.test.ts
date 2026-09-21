@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
   canDraftHistoryCaseGuidance, diagnoseHistoryRepair, evaluateRepairTrials, normalizedRepairQuestion,
@@ -61,5 +62,49 @@ describe("history automatic repair gate", () => {
       baselineSourceIds: ["other"], candidateSourceIds: [faqId], baselineGuard: true,
     })]).reasons).toContain("control_regression");
     expect(evaluateRepairTrials(faqId, trial({ candidateGuard: false }), [trial()], []).passed).toBe(false);
+  });
+
+  it("routes a high-severity issue even when the judge verdict is not_evaluable", () => {
+    // mergeHistoryJudgment downgrades `status` to not_evaluable for any
+    // high/critical issue, so the finding must still drive the diagnosis.
+    expect(diagnoseHistoryRepair({ status: "scored", pairing: "confident", contextGap: false,
+      judgment: { status: "not_evaluable", issues: [
+        { category: "generation", layer: "generation", severity: "high", evidence: [], suggestedFix: "" },
+      ] },
+    })).toMatchObject({ cause: "generation", outcome: "unsupported_repair", reason: "answer_logic_code_change_required" });
+  });
+
+  it("falls back to judge_not_evaluable only when there is no routable issue", () => {
+    expect(diagnoseHistoryRepair({ status: "scored", pairing: "confident", contextGap: false,
+      judgment: { status: "not_evaluable", issues: [] },
+    })).toMatchObject({ cause: "unknown", outcome: "insufficient_evidence", reason: "judge_not_evaluable" });
+  });
+
+  it("does not treat a retrieval-layer issue without an approved source as a retrieval miss", () => {
+    expect(diagnoseHistoryRepair({ status: "scored", pairing: "confident", contextGap: false,
+      judgment: { status: "scored", issues: [
+        { category: "unsupported_service_name", layer: "retrieval", severity: "medium", evidence: [], suggestedFix: "" },
+      ] },
+    })).toMatchObject({ cause: "unknown", outcome: "insufficient_evidence", reason: "no_supported_diagnosis" });
+  });
+
+  it("accepts a retrieval-layer issue that cites exactly one approved source", () => {
+    expect(diagnoseHistoryRepair({ status: "scored", pairing: "confident", contextGap: false,
+      judgment: { status: "scored", issues: [
+        { category: "unsupported_service_name", layer: "retrieval", severity: "medium",
+          evidence: [{ sourceType: "approved_source", sourceId: faqId }], suggestedFix: "" },
+      ] },
+    })).toMatchObject({ cause: "retrieval", outcome: "candidate", faqId });
+  });
+
+  it("requires human-reviewed R2 state before an alias can be activated", () => {
+    const sql = readFileSync(
+      "supabase/migrations/20260921270000_customer_service_reviewed_alias_repairs.sql",
+      "utf8",
+    );
+    expect(sql).toContain("v_proposal.status <> 'ready'");
+    expect(sql).toContain("v_proposal.risk_level <> 'R2'");
+    expect(sql).toContain("v_proposal.approved_by is null");
+    expect(sql).toContain("proposal.preauthorized is distinct from true");
   });
 });

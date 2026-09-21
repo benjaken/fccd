@@ -39,6 +39,7 @@ import {
   shopifyDrinkSelectionQuantity,
   shopifyCustomizationCostParentName,
   resolvePackageOptionQuantity,
+  packageQuantitiesByLineId,
   isShopifyBeverageName,
   staleGeneratedCustomLineIds,
   shopifyFinancialStatus,
@@ -705,6 +706,18 @@ describe("resolvePackageOptionQuantity", () => {
   it("keeps the remark quantity for dishes that are not package members", () => {
     expect(resolvePackageOptionQuantity({ remarkQuantity: 4 })).toBe(4);
     expect(resolvePackageOptionQuantity({ remarkQuantity: 1, memberQuantity: null })).toBe(1);
+  });
+});
+
+describe("packageQuantitiesByLineId", () => {
+  it("keeps separately customized lines of the same package independent", () => {
+    const quantities = packageQuantitiesByLineId([
+      { lineId: 101, packageId: "package-1", productId: null, quantity: 1 },
+      { lineId: 202, packageId: "package-1", productId: null, quantity: 1 },
+    ]);
+
+    expect(quantities.get(101)).toBe(1);
+    expect(quantities.get(202)).toBe(1);
   });
 });
 

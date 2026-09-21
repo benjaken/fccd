@@ -5,6 +5,7 @@ const invokeMock = vi.hoisted(() => vi.fn());
 const rpcMock = vi.hoisted(() => vi.fn());
 
 vi.mock("@/lib/supabase", () => ({
+  supabaseUrl: "https://mxiueauyylnpwlxrvgbo.supabase.co",
   supabase: {
     functions: { invoke: invokeMock },
     rpc: rpcMock,
@@ -138,17 +139,50 @@ describe("customer-service history import client", () => {
           human_count: 3,
           customer_count: 9,
           broadcast_count: 2855,
+          learned: true,
         },
       ],
       error: null,
     });
     await expect(fetchCustomerServiceLearningImportSummary()).resolves.toEqual([
-      { date: "2026-08-01", messageCount: 12, humanCount: 3, customerCount: 9, broadcastCount: 2855 },
+      {
+        date: "2026-08-01",
+        messageCount: 12,
+        humanCount: 3,
+        customerCount: 9,
+        broadcastCount: 2855,
+        learned: true,
+      },
     ]);
     expect(rpcMock).toHaveBeenCalledWith(
       "customer_service_learning_import_summary",
-      { p_limit: 90 },
+      { p_limit: 90, p_environment: "develop" },
     );
+  });
+
+  it("treats a missing learned flag as not yet learned", async () => {
+    rpcMock.mockResolvedValue({
+      data: [
+        {
+          import_date: "2026-08-02",
+          message_count: 4,
+          human_count: 1,
+          customer_count: 3,
+          broadcast_count: 0,
+        },
+      ],
+      error: null,
+    });
+    await expect(fetchCustomerServiceLearningImportSummary()).resolves.toEqual([
+      {
+        date: "2026-08-02",
+        messageCount: 4,
+        humanCount: 1,
+        customerCount: 3,
+        broadcastCount: 0,
+        learned: false,
+      },
+    ]);
   });
 });
 
@@ -158,7 +192,7 @@ describe("history import UI wiring", () => {
       "src/components/settings/CustomerFaqPage.tsx",
       "utf8",
     );
-    expect(page).toContain("歷史對話學習");
+    expect(page).toContain("settings.customerFaq.historyLearningTitle");
     expect(page).toContain("importCustomerServiceHistory");
     expect(page).toContain("fetchCustomerServiceLearningImportSummary");
     expect(page).toContain("一鍵學習最近日期");
@@ -166,9 +200,18 @@ describe("history import UI wiring", () => {
     expect(page).toContain("setImportDialogOpen(true)");
     expect(page).toContain("getTime() + 86_400_000");
     expect(page).toContain("CUSTOMER_SERVICE_IMPORT_MAX_RANGE_DAYS = 31");
-    expect(page).toContain("最多 31 天");
-    expect(page).toContain("最近 30 日");
+    expect(page).toContain("settings.customerFaq.importDateRange");
+    expect(page).toContain("settings.customerFaq.lastSevenDays");
     expect(page).toContain("historyImportRangeDays");
+  });
+
+  it("skips already-learned days in the one-click learn action", () => {
+    const page = readFileSync(
+      "src/components/settings/CustomerFaqPage.tsx",
+      "utf8",
+    );
+    expect(page).toContain("day.humanCount > 0 && !day.learned");
+    expect(page).toContain("已學習");
   });
 
   it("gates the import summary RPC behind customer FAQ page access", () => {
@@ -178,5 +221,26 @@ describe("history import UI wiring", () => {
     );
     expect(sql).toContain("customer_service_learning_import_summary");
     expect(sql).toContain("private.has_page_access('settings.customer_faq')");
+  });
+
+  it("flags learned import days from non-failed daily reports", () => {
+    const sql = readFileSync(
+      "supabase/migrations/20260921230000_customer_service_learning_import_summary_learned.sql",
+      "utf8",
+    );
+    expect(sql).toContain("learned boolean");
+    expect(sql).toContain("public.customer_service_daily_reports");
+    expect(sql).toContain("reports.status <> 'failed'");
+    expect(sql).toContain("private.has_page_access('settings.customer_faq')");
+  });
+
+  it("keeps import counts and learned state inside the requested environment", () => {
+    const sql = readFileSync(
+      "supabase/migrations/20260921271000_customer_service_learning_summary_environment.sql",
+      "utf8",
+    );
+    expect(sql).toContain("messages.environment = p_environment");
+    expect(sql).toContain("reports.environment = p_environment");
+    expect(sql).toContain("p_environment not in ('develop', 'production')");
   });
 });

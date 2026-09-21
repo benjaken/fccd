@@ -48,6 +48,7 @@ import { FilterableSelect } from "@/components/ui/filterable-select";
 import { ListSearchBar } from "@/components/ui/list-search-bar";
 import { Modal } from "@/components/ui/modal";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { TablePagination } from "@/components/ui/table-pagination";
 import { ListTable } from "@/components/ui/list-table";
 import {
@@ -89,6 +90,7 @@ import {
   submitCustomerServiceTurnFeedback,
   updateCustomerFaq,
   updateCustomerServiceIntent,
+  updateCustomerServiceLearningSuggestion,
   updateCustomerServiceReplyTemplate,
   updateCustomerServiceWorkflowPolicy,
   type CustomerFaq,
@@ -919,6 +921,16 @@ export function CustomerFaqPage({
   const [importDays, setImportDays] = useState<CustomerServiceImportDay[]>([]);
   const [importDaysPage, setImportDaysPage] = useState(1);
   const [reviewingSuggestion, setReviewingSuggestion] = useState("");
+  const [editingSuggestion, setEditingSuggestion] =
+    useState<CustomerServiceLearningSuggestion | null>(null);
+  const [suggestionDraft, setSuggestionDraft] = useState({
+    question: "",
+    answer: "",
+    keywords: "",
+    category: "ordering",
+  });
+  const [suggestionSaving, setSuggestionSaving] = useState(false);
+  const [suggestionEditError, setSuggestionEditError] = useState("");
   const [bulkReviewing, setBulkReviewing] = useState(false);
   const [onlyApprovable, setOnlyApprovable] = useState(false);
   const [selectedSuggestionIds, setSelectedSuggestionIds] = useState<Set<string>>(
@@ -1522,6 +1534,65 @@ export function CustomerFaqPage({
       setReviewingSuggestion("");
     }
   };
+  const openSuggestionEditor = (
+    suggestion: CustomerServiceLearningSuggestion,
+  ) => {
+    const content = suggestion.proposedContent;
+    setEditingSuggestion(suggestion);
+    setSuggestionDraft({
+      question: content.question ?? "",
+      answer: content.answer ?? "",
+      keywords: content.keywords ?? "",
+      category: content.category ?? "ordering",
+    });
+    setSuggestionEditError("");
+  };
+  const closeSuggestionEditor = () => {
+    if (suggestionSaving) return;
+    setEditingSuggestion(null);
+    setSuggestionEditError("");
+  };
+  const saveSuggestionEdit = async (event: FormEvent) => {
+    event.preventDefault();
+    const target = editingSuggestion;
+    if (!target || !canEdit || suggestionSaving) return;
+    if (!suggestionDraft.question.trim() || !suggestionDraft.answer.trim()) {
+      setSuggestionEditError("問題和答案都必須填寫。");
+      return;
+    }
+    setSuggestionSaving(true);
+    setSuggestionEditError("");
+    try {
+      const updated = await updateCustomerServiceLearningSuggestion(target.id, {
+        ...target.proposedContent,
+        question: suggestionDraft.question.trim(),
+        answer: suggestionDraft.answer.trim(),
+        keywords: suggestionDraft.keywords.trim(),
+        category: suggestionDraft.category,
+      });
+      setSuggestions((current) =>
+        current.map((item) =>
+          item.id === target.id ? { ...item, proposedContent: updated } : item,
+        ),
+      );
+      setEditingSuggestion(null);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      setSuggestionEditError(
+        message.includes("suggestion_faq_gate_failed")
+          ? "此內容未通過開場／急單／衝突檢查，請調整後再試。"
+          : message.includes("suggestion_mapping_invalid")
+            ? "分類不正確，請重新選擇。"
+            : message.includes("suggestion_already_reviewed")
+              ? "此建議已被審核，無法再修改。"
+              : message.includes("suggestion_not_editable")
+                ? "只有 FAQ 建議可以修改。"
+                : "儲存修改失敗，請再試一次。",
+      );
+    } finally {
+      setSuggestionSaving(false);
+    }
+  };
   const toggleSuggestionSelection = (id: string, checked: boolean) => {
     setSelectedSuggestionIds((current) => {
       const next = new Set(current);
@@ -1722,7 +1793,7 @@ export function CustomerFaqPage({
       )}%`
     : "—";
   const learnableImportDates = importDays
-    .filter((day) => day.humanCount > 0)
+    .filter((day) => day.humanCount > 0 && !day.learned)
     .slice(0, CUSTOMER_SERVICE_LEARN_MAX_DAYS)
     .map((day) => day.date);
   const allLearningSuggestions = [...suggestions, ...reviewedSuggestions];
@@ -2943,26 +3014,44 @@ export function CustomerFaqPage({
                           <div className="cs-review-row-actions">
                             {reviewable && canEdit ? (
                               <div className="customer-service-review-actions">
+                                {suggestion.suggestionType === "faq" ? (
+                                  <Button
+                                    size="icon"
+                                    variant="outline"
+                                    aria-label="編輯"
+                                    title="編輯"
+                                    disabled={reviewingSuggestion === suggestion.id}
+                                    onClick={() => openSuggestionEditor(suggestion)}
+                                  >
+                                    <Pencil />
+                                  </Button>
+                                ) : null}
                                 <Button
-                                  size="sm"
+                                  size="icon"
+                                  aria-label={
+                                    suggestion.suggestionType === "faq" ? "批准並發布" : "批准並套用"
+                                  }
+                                  title={
+                                    suggestion.suggestionType === "faq" ? "批准並發布" : "批准並套用"
+                                  }
                                   disabled={reviewingSuggestion === suggestion.id || !complete}
                                   onClick={() =>
                                     void reviewSuggestion(suggestion.id, "approved")
                                   }
                                 >
                                   <Check />
-                                  {suggestion.suggestionType === "faq" ? "批准並發布" : "批准並套用"}
                                 </Button>
                                 <Button
-                                  size="sm"
+                                  size="icon"
                                   variant="outline"
+                                  aria-label="忽略"
+                                  title="忽略"
                                   disabled={reviewingSuggestion === suggestion.id}
                                   onClick={() =>
                                     void reviewSuggestion(suggestion.id, "rejected")
                                   }
                                 >
                                   <X />
-                                  忽略
                                 </Button>
                               </div>
                             ) : (
@@ -3023,26 +3112,20 @@ export function CustomerFaqPage({
           {activeSection === "history" ? (
           <div className="cs-history-page">
             <section className="customer-service-import-lab">
-              <h2 className="sr-only">歷史對話學習</h2>
+              <h2 className="sr-only">{t("settings.customerFaq.historyLearningTitle")}</h2>
               <div className="customer-service-import-controls">
-                <label>
-                  <span>起始日期（最多 31 天）</span>
-                  <input
-                    type="date"
-                    value={importSince}
-                    disabled={importBusy || learningDates}
-                    onChange={(event) => applyImportSince(event.target.value)}
-                  />
-                </label>
-                <label>
-                  <span>結束日期</span>
-                  <input
-                    type="date"
-                    value={importUntil}
-                    disabled={importBusy || learningDates}
-                    onChange={(event) => applyImportUntil(event.target.value)}
-                  />
-                </label>
+                <DateRangePicker
+                  startId="customer-service-import-start"
+                  endId="customer-service-import-end"
+                  startValue={importSince}
+                  endValue={importUntil}
+                  onStartChange={applyImportSince}
+                  onEndChange={applyImportUntil}
+                  startLabel={t("settings.customerFaq.importStartDate")}
+                  endLabel={t("settings.customerFaq.importEndDate")}
+                  legend={t("settings.customerFaq.importDateRange")}
+                  disabled={importBusy || learningDates}
+                />
                 <Button
                   type="button"
                   size="sm"
@@ -3053,7 +3136,7 @@ export function CustomerFaqPage({
                     setImportUntil(hongKongDateOffset());
                   }}
                 >
-                  最近 7 日
+                  {t("settings.customerFaq.lastSevenDays")}
                 </Button>
                 <Button
                   type="button"
@@ -3123,6 +3206,9 @@ export function CustomerFaqPage({
                         <td>{day.date}</td>
                         <td>
                           訊息 {day.messageCount} · 真人 {day.humanCount}
+                          {day.learned ? (
+                            <span className="cs-history-learned-note"> · 已學習</span>
+                          ) : null}
                           {day.broadcastCount > 0 ? (
                             <span className="cs-history-broadcast-note">
                               {" "}
@@ -3136,7 +3222,10 @@ export function CustomerFaqPage({
                             size="sm"
                             variant="outline"
                             disabled={
-                              !canEdit || learningDates || day.humanCount === 0
+                              !canEdit ||
+                              learningDates ||
+                              day.humanCount === 0 ||
+                              day.learned
                             }
                             onClick={() => void learnImportDates([day.date])}
                           >
@@ -4111,6 +4200,98 @@ export function CustomerFaqPage({
           </p>
         </div>
       </Modal>
+
+      <SidePanel
+        open={editingSuggestion !== null}
+        title="修改建議答案"
+        description="修改後會立即寫回這項學習建議草稿，批准時會採用修改後的內容。"
+        closeLabel="關閉"
+        onClose={closeSuggestionEditor}
+        footer={
+          <>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={suggestionSaving}
+              onClick={closeSuggestionEditor}
+            >
+              取消
+            </Button>
+            <Button
+              type="submit"
+              form="cs-suggestion-edit-form"
+              disabled={suggestionSaving}
+            >
+              {suggestionSaving ? "儲存中…" : "儲存修改"}
+            </Button>
+          </>
+        }
+      >
+        <form
+          id="cs-suggestion-edit-form"
+          className="ingredients-form"
+          onSubmit={(event) => void saveSuggestionEdit(event)}
+        >
+          <label className="ingredients-field">
+            <span>問題</span>
+            <input
+              value={suggestionDraft.question}
+              required
+              onChange={(event) =>
+                setSuggestionDraft((current) => ({
+                  ...current,
+                  question: event.target.value,
+                }))
+              }
+            />
+          </label>
+          <label className="ingredients-field">
+            <span>答案</span>
+            <textarea
+              rows={8}
+              value={suggestionDraft.answer}
+              required
+              onChange={(event) =>
+                setSuggestionDraft((current) => ({
+                  ...current,
+                  answer: event.target.value,
+                }))
+              }
+            />
+          </label>
+          <label className="ingredients-field">
+            <span>關鍵字</span>
+            <input
+              value={suggestionDraft.keywords}
+              onChange={(event) =>
+                setSuggestionDraft((current) => ({
+                  ...current,
+                  keywords: event.target.value,
+                }))
+              }
+            />
+          </label>
+          <label className="ingredients-field">
+            <span>分類</span>
+            <select
+              value={suggestionDraft.category}
+              onChange={(event) =>
+                setSuggestionDraft((current) => ({
+                  ...current,
+                  category: event.target.value,
+                }))
+              }
+            >
+              {CUSTOMER_FAQ_CATEGORIES.map((key) => (
+                <option key={key} value={key}>
+                  {t(`settings.customerFaq.categories.${key}`)}
+                </option>
+              ))}
+            </select>
+          </label>
+          {suggestionEditError ? <p role="alert">{suggestionEditError}</p> : null}
+        </form>
+      </SidePanel>
     </section>
   );
 }
