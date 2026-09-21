@@ -203,6 +203,8 @@ type ProgressRow = {
   last_message_at: string | null;
   message_count: number;
   last_checked_at: string;
+  checked_since: string | null;
+  checked_until: string | null;
   updated_at: string;
 };
 
@@ -256,20 +258,28 @@ async function storeContacts(
   }
 }
 
-/** 3) Phones already checked for a window ending at `until` are skipped. */
+/**
+ * 3) Phones whose recorded window fully covers the requested one are skipped.
+ * The window a contact was imported for is `[checked_since, checked_until)`;
+ * a request `[since, until)` is covered only when
+ * `checked_since <= since` and `checked_until >= until`. Open-ended requests
+ * are never skipped, and rows without a recorded window never match.
+ */
 async function loadCheckedPhones(
   admin: AdminClient,
   environment: string,
+  since: string | null,
   until: string | null,
 ): Promise<Set<string>> {
   const checked = new Set<string>();
-  if (!until) return checked;
+  if (!since || !until) return checked;
   for (let offset = 0; offset < 200_000; offset += READ_PAGE_SIZE) {
     const { data, error } = await admin
       .from("customer_service_learning_import_contacts")
       .select("phone")
       .eq("environment", environment)
-      .gte("last_checked_at", until)
+      .lte("checked_since", since)
+      .gte("checked_until", until)
       .order("phone", { ascending: true })
       .range(offset, offset + READ_PAGE_SIZE - 1);
     if (error) {
@@ -287,9 +297,14 @@ async function storeProgress(
   admin: AdminClient,
   environment: string,
   entries: ReadonlyArray<{ phone: string; lastMessageAt: string; messageCount: number }>,
+  window: { since: string | null; until: string | null },
 ) {
   if (!entries.length) return;
   const now = new Date().toISOString();
+  // An open-ended import covers everything up to now, so record `now` as the
+  // covered end; a missing `since` stays null and simply never matches a
+  // bounded request (it is re-fetched instead of wrongly skipped).
+  const coveredUntil = window.until ?? now;
   const byPhone = new Map<string, ProgressRow>();
   for (const entry of entries) {
     byPhone.set(entry.phone, {
@@ -298,6 +313,8 @@ async function storeProgress(
       last_message_at: entry.lastMessageAt || null,
       message_count: entry.messageCount,
       last_checked_at: now,
+      checked_since: window.since,
+      checked_until: coveredUntil,
       updated_at: now,
     });
   }
@@ -426,7 +443,7 @@ Deno.serve(async (request) => {
       phones = phones.slice(0, maxPhones);
     }
     // 3) Skip phones already checked for this window (incremental / negative cache).
-    const checkedPhones = isProbe ? new Set<string>() : await loadCheckedPhones(admin, environment, until);
+    const checkedPhones = isProbe ? new Set<string>() : await loadCheckedPhones(admin, environment, since, until);
     const beforeSkip = phones.length;
     if (checkedPhones.size) phones = phones.filter((phone) => !checkedPhones.has(phone));
     const phonesSkipped = beforeSkip - phones.length;
@@ -505,7 +522,7 @@ Deno.serve(async (request) => {
           progress.push({ phone: result.phone, lastMessageAt: result.lastMessageAt, messageCount: result.messageCount });
         }
       }
-      if (progress.length) await storeProgress(admin, environment, progress);
+      if (progress.length) await storeProgress(admin, environment, progress, { since, until });
       processed += wave.length;
     }
 
