@@ -646,18 +646,25 @@ async function fetchPackageMemberQuantities(
   packageIds: string[],
 ): Promise<Map<string, number>> {
   const result = new Map<string, number>();
+  const linked = new Set<string>();
   const unique = [...new Set(packageIds.filter(Boolean))];
   if (!unique.length) return result;
   const { data } = await client
     .from("package_products")
-    .select("package_id, product_id, quantity")
+    .select("package_id, product_id, quantity, package_choice_set_legacy_id")
     .in("package_id", unique);
   for (const row of data ?? []) {
     const packageId = String(row.package_id ?? "");
     const productId = String(row.product_id ?? "");
     const quantity = Number(row.quantity ?? 0);
     if (!packageId || !productId || !Number.isFinite(quantity) || quantity <= 0) continue;
-    result.set(`${packageId}:${productId}`, quantity);
+    const key = `${packageId}:${productId}`;
+    const isLinked = row.package_choice_set_legacy_id != null;
+    // A choice-set linked row is the current package definition; unlinked
+    // duplicates can hold stale quantities, so they must not win.
+    if (linked.has(key) && !isLinked) continue;
+    result.set(key, quantity);
+    if (isLinked) linked.add(key);
   }
   return result;
 }
