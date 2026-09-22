@@ -850,6 +850,20 @@ function strongPublishedFaqMatch(query: string, hit: CustomerServiceFaqHit) {
   return rule.aliases.some((alias) => alias.test(left));
 }
 
+/**
+ * True when the message directly matches a curated FAQ alias (for example the
+ * typhoon / heavy-rain delivery policy). Such explicit FAQ rules outrank a model
+ * that mislabels the question as a dated availability check when the guest never
+ * named a date, so a weather-policy question still reaches its published FAQ.
+ */
+function matchesCustomerServiceFaqDirectRule(query: string) {
+  const text = normalizedFaqText(query);
+  if (!text) return false;
+  return FAQ_DIRECT_MATCH_RULES.some((rule) =>
+    !rule.excluded?.test(text) &&
+    rule.aliases.some((alias) => alias.test(text)));
+}
+
 const DELIVERY_OVERVIEW_FAQ = "送貨／運輸／交收方式有咩選擇";
 
 function isDeliveryOverviewFaq(question: string) {
@@ -2162,8 +2176,15 @@ export async function handleCustomerServiceTurn({
   const asksHowToOrder = isOrderingInstructionsRequest(text) &&
     ["search_faq", "collect_inquiry"].includes(rawClassified.intent) &&
     !rawClassified.requiresHuman;
+  // An explicit FAQ rule (for example the typhoon delivery policy) must win over
+  // a model that mislabels the same message as a dated availability check even
+  // though the guest never named a date.
+  const faqRuleOverridesAvailability =
+    rawClassified.configuredIntentKey === "delivery_availability" &&
+    !resolveCustomerServiceDeliveryDate(text) &&
+    matchesCustomerServiceFaqDirectRule(text);
   // A direct how-to follow-up must not inherit the previous availability task.
-  const modelClassified: ClassifiedMessage = asksHowToOrder
+  const modelClassified: ClassifiedMessage = asksHowToOrder || faqRuleOverridesAvailability
     ? { ...rawClassified, intent: "search_faq", configuredIntentKey: "search_faq",
       toolKey: "search_faqs", needsClarification: false, clarificationQuestion: undefined }
     : rawClassified;
