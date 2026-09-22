@@ -15,6 +15,7 @@ import {
   isCustomerServiceGreeting,
   isCustomerServiceEmojiAcknowledgement,
   isCustomerServiceThanks,
+  isActiveCustomerServiceOrder,
   isBlockedDateReasonQuestion,
   isDeliveryAvailabilityQuestion,
   isHongKongCalendarDateToday,
@@ -34,11 +35,13 @@ import {
   handoffOrderListReply,
   handoffOrderSelectedReply,
   lookupListReply,
+  lookupNoActiveOrdersReply,
   lookupNoOrdersReply,
   lookupNotFoundReply,
   lookupRequestedOrderReply,
   REPLIES,
   sanitizeOutboundReply,
+  type CustomerServiceOrderChoice,
 } from "./customer-service-replies.ts";
 import { findOrderIntakeRecommendation } from "./customer-service-order-intake.ts";
 import {
@@ -46,6 +49,10 @@ import {
   inferCustomerServicePilotGoal,
   type CustomerServicePilotGoal,
 } from "./customer-service-pilot-graph.ts";
+import {
+  applyClassificationSafetyGuards,
+  safetyRouteToIntent,
+} from "./customer-service-safety.ts";
 import type { CustomerServiceRecentMessage } from "./customer-service-context.ts";
 import {
   customerServiceCatalogQuery,
@@ -286,6 +293,7 @@ export type BotTurn = {
   failureReason?: string | null;
   faqSourceIds?: string[];
   relatedFaqs?: RelatedFaqSuggestion[];
+  orderChoices?: CustomerServiceOrderChoice[];
   model?: string | null;
   dialogAction?: ClassifiedMessage["dialogAction"];
 };
@@ -351,10 +359,16 @@ function nextConversation(
 }
 
 function isUndeliveredOrder(order: CustomerServiceOrder) {
-  const status = order.delivery_status?.trim() ?? "";
-  return !/已送達|己送達|已經送達|delivered|已取消|己取消|取消|cancelled/i.test(
-    status,
-  );
+  return isActiveCustomerServiceOrder(order);
+}
+
+function orderChoicesFor(
+  orders: CustomerServiceOrder[],
+): CustomerServiceOrderChoice[] {
+  return orders.map((order) => ({
+    orderId: order.order_id,
+    orderNumber: order.order_number || "",
+  }));
 }
 
 function normalizedFaqText(value: string) {
@@ -1134,6 +1148,7 @@ async function replyOrderHandoff(
         pending_request: pendingRequest,
         active_goal: "order_change",
       }),
+      orderChoices: orderChoicesFor(orders),
       wroteInquiry: false,
       notified: false,
       usedModel: false,
@@ -1248,10 +1263,19 @@ async function replyLookup(
       failureReason: result.failureReason,
     };
   }
-  if (orders.length === 1) {
+  // Determine order status before asking the guest to choose: a single
+  // active order is answered directly, a delivered/cancelled-only history is
+  // never dumped as a selectable list.
+  const activeOrders = orders.filter(isUndeliveredOrder);
+  const singleOrder = orders.length === 1
+    ? orders[0]
+    : activeOrders.length === 1
+      ? activeOrders[0]
+      : null;
+  if (singleOrder) {
     if (!hasVerifiedIdentity(conversation)) {
       return beginOrderVerification(
-        orders[0],
+        singleOrder,
         conversation,
         `lookup:${requestedFields.join(",")}`,
         classified.usedModel,
@@ -1260,14 +1284,14 @@ async function replyLookup(
     const result = await lookupVerifiedOrderReply(
       deps,
       phone,
-      orders[0],
+      singleOrder,
       requestedFields,
     );
     return {
       reply: result.reply,
       conversation: nextConversation(conversation, {
         state: "identifying",
-        selected_order_id: orders[0].order_id,
+        selected_order_id: singleOrder.order_id,
         pending_request: null,
       }),
       wroteInquiry: false,
@@ -1276,13 +1300,28 @@ async function replyLookup(
       failureReason: result.failureReason,
     };
   }
-  if (orders.length > 1) {
+  if (activeOrders.length > 1) {
     return {
-      reply: lookupListReply(orders),
+      reply: lookupListReply(activeOrders),
       conversation: nextConversation(conversation, {
         state: "picking_order",
         selected_order_id: null,
         pending_request: `lookup:${requestedFields.join(",")}`,
+      }),
+      orderChoices: orderChoicesFor(activeOrders),
+      wroteInquiry: false,
+      notified: false,
+      usedModel: classified.usedModel,
+    };
+  }
+  if (orders.length > 1) {
+    return {
+      reply: lookupNoActiveOrdersReply(),
+      conversation: nextConversation(conversation, {
+        state: "identifying",
+        selected_order_id: null,
+        pending_request: null,
+        active_goal: null,
       }),
       wroteInquiry: false,
       notified: false,
@@ -2151,6 +2190,35 @@ export async function handleCustomerServiceTurn({
     : explicitRequestedFields.length
       ? { ...modelClassified, requestedFields: explicitRequestedFields }
       : modelClassified;
+
+  const safetyResult = applyClassificationSafetyGuards({
+    text,
+    classified,
+    orderNumber: classified.orderNumber,
+  });
+  if (safetyResult.override) {
+    const mapped = safetyRouteToIntent(safetyResult.route);
+    if (mapped) {
+      classified.intent = mapped.intent as ClassifiedMessage["intent"];
+      classified.configuredIntentKey = mapped.intent;
+      classified.requiresHuman = mapped.requiresHuman;
+    }
+  }
+  trace({
+    stage: "safety_guard",
+    status: safetyResult.override ? "warn" : "ok",
+    code: safetyResult.route.kind,
+    params: {
+      model_intent: modelClassified.intent,
+      evidence_injection: safetyResult.evidence.injection,
+      evidence_change: safetyResult.evidence.changeAction,
+      evidence_cancel: safetyResult.evidence.cancelAction,
+      evidence_complaint: safetyResult.evidence.complaint,
+      evidence_negated: safetyResult.evidence.negatedAction,
+      override: safetyResult.override,
+      note: safetyResult.note,
+    },
+  });
   trace({
     stage: "classify",
     status: classified.needsClarification ? "warn" : "ok",

@@ -618,6 +618,68 @@ describe("CustomerFaqPage", () => {
     expect(await screen.findByText("可以喺工場自取。")).toBeInTheDocument();
   });
 
+  it("clicks an order choice to send the order number", async () => {
+    const user = userEvent.setup();
+    const previewTurn = vi
+      .fn()
+      .mockResolvedValueOnce({
+        reply: "已經幫你查到多過一張處理中嘅訂單。",
+        conversation: {
+          phone_normalized: "8613828747224",
+          state: "picking_order",
+          selected_order_id: null,
+          handoff_at: null,
+        },
+        usedModel: false,
+        simulatedWrite: false,
+        simulatedNotify: false,
+        humanHandoff: false,
+        relatedFaqs: [],
+        orderChoices: [
+          { orderId: "o1", orderNumber: "FCL2026090101" },
+          { orderId: "o2", orderNumber: "FCL2026090202" },
+        ],
+      })
+      .mockResolvedValueOnce({
+        reply: "你好，已經幫你查到訂單 FCL2026090101。",
+        conversation: {
+          phone_normalized: "8613828747224",
+          state: "identifying",
+          selected_order_id: "o1",
+          handoff_at: null,
+        },
+        usedModel: false,
+        simulatedWrite: false,
+        simulatedNotify: false,
+        humanHandoff: false,
+        relatedFaqs: [],
+        orderChoices: [],
+      });
+
+    render(
+      <CustomerFaqPage
+        loadFaqs={vi.fn().mockResolvedValue({ items: [faq], total: 1 })}
+        loadControls={vi.fn().mockResolvedValue({
+          botEnabled: true,
+          allowedPhones: ["8613828747224"],
+          updatedAt: faq.updatedAt,
+        })}
+        previewTurn={previewTurn}
+      />,
+    );
+
+    expect(await screen.findByText("運費幾多？")).toBeInTheDocument();
+    await user.type(screen.getByLabelText("客人會點問"), "查單");
+    await user.click(screen.getByRole("button", { name: "傳送測試訊息" }));
+    expect(await screen.findByText("請點選訂單")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "FCL2026090101" }));
+    await waitFor(() =>
+      expect(previewTurn).toHaveBeenLastCalledWith(
+        expect.objectContaining({ text: "FCL2026090101" }),
+      ),
+    );
+  });
+
   it("hides write actions without edit permission", async () => {
     accessState.canAccess = (key: string) => key === "settings.customer_faq";
 

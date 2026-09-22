@@ -189,6 +189,10 @@ export function isHumanOperatorMessage(event: WatiInboundEvent) {
   // the same localMessageId in sessionMessageSent_v2, so an API reply cannot
   // accidentally move the conversation into human-owned state.
   if (event.localMessageId.startsWith("fcc-bot-")) return false;
+  // The interactive-buttons API does not support localMessageId, so WATI echoes
+  // those as plain owner messages. Recognise the bot's own related-suggestion
+  // text so a button echo cannot switch the conversation to human-owned.
+  if (event.text.trim().startsWith("你可能仲想問")) return false;
   if (event.operatorEmail) return true;
   if (!event.operatorName) return false;
   return !/^(api|bot|system|wati)$/i.test(event.operatorName);
@@ -441,6 +445,131 @@ export async function deliverWatiSessionMessage({
     }
   }
   throw new Error(errors[0] || "wati_session_failed:all_targets");
+}
+
+export function buildInteractiveButtonsUrl({
+  endpoint,
+  phone,
+  channelNumber,
+  tenantId = "",
+  localMessageId = "",
+}: {
+  endpoint: string;
+  phone: string;
+  channelNumber: string;
+  tenantId?: string;
+  localMessageId?: string;
+}) {
+  const base = resolveWatiSessionEndpoint(endpoint, tenantId);
+  const url = new URL(`${base}/api/v1/sendInteractiveButtonsMessage`);
+  if (phone) url.searchParams.set("whatsappNumber", phone);
+  if (channelNumber) url.searchParams.set("channelPhoneNumber", channelNumber);
+  if (localMessageId) url.searchParams.set("localMessageId", localMessageId);
+  return url.toString();
+}
+
+async function postWatiInteractiveButtons({
+  endpoint,
+  token,
+  phone,
+  body,
+  buttons,
+  footer,
+  channelNumber,
+  fetchImpl,
+  localMessageId,
+}: {
+  endpoint: string;
+  token: string;
+  phone: string;
+  body: string;
+  buttons: Array<{ text: string }>;
+  footer?: string;
+  channelNumber: string;
+  fetchImpl: typeof fetch;
+  localMessageId: string;
+}) {
+  const url = buildInteractiveButtonsUrl({ endpoint, phone, channelNumber, localMessageId });
+  const response = await fetchImpl(url, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${normalizeWatiToken(token)}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      body,
+      ...(footer ? { footer } : {}),
+      buttons,
+    }),
+  });
+  const raw = await response.text();
+  if (!response.ok) {
+    throw new Error(`wati_buttons_failed:${response.status}:${raw.slice(0, 300)}`);
+  }
+  try {
+    const parsed = JSON.parse(raw) as {
+      result?: boolean;
+      ok?: boolean;
+      info?: string;
+      errors?: unknown;
+    };
+    if (parsed.result === false || parsed.ok === false) {
+      throw new Error(
+        `wati_buttons_failed:result_false:${String(parsed.info || parsed.errors || raw).slice(0, 300)}`,
+      );
+    }
+  } catch (error) {
+    if (error instanceof Error && error.message.startsWith("wati_buttons_failed:")) throw error;
+  }
+  return raw;
+}
+
+export async function deliverWatiInteractiveButtons({
+  creds,
+  phone,
+  body,
+  buttons,
+  footer,
+  channelNumber,
+  localMessageId = `fcc-bot-${crypto.randomUUID()}`,
+  fetchImpl = fetch,
+  log = console.error,
+}: {
+  creds: WatiSessionCredentials;
+  phone: string;
+  body: string;
+  buttons: Array<{ text: string }>;
+  footer?: string;
+  channelNumber: string;
+  localMessageId?: string;
+  fetchImpl?: typeof fetch;
+  log?: (...args: unknown[]) => void;
+}) {
+  const targets = listWatiSessionTargets(creds);
+  if (!targets.length) throw new Error("wati_buttons_failed:missing_credentials");
+  const errors: string[] = [];
+  for (const target of targets) {
+    try {
+      const raw = await postWatiInteractiveButtons({
+        endpoint: target.endpoint,
+        token: target.token,
+        phone,
+        body,
+        buttons,
+        footer,
+        channelNumber,
+        fetchImpl,
+        localMessageId,
+      });
+      log("wati interactive buttons sent", target.label, describeWatiSessionTarget(target.endpoint));
+      return raw;
+    } catch (error) {
+      const detail = error instanceof Error ? error.message.slice(0, 180) : String(error);
+      errors.push(`${target.label}@${describeWatiSessionTarget(target.endpoint)}:${detail}`);
+      log("wati interactive buttons try failed", target.label, describeWatiSessionTarget(target.endpoint), detail);
+    }
+  }
+  throw new Error(errors[0] || "wati_buttons_failed:all_targets");
 }
 
 function imageFileName(imageUrl: string, contentType: string) {

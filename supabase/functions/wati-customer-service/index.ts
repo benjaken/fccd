@@ -2,12 +2,14 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 import { createCustomerServiceFaqRagDeps } from "../_shared/customer-service-rag-runtime.ts";
 import {
   customerServiceAiTiers,
+  customerServiceJevFromActive,
   type ActiveCustomerServiceConfig,
 } from "../_shared/customer-service-active-config.ts";
 
 import { EMAIL_FROM } from "../_shared/email-sender.ts";
 import {
   answerCustomerServiceFallbackWithTieredAi,
+  classifyCustomerServiceWithJevOrGroK,
   classifyCustomerServiceWithTieredAi,
   customerServiceAiConfig,
   type CustomerServiceAiTierConfig,
@@ -50,6 +52,10 @@ import {
 } from "../_shared/customer-service-bot.ts";
 import {
   appendRelatedFaqsToReply,
+  buildOrderChoiceButtons,
+  buildRelatedFaqButtons,
+  formatRelatedFaqsAppendix,
+  sanitizeOutboundReply,
   suppressRecentSimilarReply,
   withEnvironmentOutboundMarker,
 } from "../_shared/customer-service-replies.ts";
@@ -75,6 +81,7 @@ import {
   type WatiInboundEvent,
   deliverWatiSessionImage,
   deliverWatiSessionMessage,
+  deliverWatiInteractiveButtons,
   verifyWatiWebhook,
 } from "../_shared/wati-customer-service-adapter.ts";
 import {
@@ -345,6 +352,7 @@ function createCustomerServiceClassifier({
   activeGoal,
   workflowPolicies = [],
   tiers,
+  jevConfig,
   traceSteps,
 }: {
   intents: CustomerServiceIntentConfig[];
@@ -354,6 +362,7 @@ function createCustomerServiceClassifier({
   activeGoal?: WorkflowPolicy["goalKey"] | null;
   workflowPolicies?: WorkflowPolicy[];
   tiers: CustomerServiceAiTierConfig;
+  jevConfig?: ReturnType<typeof customerServiceJevFromActive>;
   traceSteps?: CustomerServiceTraceStep[];
 }) {
   const trace = (step: CustomerServiceTraceStep) => {
@@ -384,7 +393,7 @@ function createCustomerServiceClassifier({
       return fallback;
     }
     try {
-      const result = await classifyCustomerServiceWithTieredAi({
+      const { classification: result, jevTrace } = await classifyCustomerServiceWithJevOrGroK({
         message: text,
         conversationState,
         pendingRequest: pendingRequest ?? "",
@@ -392,7 +401,22 @@ function createCustomerServiceClassifier({
         workflowInstructions: activePolicy?.instructions ?? "",
         intents,
         tiers,
+        jevConfig,
       });
+      if (jevTrace) {
+        trace({
+          stage: "classify_jev",
+          status: jevTrace.outcome === "error" ? "warn" : "ok",
+          code: jevTrace.outcome,
+          params: {
+            model: jevTrace.decision?.model ?? null,
+            confidence: jevTrace.decision?.intentConfidence ?? null,
+            latency_ms: jevTrace.classificationLatencyMs,
+            cost_usd: jevTrace.costUsd,
+            error_code: jevTrace.errorCode,
+          },
+        });
+      }
       if (!result) {
         trace({
           stage: "classify_ai",
@@ -1070,7 +1094,7 @@ async function recordHumanOperatorContextMessage(
 async function loadActiveCustomerServiceConfig(admin: AdminClient) {
   const { data, error } = await admin
     .from("customer_service_config_versions")
-    .select("model,fallback_model,fallback_enabled,escalation_confidence,system_prompt,temperature,retrieval_limit,rag_config")
+    .select("model,fallback_model,fallback_enabled,escalation_confidence,system_prompt,temperature,retrieval_limit,rag_config,jev_enabled,jev_shadow,jev_model,jev_accept_threshold,jev_requires_human_threshold,jev_budget_ms")
     .eq("environment", deploymentEnvironment())
     .eq("status", "active")
     .maybeSingle();
@@ -2270,6 +2294,7 @@ async function handleBackendPreview(
     workflowPolicies: runtime.workflowPolicies,
     recentMessages: conversation.recent_messages,
   });
+  const jevConfig = customerServiceJevFromActive(activeConfig, Deno.env.get("TYPESAFE_API_KEY") ?? "");
   const baseClassify = createCustomerServiceClassifier({
     intents: runtime.intents,
     conversationState: conversation.state,
@@ -2278,6 +2303,7 @@ async function handleBackendPreview(
     activeGoal: conversation.active_goal,
     workflowPolicies: runtime.workflowPolicies,
     tiers,
+    jevConfig,
     traceSteps,
   });
   let turn: Awaited<ReturnType<typeof handleCustomerServiceTurn>>;
@@ -2460,6 +2486,7 @@ async function handleBackendPreview(
     confidence: turn.confidence,
     tool_keys: turn.toolKeys ?? [],
     related_faqs: turn.relatedFaqs ?? [],
+    order_choices: turn.orderChoices ?? [],
     failure_reason: failureReason,
     media_route: mediaRoute?.action ?? null,
     vision: vision
@@ -2495,6 +2522,7 @@ async function prepareCustomerServiceTurn(
     loadActiveCustomerServiceConfig(admin),
   ]);
   const tiers = customerServiceAiTiers(activeConfig);
+  const jevConfig = customerServiceJevFromActive(activeConfig, Deno.env.get("TYPESAFE_API_KEY") ?? "");
   const baseClassify = createCustomerServiceClassifier({
     intents: runtime.intents,
     conversationState: conversation.state,
@@ -2503,6 +2531,7 @@ async function prepareCustomerServiceTurn(
     activeGoal: conversation.active_goal,
     workflowPolicies: runtime.workflowPolicies,
     tiers,
+    jevConfig,
   });
   const turn = await handleCustomerServiceTurn({
     phone: input.phone,
@@ -2534,8 +2563,16 @@ async function persistCustomerServiceTurn(
 ) {
   const { conversation, startedAt, turn } = input.prepared;
   let outboundId: string | null = null;
+  const relatedFaqs = turn.relatedFaqs ?? [];
+  const relatedFaqButtons = buildRelatedFaqButtons(relatedFaqs);
+  const orderChoiceButtons = buildOrderChoiceButtons(turn.orderChoices ?? []);
+  const quickReplyButtons = orderChoiceButtons ?? relatedFaqButtons;
+  // When clickable buttons are available, the text reply omits the plain-text
+  // suggestion appendix so the same list is not shown twice.
   const replyWithRelated = turn.reply
-    ? appendRelatedFaqsToReply(turn.reply, turn.relatedFaqs ?? [])
+    ? relatedFaqButtons
+      ? sanitizeOutboundReply(turn.reply)
+      : appendRelatedFaqsToReply(turn.reply, relatedFaqs)
     : null;
   const duplicateReplySuppressed = replyWithRelated
     ? suppressRecentSimilarReply(replyWithRelated, conversation.recent_messages)
@@ -2577,6 +2614,37 @@ async function persistCustomerServiceTurn(
           sent_at: new Date().toISOString(),
           last_error: null,
         });
+      }
+      if (quickReplyButtons) {
+        try {
+          await deliverWatiInteractiveButtons({
+            creds: watiCredentials(),
+            phone: input.phone,
+            body: quickReplyButtons.body,
+            buttons: quickReplyButtons.buttons,
+            channelNumber: env("WATI_CHANNEL_NUMBER") || BRAND_WHATSAPP_CHANNEL,
+          });
+        } catch (buttonsError) {
+          console.error(
+            "customer-service buttons send failed",
+            buttonsError instanceof Error ? buttonsError.message.slice(0, 300) : String(buttonsError),
+          );
+          if (relatedFaqButtons) {
+            try {
+              await deliverWatiSessionMessage({
+                creds: watiCredentials(),
+                phone: input.phone,
+                text: formatRelatedFaqsAppendix(relatedFaqs),
+                channelNumber: env("WATI_CHANNEL_NUMBER") || BRAND_WHATSAPP_CHANNEL,
+              });
+            } catch (fallbackError) {
+              console.error(
+                "customer-service buttons fallback failed",
+                fallbackError instanceof Error ? fallbackError.message.slice(0, 300) : String(fallbackError),
+              );
+            }
+          }
+        }
       }
       if (turn.imageUrl) {
         try {

@@ -91,6 +91,11 @@ export type RelatedFaqSuggestion = {
   question: string;
 };
 
+export type CustomerServiceOrderChoice = {
+  orderId: string;
+  orderNumber: string;
+};
+
 export type CustomerServiceTraceStatus = "ok" | "skipped" | "warn" | "failed";
 
 export type CustomerServiceTraceStep = {
@@ -120,6 +125,7 @@ export type CustomerServicePreviewResult = {
   confidence?: number;
   toolKeys?: string[];
   relatedFaqs?: RelatedFaqSuggestion[];
+  orderChoices?: CustomerServiceOrderChoice[];
   failureReason?: string | null;
   mediaRoute?: string | null;
   vision?: CustomerServiceVisionPreview | null;
@@ -637,6 +643,7 @@ export async function previewCustomerServiceTurn(input: {
     confidence?: unknown;
     tool_keys?: unknown;
     related_faqs?: unknown;
+    order_choices?: unknown;
     failure_reason?: unknown;
     media_route?: unknown;
     vision?: unknown;
@@ -656,6 +663,20 @@ export async function previewCustomerServiceTurn(input: {
         return [{ id: row.id, question }];
       })
     : [];
+  const orderChoices = Array.isArray(payload.order_choices)
+    ? payload.order_choices.flatMap((item) => {
+        if (!item || typeof item !== "object") return [];
+        const row = item as { orderId?: unknown; orderNumber?: unknown };
+        if (typeof row.orderId !== "string") return [];
+        return [{
+          orderId: row.orderId,
+          orderNumber:
+            typeof row.orderNumber === "string"
+              ? row.orderNumber.trim()
+              : "",
+        }];
+      })
+    : [];
   return {
     reply: typeof payload.reply === "string" ? payload.reply : null,
     conversation: payload.conversation,
@@ -673,6 +694,7 @@ export async function previewCustomerServiceTurn(input: {
         )
       : [],
     relatedFaqs,
+    orderChoices,
     failureReason:
       typeof payload.failure_reason === "string" ? payload.failure_reason : null,
     mediaRoute:

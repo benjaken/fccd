@@ -1371,6 +1371,11 @@ describe("customer-service bot turns", () => {
     expect(listed.reply).toContain("FCL2026090101");
     expect(listed.reply).toContain("FCL2026090202");
     expect(listed.reply).not.toContain("秘密狀態");
+    expect(listed.reply).toContain("處理中");
+    expect(listed.orderChoices?.map((choice) => choice.orderNumber)).toEqual([
+      "FCL2026090101",
+      "FCL2026090202",
+    ]);
     expect(listed.conversation.state).toBe("picking_order");
 
     const picked = await handleCustomerServiceTurn({
@@ -1381,6 +1386,54 @@ describe("customer-service bot turns", () => {
     });
     expect(picked.reply).toContain("已安排");
     expect(picked.reply).not.toContain("秘密狀態");
+  });
+
+  it("determines order status before selection and hides delivered orders from the list", async () => {
+    const delivered = {
+      ...order,
+      order_id: "33333333-3333-4333-8333-333333333333",
+      order_number: "B-1549",
+      delivery_status: "已送達",
+    };
+    const turn = await handleCustomerServiceTurn({
+      phone: conversation.phone_normalized,
+      text: "查單",
+      conversation,
+      deps: deps({
+        lookupOrders: vi.fn().mockResolvedValue([order, delivered]),
+      }),
+    });
+    expect(turn.reply).toContain("FCL2026090101");
+    expect(turn.reply).not.toContain("B-1549");
+    expect(turn.conversation.state).toBe("identifying");
+    expect(turn.orderChoices).toBeUndefined();
+  });
+
+  it("answers a delivered-only history without offering a choice list", async () => {
+    const delivered = {
+      ...order,
+      order_id: "33333333-3333-4333-8333-333333333333",
+      order_number: "B-1549",
+      delivery_status: "已送達",
+    };
+    const cancelled = {
+      ...order,
+      order_id: "44444444-4444-4444-8444-444444444444",
+      order_number: "B-1551",
+      delivery_status: "已取消",
+    };
+    const turn = await handleCustomerServiceTurn({
+      phone: conversation.phone_normalized,
+      text: "查單",
+      conversation,
+      deps: deps({
+        lookupOrders: vi.fn().mockResolvedValue([delivered, cancelled]),
+      }),
+    });
+    expect(turn.reply).toContain("冇處理中");
+    expect(turn.reply).not.toContain("B-1549");
+    expect(turn.reply).not.toContain("B-1551");
+    expect(turn.conversation.state).toBe("identifying");
   });
 
   it("requires confirmation before it records and queues a catering inquiry", async () => {
@@ -2784,8 +2837,10 @@ describe("customer-service execution trace", () => {
       traceSteps,
     });
     const stages = traceSteps.map((step) => step.stage);
-    expect(stages[0]).toBe("classify");
+    expect(stages[0]).toBe("safety_guard");
+    expect(stages).toContain("classify");
     expect(stages).toContain("pilot");
+    expect(stages.indexOf("classify")).toBeLessThan(stages.indexOf("pilot"));
     expect(searchFaqs).toHaveBeenCalled();
     const classifyStep = traceSteps.find((step) => step.stage === "classify");
     expect(classifyStep?.code).toBe("search_faq");

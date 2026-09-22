@@ -112,6 +112,53 @@ export function normalizeCustomerServiceOrderNumber(value: string | null | undef
     .replace(/[^A-Z0-9]/g, "");
 }
 
+export type CustomerServiceOrderLifecycle =
+  | "active"
+  | "completed"
+  | "cancelled";
+
+const CUSTOMER_SERVICE_ORDER_CANCELLED_STATUS =
+  /已取消|己取消|取消|cancelled|canceled|已退回|已退款/i;
+const CUSTOMER_SERVICE_ORDER_COMPLETED_STATUS =
+  /已送達|己送達|已經送達|已送货|已送貨|delivered|completed|已完成|已完結|已完结/i;
+
+/**
+ * Collapse the internal delivery status into a coarse, customer-facing
+ * lifecycle bucket. Unknown or empty statuses stay `active` so a live order is
+ * never hidden just because its status wording is new.
+ */
+export function classifyCustomerServiceOrderLifecycle(
+  status: string | null | undefined,
+): CustomerServiceOrderLifecycle {
+  const value = (status ?? "").trim();
+  if (CUSTOMER_SERVICE_ORDER_CANCELLED_STATUS.test(value)) return "cancelled";
+  if (CUSTOMER_SERVICE_ORDER_COMPLETED_STATUS.test(value)) return "completed";
+  return "active";
+}
+
+export function isActiveCustomerServiceOrder(order: {
+  delivery_status?: string | null;
+}): boolean {
+  return classifyCustomerServiceOrderLifecycle(order.delivery_status) === "active";
+}
+
+export const CUSTOMER_SERVICE_ORDER_LIFECYCLE_LABELS: Record<
+  CustomerServiceOrderLifecycle,
+  string
+> = {
+  active: "處理中",
+  completed: "已完成",
+  cancelled: "已取消",
+};
+
+export function customerServiceOrderLifecycleLabel(
+  status: string | null | undefined,
+): string {
+  return CUSTOMER_SERVICE_ORDER_LIFECYCLE_LABELS[
+    classifyCustomerServiceOrderLifecycle(status)
+  ];
+}
+
 export function emptyInquirySlots(): InquirySlots {
   return { ...EMPTY_SLOTS };
 }
