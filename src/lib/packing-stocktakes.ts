@@ -25,6 +25,7 @@ export type PackingStocktakeItem = {
 export type StocktakeDateItem = { date: string; updatedAt: string };
 
 const PACKING_SIZE_SUFFIXES = [
+  { pattern: /(?:[\s\-–—_/（(]+)(超特大|特大)[）)]?$/iu, rank: 20 },
   { pattern: /(?:[\s\-–—_/（(]+)(大碼|大號|大型|大|large|lg)[）)]?$/iu, rank: 30 },
   { pattern: /(?:[\s\-–—_/（(]+)(中碼|中號|中型|中|medium|md)[）)]?$/iu, rank: 40 },
   { pattern: /(?:[\s\-–—_/（(]+)(細碼|小碼|細號|小號|細型|小型|細|小|small|sm)[）)]?$/iu, rank: 50 },
@@ -34,6 +35,19 @@ const PACKING_COMPONENT_SUFFIXES = [
   { pattern: /(?:[\s\-–—_/（(]*)(盒身|盒盒|盒|box|base)[）)]?$/iu, rank: 10 },
   { pattern: /(?:[\s\-–—_/（(]*)(盒蓋|蓋|lid)[）)]?$/iu, rank: 20 },
 ] as const;
+
+// 格數 order used to keep the meal-box family together (單格 → 兩格 → 三格 …).
+const PACKING_COMPARTMENT_RANKS = [
+  { pattern: /(?:單|单|一)格|(?:^|\D)1\s*格/u, rank: 10 },
+  { pattern: /(?:兩|两|雙|双|二)格|(?:^|\D)2\s*格/u, rank: 20 },
+  { pattern: /三格|(?:^|\D)3\s*格/u, rank: 30 },
+  { pattern: /四格|(?:^|\D)4\s*格/u, rank: 40 },
+  { pattern: /五格|(?:^|\D)5\s*格/u, rank: 50 },
+  { pattern: /六格|(?:^|\D)6\s*格/u, rank: 60 },
+] as const;
+
+const PACKING_MEAL_BOX_PATTERN = /(?:飯盒|便當盒|微波爐盒)/u;
+const PACKING_ALUMINUM_PATTERN = /(?:鋁盒|鋁蓋)/u;
 
 function normalizePackingName(value: string | null | undefined) {
   return (value ?? "")
@@ -57,39 +71,101 @@ function stripPackingSuffix(
   return null;
 }
 
-function packingSortParts(item: PackingStocktakeItem) {
+function packingCompartmentRank(name: string) {
+  for (const compartment of PACKING_COMPARTMENT_RANKS) {
+    if (compartment.pattern.test(name)) return compartment.rank;
+  }
+  return 0;
+}
+
+/** Leading product code such as `YW810` / `YR-3G01`, with trailing letters trimmed so a lid matches its box. */
+function packingCodeBase(name: string) {
+  const match = /^[A-Za-z0-9][A-Za-z0-9-]*/u.exec(name.trim());
+  return match ? match[0].replace(/[A-Za-z]+$/u, "") : "";
+}
+
+type PackingSortKeys = {
+  family: string;
+  groupRank: number;
+  group: string;
+  componentRank: number;
+};
+
+function packingSortKeys(
+  item: PackingStocktakeItem,
+  compartmentByCode: Map<string, number>,
+): PackingSortKeys {
   const name = normalizePackingName(item.name ?? item.sku);
+  if (PACKING_ALUMINUM_PATTERN.test(name)) {
+    const size = stripPackingSuffix(name, PACKING_SIZE_SUFFIXES);
+    const withoutSize = size?.remainder ?? name;
+    const component = stripPackingSuffix(withoutSize, PACKING_COMPONENT_SUFFIXES);
+    return {
+      family: "鋁盒",
+      groupRank: size?.rank ?? 0,
+      group: component?.remainder ?? withoutSize,
+      componentRank: component?.rank ?? 0,
+    };
+  }
+  if (PACKING_MEAL_BOX_PATTERN.test(name)) {
+    let rank = packingCompartmentRank(name);
+    const code = packingCodeBase(name);
+    if (rank === 0 && code) rank = compartmentByCode.get(code) ?? 0;
+    const component = stripPackingSuffix(name, PACKING_COMPONENT_SUFFIXES);
+    return {
+      family: "飯盒",
+      groupRank: rank || 99,
+      group: code || component?.remainder || name,
+      componentRank: component?.rank ?? 0,
+    };
+  }
   const size = stripPackingSuffix(name, PACKING_SIZE_SUFFIXES);
   const withoutSize = size?.remainder ?? name;
   const component = stripPackingSuffix(withoutSize, PACKING_COMPONENT_SUFFIXES);
   return {
-    group: withoutSize,
     family: component?.remainder ?? withoutSize,
-    size: size?.label ?? "",
-    sizeRank: size?.rank ?? 0,
+    groupRank: size?.rank ?? 0,
+    group: withoutSize,
     componentRank: component?.rank ?? 0,
   };
 }
 
+/** Lets a box lid without its own compartment number follow the box that shares its code. */
+function packingCompartmentByCode(items: PackingStocktakeItem[]) {
+  const byCode = new Map<string, number>();
+  for (const item of items) {
+    const name = normalizePackingName(item.name ?? item.sku);
+    if (!PACKING_MEAL_BOX_PATTERN.test(name)) continue;
+    const rank = packingCompartmentRank(name);
+    if (rank === 0) continue;
+    const code = packingCodeBase(name);
+    if (code && !byCode.has(code)) byCode.set(code, rank);
+  }
+  return byCode;
+}
+
 /** Base product name plus the box-lid component or size suffix, e.g. `{ name: "金色長方形鋁盒", size: "大" }`. */
 export function describePackingStocktakeItem(item: PackingStocktakeItem) {
-  const parts = packingSortParts(item);
-  return { name: parts.group, size: parts.size };
+  const name = normalizePackingName(item.name ?? item.sku);
+  const size = stripPackingSuffix(name, PACKING_SIZE_SUFFIXES);
+  return { name: size?.remainder ?? name, size: size?.label ?? "" };
 }
 
 /**
- * Keeps each packaging family together, ordered by size first so a box and its
- * matching lid sit on adjacent rows (`大盒 → 大蓋 → 中盒 → 中蓋 → 小盒 → 小蓋`).
+ * Keeps each packaging kind together: the meal-box family (飯盒／便當盒／微波爐盒)
+ * is ordered by 格數, all aluminium boxes (連蓋) sit in one block, and other
+ * materials keep the box-and-lid / size grouping.
  */
 export function sortPackingStocktakeItems(items: PackingStocktakeItem[]) {
   const collator = new Intl.Collator("zh-HK", { numeric: true, sensitivity: "base" });
+  const compartmentByCode = packingCompartmentByCode(items);
   return [...items].sort((left, right) => {
-    const leftParts = packingSortParts(left);
-    const rightParts = packingSortParts(right);
+    const leftParts = packingSortKeys(left, compartmentByCode);
+    const rightParts = packingSortKeys(right, compartmentByCode);
     return collator.compare(leftParts.family, rightParts.family)
-      || leftParts.sizeRank - rightParts.sizeRank
-      || leftParts.componentRank - rightParts.componentRank
+      || leftParts.groupRank - rightParts.groupRank
       || collator.compare(leftParts.group, rightParts.group)
+      || leftParts.componentRank - rightParts.componentRank
       || collator.compare(left.sku ?? "", right.sku ?? "");
   });
 }
