@@ -52,6 +52,9 @@ import {
 } from "../_shared/customer-service-bot.ts";
 import {
   appendRelatedFaqsToReply,
+  buildRelatedFaqButtons,
+  formatRelatedFaqsAppendix,
+  sanitizeOutboundReply,
   suppressRecentSimilarReply,
   withEnvironmentOutboundMarker,
 } from "../_shared/customer-service-replies.ts";
@@ -76,6 +79,7 @@ import {
   type WatiInboundEvent,
   deliverWatiSessionImage,
   deliverWatiSessionMessage,
+  deliverWatiInteractiveButtons,
   verifyWatiWebhook,
 } from "../_shared/wati-customer-service-adapter.ts";
 import {
@@ -2552,8 +2556,14 @@ async function persistCustomerServiceTurn(
 ) {
   const { conversation, startedAt, turn } = input.prepared;
   let outboundId: string | null = null;
+  const relatedFaqs = turn.relatedFaqs ?? [];
+  const relatedFaqButtons = buildRelatedFaqButtons(relatedFaqs);
+  // When clickable buttons are available, the text reply omits the plain-text
+  // suggestion appendix so the same list is not shown twice.
   const replyWithRelated = turn.reply
-    ? appendRelatedFaqsToReply(turn.reply, turn.relatedFaqs ?? [])
+    ? relatedFaqButtons
+      ? sanitizeOutboundReply(turn.reply)
+      : appendRelatedFaqsToReply(turn.reply, relatedFaqs)
     : null;
   const duplicateReplySuppressed = replyWithRelated
     ? suppressRecentSimilarReply(replyWithRelated, conversation.recent_messages)
@@ -2595,6 +2605,35 @@ async function persistCustomerServiceTurn(
           sent_at: new Date().toISOString(),
           last_error: null,
         });
+      }
+      if (relatedFaqButtons) {
+        try {
+          await deliverWatiInteractiveButtons({
+            creds: watiCredentials(),
+            phone: input.phone,
+            body: relatedFaqButtons.body,
+            buttons: relatedFaqButtons.buttons,
+            channelNumber: env("WATI_CHANNEL_NUMBER") || BRAND_WHATSAPP_CHANNEL,
+          });
+        } catch (buttonsError) {
+          console.error(
+            "customer-service buttons send failed",
+            buttonsError instanceof Error ? buttonsError.message.slice(0, 300) : String(buttonsError),
+          );
+          try {
+            await deliverWatiSessionMessage({
+              creds: watiCredentials(),
+              phone: input.phone,
+              text: formatRelatedFaqsAppendix(relatedFaqs),
+              channelNumber: env("WATI_CHANNEL_NUMBER") || BRAND_WHATSAPP_CHANNEL,
+            });
+          } catch (fallbackError) {
+            console.error(
+              "customer-service buttons fallback failed",
+              fallbackError instanceof Error ? fallbackError.message.slice(0, 300) : String(fallbackError),
+            );
+          }
+        }
       }
       if (turn.imageUrl) {
         try {

@@ -322,6 +322,53 @@ export function appendRelatedFaqsToReply(
   return sanitizeOutboundReply(`${reply.trim()}\n\n${appendix}`);
 }
 
+/** WhatsApp interactive buttons allow at most 20 characters per button label. */
+export const MAX_RELATED_FAQ_BUTTON_LENGTH = 20;
+export const MAX_RELATED_FAQ_BUTTONS = 3;
+
+/**
+ * Shorten a related-FAQ question into a WhatsApp button label (<= 20 chars).
+ * Prefers the final question sentence so a button still reads as a real ask.
+ */
+export function shortenRelatedFaqLabel(
+  question: string,
+  maxLength = MAX_RELATED_FAQ_BUTTON_LENGTH,
+): string {
+  const text = question.trim().replace(/\s+/g, " ");
+  if (!text) return "";
+  if (text.length <= maxLength) return text;
+  const segments = text
+    .split(/[，。,.、;；\n]+/)
+    .map((segment) => segment.trim())
+    .filter(Boolean);
+  for (let index = segments.length - 1; index >= 0; index -= 1) {
+    const segment = segments[index];
+    if (/[?？]$/.test(segment) && segment.length <= maxLength) return segment;
+  }
+  const tail = segments.at(-1) ?? text;
+  if (tail.length <= maxLength) return tail;
+  return `${tail.slice(0, maxLength - 1)}…`;
+}
+
+/** Build the WhatsApp interactive-buttons payload for related FAQ suggestions. */
+export function buildRelatedFaqButtons(
+  relatedFaqs: Array<{ question: string }>,
+  maxLength = MAX_RELATED_FAQ_BUTTON_LENGTH,
+): { body: string; buttons: Array<{ text: string }> } | null {
+  const seen = new Set<string>();
+  const buttons: Array<{ text: string }> = [];
+  for (const faq of relatedFaqs) {
+    const label = shortenRelatedFaqLabel(faq?.question ?? "", maxLength);
+    if (!label || seen.has(label)) continue;
+    seen.add(label);
+    buttons.push({ text: label });
+    if (buttons.length >= MAX_RELATED_FAQ_BUTTONS) break;
+  }
+  if (!buttons.length) return null;
+  return { body: "你可能仲想問：", buttons };
+}
+
+
 const RECENT_REPLY_COOLDOWN_MS = 10 * 60 * 1_000;
 const RECENT_REPLY_SIMILARITY_FLOOR = 0.92;
 
