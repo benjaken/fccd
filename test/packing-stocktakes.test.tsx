@@ -108,19 +108,65 @@ describe("Packaging stocktake records page", () => {
     const names = [...container.querySelectorAll("tbody tr td:nth-child(4) strong")]
       .map((node) => node.textContent);
     expect(names).toEqual([
+      "銀色保溫袋",
+      "銀色保溫袋",
+      "銀色保溫袋",
       "金色長方形鋁盒",
       "金色長方形鋁蓋",
       "金色長方形鋁盒",
       "金色長方形鋁蓋",
       "金色長方形鋁盒",
       "金色長方形鋁蓋",
-      "銀色保溫袋",
-      "銀色保溫袋",
-      "銀色保溫袋",
     ]);
     const sizes = [...container.querySelectorAll("tbody tr td:nth-child(5)")]
       .map((node) => node.textContent);
-    expect(sizes).toEqual(["大", "大", "中", "中", "小", "小", "大", "中", "細"]);
+    expect(sizes).toEqual(["大", "中", "細", "大", "大", "中", "中", "小", "小"]);
+  });
+
+  it("keeps the 飯盒 family together by 格數 with 便當盒 after 飯盒", () => {
+    const mealBoxes: PackingStocktakeItem[] = [
+      { ...records[0], id: "m6", sku: "M6", name: "六格便當盒" },
+      { ...records[0], id: "m3", sku: "M3", name: "YR-3G01 900ML 3格(玉米)飯盒連蓋(200個/箱)" },
+      { ...records[0], id: "m2", sku: "M2", name: "兩格飯盒" },
+      { ...records[0], id: "m1-lid", sku: "M1L", name: "YW810L (透明)810-813微波爐盒膠蓋" },
+      { ...records[0], id: "m5", sku: "M5", name: "五格便當盒" },
+      { ...records[0], id: "m1", sku: "M1", name: "YW810 (黑色)單格微波爐盒 (250個) $120" },
+      { ...records[0], id: "m0", sku: "M0", name: "CY-950 (玉米)950ML單格環保飯盒連蓋" },
+    ];
+    expect(sortPackingStocktakeItems(mealBoxes).map((item) => item.name)).toEqual([
+      "CY-950 (玉米)950ML單格環保飯盒連蓋",
+      "YW810 (黑色)單格微波爐盒 (250個) $120",
+      "YW810L (透明)810-813微波爐盒膠蓋",
+      "兩格飯盒",
+      "YR-3G01 900ML 3格(玉米)飯盒連蓋(200個/箱)",
+      "五格便當盒",
+      "六格便當盒",
+    ]);
+  });
+
+  it("keeps every aluminium box together and groups 特大 with the other sizes", () => {
+    const aluminium: PackingStocktakeItem[] = [
+      "銀色長方形鋁盒- 特大",
+      "金色長方形鋁盒- 大",
+      "圓形鋁盒蓋",
+      "金色長方形鋁蓋- 小",
+      "圓形金色鋁盒",
+      "銀色長方形鋁蓋- 特大",
+      "金色長方形鋁盒- 小",
+      "金色長方形鋁蓋- 大",
+    ].map((name, index) => ({ ...records[0], id: `alu-${index}`, sku: `ALU-${index}`, name }));
+    const sorted = sortPackingStocktakeItems(aluminium);
+    expect(sorted.map((item) => item.name)).toEqual([
+      "圓形金色鋁盒",
+      "圓形鋁盒蓋",
+      "銀色長方形鋁盒- 特大",
+      "銀色長方形鋁蓋- 特大",
+      "金色長方形鋁盒- 大",
+      "金色長方形鋁蓋- 大",
+      "金色長方形鋁盒- 小",
+      "金色長方形鋁蓋- 小",
+    ]);
+    expect(describePackingStocktakeItem(sorted[2])).toEqual({ name: "銀色長方形鋁盒", size: "特大" });
   });
 
   it("splits the size suffix out of the material name", () => {
