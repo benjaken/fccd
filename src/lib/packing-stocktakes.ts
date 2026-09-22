@@ -24,15 +24,15 @@ export type PackingStocktakeItem = {
 
 export type StocktakeDateItem = { date: string; updatedAt: string };
 
-const PACKING_VARIANT_SUFFIXES = [
-  { pattern: /(?:[\s\-–—_/（(]+)(?:蓋|盒蓋|lid)[）)]?$/iu, rank: 10 },
-  { pattern: /蓋$/u, rank: 10 },
-  { pattern: /(?:[\s\-–—_/（(]+)(?:盒|盒身|box|base)[）)]?$/iu, rank: 20 },
-  { pattern: /(?:盒身)$/u, rank: 20 },
-  { pattern: /盒盒$/u, rank: 20 },
-  { pattern: /(?:[\s\-–—_/（(]+)(?:大碼|大號|大型|大|large|lg)[）)]?$/iu, rank: 30 },
-  { pattern: /(?:[\s\-–—_/（(]+)(?:中碼|中號|中型|中|medium|md)[）)]?$/iu, rank: 40 },
-  { pattern: /(?:[\s\-–—_/（(]+)(?:細碼|小碼|細號|小號|細型|小型|細|小|small|sm)[）)]?$/iu, rank: 50 },
+const PACKING_SIZE_SUFFIXES = [
+  { pattern: /(?:[\s\-–—_/（(]+)(大碼|大號|大型|大|large|lg)[）)]?$/iu, rank: 30 },
+  { pattern: /(?:[\s\-–—_/（(]+)(中碼|中號|中型|中|medium|md)[）)]?$/iu, rank: 40 },
+  { pattern: /(?:[\s\-–—_/（(]+)(細碼|小碼|細號|小號|細型|小型|細|小|small|sm)[）)]?$/iu, rank: 50 },
+] as const;
+
+const PACKING_COMPONENT_SUFFIXES = [
+  { pattern: /(?:[\s\-–—_/（(]*)(盒身|盒盒|盒|box|base)[）)]?$/iu, rank: 10 },
+  { pattern: /(?:[\s\-–—_/（(]*)(盒蓋|蓋|lid)[）)]?$/iu, rank: 20 },
 ] as const;
 
 function normalizePackingName(value: string | null | undefined) {
@@ -43,25 +43,53 @@ function normalizePackingName(value: string | null | undefined) {
     .trim();
 }
 
-function packingSortParts(item: PackingStocktakeItem) {
-  const name = normalizePackingName(item.name ?? item.sku);
-  for (const suffix of PACKING_VARIANT_SUFFIXES) {
-    if (!suffix.pattern.test(name)) continue;
-    const group = name.replace(suffix.pattern, "").replace(/[\s\-–—_/（(]+$/gu, "").trim();
-    if (group) return { group, rank: suffix.rank, name };
+function stripPackingSuffix(
+  value: string,
+  suffixes: ReadonlyArray<{ pattern: RegExp; rank: number }>,
+) {
+  for (const suffix of suffixes) {
+    const match = suffix.pattern.exec(value);
+    if (!match) continue;
+    const stripped = value.replace(suffix.pattern, "").replace(/[\s\-–—_/（(]+$/gu, "").trim();
+    if (!stripped) continue;
+    return { remainder: stripped, label: (match[1] ?? "").trim(), rank: suffix.rank };
   }
-  return { group: name, rank: 0, name };
+  return null;
 }
 
-/** Keeps components and sizes of the same packaging set beside each other. */
+function packingSortParts(item: PackingStocktakeItem) {
+  const name = normalizePackingName(item.name ?? item.sku);
+  const size = stripPackingSuffix(name, PACKING_SIZE_SUFFIXES);
+  const withoutSize = size?.remainder ?? name;
+  const component = stripPackingSuffix(withoutSize, PACKING_COMPONENT_SUFFIXES);
+  return {
+    group: withoutSize,
+    family: component?.remainder ?? withoutSize,
+    size: size?.label ?? "",
+    sizeRank: size?.rank ?? 0,
+    componentRank: component?.rank ?? 0,
+  };
+}
+
+/** Base product name plus the box-lid component or size suffix, e.g. `{ name: "金色長方形鋁盒", size: "大" }`. */
+export function describePackingStocktakeItem(item: PackingStocktakeItem) {
+  const parts = packingSortParts(item);
+  return { name: parts.group, size: parts.size };
+}
+
+/**
+ * Keeps each packaging family together, ordered by size first so a box and its
+ * matching lid sit on adjacent rows (`大盒 → 大蓋 → 中盒 → 中蓋 → 小盒 → 小蓋`).
+ */
 export function sortPackingStocktakeItems(items: PackingStocktakeItem[]) {
   const collator = new Intl.Collator("zh-HK", { numeric: true, sensitivity: "base" });
   return [...items].sort((left, right) => {
     const leftParts = packingSortParts(left);
     const rightParts = packingSortParts(right);
-    return collator.compare(leftParts.group, rightParts.group)
-      || leftParts.rank - rightParts.rank
-      || collator.compare(leftParts.name, rightParts.name)
+    return collator.compare(leftParts.family, rightParts.family)
+      || leftParts.sizeRank - rightParts.sizeRank
+      || leftParts.componentRank - rightParts.componentRank
+      || collator.compare(leftParts.group, rightParts.group)
       || collator.compare(left.sku ?? "", right.sku ?? "");
   });
 }

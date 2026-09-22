@@ -6,7 +6,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { PackingStocktakesPage } from "@/components/PackingStocktakesPage";
 import i18n from "@/i18n";
-import { sortPackingStocktakeItems, type PackingStocktakeItem } from "@/lib/packing-stocktakes";
+import { describePackingStocktakeItem, sortPackingStocktakeItems, type PackingStocktakeItem } from "@/lib/packing-stocktakes";
 
 vi.mock("@/auth/AuthProvider", () => ({
   useAuth: () => ({ user: { app_metadata: { role: "Super Admin" } }, profile: { role: "Super Admin" } }),
@@ -82,14 +82,18 @@ describe("Packaging stocktake records page", () => {
     await waitFor(() => expect(loadRows).toHaveBeenLastCalledWith({ page: 2, search: "", stocktakeDate: "2026-08-10" }));
   });
 
-  it("keeps packaging-set components and sizes together in the requested order", async () => {
+  it("pairs each box with its matching lid and keeps sizes together", async () => {
     const user = userEvent.setup();
     const groupedRecords: PackingStocktakeItem[] = [
+      { ...records[0], id: "box-lid-small", sku: "BOX-L-S", name: "金色長方形鋁蓋 小" },
       { ...records[0], id: "bag-small", sku: "BAG-S", name: "銀色保温袋 細" },
-      { ...records[0], id: "box-base", sku: "BOX-B", name: "金色長方形鋁盒 盒" },
+      { ...records[0], id: "box-base-large", sku: "BOX-B-L", name: "金色長方形鋁盒 大" },
+      { ...records[0], id: "box-lid-medium", sku: "BOX-L-M", name: "金色長方形鋁蓋 中" },
       { ...records[0], id: "bag-large", sku: "BAG-L", name: "銀色保溫袋 大" },
-      { ...records[0], id: "box-lid", sku: "BOX-L", name: "金色長方形鋁盒 蓋" },
+      { ...records[0], id: "box-base-small", sku: "BOX-B-S", name: "金色長方形鋁盒 小" },
       { ...records[0], id: "bag-medium", sku: "BAG-M", name: "銀色保溫袋 中" },
+      { ...records[0], id: "box-lid-large", sku: "BOX-L-L", name: "金色長方形鋁蓋 大" },
+      { ...records[0], id: "box-base-medium", sku: "BOX-B-M", name: "金色長方形鋁盒 中" },
     ];
     const { container } = render(<MemoryRouter><PackingStocktakesPage canEdit
       loadDates={vi.fn().mockResolvedValue([{ date: "2026-08-10" }])}
@@ -98,17 +102,49 @@ describe("Packaging stocktake records page", () => {
 
     const dateList = await screen.findByRole("complementary", { name: "盤點日期列表" });
     await user.click(dateButton(dateList, "2026-08-10"));
-    await screen.findByText("金色長方形鋁盒 蓋");
+    await screen.findAllByText("金色長方形鋁盒");
 
+    expect(screen.getByRole("columnheader", { name: "尺寸" })).toBeInTheDocument();
     const names = [...container.querySelectorAll("tbody tr td:nth-child(4) strong")]
       .map((node) => node.textContent);
     expect(names).toEqual([
-      "金色長方形鋁盒 蓋",
-      "金色長方形鋁盒 盒",
-      "銀色保溫袋 大",
-      "銀色保溫袋 中",
-      "銀色保温袋 細",
+      "金色長方形鋁盒",
+      "金色長方形鋁蓋",
+      "金色長方形鋁盒",
+      "金色長方形鋁蓋",
+      "金色長方形鋁盒",
+      "金色長方形鋁蓋",
+      "銀色保溫袋",
+      "銀色保溫袋",
+      "銀色保溫袋",
     ]);
+    const sizes = [...container.querySelectorAll("tbody tr td:nth-child(5)")]
+      .map((node) => node.textContent);
+    expect(sizes).toEqual(["大", "大", "中", "中", "小", "小", "大", "中", "細"]);
+  });
+
+  it("splits the size suffix out of the material name", () => {
+    expect(describePackingStocktakeItem({ ...records[0], name: "金色長方形鋁盒 大" }))
+      .toEqual({ name: "金色長方形鋁盒", size: "大" });
+    expect(describePackingStocktakeItem({ ...records[0], name: "金色長方形鋁蓋 小" }))
+      .toEqual({ name: "金色長方形鋁蓋", size: "小" });
+    expect(describePackingStocktakeItem({ ...records[0], name: "銀色保温袋 細" }))
+      .toEqual({ name: "銀色保溫袋", size: "細" });
+    expect(describePackingStocktakeItem({ ...records[0], name: "芝士汁粉" }))
+      .toEqual({ name: "芝士汁粉", size: "" });
+  });
+
+  it("does not add a size column to ingredient stocktakes", async () => {
+    const user = userEvent.setup();
+    render(<MemoryRouter><PackingStocktakesPage kind="ingredient" canEdit
+      loadDates={vi.fn().mockResolvedValue([{ date: "2026-08-10" }])}
+      loadRows={vi.fn().mockResolvedValue({ items: records, total: 1 })}
+    /></MemoryRouter>);
+
+    const dateList = await screen.findByRole("complementary", { name: "盤點日期列表" });
+    await user.click(dateButton(dateList, "2026-08-10"));
+    await screen.findByText("芝士汁粉");
+    expect(screen.queryByRole("columnheader", { name: "尺寸" })).not.toBeInTheDocument();
   });
 
   it("keeps lid/base pairs together without truncating ordinary size-ending words", () => {
