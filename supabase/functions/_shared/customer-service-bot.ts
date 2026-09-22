@@ -46,6 +46,10 @@ import {
   inferCustomerServicePilotGoal,
   type CustomerServicePilotGoal,
 } from "./customer-service-pilot-graph.ts";
+import {
+  applyClassificationSafetyGuards,
+  safetyRouteToIntent,
+} from "./customer-service-safety.ts";
 import type { CustomerServiceRecentMessage } from "./customer-service-context.ts";
 import {
   customerServiceCatalogQuery,
@@ -2151,6 +2155,35 @@ export async function handleCustomerServiceTurn({
     : explicitRequestedFields.length
       ? { ...modelClassified, requestedFields: explicitRequestedFields }
       : modelClassified;
+
+  const safetyResult = applyClassificationSafetyGuards({
+    text,
+    classified,
+    orderNumber: classified.orderNumber,
+  });
+  if (safetyResult.override) {
+    const mapped = safetyRouteToIntent(safetyResult.route);
+    if (mapped) {
+      classified.intent = mapped.intent as ClassifiedMessage["intent"];
+      classified.configuredIntentKey = mapped.intent;
+      classified.requiresHuman = mapped.requiresHuman;
+    }
+  }
+  trace({
+    stage: "safety_guard",
+    status: safetyResult.override ? "warn" : "ok",
+    code: safetyResult.route.kind,
+    params: {
+      model_intent: modelClassified.intent,
+      evidence_injection: safetyResult.evidence.injection,
+      evidence_change: safetyResult.evidence.changeAction,
+      evidence_cancel: safetyResult.evidence.cancelAction,
+      evidence_complaint: safetyResult.evidence.complaint,
+      evidence_negated: safetyResult.evidence.negatedAction,
+      override: safetyResult.override,
+      note: safetyResult.note,
+    },
+  });
   trace({
     stage: "classify",
     status: classified.needsClarification ? "warn" : "ok",

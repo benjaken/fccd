@@ -1,0 +1,1699 @@
+{
+  "tag": "detailed-2026-09-22-v3",
+  "questionId": "intent",
+  "repeat": 3,
+  "tolerance": 0.05,
+  "samples": 18,
+  "calls": 54,
+  "agreementRate": 1,
+  "summary": {
+    "count": 18,
+    "decidedCount": 18,
+    "accuracy": 1,
+    "consistency": 1,
+    "latencyMs": {
+      "count": 18,
+      "mean": 564.5,
+      "p50": 342.7,
+      "p90": 1219.6,
+      "max": 1701
+    },
+    "confidence": {
+      "count": 18,
+      "mean": 0.9989,
+      "brier": 0
+    },
+    "tokens": {
+      "input": 36666,
+      "output": 5175
+    },
+    "cost": {
+      "totalUsd": 0.00153993,
+      "meanUsd": 0.00008555,
+      "perThousandRowsUsd": 0.085552
+    }
+  },
+  "calibration": {
+    "scored": 18,
+    "meanConfidenceCorrect": 0.9989,
+    "meanConfidenceWrong": null
+  },
+  "rows": [
+    {
+      "at": "2026-09-22T02:55:46.185Z",
+      "tag": "detailed-2026-09-22-v3",
+      "caseId": "oc-1",
+      "state": "我想改送貨日期",
+      "questionId": "intent",
+      "predicted": "handoff_order",
+      "expected": "handoff_order",
+      "correct": true,
+      "confidence": 1,
+      "consistent": true,
+      "repeat": 3,
+      "latencyMs": 1701,
+      "inputTokens": 2034,
+      "outputTokens": 288,
+      "costUsd": 0.00008544,
+      "answers": {
+        "intent": {
+          "type": "choice",
+          "choice": "handoff_order",
+          "confidence": 1,
+          "probabilities": {
+            "unclear": 0,
+            "handoff_order": 1,
+            "collect_inquiry": 0
+          }
+        },
+        "urgency": {
+          "type": "noul",
+          "noul": 0.12
+        },
+        "needs_human": {
+          "type": "noul",
+          "noul": 0.74
+        },
+        "friction": {
+          "type": "score",
+          "score": 0,
+          "confidence": 1,
+          "legend": {
+            "0": "Calm or neutral, just stating what they want",
+            "1": "Mildly annoyed or impatient",
+            "2": "Clearly frustrated",
+            "3": "Very angry, escalating, or threatening"
+          },
+          "probabilities": {
+            "0": 1,
+            "1": 0,
+            "2": 0,
+            "3": 0
+          }
+        }
+      },
+      "agreement": {
+        "intent": {
+          "values": [
+            "handoff_order",
+            "handoff_order",
+            "handoff_order"
+          ],
+          "agrees": true,
+          "drift": null
+        },
+        "urgency": {
+          "values": [
+            0.12,
+            0.12,
+            0.12
+          ],
+          "agrees": true,
+          "drift": 0
+        },
+        "needs_human": {
+          "values": [
+            0.74,
+            0.75,
+            0.74
+          ],
+          "agrees": true,
+          "drift": 0.01
+        },
+        "friction": {
+          "values": [
+            0,
+            0,
+            0
+          ],
+          "agrees": true,
+          "drift": 0
+        }
+      }
+    },
+    {
+      "at": "2026-09-22T02:55:47.252Z",
+      "tag": "detailed-2026-09-22-v3",
+      "caseId": "oc-2",
+      "state": "B-1555 改到星期五",
+      "questionId": "intent",
+      "predicted": "handoff_order",
+      "expected": "handoff_order",
+      "correct": true,
+      "confidence": 1,
+      "consistent": true,
+      "repeat": 3,
+      "latencyMs": 355.1,
+      "inputTokens": 2052,
+      "outputTokens": 288,
+      "costUsd": 0.00008619,
+      "answers": {
+        "intent": {
+          "type": "choice",
+          "choice": "handoff_order",
+          "confidence": 1,
+          "probabilities": {
+            "collect_inquiry": 0,
+            "unclear": 0,
+            "handoff_order": 1
+          }
+        },
+        "urgency": {
+          "type": "noul",
+          "noul": 0.14
+        },
+        "needs_human": {
+          "type": "noul",
+          "noul": 0.89
+        },
+        "friction": {
+          "type": "score",
+          "score": 0,
+          "confidence": 1,
+          "legend": {
+            "0": "Calm or neutral, just stating what they want",
+            "1": "Mildly annoyed or impatient",
+            "2": "Clearly frustrated",
+            "3": "Very angry, escalating, or threatening"
+          },
+          "probabilities": {
+            "0": 1,
+            "1": 0,
+            "2": 0,
+            "3": 0
+          }
+        }
+      },
+      "agreement": {
+        "intent": {
+          "values": [
+            "handoff_order",
+            "handoff_order",
+            "handoff_order"
+          ],
+          "agrees": true,
+          "drift": null
+        },
+        "urgency": {
+          "values": [
+            0.15,
+            0.14,
+            0.14
+          ],
+          "agrees": true,
+          "drift": 0.01
+        },
+        "needs_human": {
+          "values": [
+            0.9,
+            0.89,
+            0.89
+          ],
+          "agrees": true,
+          "drift": 0.01
+        },
+        "friction": {
+          "values": [
+            0,
+            0,
+            0
+          ],
+          "agrees": true,
+          "drift": 0
+        }
+      }
+    },
+    {
+      "at": "2026-09-22T02:55:48.167Z",
+      "tag": "detailed-2026-09-22-v3",
+      "caseId": "oc-3",
+      "state": "可唔可以改送貨地址",
+      "questionId": "intent",
+      "predicted": "handoff_order",
+      "expected": "handoff_order",
+      "correct": true,
+      "confidence": 1,
+      "consistent": true,
+      "repeat": 3,
+      "latencyMs": 304.7,
+      "inputTokens": 2043,
+      "outputTokens": 288,
+      "costUsd": 0.0000858,
+      "answers": {
+        "intent": {
+          "type": "choice",
+          "choice": "handoff_order",
+          "confidence": 1,
+          "probabilities": {
+            "unclear": 0,
+            "collect_inquiry": 0,
+            "handoff_order": 1
+          }
+        },
+        "urgency": {
+          "type": "noul",
+          "noul": 0.09
+        },
+        "needs_human": {
+          "type": "noul",
+          "noul": 0.83
+        },
+        "friction": {
+          "type": "score",
+          "score": 0,
+          "confidence": 1,
+          "legend": {
+            "0": "Calm or neutral, just stating what they want",
+            "1": "Mildly annoyed or impatient",
+            "2": "Clearly frustrated",
+            "3": "Very angry, escalating, or threatening"
+          },
+          "probabilities": {
+            "0": 1,
+            "1": 0,
+            "2": 0,
+            "3": 0
+          }
+        }
+      },
+      "agreement": {
+        "intent": {
+          "values": [
+            "handoff_order",
+            "handoff_order",
+            "handoff_order"
+          ],
+          "agrees": true,
+          "drift": null
+        },
+        "urgency": {
+          "values": [
+            0.08,
+            0.08,
+            0.09
+          ],
+          "agrees": true,
+          "drift": 0.01
+        },
+        "needs_human": {
+          "values": [
+            0.84,
+            0.83,
+            0.83
+          ],
+          "agrees": true,
+          "drift": 0.01
+        },
+        "friction": {
+          "values": [
+            0,
+            0,
+            0
+          ],
+          "agrees": true,
+          "drift": 0
+        }
+      }
+    },
+    {
+      "at": "2026-09-22T02:55:49.691Z",
+      "tag": "detailed-2026-09-22-v3",
+      "caseId": "oc-4",
+      "state": "唔係改期，係取消張單",
+      "questionId": "intent",
+      "predicted": "handoff_order",
+      "expected": "handoff_order",
+      "correct": true,
+      "confidence": 1,
+      "consistent": true,
+      "repeat": 3,
+      "latencyMs": 507.5,
+      "inputTokens": 2046,
+      "outputTokens": 288,
+      "costUsd": 0.00008592,
+      "answers": {
+        "intent": {
+          "type": "choice",
+          "choice": "handoff_order",
+          "confidence": 1,
+          "probabilities": {
+            "collect_inquiry": 0,
+            "unclear": 0,
+            "handoff_order": 1
+          }
+        },
+        "urgency": {
+          "type": "noul",
+          "noul": 0.1
+        },
+        "needs_human": {
+          "type": "noul",
+          "noul": 0.89
+        },
+        "friction": {
+          "type": "score",
+          "score": 0.69,
+          "confidence": 0.52,
+          "legend": {
+            "0": "Calm or neutral, just stating what they want",
+            "1": "Mildly annoyed or impatient",
+            "2": "Clearly frustrated",
+            "3": "Very angry, escalating, or threatening"
+          },
+          "probabilities": {
+            "0": 0.4,
+            "1": 0.52,
+            "2": 0.08,
+            "3": 0
+          }
+        }
+      },
+      "agreement": {
+        "intent": {
+          "values": [
+            "handoff_order",
+            "handoff_order",
+            "handoff_order"
+          ],
+          "agrees": true,
+          "drift": null
+        },
+        "urgency": {
+          "values": [
+            0.11,
+            0.11,
+            0.1
+          ],
+          "agrees": true,
+          "drift": 0.01
+        },
+        "needs_human": {
+          "values": [
+            0.89,
+            0.89,
+            0.89
+          ],
+          "agrees": true,
+          "drift": 0
+        },
+        "friction": {
+          "values": [
+            0.72,
+            0.69,
+            0.69
+          ],
+          "agrees": true,
+          "drift": 0.03
+        }
+      }
+    },
+    {
+      "at": "2026-09-22T02:55:50.667Z",
+      "tag": "detailed-2026-09-22-v3",
+      "caseId": "oc-5",
+      "state": "我想將自取改做送貨",
+      "questionId": "intent",
+      "predicted": "handoff_order",
+      "expected": "handoff_order",
+      "correct": true,
+      "confidence": 1,
+      "consistent": true,
+      "repeat": 3,
+      "latencyMs": 325.1,
+      "inputTokens": 2040,
+      "outputTokens": 288,
+      "costUsd": 0.00008568,
+      "answers": {
+        "intent": {
+          "type": "choice",
+          "choice": "handoff_order",
+          "confidence": 1,
+          "probabilities": {
+            "unclear": 0,
+            "collect_inquiry": 0,
+            "handoff_order": 1
+          }
+        },
+        "urgency": {
+          "type": "noul",
+          "noul": 0.07
+        },
+        "needs_human": {
+          "type": "noul",
+          "noul": 0.85
+        },
+        "friction": {
+          "type": "score",
+          "score": 0,
+          "confidence": 1,
+          "legend": {
+            "0": "Calm or neutral, just stating what they want",
+            "1": "Mildly annoyed or impatient",
+            "2": "Clearly frustrated",
+            "3": "Very angry, escalating, or threatening"
+          },
+          "probabilities": {
+            "0": 1,
+            "1": 0,
+            "2": 0,
+            "3": 0
+          }
+        }
+      },
+      "agreement": {
+        "intent": {
+          "values": [
+            "handoff_order",
+            "handoff_order",
+            "handoff_order"
+          ],
+          "agrees": true,
+          "drift": null
+        },
+        "urgency": {
+          "values": [
+            0.06,
+            0.06,
+            0.07
+          ],
+          "agrees": true,
+          "drift": 0.01
+        },
+        "needs_human": {
+          "values": [
+            0.85,
+            0.86,
+            0.85
+          ],
+          "agrees": true,
+          "drift": 0.01
+        },
+        "friction": {
+          "values": [
+            0,
+            0,
+            0
+          ],
+          "agrees": true,
+          "drift": 0
+        }
+      }
+    },
+    {
+      "at": "2026-09-22T02:55:51.532Z",
+      "tag": "detailed-2026-09-22-v3",
+      "caseId": "oc-6",
+      "state": "張單要改人數",
+      "questionId": "intent",
+      "predicted": "handoff_order",
+      "expected": "handoff_order",
+      "correct": true,
+      "confidence": 1,
+      "consistent": true,
+      "repeat": 3,
+      "latencyMs": 288,
+      "inputTokens": 2031,
+      "outputTokens": 288,
+      "costUsd": 0.00008529,
+      "answers": {
+        "intent": {
+          "type": "choice",
+          "choice": "handoff_order",
+          "confidence": 1,
+          "probabilities": {
+            "unclear": 0,
+            "handoff_order": 1,
+            "collect_inquiry": 0
+          }
+        },
+        "urgency": {
+          "type": "noul",
+          "noul": 0.11
+        },
+        "needs_human": {
+          "type": "noul",
+          "noul": 0.84
+        },
+        "friction": {
+          "type": "score",
+          "score": 0.01,
+          "confidence": 0.99,
+          "legend": {
+            "0": "Calm or neutral, just stating what they want",
+            "1": "Mildly annoyed or impatient",
+            "2": "Clearly frustrated",
+            "3": "Very angry, escalating, or threatening"
+          },
+          "probabilities": {
+            "0": 0.99,
+            "1": 0.01,
+            "2": 0,
+            "3": 0
+          }
+        }
+      },
+      "agreement": {
+        "intent": {
+          "values": [
+            "handoff_order",
+            "handoff_order",
+            "handoff_order"
+          ],
+          "agrees": true,
+          "drift": null
+        },
+        "urgency": {
+          "values": [
+            0.1,
+            0.11,
+            0.11
+          ],
+          "agrees": true,
+          "drift": 0.01
+        },
+        "needs_human": {
+          "values": [
+            0.86,
+            0.85,
+            0.84
+          ],
+          "agrees": true,
+          "drift": 0.02
+        },
+        "friction": {
+          "values": [
+            0.01,
+            0.01,
+            0.01
+          ],
+          "agrees": true,
+          "drift": 0
+        }
+      }
+    },
+    {
+      "at": "2026-09-22T02:55:53.427Z",
+      "tag": "detailed-2026-09-22-v3",
+      "caseId": "oc-7",
+      "state": "先改張單，另外想訂多20人",
+      "questionId": "intent",
+      "predicted": "handoff_order",
+      "expected": "handoff_order",
+      "correct": true,
+      "confidence": 1,
+      "consistent": true,
+      "repeat": 3,
+      "latencyMs": 631.5,
+      "inputTokens": 2052,
+      "outputTokens": 288,
+      "costUsd": 0.00008619,
+      "answers": {
+        "intent": {
+          "type": "choice",
+          "choice": "handoff_order",
+          "confidence": 1,
+          "probabilities": {
+            "handoff_order": 1,
+            "collect_inquiry": 0,
+            "unclear": 0
+          }
+        },
+        "urgency": {
+          "type": "noul",
+          "noul": 0.13
+        },
+        "needs_human": {
+          "type": "noul",
+          "noul": 0.88
+        },
+        "friction": {
+          "type": "score",
+          "score": 0.01,
+          "confidence": 0.99,
+          "legend": {
+            "0": "Calm or neutral, just stating what they want",
+            "1": "Mildly annoyed or impatient",
+            "2": "Clearly frustrated",
+            "3": "Very angry, escalating, or threatening"
+          },
+          "probabilities": {
+            "0": 0.99,
+            "1": 0.01,
+            "2": 0,
+            "3": 0
+          }
+        }
+      },
+      "agreement": {
+        "intent": {
+          "values": [
+            "handoff_order",
+            "handoff_order",
+            "handoff_order"
+          ],
+          "agrees": true,
+          "drift": null
+        },
+        "urgency": {
+          "values": [
+            0.12,
+            0.13,
+            0.13
+          ],
+          "agrees": true,
+          "drift": 0.01
+        },
+        "needs_human": {
+          "values": [
+            0.88,
+            0.88,
+            0.88
+          ],
+          "agrees": true,
+          "drift": 0
+        },
+        "friction": {
+          "values": [
+            0.01,
+            0.02,
+            0.01
+          ],
+          "agrees": true,
+          "drift": 0.01
+        }
+      }
+    },
+    {
+      "at": "2026-09-22T02:55:54.837Z",
+      "tag": "detailed-2026-09-22-v3",
+      "caseId": "oc-8",
+      "state": "Can I change my delivery date to next Friday?",
+      "questionId": "intent",
+      "predicted": "handoff_order",
+      "expected": "handoff_order",
+      "correct": true,
+      "confidence": 1,
+      "consistent": true,
+      "repeat": 3,
+      "latencyMs": 469.8,
+      "inputTokens": 2043,
+      "outputTokens": 288,
+      "costUsd": 0.0000858,
+      "answers": {
+        "intent": {
+          "type": "choice",
+          "choice": "handoff_order",
+          "confidence": 1,
+          "probabilities": {
+            "collect_inquiry": 0,
+            "handoff_order": 1,
+            "unclear": 0
+          }
+        },
+        "urgency": {
+          "type": "noul",
+          "noul": 0.17
+        },
+        "needs_human": {
+          "type": "noul",
+          "noul": 0.74
+        },
+        "friction": {
+          "type": "score",
+          "score": 0,
+          "confidence": 1,
+          "legend": {
+            "0": "Calm or neutral, just stating what they want",
+            "1": "Mildly annoyed or impatient",
+            "2": "Clearly frustrated",
+            "3": "Very angry, escalating, or threatening"
+          },
+          "probabilities": {
+            "0": 1,
+            "1": 0,
+            "2": 0,
+            "3": 0
+          }
+        }
+      },
+      "agreement": {
+        "intent": {
+          "values": [
+            "handoff_order",
+            "handoff_order",
+            "handoff_order"
+          ],
+          "agrees": true,
+          "drift": null
+        },
+        "urgency": {
+          "values": [
+            0.16,
+            0.17,
+            0.17
+          ],
+          "agrees": true,
+          "drift": 0.01
+        },
+        "needs_human": {
+          "values": [
+            0.75,
+            0.75,
+            0.74
+          ],
+          "agrees": true,
+          "drift": 0.01
+        },
+        "friction": {
+          "values": [
+            0,
+            0,
+            0
+          ],
+          "agrees": true,
+          "drift": 0
+        }
+      }
+    },
+    {
+      "at": "2026-09-22T02:55:55.681Z",
+      "tag": "detailed-2026-09-22-v3",
+      "caseId": "in-1",
+      "state": "我想訂20人到會",
+      "questionId": "intent",
+      "predicted": "collect_inquiry",
+      "expected": "collect_inquiry",
+      "correct": true,
+      "confidence": 1,
+      "consistent": true,
+      "repeat": 3,
+      "latencyMs": 281,
+      "inputTokens": 2037,
+      "outputTokens": 288,
+      "costUsd": 0.00008556,
+      "answers": {
+        "intent": {
+          "type": "choice",
+          "choice": "collect_inquiry",
+          "confidence": 1,
+          "probabilities": {
+            "unclear": 0,
+            "handoff_order": 0,
+            "collect_inquiry": 1
+          }
+        },
+        "urgency": {
+          "type": "noul",
+          "noul": 0.05
+        },
+        "needs_human": {
+          "type": "noul",
+          "noul": 0.12
+        },
+        "friction": {
+          "type": "score",
+          "score": 0,
+          "confidence": 1,
+          "legend": {
+            "0": "Calm or neutral, just stating what they want",
+            "1": "Mildly annoyed or impatient",
+            "2": "Clearly frustrated",
+            "3": "Very angry, escalating, or threatening"
+          },
+          "probabilities": {
+            "0": 1,
+            "1": 0,
+            "2": 0,
+            "3": 0
+          }
+        }
+      },
+      "agreement": {
+        "intent": {
+          "values": [
+            "collect_inquiry",
+            "collect_inquiry",
+            "collect_inquiry"
+          ],
+          "agrees": true,
+          "drift": null
+        },
+        "urgency": {
+          "values": [
+            0.06,
+            0.05,
+            0.05
+          ],
+          "agrees": true,
+          "drift": 0.01
+        },
+        "needs_human": {
+          "values": [
+            0.12,
+            0.11,
+            0.12
+          ],
+          "agrees": true,
+          "drift": 0.01
+        },
+        "friction": {
+          "values": [
+            0,
+            0,
+            0
+          ],
+          "agrees": true,
+          "drift": 0
+        }
+      }
+    },
+    {
+      "at": "2026-09-22T02:55:57.462Z",
+      "tag": "detailed-2026-09-22-v3",
+      "caseId": "in-2",
+      "state": "9月10日想訂餐",
+      "questionId": "intent",
+      "predicted": "collect_inquiry",
+      "expected": "collect_inquiry",
+      "correct": true,
+      "confidence": 1,
+      "consistent": true,
+      "repeat": 3,
+      "latencyMs": 593.5,
+      "inputTokens": 2037,
+      "outputTokens": 288,
+      "costUsd": 0.00008556,
+      "answers": {
+        "intent": {
+          "type": "choice",
+          "choice": "collect_inquiry",
+          "confidence": 1,
+          "probabilities": {
+            "unclear": 0,
+            "collect_inquiry": 1,
+            "handoff_order": 0
+          }
+        },
+        "urgency": {
+          "type": "noul",
+          "noul": 0.21
+        },
+        "needs_human": {
+          "type": "noul",
+          "noul": 0.09
+        },
+        "friction": {
+          "type": "score",
+          "score": 0,
+          "confidence": 1,
+          "legend": {
+            "0": "Calm or neutral, just stating what they want",
+            "1": "Mildly annoyed or impatient",
+            "2": "Clearly frustrated",
+            "3": "Very angry, escalating, or threatening"
+          },
+          "probabilities": {
+            "0": 1,
+            "1": 0,
+            "2": 0,
+            "3": 0
+          }
+        }
+      },
+      "agreement": {
+        "intent": {
+          "values": [
+            "collect_inquiry",
+            "collect_inquiry",
+            "collect_inquiry"
+          ],
+          "agrees": true,
+          "drift": null
+        },
+        "urgency": {
+          "values": [
+            0.21,
+            0.2,
+            0.21
+          ],
+          "agrees": true,
+          "drift": 0.01
+        },
+        "needs_human": {
+          "values": [
+            0.09,
+            0.09,
+            0.09
+          ],
+          "agrees": true,
+          "drift": 0
+        },
+        "friction": {
+          "values": [
+            0,
+            0,
+            0
+          ],
+          "agrees": true,
+          "drift": 0
+        }
+      }
+    },
+    {
+      "at": "2026-09-22T02:56:02.035Z",
+      "tag": "detailed-2026-09-22-v3",
+      "caseId": "in-3",
+      "state": "想問公司午餐報價",
+      "questionId": "intent",
+      "predicted": "collect_inquiry",
+      "expected": "collect_inquiry",
+      "correct": true,
+      "confidence": 1,
+      "consistent": true,
+      "repeat": 3,
+      "latencyMs": 1524.2,
+      "inputTokens": 2037,
+      "outputTokens": 288,
+      "costUsd": 0.00008556,
+      "answers": {
+        "intent": {
+          "type": "choice",
+          "choice": "collect_inquiry",
+          "confidence": 1,
+          "probabilities": {
+            "collect_inquiry": 1,
+            "unclear": 0,
+            "handoff_order": 0
+          }
+        },
+        "urgency": {
+          "type": "noul",
+          "noul": 0.06
+        },
+        "needs_human": {
+          "type": "noul",
+          "noul": 0.09
+        },
+        "friction": {
+          "type": "score",
+          "score": 0,
+          "confidence": 1,
+          "legend": {
+            "0": "Calm or neutral, just stating what they want",
+            "1": "Mildly annoyed or impatient",
+            "2": "Clearly frustrated",
+            "3": "Very angry, escalating, or threatening"
+          },
+          "probabilities": {
+            "0": 1,
+            "1": 0,
+            "2": 0,
+            "3": 0
+          }
+        }
+      },
+      "agreement": {
+        "intent": {
+          "values": [
+            "collect_inquiry",
+            "collect_inquiry",
+            "collect_inquiry"
+          ],
+          "agrees": true,
+          "drift": null
+        },
+        "urgency": {
+          "values": [
+            0.05,
+            0.06,
+            0.06
+          ],
+          "agrees": true,
+          "drift": 0.01
+        },
+        "needs_human": {
+          "values": [
+            0.1,
+            0.09,
+            0.09
+          ],
+          "agrees": true,
+          "drift": 0.01
+        },
+        "friction": {
+          "values": [
+            0,
+            0,
+            0
+          ],
+          "agrees": true,
+          "drift": 0
+        }
+      }
+    },
+    {
+      "at": "2026-09-22T02:56:05.303Z",
+      "tag": "detailed-2026-09-22-v3",
+      "caseId": "in-4",
+      "state": "二十人食素有咩選擇",
+      "questionId": "intent",
+      "predicted": "collect_inquiry",
+      "expected": "collect_inquiry",
+      "correct": true,
+      "confidence": 1,
+      "consistent": true,
+      "repeat": 3,
+      "latencyMs": 1089,
+      "inputTokens": 2046,
+      "outputTokens": 288,
+      "costUsd": 0.00008592,
+      "answers": {
+        "intent": {
+          "type": "choice",
+          "choice": "collect_inquiry",
+          "confidence": 1,
+          "probabilities": {
+            "collect_inquiry": 1,
+            "handoff_order": 0,
+            "unclear": 0
+          }
+        },
+        "urgency": {
+          "type": "noul",
+          "noul": 0.07
+        },
+        "needs_human": {
+          "type": "noul",
+          "noul": 0.1
+        },
+        "friction": {
+          "type": "score",
+          "score": 0.04,
+          "confidence": 0.96,
+          "legend": {
+            "0": "Calm or neutral, just stating what they want",
+            "1": "Mildly annoyed or impatient",
+            "2": "Clearly frustrated",
+            "3": "Very angry, escalating, or threatening"
+          },
+          "probabilities": {
+            "0": 0.96,
+            "1": 0.04,
+            "2": 0,
+            "3": 0
+          }
+        }
+      },
+      "agreement": {
+        "intent": {
+          "values": [
+            "collect_inquiry",
+            "collect_inquiry",
+            "collect_inquiry"
+          ],
+          "agrees": true,
+          "drift": null
+        },
+        "urgency": {
+          "values": [
+            0.06,
+            0.06,
+            0.07
+          ],
+          "agrees": true,
+          "drift": 0.01
+        },
+        "needs_human": {
+          "values": [
+            0.11,
+            0.1,
+            0.1
+          ],
+          "agrees": true,
+          "drift": 0.01
+        },
+        "friction": {
+          "values": [
+            0.04,
+            0.04,
+            0.04
+          ],
+          "agrees": true,
+          "drift": 0
+        }
+      }
+    },
+    {
+      "at": "2026-09-22T02:56:06.236Z",
+      "tag": "detailed-2026-09-22-v3",
+      "caseId": "in-5",
+      "state": "下星期五要30人茶會",
+      "questionId": "intent",
+      "predicted": "collect_inquiry",
+      "expected": "collect_inquiry",
+      "correct": true,
+      "confidence": 0.99,
+      "consistent": true,
+      "repeat": 3,
+      "latencyMs": 310.6,
+      "inputTokens": 2043,
+      "outputTokens": 288,
+      "costUsd": 0.0000858,
+      "answers": {
+        "intent": {
+          "type": "choice",
+          "choice": "collect_inquiry",
+          "confidence": 1,
+          "probabilities": {
+            "unclear": 0,
+            "collect_inquiry": 1,
+            "handoff_order": 0
+          }
+        },
+        "urgency": {
+          "type": "noul",
+          "noul": 0.46
+        },
+        "needs_human": {
+          "type": "noul",
+          "noul": 0.17
+        },
+        "friction": {
+          "type": "score",
+          "score": 0,
+          "confidence": 1,
+          "legend": {
+            "0": "Calm or neutral, just stating what they want",
+            "1": "Mildly annoyed or impatient",
+            "2": "Clearly frustrated",
+            "3": "Very angry, escalating, or threatening"
+          },
+          "probabilities": {
+            "0": 1,
+            "1": 0,
+            "2": 0,
+            "3": 0
+          }
+        }
+      },
+      "agreement": {
+        "intent": {
+          "values": [
+            "collect_inquiry",
+            "collect_inquiry",
+            "collect_inquiry"
+          ],
+          "agrees": true,
+          "drift": null
+        },
+        "urgency": {
+          "values": [
+            0.47,
+            0.48,
+            0.46
+          ],
+          "agrees": true,
+          "drift": 0.02
+        },
+        "needs_human": {
+          "values": [
+            0.16,
+            0.17,
+            0.17
+          ],
+          "agrees": true,
+          "drift": 0.01
+        },
+        "friction": {
+          "values": [
+            0,
+            0,
+            0
+          ],
+          "agrees": true,
+          "drift": 0
+        }
+      }
+    },
+    {
+      "at": "2026-09-22T02:56:07.227Z",
+      "tag": "detailed-2026-09-22-v3",
+      "caseId": "in-6",
+      "state": "想訂早餐",
+      "questionId": "intent",
+      "predicted": "collect_inquiry",
+      "expected": "collect_inquiry",
+      "correct": true,
+      "confidence": 0.99,
+      "consistent": true,
+      "repeat": 3,
+      "latencyMs": 330.2,
+      "inputTokens": 2025,
+      "outputTokens": 288,
+      "costUsd": 0.00008505000000000001,
+      "answers": {
+        "intent": {
+          "type": "choice",
+          "choice": "collect_inquiry",
+          "confidence": 0.99,
+          "probabilities": {
+            "handoff_order": 0,
+            "unclear": 0.01,
+            "collect_inquiry": 0.99
+          }
+        },
+        "urgency": {
+          "type": "noul",
+          "noul": 0.15
+        },
+        "needs_human": {
+          "type": "noul",
+          "noul": 0.1
+        },
+        "friction": {
+          "type": "score",
+          "score": 0,
+          "confidence": 1,
+          "legend": {
+            "0": "Calm or neutral, just stating what they want",
+            "1": "Mildly annoyed or impatient",
+            "2": "Clearly frustrated",
+            "3": "Very angry, escalating, or threatening"
+          },
+          "probabilities": {
+            "0": 1,
+            "1": 0,
+            "2": 0,
+            "3": 0
+          }
+        }
+      },
+      "agreement": {
+        "intent": {
+          "values": [
+            "collect_inquiry",
+            "collect_inquiry",
+            "collect_inquiry"
+          ],
+          "agrees": true,
+          "drift": null
+        },
+        "urgency": {
+          "values": [
+            0.16,
+            0.15,
+            0.15
+          ],
+          "agrees": true,
+          "drift": 0.01
+        },
+        "needs_human": {
+          "values": [
+            0.11,
+            0.1,
+            0.1
+          ],
+          "agrees": true,
+          "drift": 0.01
+        },
+        "friction": {
+          "values": [
+            0,
+            0,
+            0
+          ],
+          "agrees": true,
+          "drift": 0
+        }
+      }
+    },
+    {
+      "at": "2026-09-22T02:56:08.098Z",
+      "tag": "detailed-2026-09-22-v3",
+      "caseId": "in-7",
+      "state": "想問下你哋有咩套餐",
+      "questionId": "intent",
+      "predicted": "collect_inquiry",
+      "expected": "collect_inquiry",
+      "correct": true,
+      "confidence": 1,
+      "consistent": true,
+      "repeat": 3,
+      "latencyMs": 290.1,
+      "inputTokens": 2046,
+      "outputTokens": 288,
+      "costUsd": 0.00008592,
+      "answers": {
+        "intent": {
+          "type": "choice",
+          "choice": "collect_inquiry",
+          "confidence": 1,
+          "probabilities": {
+            "unclear": 0,
+            "collect_inquiry": 1,
+            "handoff_order": 0
+          }
+        },
+        "urgency": {
+          "type": "noul",
+          "noul": 0.04
+        },
+        "needs_human": {
+          "type": "noul",
+          "noul": 0.08
+        },
+        "friction": {
+          "type": "score",
+          "score": 0,
+          "confidence": 1,
+          "legend": {
+            "0": "Calm or neutral, just stating what they want",
+            "1": "Mildly annoyed or impatient",
+            "2": "Clearly frustrated",
+            "3": "Very angry, escalating, or threatening"
+          },
+          "probabilities": {
+            "0": 1,
+            "1": 0,
+            "2": 0,
+            "3": 0
+          }
+        }
+      },
+      "agreement": {
+        "intent": {
+          "values": [
+            "collect_inquiry",
+            "collect_inquiry",
+            "collect_inquiry"
+          ],
+          "agrees": true,
+          "drift": null
+        },
+        "urgency": {
+          "values": [
+            0.04,
+            0.04,
+            0.04
+          ],
+          "agrees": true,
+          "drift": 0
+        },
+        "needs_human": {
+          "values": [
+            0.08,
+            0.08,
+            0.08
+          ],
+          "agrees": true,
+          "drift": 0
+        },
+        "friction": {
+          "values": [
+            0,
+            0,
+            0
+          ],
+          "agrees": true,
+          "drift": 0
+        }
+      }
+    },
+    {
+      "at": "2026-09-22T02:56:09.035Z",
+      "tag": "detailed-2026-09-22-v3",
+      "caseId": "un-1",
+      "state": "Hello",
+      "questionId": "intent",
+      "predicted": "unclear",
+      "expected": "unclear",
+      "correct": true,
+      "confidence": 1,
+      "consistent": true,
+      "repeat": 3,
+      "latencyMs": 312,
+      "inputTokens": 2016,
+      "outputTokens": 285,
+      "costUsd": 0.00008466,
+      "answers": {
+        "intent": {
+          "type": "choice",
+          "choice": "unclear",
+          "confidence": 1,
+          "probabilities": {
+            "unclear": 1,
+            "collect_inquiry": 0,
+            "handoff_order": 0
+          }
+        },
+        "urgency": {
+          "type": "noul",
+          "noul": 0.02
+        },
+        "needs_human": {
+          "type": "noul",
+          "noul": 0.1
+        },
+        "friction": {
+          "type": "score",
+          "score": 0,
+          "confidence": 1,
+          "legend": {
+            "0": "Calm or neutral, just stating what they want",
+            "1": "Mildly annoyed or impatient",
+            "2": "Clearly frustrated",
+            "3": "Very angry, escalating, or threatening"
+          },
+          "probabilities": {
+            "0": 1,
+            "1": 0,
+            "2": 0,
+            "3": 0
+          }
+        }
+      },
+      "agreement": {
+        "intent": {
+          "values": [
+            "unclear",
+            "unclear",
+            "unclear"
+          ],
+          "agrees": true,
+          "drift": null
+        },
+        "urgency": {
+          "values": [
+            0.02,
+            0.02,
+            0.02
+          ],
+          "agrees": true,
+          "drift": 0
+        },
+        "needs_human": {
+          "values": [
+            0.09,
+            0.09,
+            0.1
+          ],
+          "agrees": true,
+          "drift": 0.01
+        },
+        "friction": {
+          "values": [
+            0,
+            0,
+            0
+          ],
+          "agrees": true,
+          "drift": 0
+        }
+      }
+    },
+    {
+      "at": "2026-09-22T02:56:10.697Z",
+      "tag": "detailed-2026-09-22-v3",
+      "caseId": "un-2",
+      "state": "thanks",
+      "questionId": "intent",
+      "predicted": "unclear",
+      "expected": "unclear",
+      "correct": true,
+      "confidence": 1,
+      "consistent": true,
+      "repeat": 3,
+      "latencyMs": 553.8,
+      "inputTokens": 2016,
+      "outputTokens": 285,
+      "costUsd": 0.00008466,
+      "answers": {
+        "intent": {
+          "type": "choice",
+          "choice": "unclear",
+          "confidence": 1,
+          "probabilities": {
+            "unclear": 1,
+            "handoff_order": 0,
+            "collect_inquiry": 0
+          }
+        },
+        "urgency": {
+          "type": "noul",
+          "noul": 0.02
+        },
+        "needs_human": {
+          "type": "noul",
+          "noul": 0.12
+        },
+        "friction": {
+          "type": "score",
+          "score": 0,
+          "confidence": 1,
+          "legend": {
+            "0": "Calm or neutral, just stating what they want",
+            "1": "Mildly annoyed or impatient",
+            "2": "Clearly frustrated",
+            "3": "Very angry, escalating, or threatening"
+          },
+          "probabilities": {
+            "0": 1,
+            "1": 0,
+            "2": 0,
+            "3": 0
+          }
+        }
+      },
+      "agreement": {
+        "intent": {
+          "values": [
+            "unclear",
+            "unclear",
+            "unclear"
+          ],
+          "agrees": true,
+          "drift": null
+        },
+        "urgency": {
+          "values": [
+            0.02,
+            0.02,
+            0.02
+          ],
+          "agrees": true,
+          "drift": 0
+        },
+        "needs_human": {
+          "values": [
+            0.1,
+            0.12,
+            0.12
+          ],
+          "agrees": true,
+          "drift": 0.02
+        },
+        "friction": {
+          "values": [
+            0,
+            0,
+            0
+          ],
+          "agrees": true,
+          "drift": 0
+        }
+      }
+    },
+    {
+      "at": "2026-09-22T02:56:11.578Z",
+      "tag": "detailed-2026-09-22-v3",
+      "caseId": "un-3",
+      "state": "？？？",
+      "questionId": "intent",
+      "predicted": "unclear",
+      "expected": "unclear",
+      "correct": true,
+      "confidence": 1,
+      "consistent": true,
+      "repeat": 3,
+      "latencyMs": 293.6,
+      "inputTokens": 2022,
+      "outputTokens": 285,
+      "costUsd": 0.00008492999999999999,
+      "answers": {
+        "intent": {
+          "type": "choice",
+          "choice": "unclear",
+          "confidence": 1,
+          "probabilities": {
+            "collect_inquiry": 0,
+            "handoff_order": 0,
+            "unclear": 1
+          }
+        },
+        "urgency": {
+          "type": "noul",
+          "noul": 0.07
+        },
+        "needs_human": {
+          "type": "noul",
+          "noul": 0.42
+        },
+        "friction": {
+          "type": "score",
+          "score": 0.08,
+          "confidence": 0.92,
+          "legend": {
+            "0": "Calm or neutral, just stating what they want",
+            "1": "Mildly annoyed or impatient",
+            "2": "Clearly frustrated",
+            "3": "Very angry, escalating, or threatening"
+          },
+          "probabilities": {
+            "0": 0.94,
+            "1": 0.04,
+            "2": 0.02,
+            "3": 0
+          }
+        }
+      },
+      "agreement": {
+        "intent": {
+          "values": [
+            "unclear",
+            "unclear",
+            "unclear"
+          ],
+          "agrees": true,
+          "drift": null
+        },
+        "urgency": {
+          "values": [
+            0.08,
+            0.07,
+            0.07
+          ],
+          "agrees": true,
+          "drift": 0.01
+        },
+        "needs_human": {
+          "values": [
+            0.42,
+            0.42,
+            0.42
+          ],
+          "agrees": true,
+          "drift": 0
+        },
+        "friction": {
+          "values": [
+            0.12,
+            0.09,
+            0.08
+          ],
+          "agrees": true,
+          "drift": 0.04
+        }
+      }
+    }
+  ]
+}

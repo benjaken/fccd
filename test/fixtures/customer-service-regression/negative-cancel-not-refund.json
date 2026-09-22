@@ -26,14 +26,15 @@
         "dialogAction": "new_request"
       },
       "expect": {
+        "intent": "handoff_order",
+        "state": "awaiting_human",
         "effects": {
           "writeInquiry": 0,
           "queueHandoff": 1
         },
         "replyExcludes": [
           "7 個工作天"
-        ],
-        "failureReason": "faq_not_found"
+        ]
       }
     }
   ]

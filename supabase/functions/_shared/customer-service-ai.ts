@@ -8,6 +8,15 @@ import {
   type CustomerServiceOrderField,
 } from "./customer-service-intents.ts";
 import { buildCustomerServiceSystemPrompt } from "./customer-service-prompts.ts";
+import {
+  classifyCustomerServiceWithJev,
+  customerServiceJevConfig,
+  isJevAcceptable,
+  type CustomerServiceJevConfig,
+  type CustomerServiceJevTrace,
+} from "./customer-service-jev.ts";
+
+type OpenAiMessage = { role: string; content: string };
 
 export type CustomerServiceFaqKnowledge = {
   id: string;
@@ -654,6 +663,86 @@ export async function classifyCustomerServiceWithTieredAi({
   });
   if (!fallback) return primary;
   return !primary || fallback.confidence >= primary.confidence ? fallback : primary;
+}
+
+export async function classifyCustomerServiceWithJevOrGroK(args: {
+  message: string;
+  conversationState: string;
+  pendingRequest?: string;
+  recentMessages?: CustomerServiceRecentMessage[];
+  workflowInstructions?: string;
+  intents: CustomerServiceIntentConfig[];
+  tiers: CustomerServiceAiTierConfig;
+  jevConfig?: CustomerServiceJevConfig;
+  fetchImpl?: typeof fetch;
+  beforeRequest?: (
+    provider: "primary" | "fallback",
+    model: string,
+    messages: OpenAiMessage[],
+  ) => void | Promise<void>;
+}): Promise<{
+  classification: CustomerServiceAiClassification | null;
+  jevTrace: CustomerServiceJevTrace | null;
+}> {
+  const jevConfig = args.jevConfig ?? customerServiceJevConfig();
+  let jevTrace: CustomerServiceJevTrace | null = null;
+
+  if (jevConfig.enabled) {
+    const intentDescriptions = args.intents.map((i) => ({
+      intentKey: i.intentKey,
+      description: i.description,
+      examples: i.examples,
+    }));
+    const { decision, trace } = await classifyCustomerServiceWithJev({
+      message: args.message,
+      conversationState: args.conversationState,
+      pendingRequest: args.pendingRequest,
+      recentMessages: args.recentMessages,
+      intents: intentDescriptions,
+      config: jevConfig,
+      fetchImpl: args.fetchImpl,
+    });
+    jevTrace = trace;
+
+    if (decision && !jevConfig.shadow) {
+      const config = args.intents.find((i) => i.intentKey === decision.intentKey);
+      const actionKey = config?.actionKey ?? "faq_search";
+      const { accepted, reason } = isJevAcceptable(decision, jevConfig, actionKey);
+
+      if (accepted) {
+        const classification: CustomerServiceAiClassification = {
+          intentKey: decision.intentKey,
+          confidence: decision.intentConfidence,
+          clarificationQuestion: "",
+          orderNumber: "",
+          requestedDate: "",
+          requestedFields: [],
+          missingFields: [],
+          requiresHuman: decision.requiresHumanProbability >= jevConfig.requiresHumanThreshold,
+          needsClarification: decision.needsClarificationProbability >= 0.5,
+          dialogAction: decision.dialogAction,
+          toolKey: null,
+          model: decision.model,
+        };
+        return { classification, jevTrace };
+      }
+      trace.outcome = "escalated";
+      trace.errorCode = reason;
+    }
+  }
+
+  const classification = await classifyCustomerServiceWithTieredAi({
+    message: args.message,
+    conversationState: args.conversationState,
+    pendingRequest: args.pendingRequest,
+    recentMessages: args.recentMessages,
+    workflowInstructions: args.workflowInstructions,
+    intents: args.intents,
+    tiers: args.tiers,
+    fetchImpl: args.fetchImpl,
+    beforeRequest: args.beforeRequest as (() => void | Promise<void>) | undefined,
+  });
+  return { classification, jevTrace };
 }
 
 export async function answerCustomerServiceFaqWithTieredAi({
