@@ -178,6 +178,10 @@ export function isHumanOperatorMessage(event: WatiInboundEvent) {
   // the same localMessageId in sessionMessageSent_v2, so an API reply cannot
   // accidentally move the conversation into human-owned state.
   if (event.localMessageId.startsWith("fcc-bot-")) return false;
+  // The interactive-buttons API does not support localMessageId, so WATI echoes
+  // those as plain owner messages. Recognise the bot's own related-suggestion
+  // text so a button echo cannot switch the conversation to human-owned.
+  if (event.text.trim().startsWith("你可能仲想問")) return false;
   if (event.operatorEmail) return true;
   if (!event.operatorName) return false;
   return !/^(api|bot|system|wati)$/i.test(event.operatorName);
@@ -437,16 +441,19 @@ export function buildInteractiveButtonsUrl({
   phone,
   channelNumber,
   tenantId = "",
+  localMessageId = "",
 }: {
   endpoint: string;
   phone: string;
   channelNumber: string;
   tenantId?: string;
+  localMessageId?: string;
 }) {
   const base = resolveWatiSessionEndpoint(endpoint, tenantId);
   const url = new URL(`${base}/api/v1/sendInteractiveButtonsMessage`);
   if (phone) url.searchParams.set("whatsappNumber", phone);
   if (channelNumber) url.searchParams.set("channelPhoneNumber", channelNumber);
+  if (localMessageId) url.searchParams.set("localMessageId", localMessageId);
   return url.toString();
 }
 
@@ -459,6 +466,7 @@ async function postWatiInteractiveButtons({
   footer,
   channelNumber,
   fetchImpl,
+  localMessageId,
 }: {
   endpoint: string;
   token: string;
@@ -468,8 +476,9 @@ async function postWatiInteractiveButtons({
   footer?: string;
   channelNumber: string;
   fetchImpl: typeof fetch;
+  localMessageId: string;
 }) {
-  const url = buildInteractiveButtonsUrl({ endpoint, phone, channelNumber });
+  const url = buildInteractiveButtonsUrl({ endpoint, phone, channelNumber, localMessageId });
   const response = await fetchImpl(url, {
     method: "POST",
     headers: {
@@ -511,6 +520,7 @@ export async function deliverWatiInteractiveButtons({
   buttons,
   footer,
   channelNumber,
+  localMessageId = `fcc-bot-${crypto.randomUUID()}`,
   fetchImpl = fetch,
   log = console.error,
 }: {
@@ -520,6 +530,7 @@ export async function deliverWatiInteractiveButtons({
   buttons: Array<{ text: string }>;
   footer?: string;
   channelNumber: string;
+  localMessageId?: string;
   fetchImpl?: typeof fetch;
   log?: (...args: unknown[]) => void;
 }) {
@@ -537,6 +548,7 @@ export async function deliverWatiInteractiveButtons({
         footer,
         channelNumber,
         fetchImpl,
+        localMessageId,
       });
       log("wati interactive buttons sent", target.label, describeWatiSessionTarget(target.endpoint));
       return raw;
