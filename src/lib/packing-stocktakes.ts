@@ -84,6 +84,8 @@ function packingCodeBase(name: string) {
   return match ? match[0].replace(/[A-Za-z]+$/u, "") : "";
 }
 
+type PackingSortableItem = { name: string | null; sku: string | null };
+
 type PackingSortKeys = {
   family: string;
   groupRank: number;
@@ -92,7 +94,7 @@ type PackingSortKeys = {
 };
 
 function packingSortKeys(
-  item: PackingStocktakeItem,
+  item: PackingSortableItem,
   compartmentByCode: Map<string, number>,
 ): PackingSortKeys {
   const name = normalizePackingName(item.name ?? item.sku);
@@ -131,7 +133,7 @@ function packingSortKeys(
 }
 
 /** Lets a box lid without its own compartment number follow the box that shares its code. */
-function packingCompartmentByCode(items: PackingStocktakeItem[]) {
+function packingCompartmentByCode(items: ReadonlyArray<PackingSortableItem>) {
   const byCode = new Map<string, number>();
   for (const item of items) {
     const name = normalizePackingName(item.name ?? item.sku);
@@ -156,7 +158,7 @@ export function describePackingStocktakeItem(item: PackingStocktakeItem) {
  * is ordered by 格數, all aluminium boxes (連蓋) sit in one block, and other
  * materials keep the box-and-lid / size grouping.
  */
-export function sortPackingStocktakeItems(items: PackingStocktakeItem[]) {
+export function sortPackingStocktakeItems<T extends PackingSortableItem>(items: ReadonlyArray<T>): T[] {
   const collator = new Intl.Collator("zh-HK", { numeric: true, sensitivity: "base" });
   const compartmentByCode = packingCompartmentByCode(items);
   return [...items].sort((left, right) => {

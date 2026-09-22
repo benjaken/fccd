@@ -123,6 +123,25 @@ describe("material inventory ledger", () => {
     expect(container.querySelector(".operational-list-pagination")).toBeInTheDocument();
   });
 
+  it("groups packaging rows so 便當盒 follows 飯盒 on the packing tab", async () => {
+    const user = userEvent.setup();
+    const packing = [
+      { ingredientId: "p3", sku: "P3", name: "六格便當盒", ingredientType: "包裝用品", unit: "個", currentQuantity: 1, minimumStock: 0, lastActivityAt: null },
+      { ingredientId: "p2", sku: "P2", name: "兩格飯盒", ingredientType: "包裝用品", unit: "個", currentQuantity: 1, minimumStock: 0, lastActivityAt: null },
+      { ingredientId: "p1", sku: "P1", name: "五格便當盒", ingredientType: "包裝用品", unit: "個", currentQuantity: 1, minimumStock: 0, lastActivityAt: null },
+    ];
+    vi.mocked(fetchMaterialInventory).mockResolvedValue(packing);
+    const { container } = render(<MemoryRouter><MaterialInventoryPage /></MemoryRouter>);
+
+    await user.click(await screen.findByRole("tab", { name: "包裝" }));
+    await waitFor(() => expect(fetchMaterialInventory).toHaveBeenCalledWith("packing", ""));
+    await waitFor(() => {
+      const names = [...container.querySelectorAll("tbody tr td:nth-child(3) strong")]
+        .map((node) => node.textContent);
+      expect(names).toEqual(["兩格飯盒", "五格便當盒", "六格便當盒"]);
+    });
+  });
+
   it("filters inventory rows by stock status", async () => {
     const user = userEvent.setup();
     vi.mocked(fetchMaterialInventory).mockResolvedValue([
