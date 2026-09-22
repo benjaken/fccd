@@ -521,6 +521,7 @@ type PreviewMessage = {
   simulatedWrite?: boolean;
   simulatedNotify?: boolean;
   relatedFaqs?: Array<{ id: string; question: string }>;
+  orderChoices?: Array<{ orderId: string; orderNumber: string }>;
   trace?: PreviewExecutionTrace;
 };
 
@@ -1189,6 +1190,7 @@ export function CustomerFaqPage({
           simulatedWrite: result.simulatedWrite,
           simulatedNotify: result.simulatedNotify,
           relatedFaqs: result.relatedFaqs ?? [],
+          orderChoices: result.orderChoices ?? [],
           trace: {
             stateBefore,
             stateAfter: result.conversation.state,
@@ -2340,6 +2342,32 @@ export function CustomerFaqPage({
                               }}
                             >
                               {faq.question}
+                            </button>
+                          ))}
+                        </div>
+                      ) : null}
+                      {message.role === "assistant" &&
+                      message.orderChoices?.length ? (
+                        <div
+                          className="customer-faq-related-suggestions"
+                          aria-label={t(
+                            "settings.customerFaq.previewOrderChoicesLabel",
+                          )}
+                        >
+                          <span className="customer-faq-related-heading">
+                            {t("settings.customerFaq.previewOrderChoicesLabel")}
+                          </span>
+                          {message.orderChoices.map((choice) => (
+                            <button
+                              key={choice.orderId}
+                              type="button"
+                              className="customer-faq-related-chip"
+                              disabled={previewing || !choice.orderNumber}
+                              onClick={() => {
+                                void sendPreviewText(choice.orderNumber);
+                              }}
+                            >
+                              {choice.orderNumber || "—"}
                             </button>
                           ))}
                         </div>

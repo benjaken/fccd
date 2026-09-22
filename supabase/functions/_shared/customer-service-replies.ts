@@ -1,4 +1,5 @@
 import type { CustomerServiceRecentMessage } from "./customer-service-context.ts";
+import { customerServiceOrderLifecycleLabel } from "./customer-service-intents.ts";
 
 export const CUSTOMER_SERVICE_REPLY_VERSION = "zh-HK.v1";
 
@@ -31,7 +32,7 @@ export const REPLIES = {
   help: "你好，請問是查詢現有訂單，還是需要到會訂餐協助？",
   fallback: "唔好意思，系統暫時未能完成呢則回覆。同事會跟進。",
   pickOrder:
-    "已經幫你查到多過一張訂單。請回覆其中一個訂單號，我再同你講嗰單嘅狀況。",
+    "已經幫你查到多過一張處理中嘅訂單。請點選或回覆其中一個訂單號，我再同你講嗰單嘅狀況。",
 } as const;
 
 export function containsProfanity(value: string) {
@@ -231,17 +232,28 @@ export function lookupNoOrdersReply(orderNumber = "") {
 }
 
 export function lookupListReply(
-  orders: Array<{ order_number: string | null; delivery_at: string | null }>,
+  orders: Array<{
+    order_number: string | null;
+    delivery_at: string | null;
+    delivery_status?: string | null;
+  }>,
 ) {
-  const lines = orders.map((order) => {
+  const lines = orders.map((order, index) => {
     const when = order.delivery_at
       ? new Date(order.delivery_at).toLocaleDateString("zh-HK", {
           timeZone: "Asia/Hong_Kong",
         })
       : "日期待確認";
-    return `${order.order_number || "（未有單號）"}（${when}）`;
+    const status = customerServiceOrderLifecycleLabel(order.delivery_status);
+    return `${index + 1}. ${order.order_number || "（未有單號）"}（${when}・${status}）`;
   });
   return sanitizeOutboundReply(`${REPLIES.pickOrder}\n${lines.join("\n")}`);
+}
+
+export function lookupNoActiveOrdersReply() {
+  return sanitizeOutboundReply(
+    "你目前冇處理中嘅訂單，最近嘅訂單已經完成或取消。如果你仍想查看舊訂單，可以傳送該訂單號碼；如需協助請回覆「請客服跟進」。",
+  );
 }
 
 export function lookupNotFoundReply(orderNumber: string) {
@@ -252,7 +264,11 @@ export function lookupNotFoundReply(orderNumber: string) {
 
 export function handoffOrderListReply(
   request: string,
-  orders: Array<{ order_number: string | null; delivery_at: string | null }>,
+  orders: Array<{
+    order_number: string | null;
+    delivery_at: string | null;
+    delivery_status?: string | null;
+  }>,
 ) {
   const confirming = request.trim()
     ? `收到，你想處理「${request.trim()}」。`
@@ -268,10 +284,11 @@ export function handoffOrderListReply(
           minute: "2-digit",
         })
       : "日期待確認";
-    return `${order.order_number || "（未有單號）"}（${when}）`;
+    const status = customerServiceOrderLifecycleLabel(order.delivery_status);
+    return `${order.order_number || "（未有單號）"}（${when}・${status}）`;
   });
   return sanitizeOutboundReply(
-    `${confirming}請先回覆要處理嘅未送貨訂單號：\n${lines.join("\n")}`,
+    `${confirming}請先點選或回覆要處理嘅未送貨訂單號：\n${lines.join("\n")}`,
   );
 }
 
@@ -366,6 +383,33 @@ export function buildRelatedFaqButtons(
   }
   if (!buttons.length) return null;
   return { body: "你可能仲想問：", buttons };
+}
+
+/** WhatsApp interactive buttons allow at most 3 order choices. */
+export const MAX_ORDER_CHOICE_BUTTONS = 3;
+
+export type CustomerServiceOrderChoice = {
+  orderId: string;
+  orderNumber: string;
+};
+
+/** Build the WhatsApp interactive-buttons payload for order selection. */
+export function buildOrderChoiceButtons(
+  choices: CustomerServiceOrderChoice[],
+  maxLength = MAX_RELATED_FAQ_BUTTON_LENGTH,
+): { body: string; buttons: Array<{ text: string }> } | null {
+  const seen = new Set<string>();
+  const buttons: Array<{ text: string }> = [];
+  for (const choice of choices) {
+    const raw = (choice.orderNumber || "").trim() || `訂單 ${buttons.length + 1}`;
+    const label = raw.length <= maxLength ? raw : `${raw.slice(0, maxLength - 1)}…`;
+    if (seen.has(label)) continue;
+    seen.add(label);
+    buttons.push({ text: label });
+    if (buttons.length >= MAX_ORDER_CHOICE_BUTTONS) break;
+  }
+  if (!buttons.length) return null;
+  return { body: "請點選訂單：", buttons };
 }
 
 

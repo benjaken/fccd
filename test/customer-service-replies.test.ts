@@ -2,11 +2,18 @@ import { describe, expect, it } from "vitest";
 
 import {
   appendRelatedFaqsToReply,
+  buildOrderChoiceButtons,
   buildRelatedFaqButtons,
   formatRelatedFaqsAppendix,
   handoffNoOpenOrderReply,
+  lookupListReply,
+  lookupNoActiveOrdersReply,
   shortenRelatedFaqLabel,
 } from "../supabase/functions/_shared/customer-service-replies.ts";
+import {
+  classifyCustomerServiceOrderLifecycle,
+  isActiveCustomerServiceOrder,
+} from "../supabase/functions/_shared/customer-service-intents.ts";
 
 describe("related FAQ reply appendix", () => {
   it("formats a Cantonese numbered suggestion list", () => {
@@ -84,5 +91,62 @@ describe("related FAQ interactive buttons", () => {
   it("returns null when there are no suggestions", () => {
     expect(buildRelatedFaqButtons([])).toBeNull();
     expect(buildRelatedFaqButtons([{ question: "   " }])).toBeNull();
+  });
+});
+
+describe("order lifecycle classification", () => {
+  it("maps cancel and delivered statuses to coarse buckets", () => {
+    expect(classifyCustomerServiceOrderLifecycle("已取消")).toBe("cancelled");
+    expect(classifyCustomerServiceOrderLifecycle("Cancelled")).toBe("cancelled");
+    expect(classifyCustomerServiceOrderLifecycle("已送達")).toBe("completed");
+    expect(classifyCustomerServiceOrderLifecycle("delivered")).toBe("completed");
+    expect(classifyCustomerServiceOrderLifecycle("待取貨")).toBe("active");
+    expect(classifyCustomerServiceOrderLifecycle("已安排")).toBe("active");
+  });
+
+  it("treats unknown or empty status as active so live orders are never hidden", () => {
+    expect(classifyCustomerServiceOrderLifecycle("")).toBe("active");
+    expect(classifyCustomerServiceOrderLifecycle(null)).toBe("active");
+    expect(classifyCustomerServiceOrderLifecycle("某個新狀態")).toBe("active");
+    expect(isActiveCustomerServiceOrder({ delivery_status: "" })).toBe(true);
+    expect(isActiveCustomerServiceOrder({ delivery_status: "已送達" })).toBe(false);
+  });
+});
+
+describe("order status aware selection", () => {
+  it("numbers the active order list and shows the coarse status", () => {
+    const reply = lookupListReply([
+      {
+        order_number: "FCL2026090101",
+        delivery_at: "2026-09-10T03:00:00.000Z",
+        delivery_status: "待取貨",
+      },
+      { order_number: "FCL2026090202", delivery_at: null, delivery_status: "已安排" },
+    ]);
+
+    expect(reply).toContain("1. FCL2026090101");
+    expect(reply).toContain("2. FCL2026090202");
+    expect(reply).toContain("處理中");
+    expect(reply).not.toContain("待取貨");
+  });
+
+  it("builds at most three order choice buttons from order numbers", () => {
+    const result = buildOrderChoiceButtons([
+      { orderId: "1", orderNumber: "FCL2026090101" },
+      { orderId: "2", orderNumber: "FCL2026090202" },
+      { orderId: "3", orderNumber: "FCL2026090303" },
+      { orderId: "4", orderNumber: "FCL2026090404" },
+    ]);
+
+    expect(result?.body).toBe("請點選訂單：");
+    expect(result?.buttons.map((button) => button.text)).toEqual([
+      "FCL2026090101",
+      "FCL2026090202",
+      "FCL2026090303",
+    ]);
+  });
+
+  it("does not offer a choice list when only completed or cancelled orders exist", () => {
+    expect(lookupNoActiveOrdersReply()).toContain("冇處理中");
   });
 });

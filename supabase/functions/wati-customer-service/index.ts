@@ -52,6 +52,7 @@ import {
 } from "../_shared/customer-service-bot.ts";
 import {
   appendRelatedFaqsToReply,
+  buildOrderChoiceButtons,
   buildRelatedFaqButtons,
   formatRelatedFaqsAppendix,
   sanitizeOutboundReply,
@@ -2480,6 +2481,7 @@ async function handleBackendPreview(
     confidence: turn.confidence,
     tool_keys: turn.toolKeys ?? [],
     related_faqs: turn.relatedFaqs ?? [],
+    order_choices: turn.orderChoices ?? [],
     failure_reason: failureReason,
     media_route: mediaRoute?.action ?? null,
     vision: vision
@@ -2558,6 +2560,8 @@ async function persistCustomerServiceTurn(
   let outboundId: string | null = null;
   const relatedFaqs = turn.relatedFaqs ?? [];
   const relatedFaqButtons = buildRelatedFaqButtons(relatedFaqs);
+  const orderChoiceButtons = buildOrderChoiceButtons(turn.orderChoices ?? []);
+  const quickReplyButtons = orderChoiceButtons ?? relatedFaqButtons;
   // When clickable buttons are available, the text reply omits the plain-text
   // suggestion appendix so the same list is not shown twice.
   const replyWithRelated = turn.reply
@@ -2606,13 +2610,13 @@ async function persistCustomerServiceTurn(
           last_error: null,
         });
       }
-      if (relatedFaqButtons) {
+      if (quickReplyButtons) {
         try {
           await deliverWatiInteractiveButtons({
             creds: watiCredentials(),
             phone: input.phone,
-            body: relatedFaqButtons.body,
-            buttons: relatedFaqButtons.buttons,
+            body: quickReplyButtons.body,
+            buttons: quickReplyButtons.buttons,
             channelNumber: env("WATI_CHANNEL_NUMBER") || BRAND_WHATSAPP_CHANNEL,
           });
         } catch (buttonsError) {
@@ -2620,18 +2624,20 @@ async function persistCustomerServiceTurn(
             "customer-service buttons send failed",
             buttonsError instanceof Error ? buttonsError.message.slice(0, 300) : String(buttonsError),
           );
-          try {
-            await deliverWatiSessionMessage({
-              creds: watiCredentials(),
-              phone: input.phone,
-              text: formatRelatedFaqsAppendix(relatedFaqs),
-              channelNumber: env("WATI_CHANNEL_NUMBER") || BRAND_WHATSAPP_CHANNEL,
-            });
-          } catch (fallbackError) {
-            console.error(
-              "customer-service buttons fallback failed",
-              fallbackError instanceof Error ? fallbackError.message.slice(0, 300) : String(fallbackError),
-            );
+          if (relatedFaqButtons) {
+            try {
+              await deliverWatiSessionMessage({
+                creds: watiCredentials(),
+                phone: input.phone,
+                text: formatRelatedFaqsAppendix(relatedFaqs),
+                channelNumber: env("WATI_CHANNEL_NUMBER") || BRAND_WHATSAPP_CHANNEL,
+              });
+            } catch (fallbackError) {
+              console.error(
+                "customer-service buttons fallback failed",
+                fallbackError instanceof Error ? fallbackError.message.slice(0, 300) : String(fallbackError),
+              );
+            }
           }
         }
       }
