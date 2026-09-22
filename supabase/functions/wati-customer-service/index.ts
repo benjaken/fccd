@@ -1084,7 +1084,7 @@ async function recordHumanOperatorContextMessage(
 async function loadActiveCustomerServiceConfig(admin: AdminClient) {
   const { data, error } = await admin
     .from("customer_service_config_versions")
-    .select("model,fallback_model,fallback_enabled,escalation_confidence,system_prompt,temperature,retrieval_limit,rag_config")
+    .select("model,fallback_model,fallback_enabled,escalation_confidence,system_prompt,temperature,retrieval_limit,rag_config,jev_enabled,jev_shadow,jev_model,jev_accept_threshold,jev_requires_human_threshold,jev_budget_ms")
     .eq("environment", deploymentEnvironment())
     .eq("status", "active")
     .maybeSingle();
