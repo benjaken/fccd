@@ -20,6 +20,7 @@ import {
   type MaterialInventoryLedgerEntry,
   type MaterialInventoryStatusFilter,
 } from "@/lib/material-inventory";
+import { sortPackingStocktakeItems } from "@/lib/packing-stocktakes";
 import { useDeferredFilter } from "@/lib/use-deferred-filter";
 import styles from "./MaterialInventoryPage.module.css";
 
@@ -82,7 +83,7 @@ export function MaterialInventoryPage() {
     let active = true;
     setLoading(true); setError(null);
     void fetchMaterialInventory(kind, appliedSearch)
-      .then((rows) => { if (active) { setItems(rows); setPage(1); } })
+      .then((rows) => { if (active) { setItems(kind === "packing" ? sortPackingStocktakeItems(rows) : rows); setPage(1); } })
       .catch(() => { if (active) setError("load"); })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
