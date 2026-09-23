@@ -34,7 +34,7 @@ const perOrderWatiMigration = readFileSync(
   "utf8",
 );
 const limitedWatiWindowMigration = readFileSync(
-  "supabase/migrations/20260916120000_limit_missing_order_wati_window.sql",
+  "supabase/migrations/20260923100000_limit_followup_notifications_to_three_days.sql",
   "utf8",
 );
 const factoryUnsentSection = migration.slice(
@@ -120,14 +120,17 @@ describe("Shopify/FCCD order reconciliation alerts", () => {
     expect(internalTemplateConfig).toContain('replace(/[\\r\\n\\t]+/g, " ")');
   });
 
-  it("limits missing-order WhatsApp alerts to delivery dates within three days", () => {
+  it("limits the daily follow-up to delivery dates within three days", () => {
     expect(limitedWatiWindowMigration).toContain(
       "function private.enqueue_order_reconciliation_alerts",
     );
     expect(limitedWatiWindowMigration).toContain(
-      "issue.issue_type not in ('missing_fccd', 'unlinked_fccd')",
+      "issue.issue_type <> 'driver_unassigned'",
     );
-    expect(limitedWatiWindowMigration).toContain("v_today + 2");
+    expect(limitedWatiWindowMigration).toContain(
+      "issue.issue_type = 'insufficient_stock'",
+    );
+    expect(limitedWatiWindowMigration).toContain("v_today + 3");
     expect(limitedWatiWindowMigration).toContain("join public.orders order_row on order_row.id = issue.order_id");
   });
 

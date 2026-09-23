@@ -561,7 +561,7 @@ describe("WATI order notifications", () => {
     expect(scheduler).toContain("wati_order_cron_secret");
   });
 
-  it("queues daily unassigned-driver email and WATI reminders for internal recipients", () => {
+  it("queues one unassigned-driver email and WATI reminder at 17:00 for internal recipients", () => {
     const migration = readFileSync(
       resolve(
         process.cwd(),
@@ -586,12 +586,17 @@ describe("WATI order notifications", () => {
       ),
       "utf8",
     );
+    const onceDailyMigration = readFileSync(
+      resolve(
+        process.cwd(),
+        "supabase/migrations/20260923100000_limit_followup_notifications_to_three_days.sql",
+      ),
+      "utf8",
+    );
     expect(worker).toContain('Deno.env.get("DRIVER_ASSIGNMENT_REMINDER_HOUR_HK")');
-    expect(worker).toContain('Deno.env.get("DRIVER_ASSIGNMENT_REMINDER_INTERVAL_HOURS")');
-    expect(worker).toContain("configured !== 9");
-    expect(worker).toContain("interval !== 3");
-    expect(worker).toContain("(local.hour - configured) % interval !== 0");
-    expect(worker).toContain("local.hour > 21");
+    expect(worker).toContain('?.trim() || "17"');
+    expect(worker).not.toContain("DRIVER_ASSIGNMENT_REMINDER_INTERVAL_HOURS");
+    expect(worker).toContain("if (local.hour !== configured)");
     expect(worker).toContain('"enqueue_driver_assignment_internal_reminders"');
     expect(worker).toContain("p_reminder_hour: dueDriverReminder.hour");
     expect(worker).toContain('"claim_driver_assignment_internal_reminders"');
@@ -608,6 +613,10 @@ describe("WATI order notifications", () => {
     expect(repeatMigration).toContain("unique (reminder_date, reminder_hour, channel, recipient_key)");
     expect(repeatMigration).toContain("template.event_key = 'driver_assigned'");
     expect(repeatMigration).toContain("set is_active = false");
+    expect(onceDailyMigration).toContain(
+      "create or replace function public.enqueue_driver_assignment_internal_reminders",
+    );
+    expect(onceDailyMigration).toContain("p_reminder_hour not in (17)");
   });
 
   it("uses the delivery sales address for every Resend email", () => {

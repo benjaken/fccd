@@ -193,16 +193,9 @@ function hongKongDateAndHour(now = new Date()) {
 }
 
 function driverReminderSlot(now = new Date()) {
-  const configured = Number(Deno.env.get("DRIVER_ASSIGNMENT_REMINDER_HOUR_HK")?.trim() || "9");
-  const interval = Number(Deno.env.get("DRIVER_ASSIGNMENT_REMINDER_INTERVAL_HOURS")?.trim() || "3");
-  if (configured !== 9) {
-    throw new Error("invalid_driver_assignment_reminder_hour_hk");
-  }
-  if (interval !== 3) {
-    throw new Error("invalid_driver_assignment_reminder_interval_hours");
-  }
+  const configured = Number(Deno.env.get("DRIVER_ASSIGNMENT_REMINDER_HOUR_HK")?.trim() || "17");
   const local = hongKongDateAndHour(now);
-  if (local.hour < configured || local.hour > 21 || (local.hour - configured) % interval !== 0) {
+  if (local.hour !== configured) {
     return null;
   }
   return { date: nextDateKey(local.date), hour: local.hour };
@@ -211,6 +204,12 @@ function driverReminderSlot(now = new Date()) {
 function nextDateKey(value: string) {
   const date = new Date(`${value}T12:00:00Z`);
   date.setUTCDate(date.getUTCDate() + 1);
+  return date.toISOString().slice(0, 10);
+}
+
+function addDays(dateKey: string, days: number) {
+  const date = new Date(`${dateKey}T12:00:00Z`);
+  date.setUTCDate(date.getUTCDate() + days);
   return date.toISOString().slice(0, 10);
 }
 
@@ -508,6 +507,35 @@ function reconciliationDeliveryDate(issue: ReconciliationIssueRow) {
       day: "2-digit",
     }).format(new Date(value))
     : "未設定";
+}
+
+const FOLLOW_UP_DATE_HORIZON_DAYS = 3;
+const FOLLOW_UP_UNLIMITED_ISSUE_TYPES = new Set([
+  "missing_delivery_date",
+  "insufficient_stock",
+]);
+
+function reconciliationFollowUpLimitDate(now = new Date()) {
+  return addDays(hongKongDateAndHour(now).date, FOLLOW_UP_DATE_HORIZON_DAYS);
+}
+
+function reconciliationFollowUpDate(issue: ReconciliationIssueRow) {
+  const order = reconciliationOrder(issue);
+  const value = order?.delivery_at || issue.service_at;
+  if (!value) return null;
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Hong_Kong",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date(value));
+}
+
+function reconciliationFollowUpEligible(issue: ReconciliationIssueRow, limitDate: string) {
+  if (issue.issue_type === "driver_unassigned") return false;
+  if (FOLLOW_UP_UNLIMITED_ISSUE_TYPES.has(issue.issue_type)) return true;
+  const date = reconciliationFollowUpDate(issue);
+  return !date || date <= limitDate;
 }
 
 function reconciliationCompactOrder(issue: ReconciliationIssueRow) {
@@ -1400,7 +1428,9 @@ Deno.serve(async (request) => {
       if (runError) throw new Error(`order_reconciliation_run_load_failed:${runError.message}`);
       if (issueError) throw new Error(`order_reconciliation_issue_load_failed:${issueError.message}`);
       dailyRun = ((runRows || [])[0] || null) as ReconciliationRunRow | null;
-      dailyIssues = (issueRows || []) as ReconciliationIssueRow[];
+      const followUpLimitDate = reconciliationFollowUpLimitDate();
+      dailyIssues = ((issueRows || []) as ReconciliationIssueRow[])
+        .filter((issue) => reconciliationFollowUpEligible(issue, followUpLimitDate));
     }
 
     for (const job of reconciliationAlertJobs) {
