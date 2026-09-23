@@ -32,11 +32,12 @@ demand. Order BOM snapshots are preferred, with product/package recipes used
 as fallback. Each affected order is queued once per WhatsApp recipient per day;
 all open problems for that order are combined into `issue_summary`.
 
-Daily WhatsApp alerts for `missing_fccd` and `unlinked_fccd` are limited to
-orders whose delivery date is within three days (today through the next two
-days) or already overdue; orders without a delivery date are still alerted. The
-daily email keeps listing every open issue, including far-future orders, so no
-follow-up disappears from the daily report.
+The daily follow-up email and WhatsApp alerts are limited to orders whose
+delivery date is within three days (today through today + 3). Orders without a
+delivery date and the independent inventory-shortage alert still notify.
+Unassigned-driver problems are no longer part of the daily follow-up; they are
+handled by the dedicated unassigned-driver reminder sent once at 17:00 Hong Kong
+time the day before delivery.
 
 The worker refreshes the existing reconciliation/urgent issues every minute;
 the heavier readiness and inventory audit runs once daily after 09:00. An
@@ -70,7 +71,9 @@ the existing activation gate continues to protect every normal/customer run.
 - `kitchen_not_visible`: an order marked sent to factory has no delivery row
   on the same Hong Kong delivery date, so it cannot appear in the kitchen view.
 - `driver_unassigned`: a future delivery (excluding pickup) has no assigned
-  motorcade/driver team.
+  motorcade/driver team. This issue is notified only by the dedicated
+  unassigned-driver reminder (once at 17:00 the day before delivery), not by the
+  daily follow-up.
 - `insufficient_stock`: the order uses an ingredient or packing item that is
   short within the 14-day aggregate forecast, or one of its lines has no BOM.
 

@@ -152,13 +152,12 @@ just because the matching email failed, and vice versa.
 
 ## Daily unassigned-driver internal reminder
 
-Starting at `DRIVER_ASSIGNMENT_REMINDER_HOUR_HK` (09:00 Hong Kong time by
-default), the scheduler sends email and WATI internal reminders every three
-hours at 09:00, 12:00, 15:00, 18:00 and 21:00 when tomorrow's delivery orders
-still have no fleet assigned. Pickup, cancelled, archived, and fulfilled orders
-are excluded. Each run rechecks the live assignment state. Each reminder shows
-the current count; the email also includes a direct FCCD link for every affected
-order, sorted by delivery time.
+At `DRIVER_ASSIGNMENT_REMINDER_HOUR_HK` (17:00 Hong Kong time by default), the
+scheduler sends one email and one WATI internal reminder when tomorrow's
+delivery orders still have no fleet assigned. Pickup, cancelled, archived, and
+fulfilled orders are excluded. Each run rechecks the live assignment state. The
+reminder shows the current count; the email also includes a direct FCCD link for
+every affected order, sorted by delivery time.
 
 Email recipients are users with `email_noti` enabled. WATI recipients come from
 `order_first_notification_recipients`. The approved internal WATI template is
@@ -173,7 +172,7 @@ needed for the detailed links in the matching email reminder; the WATI template
 uses its own fixed assignment URL.
 
 The reminder uses a date, time-slot, channel, and recipient outbox, so each
-recipient receives at most one reminder per three-hour slot. The live unassigned
+recipient receives at most one reminder per day at 17:00. The live unassigned
 list is read immediately before sending; if all orders have since been assigned,
 the queued reminder is skipped. `driver_assigned` remains inactive until the
 final rollout approval, which keeps both WATI and email stopped.
