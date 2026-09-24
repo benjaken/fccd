@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import userEvent from "@testing-library/user-event";
@@ -32,6 +32,7 @@ vi.mock("@/lib/notifications", async () => {
 
 describe("NotificationCenter", () => {
   beforeEach(async () => {
+    vi.clearAllMocks();
     await i18n.changeLanguage("zh-HK");
     vi.mocked(fetchNotifications).mockResolvedValue([
       {
@@ -51,6 +52,48 @@ describe("NotificationCenter", () => {
         updatedAt: "2026-08-23T01:00:00.000Z",
       },
     ]);
+  });
+
+  it("does not refetch for realtime events emitted by its initial refresh", async () => {
+    vi.useFakeTimers();
+    let finishInitialRefresh!: () => void;
+    vi.mocked(refreshDueNotifications).mockImplementationOnce(
+      () => new Promise<void>((resolve) => {
+        finishInitialRefresh = resolve;
+      }),
+    );
+
+    try {
+      render(
+        <MemoryRouter>
+          <NotificationCenter userId="user-1" />
+        </MemoryRouter>,
+      );
+
+      expect(subscribeToNotifications).toHaveBeenCalledWith("user-1", expect.any(Function));
+      const onRealtimeChange = vi.mocked(subscribeToNotifications).mock.calls[0]?.[1];
+      expect(onRealtimeChange).toBeTypeOf("function");
+
+      act(() => onRealtimeChange?.());
+      await act(async () => {
+        finishInitialRefresh();
+        await Promise.resolve();
+      });
+      expect(fetchNotifications).toHaveBeenCalledTimes(1);
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(401);
+      });
+      expect(fetchNotifications).toHaveBeenCalledTimes(1);
+
+      act(() => onRealtimeChange?.());
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(401);
+      });
+      expect(fetchNotifications).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("loads the login summary and opens the filterable bell inbox", async () => {
