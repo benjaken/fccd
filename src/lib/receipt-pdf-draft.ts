@@ -83,6 +83,19 @@ function storedText(value: unknown, fallback: string) {
   return typeof value === "string" ? value : fallback;
 }
 
+/**
+ * Money overrides (discount, Cashdollar) only win when they actually carry a
+ * positive amount. A blank or zero saved value must not shadow the latest
+ * order financials, otherwise an order that later receives a discount would
+ * keep printing without it.
+ */
+function storedMoney(value: unknown, fallback: string) {
+  if (typeof value !== "string") return fallback;
+  const trimmed = value.trim();
+  const parsed = Number(trimmed);
+  return trimmed !== "" && Number.isFinite(parsed) && parsed > 0 ? trimmed : fallback;
+}
+
 export function applyReceiptPdfSettings(
   fallback: ReceiptPdfDraft,
   stored: Partial<ReceiptPdfSettings> | null | undefined,
@@ -104,9 +117,9 @@ export function applyReceiptPdfSettings(
     deliveryFee: hasDeliveryOverride
       ? storedText(stored.deliveryFee, fallback.deliveryFee)
       : fallback.deliveryFee,
-    discount: storedText(stored.discount, fallback.discount),
-    cashdollarRedeemed: storedText(stored.cashdollarRedeemed, fallback.cashdollarRedeemed),
-    cashdollarPurchased: storedText(stored.cashdollarPurchased, fallback.cashdollarPurchased),
+    discount: storedMoney(stored.discount, fallback.discount),
+    cashdollarRedeemed: storedMoney(stored.cashdollarRedeemed, fallback.cashdollarRedeemed),
+    cashdollarPurchased: storedMoney(stored.cashdollarPurchased, fallback.cashdollarPurchased),
   };
 }
 

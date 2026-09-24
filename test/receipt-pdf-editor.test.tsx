@@ -220,6 +220,24 @@ describe("Receipt PDF editor", () => {
     expect(within(invoice).getByText("$1,550")).toBeInTheDocument();
   });
 
+  it("keeps showing the latest order discount when a saved draft stored a blank override", async () => {
+    render(
+      <MemoryRouter initialEntries={["/orders/order-1/invoice"]}>
+        <Routes>
+          <Route path="/orders/:id/invoice" element={<ReceiptPdfEditorPage documentKind="invoice" loadDetail={vi.fn().mockResolvedValue({
+            ...result,
+            order: result.order ? { ...result.order, discount: 100, grandTotal: 1550 } : null,
+          })} loadShippingFees={vi.fn().mockResolvedValue(shippingFees)} loadDraft={vi.fn().mockResolvedValue({ discount: "" })} />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    const invoice = await screen.findByRole("main", { name: "發票 PDF" });
+    expect(within(invoice).getByText("Discount:")).toBeInTheDocument();
+    expect(within(invoice).getByLabelText("折扣")).toHaveValue("100");
+    expect(within(invoice).getByText("$1,550")).toBeInTheDocument();
+  });
+
   it("shows Cashdollar rows only when amounts are present and deducts redeemed from the total", async () => {
     render(
       <MemoryRouter initialEntries={["/orders/order-1/invoice"]}>
