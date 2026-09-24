@@ -136,4 +136,34 @@ describe("business notification reminders", () => {
     expect(migration).toContain("needs_label_reprint = false");
     expect(migration).toContain("line_change.resolved_at is null");
   });
+
+  it("guards no-op notification upserts so realtime stays quiet", () => {
+    const migration = readFileSync(
+      path.resolve(
+        process.cwd(),
+        "supabase/migrations/20260924120000_business_notification_realtime_noise.sql",
+      ),
+      "utf8",
+    );
+
+    expect(migration).toContain("create or replace function private.upsert_business_notification");
+    expect(migration).toMatch(
+      /on conflict \(dedupe_key, recipient_user_id\) do update[\s\S]+where/,
+    );
+    expect(migration).toContain(
+      "public.business_notifications.event_type is distinct from excluded.event_type",
+    );
+    expect(migration).toContain("public.business_notifications.resolved_at is not null");
+  });
+
+  it("coalesces realtime notification reloads instead of polling every minute", () => {
+    const source = readFileSync(
+      path.resolve(process.cwd(), "src/components/NotificationCenter.tsx"),
+      "utf8",
+    );
+
+    expect(source).toContain("scheduleReload");
+    expect(source).not.toContain("}, 60_000)");
+    expect(source).toContain("}, 5 * 60_000)");
+  });
 });

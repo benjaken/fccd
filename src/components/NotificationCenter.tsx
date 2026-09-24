@@ -79,15 +79,37 @@ export function NotificationCenter({ userId }: { userId: string }) {
     }
   }, []);
 
+  const reloadTimer = useRef<number | null>(null);
+  const scheduleReload = useCallback(() => {
+    if (reloadTimer.current !== null) {
+      window.clearTimeout(reloadTimer.current);
+    }
+    reloadTimer.current = window.setTimeout(() => {
+      reloadTimer.current = null;
+      void load();
+    }, 400);
+  }, [load]);
+
   useEffect(() => {
     void refreshDueNotifications().catch(() => undefined).finally(load);
-    const channel = subscribeToNotifications(userId, load);
-    const timer = window.setInterval(() => void load(), 60_000);
+    const channel = subscribeToNotifications(userId, scheduleReload);
+    const timer = window.setInterval(() => {
+      if (document.visibilityState === "visible") void load();
+    }, 5 * 60_000);
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible") void load();
+    };
+    document.addEventListener("visibilitychange", onVisibilityChange);
     return () => {
       window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      if (reloadTimer.current !== null) {
+        window.clearTimeout(reloadTimer.current);
+        reloadTimer.current = null;
+      }
       void channel.unsubscribe();
     };
-  }, [load, userId]);
+  }, [load, scheduleReload, userId]);
 
   const unreadCount = items.filter((item) => !item.readAt).length;
   const actionCount = items.filter((item) => item.category === "action").length;
@@ -112,13 +134,13 @@ export function NotificationCenter({ userId }: { userId: string }) {
       await resolveNotification(item.id).catch(() => undefined);
     }
     setOpen(false);
-    await load();
+    scheduleReload();
     if (destination) navigate(destination);
   };
 
   const snooze = async (item: BusinessNotification, until: Date) => {
     await snoozeNotification(item.id, until);
-    await load();
+    scheduleReload();
   };
 
   const acknowledgeUrgentReconciliation = async () => {
@@ -128,7 +150,7 @@ export function NotificationCenter({ userId }: { userId: string }) {
         .map((item) => markNotificationRead(item.id)),
     );
     setUrgentPopupVisible(false);
-    await load();
+    scheduleReload();
   };
 
   return (
@@ -242,7 +264,7 @@ export function NotificationCenter({ userId }: { userId: string }) {
                     </button>
                   ) : null}
                   {item.category === "information" ? (
-                    <button type="button" onClick={() => void resolveNotification(item.id).then(load)}>
+                    <button type="button" onClick={() => void resolveNotification(item.id).then(() => scheduleReload())}>
                       <Check />{t("notificationCenter.dismiss")}
                     </button>
                   ) : null}
