@@ -336,6 +336,7 @@ export type FactoryMultiDayMenuRow = {
 }
 
 const PORTION_CHUNK_SIZE = 100
+const MENU_LINE_PAGE_SIZE = 500
 
 export function factoryVisibleDates(startDate: string, days = 3): string[] {
   return Array.from({ length: days }, (_, index) =>
@@ -773,67 +774,70 @@ export async function fetchFactoryMenuRows(
   const totals = new Map<string, FactoryMenuRow & { orderMap: Map<string, FactoryMenuOrder> }>()
   for (let index = 0; index < allowedIds.length; index += PORTION_CHUNK_SIZE) {
     const chunk = allowedIds.slice(index, index + PORTION_CHUNK_SIZE)
-    const { data, error } = await supabase
-      .from("order_lines")
-      .select("order_id, product_name_snapshot, content_snapshot, quantity, type_sort, products(name, product_types(name)), packages(name)")
-      .in("order_id", chunk)
-      .eq("is_void", false)
-    if (error) {
-      throw error
-    }
-    for (const row of data ?? []) {
-      const quantity = Number(row.quantity ?? 0)
-      if (!Number.isFinite(quantity) || quantity === 0) continue
-      const catalog = firstRelation(
-        (row as {
-          products?:
-            | { name?: string | null; product_types?: { name?: string | null } | { name?: string | null }[] | null }
-            | Array<{
-                name?: string | null
-                product_types?: { name?: string | null } | { name?: string | null }[] | null
-              }>
-            | null
-        }).products,
-      )
-      const pkg = firstRelation(
-        (row as { packages?: { name?: string | null } | { name?: string | null }[] | null }).packages,
-      )
-      const productType = firstRelation(catalog?.product_types)
-      const label = resolveFactoryOrderLineDisplayName({
-        catalogName: catalog?.name ?? pkg?.name,
-        snapshotName: row.product_name_snapshot as string | null,
-        content: row.content_snapshot as string | null,
-      })
-      if (!label) continue
-      const orderId = row.order_id as string
-      const meta = orderMeta.get(orderId)
-      const category = factoryMenuCategory({
-        productTypeName: productType?.name ?? null,
-        brandName: meta?.brandName ?? null,
-      })
-      const current = totals.get(label) ?? {
-        label,
-        quantity: 0,
-        typeSort: null,
-        category,
-        orders: [],
-        orderMap: new Map<string, FactoryMenuOrder>(),
+    for (let offset = 0; ; offset += MENU_LINE_PAGE_SIZE) {
+      const { data, error } = await supabase
+        .from("order_lines")
+        .select("id, order_id, product_name_snapshot, content_snapshot, quantity, type_sort, products(name, product_types(name)), packages(name)")
+        .in("order_id", chunk)
+        .eq("is_void", false)
+        .order("id")
+        .range(offset, offset + MENU_LINE_PAGE_SIZE - 1)
+      if (error) throw error
+      for (const row of data ?? []) {
+        const quantity = Number(row.quantity ?? 0)
+        if (!Number.isFinite(quantity) || quantity === 0) continue
+        const catalog = firstRelation(
+          (row as {
+            products?:
+              | { name?: string | null; product_types?: { name?: string | null } | { name?: string | null }[] | null }
+              | Array<{
+                  name?: string | null
+                  product_types?: { name?: string | null } | { name?: string | null }[] | null
+                }>
+              | null
+          }).products,
+        )
+        const pkg = firstRelation(
+          (row as { packages?: { name?: string | null } | { name?: string | null }[] | null }).packages,
+        )
+        const productType = firstRelation(catalog?.product_types)
+        const label = resolveFactoryOrderLineDisplayName({
+          catalogName: catalog?.name ?? pkg?.name,
+          snapshotName: row.product_name_snapshot as string | null,
+          content: row.content_snapshot as string | null,
+        })
+        if (!label) continue
+        const orderId = row.order_id as string
+        const meta = orderMeta.get(orderId)
+        const category = factoryMenuCategory({
+          productTypeName: productType?.name ?? null,
+          brandName: meta?.brandName ?? null,
+        })
+        const current = totals.get(label) ?? {
+          label,
+          quantity: 0,
+          typeSort: null,
+          category,
+          orders: [],
+          orderMap: new Map<string, FactoryMenuOrder>(),
+        }
+        current.quantity += quantity
+        current.typeSort = minimumFactoryTypeSort(
+          current.typeSort,
+          row.type_sort == null ? null : Number(row.type_sort),
+        )
+        current.category = preferredFactoryMenuCategory(current.category, category)
+        const order = current.orderMap.get(orderId) ?? {
+          orderId,
+          orderNumber: meta?.orderNumber ?? null,
+          completionTime: meta?.completionTime ?? null,
+          quantity: 0,
+        }
+        order.quantity += quantity
+        current.orderMap.set(orderId, order)
+        totals.set(label, current)
       }
-      current.quantity += quantity
-      current.typeSort = minimumFactoryTypeSort(
-        current.typeSort,
-        row.type_sort == null ? null : Number(row.type_sort),
-      )
-      current.category = preferredFactoryMenuCategory(current.category, category)
-      const order = current.orderMap.get(orderId) ?? {
-        orderId,
-        orderNumber: meta?.orderNumber ?? null,
-        completionTime: meta?.completionTime ?? null,
-        quantity: 0,
-      }
-      order.quantity += quantity
-      current.orderMap.set(orderId, order)
-      totals.set(label, current)
+      if ((data?.length ?? 0) < MENU_LINE_PAGE_SIZE) break
     }
   }
 

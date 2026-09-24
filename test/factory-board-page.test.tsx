@@ -1408,6 +1408,56 @@ describe("FactoryBoardPage", () => {
     print.mockRestore();
   });
 
+  it("shows early and unset completion times so hourly quantities add up to the daily total", async () => {
+    const user = userEvent.setup();
+    render(
+      <FactoryBoardPage
+        initialDate="2026-08-17"
+        loadBoard={async () => board}
+        loadFleets={async () => []}
+        loadBrands={async () => []}
+        qzClient={qzClient}
+        loadMenuRows={async () => [{
+          label: "測試菜式",
+          quantity: 5,
+          orders: [
+            { orderId: "order-1", orderNumber: "P-1156", completionTime: "08:30", quantity: 3 },
+            { orderId: "order-2", orderNumber: "P-1157", completionTime: null, quantity: 2 },
+          ],
+        }]}
+      />,
+    );
+    await user.click((await screen.findAllByRole("button", { name: "菜式總表" }))[1]!);
+    await user.click(screen.getByRole("button", { name: "提交" }));
+    const summary = screen.getByRole("dialog", { name: /08月18日/ });
+    expect(await within(summary).findByText("測試菜式")).toBeInTheDocument();
+    expect(within(summary).getByText("8點完成")).toBeInTheDocument();
+    expect(within(summary).getByText("未設時間")).toBeInTheDocument();
+    const cells = summary.querySelectorAll("tbody tr:not(.factory-menu-category-row) td");
+    expect(cells[1]).toHaveTextContent("5");
+    expect(cells[2]).toHaveTextContent("3");
+    expect(cells[cells.length - 1]).toHaveTextContent("2");
+  });
+
+  it("shows a load error instead of an empty menu when dish retrieval fails", async () => {
+    const user = userEvent.setup();
+    render(
+      <FactoryBoardPage
+        initialDate="2026-08-17"
+        loadBoard={async () => board}
+        loadFleets={async () => []}
+        loadBrands={async () => []}
+        qzClient={qzClient}
+        loadMenuRows={async () => { throw new Error("database unavailable"); }}
+      />,
+    );
+    await user.click((await screen.findAllByRole("button", { name: "菜式總表" }))[1]!);
+    await user.click(screen.getByRole("button", { name: "提交" }));
+    const summary = screen.getByRole("dialog", { name: /08月18日/ });
+    expect(await within(summary).findByRole("alert")).toHaveTextContent("菜式總表載入失敗");
+    expect(within(summary).getByRole("button", { name: "列印" })).toBeDisabled();
+  });
+
   it("opens the selected multi-day range in a separate report page", async () => {
     const user = userEvent.setup();
     const open = vi.spyOn(window, "open").mockImplementation(() => null);
