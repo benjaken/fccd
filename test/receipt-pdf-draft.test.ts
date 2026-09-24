@@ -78,6 +78,28 @@ describe("receipt PDF settings", () => {
     expect(applyReceiptPdfSettings(baseDraft, null)).toEqual(baseDraft);
   });
 
+  it("keeps the latest order discount when the saved override is blank or zero", () => {
+    const withDiscount = { ...baseDraft, discount: "100" };
+    expect(applyReceiptPdfSettings(withDiscount, { discount: "" }).discount).toBe("100");
+    expect(applyReceiptPdfSettings(withDiscount, { discount: "0" }).discount).toBe("100");
+    expect(applyReceiptPdfSettings(withDiscount, { discount: "  " }).discount).toBe("100");
+  });
+
+  it("keeps a saved discount override when it carries a positive amount", () => {
+    const withDiscount = { ...baseDraft, discount: "100" };
+    expect(applyReceiptPdfSettings(withDiscount, { discount: "20" }).discount).toBe("20");
+  });
+
+  it("keeps the latest Cashdollar amounts when the saved overrides are blank", () => {
+    const withCashdollar = { ...baseDraft, cashdollarRedeemed: "50", cashdollarPurchased: "20" };
+    const merged = applyReceiptPdfSettings(withCashdollar, {
+      cashdollarRedeemed: "",
+      cashdollarPurchased: "0",
+    });
+    expect(merged.cashdollarRedeemed).toBe("50");
+    expect(merged.cashdollarPurchased).toBe("20");
+  });
+
   it("ignores a stored delivery amount without a selected fee", () => {
     const merged = applyReceiptPdfSettings(baseDraft, { deliveryFee: "999" });
     expect(merged.deliveryFeeId).toBe("");
