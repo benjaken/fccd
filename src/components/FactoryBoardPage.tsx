@@ -153,6 +153,12 @@ function formatPortions(value: number | undefined) {
   return rounded.replace(/\.0$/, "");
 }
 
+function menuCompletionHour(value: string | null): number | null {
+  const match = /^(\d{1,2}):\d{2}/.exec(value ?? "");
+  const hour = match ? Number(match[1]) : null;
+  return hour !== null && hour >= 0 && hour <= 23 ? hour : null;
+}
+
 export function FactoryBoardPage({
   loadBoard = fetchFactoryBoard,
   loadFleets = fetchFactoryFleets,
@@ -219,6 +225,7 @@ export function FactoryBoardPage({
   } | null>(null);
   const [menuRows, setMenuRows] = useState<FactoryMenuRow[]>([]);
   const [menuLoading, setMenuLoading] = useState(false);
+  const [menuError, setMenuError] = useState(false);
   const [menuPrintBlocked, setMenuPrintBlocked] = useState(false);
   const [multiDayPrintBlocked, setMultiDayPrintBlocked] = useState(false);
   const [selectedJob, setSelectedJob] = useState<DeliveryListItem | null>(null);
@@ -275,13 +282,20 @@ export function FactoryBoardPage({
     [activeMultiDayBrands, multiDayRows],
   );
   const menuCompletionColumns = useMemo(() => {
-    const hours = Array.from({ length: 11 }, (_, index) => index + 9);
-    return hours.map((hour) => {
+    const hours = new Set(Array.from({ length: 11 }, (_, index) => index + 9));
+    let hasUnsetTime = false;
+    for (const row of menuRows) {
+      for (const order of row.orders ?? []) {
+        const hour = menuCompletionHour(order.completionTime);
+        if (hour === null) hasUnsetTime = true;
+        else hours.add(hour);
+      }
+    }
+    const columns: Array<{ hour: number | null; orders: string[] }> = [...hours].sort((left, right) => left - right).map((hour) => {
       const orders = new Map<string, string>();
       for (const row of menuRows) {
         for (const order of row.orders ?? []) {
-          const match = /^(\d{1,2})/.exec(order.completionTime ?? "");
-          if (match && Number(match[1]) === hour) {
+          if (menuCompletionHour(order.completionTime) === hour) {
             orders.set(
               order.orderId,
               formatFactoryOrderNumber(order.orderNumber, order.orderId),
@@ -291,6 +305,18 @@ export function FactoryBoardPage({
       }
       return { hour, orders: [...orders.values()] };
     });
+    if (hasUnsetTime) {
+      const orders = new Map<string, string>();
+      for (const row of menuRows) {
+        for (const order of row.orders ?? []) {
+          if (menuCompletionHour(order.completionTime) === null) {
+            orders.set(order.orderId, formatFactoryOrderNumber(order.orderNumber, order.orderId));
+          }
+        }
+      }
+      columns.push({ hour: null, orders: [...orders.values()] });
+    }
+    return columns;
   }, [menuRows]);
   const sortedMenuRows = useMemo(
     () => [...menuRows].sort(compareFactoryMenuRows),
@@ -443,10 +469,12 @@ export function FactoryBoardPage({
     if (!menuSummary) {
       setMenuRows([]);
       setMenuLoading(false);
+      setMenuError(false);
       setMenuPrintBlocked(false);
       return;
     }
     setMenuPrintBlocked(false);
+    setMenuError(false);
     const orderIds = (board?.items ?? [])
       .filter(
         (item) =>
@@ -462,7 +490,10 @@ export function FactoryBoardPage({
         if (!cancelled) setMenuRows(rows);
       })
       .catch(() => {
-        if (!cancelled) setMenuRows([]);
+        if (!cancelled) {
+          setMenuRows([]);
+          setMenuError(true);
+        }
       })
       .finally(() => {
         if (!cancelled) setMenuLoading(false);
@@ -1421,7 +1452,7 @@ export function FactoryBoardPage({
             >
               {t("factoryBoard.close")}
             </Button>
-            <Button type="button" disabled={menuPrintBlocked} onClick={() => printMenuWhenUnlocked(menuOrderIds, "menu")}>
+            <Button type="button" disabled={menuPrintBlocked || menuLoading || menuError || menuRows.length === 0} onClick={() => printMenuWhenUnlocked(menuOrderIds, "menu")}>
               <Printer aria-hidden="true" />
               {t("factoryBoard.print")}
             </Button>
@@ -1431,6 +1462,8 @@ export function FactoryBoardPage({
         {menuPrintBlocked ? <p className="factory-edit-lock-warning" role="alert"><TriangleAlert aria-hidden="true" /><strong>{t("factoryBoard.orderEditingPrintBlocked")}</strong></p> : null}
         {menuLoading ? (
           <p className="factory-day-state">{t("common.loading")}</p>
+        ) : menuError ? (
+          <p className="factory-day-state" role="alert">{t("factoryBoard.menuLoadError")}</p>
         ) : menuRows.length === 0 ? (
           <p className="factory-day-state">{t("factoryBoard.emptyMenu")}</p>
         ) : (
@@ -1448,7 +1481,7 @@ export function FactoryBoardPage({
               </colgroup>
               <thead>
                 <tr>
-                  <th className="factory-menu-summary-title" colSpan={10}>
+                  <th className="factory-menu-summary-title" colSpan={menuCompletionColumns.length - 1}>
                     {t("factoryBoard.preparationOverviewTitle")}
                   </th>
                   <th className="factory-menu-summary-printed" colSpan={3}>
@@ -1471,9 +1504,11 @@ export function FactoryBoardPage({
                   <th>{t("factoryBoard.allDayTotal")}</th>
                   {menuCompletionColumns.map((column) => (
                     <th key={`hour-${column.hour}`}>
-                      {t("factoryBoard.completionHour", {
-                        hour: column.hour > 12 ? column.hour - 12 : column.hour,
-                      })}
+                      {column.hour === null
+                        ? t("factoryBoard.completionTimeUnset")
+                        : t("factoryBoard.completionHour", {
+                            hour: column.hour > 12 ? column.hour - 12 : column.hour,
+                          })}
                     </th>
                   ))}
                 </tr>
@@ -1492,8 +1527,7 @@ export function FactoryBoardPage({
                         <td>{row.quantity}</td>
                         {menuCompletionColumns.map((column) => {
                           const quantity = (row.orders ?? []).reduce((total, order) => {
-                            const match = /^(\d{1,2})/.exec(order.completionTime ?? "");
-                            return match && Number(match[1]) === column.hour
+                            return menuCompletionHour(order.completionTime) === column.hour
                               ? total + order.quantity
                               : total;
                           }, 0);
