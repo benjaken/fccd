@@ -47,6 +47,7 @@ export function NotificationCenter({ userId }: { userId: string }) {
   const [summaryVisible, setSummaryVisible] = useState(false);
   const [urgentPopupVisible, setUrgentPopupVisible] = useState(false);
   const initialLoad = useRef(true);
+  const initialSyncComplete = useRef(false);
   const seenUrgentIds = useRef(new Set<string>());
 
   const load = useCallback(async () => {
@@ -91,8 +92,17 @@ export function NotificationCenter({ userId }: { userId: string }) {
   }, [load]);
 
   useEffect(() => {
-    void refreshDueNotifications().catch(() => undefined).finally(load);
-    const channel = subscribeToNotifications(userId, scheduleReload);
+    let active = true;
+    initialSyncComplete.current = false;
+    void (async () => {
+      await refreshDueNotifications().catch(() => undefined);
+      if (!active) return;
+      await load();
+      if (active) initialSyncComplete.current = true;
+    })();
+    const channel = subscribeToNotifications(userId, () => {
+      if (initialSyncComplete.current) scheduleReload();
+    });
     const timer = window.setInterval(() => {
       if (document.visibilityState === "visible") void load();
     }, 5 * 60_000);
@@ -101,6 +111,8 @@ export function NotificationCenter({ userId }: { userId: string }) {
     };
     document.addEventListener("visibilitychange", onVisibilityChange);
     return () => {
+      active = false;
+      initialSyncComplete.current = false;
       window.clearInterval(timer);
       document.removeEventListener("visibilitychange", onVisibilityChange);
       if (reloadTimer.current !== null) {
