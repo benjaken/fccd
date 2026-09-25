@@ -1174,6 +1174,7 @@ describe("FactoryBoardPage", () => {
     const user = userEvent.setup();
     const printLabels = vi.fn(async () => {});
     const markLinePrinted = vi.fn(async () => {});
+    const markOrderPrinted = vi.fn(async () => {});
     const loadLabelCommand = vi.fn(async () => "VEVTUA==");
     const connectedQzClient: QzTrayClient = {
       connect: vi.fn(async () => {}),
@@ -1198,6 +1199,7 @@ describe("FactoryBoardPage", () => {
           ],
         })}
         markLinePrinted={markLinePrinted}
+        markOrderPrinted={markOrderPrinted}
         loadLabelCommand={loadLabelCommand}
         openOrdersInNewPage={false}
         qzClient={connectedQzClient}
@@ -1209,7 +1211,10 @@ describe("FactoryBoardPage", () => {
     await waitFor(() => expect(printAll).toBeEnabled());
     await user.click(printAll);
 
-    await waitFor(() => expect(markLinePrinted).toHaveBeenCalledTimes(2));
+    await waitFor(() =>
+      expect(markOrderPrinted).toHaveBeenCalledWith("order-1", ["line-a", "line-b"]),
+    );
+    expect(markLinePrinted).not.toHaveBeenCalled();
     expect(loadLabelCommand).toHaveBeenNthCalledWith(
       1,
       expect.objectContaining({ labelName: "檸檬茶", copies: 2 }),
@@ -1236,6 +1241,58 @@ describe("FactoryBoardPage", () => {
       customerPhone: "66817198",
     });
     expect(printLabels).toHaveBeenCalledTimes(2);
+  });
+
+  it("retries only the atomic status sync when a full-order print status write fails", async () => {
+    const user = userEvent.setup();
+    const printLabels = vi.fn(async () => {});
+    const markOrderPrinted = vi.fn()
+      .mockRejectedValueOnce(new Error("status_write_failed"))
+      .mockResolvedValueOnce(undefined);
+    const connectedQzClient: QzTrayClient = {
+      connect: vi.fn(async () => {}),
+      disconnect: vi.fn(async () => {}),
+      listPrinters: vi.fn(async () => ["Zebra ZD421"]),
+      queryStatuses: vi.fn(async () => []),
+      printLabels,
+    };
+    render(
+      <FactoryBoardPage
+        initialDate="2026-08-17"
+        loadBoard={async () => board}
+        loadFleets={async () => []}
+        loadBrands={async () => []}
+        loadOrderJob={async () => ({
+          packingNote: null,
+          dispatchTime: "10:00",
+          arrivalWindow: null,
+          lines: [
+            { id: "line-a", label: "檸檬茶", quantityText: "2", remarks: [], printed: false },
+            { id: "line-b", label: "飯盒餐具包", quantityText: "1", remarks: [], printed: false },
+          ],
+        })}
+        markOrderPrinted={markOrderPrinted}
+        loadLabelCommand={async () => "VEVTUA=="}
+        openOrdersInNewPage={false}
+        qzClient={connectedQzClient}
+      />,
+    );
+
+    await user.click(await screen.findByRole("button", { name: /B-1522/ }));
+    const printAll = await screen.findByRole("button", { name: "印全單（3個標籤）" });
+    await waitFor(() => expect(printAll).toBeEnabled());
+    await user.click(printAll);
+
+    expect(await screen.findByText(/標籤已送到打印機，但打印狀態保存失敗/)).toBeInTheDocument();
+    expect(screen.getByText("錯誤：status_write_failed")).toBeInTheDocument();
+    expect(printLabels).toHaveBeenCalledTimes(1);
+    expect(markOrderPrinted).toHaveBeenCalledTimes(1);
+
+    await user.click(screen.getByRole("button", { name: "重試同步狀態" }));
+
+    expect(await screen.findByText("打印狀態已成功補回，無需重新打印。")).toBeInTheDocument();
+    expect(markOrderPrinted).toHaveBeenCalledTimes(2);
+    expect(printLabels).toHaveBeenCalledTimes(1);
   });
 
   it("opens the hidden dispatch-time editor and saves the time to the order", async () => {
