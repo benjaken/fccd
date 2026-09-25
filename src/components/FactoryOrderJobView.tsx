@@ -9,6 +9,7 @@ import {
 } from "@/lib/deliveries";
 import {
   hongKongDateKey,
+  markFactoryOrderPrinted,
   markFactoryOrderLinePrinted,
   updateFactoryDispatchTime,
   type FactoryFleet,
@@ -76,6 +77,15 @@ export function factoryOrderLabelCount(lines: FactoryOrderLine[]): number {
     );
 }
 
+function printStatusErrorDetail(error: unknown): string {
+  if (error instanceof Error && error.message.trim()) return error.message.trim();
+  if (error && typeof error === "object" && "message" in error) {
+    const message = String((error as { message?: unknown }).message ?? "").trim();
+    if (message) return message;
+  }
+  return "unknown_status_write_error";
+}
+
 const factoryChangeFieldKeys: Record<string, string> = {
   product_id: "factoryBoard.changedProduct",
   package_id: "factoryBoard.changedPackage",
@@ -113,6 +123,7 @@ export function FactoryOrderJobView({
   fleets,
   assignMotorcade = assignDeliveryMotorcade,
   markLinePrinted = markFactoryOrderLinePrinted,
+  markOrderPrinted = markFactoryOrderPrinted,
   loadLabelCommand = fetchFactoryLabelCommand,
   saveDispatchTime = updateFactoryDispatchTime,
   onLinePrinted,
@@ -128,6 +139,7 @@ export function FactoryOrderJobView({
   fleets: FactoryFleet[];
   assignMotorcade?: typeof assignDeliveryMotorcade;
   markLinePrinted?: typeof markFactoryOrderLinePrinted;
+  markOrderPrinted?: typeof markFactoryOrderPrinted;
   loadLabelCommand?: FactoryLabelCommandLoader;
   saveDispatchTime?: typeof updateFactoryDispatchTime;
   onLinePrinted?: (lineId: string) => void;
@@ -149,7 +161,13 @@ export function FactoryOrderJobView({
   const [printing, setPrinting] = useState(false);
   const [bulkPrinting, setBulkPrinting] = useState<"all" | "address" | null>(null);
   const [bulkPrintError, setBulkPrintError] = useState(false);
+  const [bulkPrintStatusError, setBulkPrintStatusError] = useState<string | null>(null);
   const [bulkPrintSuccess, setBulkPrintSuccess] = useState<string | null>(null);
+  const [pendingPrintSync, setPendingPrintSync] = useState<{
+    orderId: string;
+    lineIds: string[];
+  } | null>(null);
+  const [statusSyncing, setStatusSyncing] = useState(false);
   const [dispatchOpen, setDispatchOpen] = useState(false);
   const [dispatchDraft, setDispatchDraft] = useState("");
   const [savedDispatchTime, setSavedDispatchTime] = useState(job?.dispatchTime || item.deliveryTime || "");
@@ -274,7 +292,9 @@ export function FactoryOrderJobView({
     if (printBlocked || qz.state !== "connected" || !selectedPrinter || !printableLines.length) return;
     setBulkPrinting("all");
     setBulkPrintError(false);
+    setBulkPrintStatusError(null);
     setBulkPrintSuccess(null);
+    setPendingPrintSync(null);
     try {
       const labelCommands: string[] = [];
       for (const line of printableLines) {
@@ -293,19 +313,42 @@ export function FactoryOrderJobView({
         combineFactoryLabelBase64(labelCommands),
         1,
       );
-      for (const line of printableLines) {
-        try {
-          await markLinePrinted(line.id);
-          onLinePrinted?.(line.id);
-        } catch {
-          // Continue after a successful print even if its status cannot be saved.
-        }
+      const orderId = item.orderId;
+      const lineIds = printableLines.map((line) => line.id);
+      if (!orderId) {
+        setPendingPrintSync(null);
+        setBulkPrintStatusError("factory_order_id_missing");
+        return;
       }
+      try {
+        await markOrderPrinted(orderId, lineIds);
+      } catch (error) {
+        setPendingPrintSync({ orderId, lineIds });
+        setBulkPrintStatusError(printStatusErrorDetail(error));
+        return;
+      }
+      lineIds.forEach((lineId) => onLinePrinted?.(lineId));
       setBulkPrintSuccess(t("factoryBoard.printAllSuccess"));
     } catch {
       setBulkPrintError(true);
     } finally {
       setBulkPrinting(null);
+    }
+  };
+
+  const retryPrintStatusSync = async () => {
+    if (!pendingPrintSync || statusSyncing) return;
+    setStatusSyncing(true);
+    setBulkPrintStatusError(null);
+    try {
+      await markOrderPrinted(pendingPrintSync.orderId, pendingPrintSync.lineIds);
+      pendingPrintSync.lineIds.forEach((lineId) => onLinePrinted?.(lineId));
+      setPendingPrintSync(null);
+      setBulkPrintSuccess(t("factoryBoard.printStatusSyncSuccess"));
+    } catch (error) {
+      setBulkPrintStatusError(printStatusErrorDetail(error));
+    } finally {
+      setStatusSyncing(false);
     }
   };
 
@@ -382,6 +425,25 @@ export function FactoryOrderJobView({
             <TriangleAlert aria-hidden="true" />
             <span>{t("factoryBoard.labelPrintError")}</span>
           </p>
+        ) : null}
+        {bulkPrintStatusError ? (
+          <div className="factory-job-notification is-error" role="alert">
+            <TriangleAlert aria-hidden="true" />
+            <span>{t("factoryBoard.printStatusSyncError")}</span>
+            <small>{t("factoryBoard.printStatusErrorDetail", { error: bulkPrintStatusError })}</small>
+            {pendingPrintSync ? (
+              <Button
+                type="button"
+                variant="outline"
+                disabled={statusSyncing}
+                onClick={() => void retryPrintStatusSync()}
+              >
+                {statusSyncing
+                  ? t("factoryBoard.printStatusSyncing")
+                  : t("factoryBoard.retryPrintStatusSync")}
+              </Button>
+            ) : null}
+          </div>
         ) : null}
         {assignSuccess ? (
           <p className="factory-job-notification is-success" role="status">
