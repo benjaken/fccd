@@ -1407,3 +1407,14 @@ export async function markFactoryOrderLinePrinted(lineId: string): Promise<void>
   })
   if (error) throw error
 }
+
+export async function markFactoryOrderPrinted(
+  orderId: string,
+  lineIds: string[],
+): Promise<void> {
+  const { error } = await supabase.rpc("mark_factory_order_printed", {
+    p_order_id: orderId,
+    p_order_line_ids: lineIds,
+  })
+  if (error) throw error
+}

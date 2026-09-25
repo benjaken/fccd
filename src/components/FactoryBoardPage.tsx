@@ -42,6 +42,7 @@ import {
   hongKongDateKey,
   isNewFactoryOrder,
   markFactoryOrderLinePrinted,
+  markFactoryOrderPrinted,
   updateFactoryDispatchTime,
   type FactoryBoardData,
   type FactoryBoardItem,
@@ -79,6 +80,7 @@ type MenuLoader = typeof fetchFactoryMenuRows;
 type MultiDayMenuLoader = typeof fetchFactoryMultiDayMenu;
 type MotorcadeAssigner = typeof assignDeliveryMotorcade;
 type LinePrintMarker = typeof markFactoryOrderLinePrinted;
+type OrderPrintMarker = typeof markFactoryOrderPrinted;
 type DispatchTimeUpdater = typeof updateFactoryDispatchTime;
 
 const WEEKDAY_SHORT_ZH = ["日", "一", "二", "三", "四", "五", "六"];
@@ -168,6 +170,7 @@ export function FactoryBoardPage({
   loadMultiDayMenu = fetchFactoryMultiDayMenu,
   assignMotorcade = assignDeliveryMotorcade,
   markLinePrinted = markFactoryOrderLinePrinted,
+  markOrderPrinted = markFactoryOrderPrinted,
   loadLabelCommand = fetchFactoryLabelCommand,
   saveDispatchTime = updateFactoryDispatchTime,
   qzClient = qzTrayClient,
@@ -184,6 +187,7 @@ export function FactoryBoardPage({
   loadMultiDayMenu?: MultiDayMenuLoader;
   assignMotorcade?: MotorcadeAssigner;
   markLinePrinted?: LinePrintMarker;
+  markOrderPrinted?: OrderPrintMarker;
   loadLabelCommand?: FactoryLabelCommandLoader;
   saveDispatchTime?: DispatchTimeUpdater;
   qzClient?: QzTrayClient;
@@ -841,6 +845,7 @@ export function FactoryBoardPage({
           fleets={fleets}
           assignMotorcade={assignMotorcade}
           markLinePrinted={markLinePrinted}
+          markOrderPrinted={markOrderPrinted}
           loadLabelCommand={loadLabelCommand}
           saveDispatchTime={saveDispatchTime}
           onLinePrinted={(lineId) => {
