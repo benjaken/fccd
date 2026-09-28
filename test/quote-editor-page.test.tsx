@@ -255,6 +255,7 @@ async function fillRequiredQuoteDetails(user: ReturnType<typeof userEvent.setup>
 describe("Quote editor", () => {
   beforeEach(async () => {
     setMobileViewport(false);
+    window.localStorage.clear();
     await i18n.changeLanguage("en");
     fetchEnquirySubmission.mockReset();
     fetchEnquirySubmission.mockResolvedValue(null);
@@ -1833,6 +1834,39 @@ describe("Quote editor", () => {
     await user.type(activity, "Updated activity");
     expect(activity).toHaveValue("Updated activity");
     expect(activity).toHaveFocus();
+  });
+
+  it("keeps PDF working-draft supplements instead of empty saved supplements", async () => {
+    const user = userEvent.setup();
+    window.localStorage.setItem("fccd:quote-pdf-draft:quote-1", JSON.stringify({
+      additionalInfo: ["請提供素食選擇"],
+      activities: [{ id: "activity-1", description: "Updated activity", amount: "14000" }],
+    }));
+    renderEditor({
+      loadSummary: vi.fn().mockResolvedValue({
+        id: "quote-1",
+        orderNumber: "FCLQ20260801",
+        channelId: "channel-1",
+        supplements: { additionalInfo: [], activities: [], utensilPackQuantity: "0" },
+        draft: {
+          ...emptyQuoteDraft,
+          channelId: "channel-1",
+          customerName: "Customer",
+          contactA: "12345678",
+          email: "quote@example.com",
+          districtId: "district-1",
+          shippingMethodId: "shipping-home",
+        },
+        financials: { shippingFee: 0, discount: 0, cashdollarRedeemed: 0, cashdollarPurchased: 0 },
+      }),
+    }, "/quotes/quote-1/edit");
+
+    await user.click(await screen.findByRole("tab", { name: "Add products" }));
+    expect(screen.getByLabelText("額外資訊 1")).toHaveValue("請提供素食選擇");
+    expect(screen.getByLabelText("活動項目 1")).toHaveValue("Updated activity");
+    await waitFor(() => expect(
+      JSON.parse(localStorage.getItem("fccd:quote-pdf-draft:quote-1") || "{}").additionalInfo,
+    ).toEqual(["請提供素食選擇"]));
   });
 
   it("places convert to order on the first quote step instead of the list", async () => {

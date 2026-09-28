@@ -15,6 +15,15 @@ export function quotePdfDraftStorageKey(quoteId: string) {
   return `fccd:quote-pdf-draft:${quoteId}`;
 }
 
+export function hasQuotePdfDraft(quoteId: string) {
+  if (typeof window === "undefined") return false;
+  try {
+    return Boolean(window.localStorage.getItem(quotePdfDraftStorageKey(quoteId)));
+  } catch {
+    return false;
+  }
+}
+
 export function readQuotePdfSupplements(quoteId: string): QuotePdfSupplementDraft {
   const fallback: QuotePdfSupplementDraft = {
     additionalInfo: [],
