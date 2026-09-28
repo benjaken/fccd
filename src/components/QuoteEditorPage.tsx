@@ -107,6 +107,7 @@ import {
 import { trackOrderEditPresence } from "@/lib/order-edit-presence";
 import { cn } from "@/lib/utils";
 import {
+  hasQuotePdfDraft,
   readQuotePdfSupplements,
   writeQuotePdfSupplements,
   type QuotePdfSupplementDraft,
@@ -556,6 +557,7 @@ export function QuoteEditorPage({
   const [activityOpen, setActivityOpen] = useState(false);
   const [activitySearch, setActivitySearch] = useState("");
   const [supplementsLoadedFor, setSupplementsLoadedFor] = useState("");
+  const supplementsDraftRef = useRef(false);
   const [isSentToFactory, setIsSentToFactory] = useState(false);
   const [changingFactoryStatus, setChangingFactoryStatus] = useState(false);
   const [factoryStatusError, setFactoryStatusError] = useState(false);
@@ -696,6 +698,7 @@ export function QuoteEditorPage({
 
   useEffect(() => {
     if (!activeQuote) return;
+    supplementsDraftRef.current = hasQuotePdfDraft(activeQuote.id);
     setSupplements(readQuotePdfSupplements(activeQuote.id));
     setSupplementsLoadedFor(activeQuote.id);
   }, [activeQuote?.id]);
@@ -789,7 +792,7 @@ export function QuoteEditorPage({
             cashdollarPurchased: String(summary.financials?.cashdollarPurchased ?? 0),
           });
           setPersistedGrandTotal(id && summary.grandTotal != null ? summary.grandTotal : null);
-          if (id && summary.supplements) {
+          if (id && summary.supplements && !supplementsDraftRef.current) {
             setSupplements((current) => ({
               additionalInfo: summary.supplements?.additionalInfo ?? current.additionalInfo,
               activities: summary.supplements?.activities ?? current.activities,
