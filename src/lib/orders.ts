@@ -241,7 +241,7 @@ export type OrderListFilters = {
 } & OrderListEnhancementFilters;
 
 type OrderListSort = {
-  column: "delivery_at" | "bubble_created_at" | "created_at";
+  column: "delivery_at" | "delivery_time" | "bubble_created_at" | "created_at";
   ascending: boolean;
   nullsFirst?: boolean;
 };
@@ -249,19 +249,12 @@ type OrderListSort = {
 export function getOrderListSorts(
   deliverySort: OrderListFilters["deliverySort"],
 ): OrderListSort[] {
-  const createdSorts: OrderListSort[] = [
+  const ascending = deliverySort === "asc";
+  return [
+    { column: "delivery_at", ascending, nullsFirst: false },
+    { column: "delivery_time", ascending, nullsFirst: false },
     { column: "bubble_created_at", ascending: false, nullsFirst: false },
     { column: "created_at", ascending: false },
-  ];
-  if (!deliverySort) return createdSorts;
-
-  return [
-    {
-      column: "delivery_at",
-      ascending: deliverySort === "asc",
-      nullsFirst: false,
-    },
-    ...createdSorts,
   ];
 }
 

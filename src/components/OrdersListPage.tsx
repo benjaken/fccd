@@ -955,7 +955,7 @@ export function OrdersListPage({
                 <th>
                   {t("orders.columns.customer")} / {t("orders.columns.region")} / {t("orders.columns.address")}
                 </th>
-                <th>
+                <th aria-sort={enhancementFilters.deliverySort === "asc" ? "ascending" : "descending"}>
                   <button
                     type="button"
                     onClick={() => setEnhancementFilters({
@@ -964,7 +964,7 @@ export function OrdersListPage({
                     })}
                   >
                     {t("orders.columns.delivery")} / {t("orders.columns.deliveryTime")}{" "}
-                    <span aria-hidden="true">›</span>
+                    <span aria-hidden="true">{enhancementFilters.deliverySort === "asc" ? "↑" : "↓"}</span>
                   </button>
                   <span> / {t("orders.columns.shipOutAndDelivery")}</span>
                 </th>
