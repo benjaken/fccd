@@ -73,5 +73,55 @@ begin
 end;
 $$;
 
-rollback;
+-- A physical stocktake is an absolute baseline. If an earlier consumption is
+-- reversed only after that stocktake, the reversal must not add stock again:
+-- the counted quantity already superseded the original deduction.
+insert into ingredients(
+  id, name, sku, stocktake_unit, is_ingredient_stocktake, is_packing_stocktake
+) values (
+  '10000000-0000-0000-0000-000000000098', 'Post-stocktake reversal pack',
+  'POST-STOCKTAKE-REVERSAL', 'piece', false, true
+);
+insert into packing_stocktake_events(ingredient_id, quantity, stocktake_at)
+values (
+  '10000000-0000-0000-0000-000000000098', 850,
+  timestamptz '2026-09-28 00:00:00+08'
+);
+insert into orders(id, order_number, delivery_at) values (
+  '30000000-0000-0000-0000-000000000098', 'PRE-BASELINE-REVERSAL',
+  timestamptz '2026-09-27 00:00:00+08'
+);
+insert into deliveries(id, order_id, delivery_at, delivery_status) values (
+  '50000000-0000-0000-0000-000000000098',
+  '30000000-0000-0000-0000-000000000098',
+  timestamptz '2026-09-27 00:00:00+08', '已送達'
+);
+insert into order_lines(id, order_id, product_id, quantity, delivery_id) values (
+  '40000000-0000-0000-0000-000000000098',
+  '30000000-0000-0000-0000-000000000098',
+  '20000000-0000-0000-0000-000000000001', 1,
+  '50000000-0000-0000-0000-000000000098'
+);
+insert into order_material_consumptions(
+  id, order_id, delivery_id, order_line_id, ingredient_id, quantity,
+  consumed_at, calculation_source, reversed_at, reversal_reason
+) values (
+  '60000000-0000-0000-0000-000000000098',
+  '30000000-0000-0000-0000-000000000098',
+  '50000000-0000-0000-0000-000000000098',
+  '40000000-0000-0000-0000-000000000098',
+  '10000000-0000-0000-0000-000000000098', 2,
+  timestamptz '2026-09-27 00:00:00+08', 'product_bom',
+  timestamptz '2026-09-28 00:20:45+08', 'delivery_changed'
+);
 
+select pg_temp.assert_equal(
+  private.material_inventory_current_balance(
+    'packing', '10000000-0000-0000-0000-000000000098',
+    timestamptz '2026-09-28 01:00:00+08'
+  ),
+  850,
+  'stocktake supersedes a pre-baseline consumption and its later reversal'
+);
+
+rollback;

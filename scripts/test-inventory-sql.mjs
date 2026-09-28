@@ -40,6 +40,7 @@ try {
     'supabase/migrations/20260910014636_aggregate_ledger_order_consumptions.sql',
     'test/sql/inventory-ledger-aggregate.sql',
     'supabase/migrations/20260928150000_defer_future_consumption_reversal_stock_credit.sql',
+    'supabase/migrations/20260928160000_stocktake_supersedes_prebaseline_reversals.sql',
     'test/sql/inventory-future-reversal.sql',
     'test/sql/inventory-forecast-delivery-window.sql',
   ]) {

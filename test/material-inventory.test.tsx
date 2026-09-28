@@ -45,6 +45,10 @@ const futureReversalMigration = readFileSync(
   "supabase/migrations/20260928150000_defer_future_consumption_reversal_stock_credit.sql",
   "utf8",
 );
+const stocktakeReversalMigration = readFileSync(
+  "supabase/migrations/20260928160000_stocktake_supersedes_prebaseline_reversals.sql",
+  "utf8",
+);
 
 describe("material inventory ledger", () => {
   beforeEach(async () => {
@@ -100,6 +104,18 @@ describe("material inventory ledger", () => {
     expect(futureReversalMigration).toContain("consumption.reversed_at is not null");
     expect(futureReversalMigration).toContain("material_inventory_current_balance");
     expect(futureReversalMigration).toContain("material_inventory_ledger");
+  });
+
+  it("keeps a stocktake authoritative over earlier consumptions reversed later", () => {
+    expect(stocktakeReversalMigration).toContain(
+      "case when consumption.consumed_at > v_baseline_at",
+    );
+    expect(stocktakeReversalMigration).toContain(
+      "and consumption.reversed_at is not null",
+    );
+    expect(stocktakeReversalMigration).toContain(
+      "v_baseline + v_movement_delta - v_consumption",
+    );
   });
 
   it("shows ingredient and packaging tabs, ledger detail, and stock correction", async () => {
