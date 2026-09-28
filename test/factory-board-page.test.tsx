@@ -1174,6 +1174,7 @@ describe("FactoryBoardPage", () => {
     const user = userEvent.setup();
     const printLabels = vi.fn(async () => {});
     const markLinePrinted = vi.fn(async () => {});
+    const markOrderPrinted = vi.fn(async () => {});
     const loadLabelCommand = vi.fn(async () => "VEVTUA==");
     const connectedQzClient: QzTrayClient = {
       connect: vi.fn(async () => {}),
@@ -1198,6 +1199,7 @@ describe("FactoryBoardPage", () => {
           ],
         })}
         markLinePrinted={markLinePrinted}
+        markOrderPrinted={markOrderPrinted}
         loadLabelCommand={loadLabelCommand}
         openOrdersInNewPage={false}
         qzClient={connectedQzClient}
@@ -1209,7 +1211,15 @@ describe("FactoryBoardPage", () => {
     await waitFor(() => expect(printAll).toBeEnabled());
     await user.click(printAll);
 
-    await waitFor(() => expect(markLinePrinted).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(markOrderPrinted).toHaveBeenCalledTimes(1));
+    expect(markOrderPrinted).toHaveBeenCalledWith(
+      "order-1",
+      expect.arrayContaining([
+        expect.objectContaining({ id: "line-a", labelNames: ["檸檬茶"] }),
+        expect.objectContaining({ id: "line-b", labelNames: ["飯盒餐具包"] }),
+      ]),
+    );
+    expect(markLinePrinted).not.toHaveBeenCalled();
     expect(loadLabelCommand).toHaveBeenNthCalledWith(
       1,
       expect.objectContaining({ labelName: "檸檬茶", copies: 2 }),
@@ -1236,6 +1246,104 @@ describe("FactoryBoardPage", () => {
       customerPhone: "66817198",
     });
     expect(printLabels).toHaveBeenCalledTimes(2);
+  });
+
+  it("retries only the atomic status sync when a full-order print status write fails", async () => {
+    const user = userEvent.setup();
+    const printLabels = vi.fn(async () => {});
+    const markOrderPrinted = vi.fn()
+      .mockRejectedValueOnce(new Error("status_write_failed"))
+      .mockResolvedValueOnce(undefined);
+    const connectedQzClient: QzTrayClient = {
+      connect: vi.fn(async () => {}),
+      disconnect: vi.fn(async () => {}),
+      listPrinters: vi.fn(async () => ["Zebra ZD421"]),
+      queryStatuses: vi.fn(async () => []),
+      printLabels,
+    };
+    render(
+      <FactoryBoardPage
+        initialDate="2026-08-17"
+        loadBoard={async () => board}
+        loadFleets={async () => []}
+        loadBrands={async () => []}
+        loadOrderJob={async () => ({
+          packingNote: null,
+          dispatchTime: "10:00",
+          arrivalWindow: null,
+          lines: [
+            { id: "line-a", label: "檸檬茶", quantityText: "2", remarks: [], printed: false },
+            { id: "line-b", label: "飯盒餐具包", quantityText: "1", remarks: [], printed: false },
+          ],
+        })}
+        markOrderPrinted={markOrderPrinted}
+        loadLabelCommand={async () => "VEVTUA=="}
+        openOrdersInNewPage={false}
+        qzClient={connectedQzClient}
+      />,
+    );
+
+    await user.click(await screen.findByRole("button", { name: /B-1522/ }));
+    const printAll = await screen.findByRole("button", { name: "印全單（3個標籤）" });
+    await waitFor(() => expect(printAll).toBeEnabled());
+    await user.click(printAll);
+
+    expect(await screen.findByText(/標籤已送到打印機，但打印狀態保存失敗/)).toBeInTheDocument();
+    expect(printLabels).toHaveBeenCalledTimes(1);
+    expect(markOrderPrinted).toHaveBeenCalledTimes(1);
+
+    await user.click(screen.getByRole("button", { name: "重試同步狀態" }));
+
+    expect(await screen.findByText("打印狀態已成功補回，無需重新打印。")).toBeInTheDocument();
+    expect(markOrderPrinted).toHaveBeenCalledTimes(2);
+    expect(printLabels).toHaveBeenCalledTimes(1);
+  });
+
+  it("asks the user to reload instead of retrying when the printed line set is stale", async () => {
+    const user = userEvent.setup();
+    const printLabels = vi.fn(async () => {});
+    const markOrderPrinted = vi.fn(async () => {
+      throw new Error("factory_order_print_stale");
+    });
+    const connectedQzClient: QzTrayClient = {
+      connect: vi.fn(async () => {}),
+      disconnect: vi.fn(async () => {}),
+      listPrinters: vi.fn(async () => ["Zebra ZD421"]),
+      queryStatuses: vi.fn(async () => []),
+      printLabels,
+    };
+    render(
+      <FactoryBoardPage
+        initialDate="2026-08-17"
+        loadBoard={async () => board}
+        loadFleets={async () => []}
+        loadBrands={async () => []}
+        loadOrderJob={async () => ({
+          packingNote: null,
+          dispatchTime: "10:00",
+          arrivalWindow: null,
+          lines: [
+            { id: "line-a", label: "檸檬茶", quantityText: "2", remarks: [], printed: false },
+          ],
+        })}
+        markOrderPrinted={markOrderPrinted}
+        loadLabelCommand={async () => "VEVTUA=="}
+        openOrdersInNewPage={false}
+        qzClient={connectedQzClient}
+      />,
+    );
+
+    await user.click(await screen.findByRole("button", { name: /B-1522/ }));
+    const printAll = await screen.findByRole("button", { name: "印全單（2個標籤）" });
+    await waitFor(() => expect(printAll).toBeEnabled());
+    await user.click(printAll);
+
+    expect(await screen.findByText(/訂單明細已在列印前更新/)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "重試同步狀態" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "重新載入訂單" })).toBeInTheDocument();
+    expect(screen.queryByText(/factory_order_print_stale/)).not.toBeInTheDocument();
+    expect(markOrderPrinted).toHaveBeenCalledTimes(1);
+    expect(printLabels).toHaveBeenCalledTimes(1);
   });
 
   it("opens the hidden dispatch-time editor and saves the time to the order", async () => {
@@ -1406,6 +1514,83 @@ describe("FactoryBoardPage", () => {
     expect(printRoot?.querySelectorAll("tbody tr.factory-menu-category-row")).toHaveLength(1);
     expect(printRoot?.querySelectorAll("tbody tr")).toHaveLength(2);
     print.mockRestore();
+  });
+
+  it("shows early and unset completion times so hourly quantities add up to the daily total", async () => {
+    const user = userEvent.setup();
+    render(
+      <FactoryBoardPage
+        initialDate="2026-08-17"
+        loadBoard={async () => board}
+        loadFleets={async () => []}
+        loadBrands={async () => []}
+        qzClient={qzClient}
+        loadMenuRows={async () => [{
+          label: "測試菜式",
+          quantity: 5,
+          orders: [
+            { orderId: "order-1", orderNumber: "P-1156", completionTime: "08:30", quantity: 3 },
+            { orderId: "order-2", orderNumber: "P-1157", completionTime: null, quantity: 2 },
+          ],
+        }]}
+      />,
+    );
+    await user.click((await screen.findAllByRole("button", { name: "菜式總表" }))[1]!);
+    await user.click(screen.getByRole("button", { name: "提交" }));
+    const summary = screen.getByRole("dialog", { name: /08月18日/ });
+    expect(await within(summary).findByText("測試菜式")).toBeInTheDocument();
+    expect(within(summary).getByText("8點完成")).toBeInTheDocument();
+    expect(within(summary).getByText("未設時間")).toBeInTheDocument();
+    const cells = summary.querySelectorAll("tbody tr:not(.factory-menu-category-row) td");
+    expect(cells[1]).toHaveTextContent("5");
+    expect(cells[2]).toHaveTextContent("3");
+    expect(cells[cells.length - 1]).toHaveTextContent("2");
+  });
+
+  it("labels a midnight completion time distinctly from noon", async () => {
+    const user = userEvent.setup();
+    render(
+      <FactoryBoardPage
+        initialDate="2026-08-17"
+        loadBoard={async () => board}
+        loadFleets={async () => []}
+        loadBrands={async () => []}
+        qzClient={qzClient}
+        loadMenuRows={async () => [{
+          label: "午夜菜式",
+          quantity: 1,
+          orders: [
+            { orderId: "order-1", orderNumber: "P-1156", completionTime: "00:15", quantity: 1 },
+          ],
+        }]}
+      />,
+    );
+    await user.click((await screen.findAllByRole("button", { name: "菜式總表" }))[1]!);
+    await user.click(screen.getByRole("button", { name: "提交" }));
+    const summary = screen.getByRole("dialog", { name: /08月18日/ });
+    expect(await within(summary).findByText("午夜菜式")).toBeInTheDocument();
+    expect(within(summary).getByText("凌晨12點完成")).toBeInTheDocument();
+    expect(within(summary).queryByText("0點完成")).not.toBeInTheDocument();
+    expect(within(summary).getByText("12點完成")).toBeInTheDocument();
+  });
+
+  it("shows a load error instead of an empty menu when dish retrieval fails", async () => {
+    const user = userEvent.setup();
+    render(
+      <FactoryBoardPage
+        initialDate="2026-08-17"
+        loadBoard={async () => board}
+        loadFleets={async () => []}
+        loadBrands={async () => []}
+        qzClient={qzClient}
+        loadMenuRows={async () => { throw new Error("database unavailable"); }}
+      />,
+    );
+    await user.click((await screen.findAllByRole("button", { name: "菜式總表" }))[1]!);
+    await user.click(screen.getByRole("button", { name: "提交" }));
+    const summary = screen.getByRole("dialog", { name: /08月18日/ });
+    expect(await within(summary).findByRole("alert")).toHaveTextContent("菜式總表載入失敗");
+    expect(within(summary).getByRole("button", { name: "列印" })).toBeDisabled();
   });
 
   it("opens the selected multi-day range in a separate report page", async () => {

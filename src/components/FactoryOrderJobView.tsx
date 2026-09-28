@@ -9,9 +9,11 @@ import {
 } from "@/lib/deliveries";
 import {
   hongKongDateKey,
+  markFactoryOrderPrinted,
   markFactoryOrderLinePrinted,
   updateFactoryDispatchTime,
   type FactoryFleet,
+  type FactoryLabelPrintLine,
   type FactoryOrderLine,
   type FactoryOrderLineChange,
   type FactoryOrderJob,
@@ -76,6 +78,50 @@ export function factoryOrderLabelCount(lines: FactoryOrderLine[]): number {
     );
 }
 
+type FactoryPrintStatusFailure = {
+  kind: "retry" | "reload";
+  messageKey: string;
+};
+
+function factoryPrintStatusFailure(error: unknown): FactoryPrintStatusFailure {
+  const message = error instanceof Error
+    ? error.message
+    : error && typeof error === "object" && "message" in error
+      ? String((error as { message?: unknown }).message ?? "")
+      : "";
+  if (message.includes("factory_order_print_stale")) {
+    return { kind: "reload", messageKey: "factoryBoard.printStatusStaleError" };
+  }
+  if (message.includes("factory_order_print_set_changed")) {
+    return { kind: "reload", messageKey: "factoryBoard.printStatusSetChangedError" };
+  }
+  if (message.includes("factory_order_id_missing")) {
+    return { kind: "reload", messageKey: "factoryBoard.printStatusMissingOrderError" };
+  }
+  return { kind: "retry", messageKey: "factoryBoard.printStatusSyncError" };
+}
+
+export function buildFactoryPrintLines(
+  lines: FactoryOrderLine[],
+): FactoryLabelPrintLine[] {
+  return lines.map((line) => ({
+    id: line.id,
+    labelNames: factoryOrderLineLabelNames(line),
+    quantity: line.printSnapshot?.quantity ?? null,
+    itemOrder: line.itemOrder ?? null,
+    remarks: [...line.remarks],
+    productId: line.printSnapshot?.productId ?? null,
+    packageId: line.printSnapshot?.packageId ?? null,
+    productNameSnapshot: line.printSnapshot?.productNameSnapshot ?? null,
+    contentSnapshot: line.printSnapshot?.contentSnapshot ?? null,
+    newQuantityText: line.printSnapshot?.newQuantityText ?? null,
+    remarks1: line.printSnapshot?.remarks1 ?? null,
+    remarks2: line.printSnapshot?.remarks2 ?? null,
+    labelRemarks: line.printSnapshot?.labelRemarks ?? [],
+    isAddon: line.printSnapshot?.isAddon ?? false,
+  }));
+}
+
 const factoryChangeFieldKeys: Record<string, string> = {
   product_id: "factoryBoard.changedProduct",
   package_id: "factoryBoard.changedPackage",
@@ -113,10 +159,12 @@ export function FactoryOrderJobView({
   fleets,
   assignMotorcade = assignDeliveryMotorcade,
   markLinePrinted = markFactoryOrderLinePrinted,
+  markOrderPrinted = markFactoryOrderPrinted,
   loadLabelCommand = fetchFactoryLabelCommand,
   saveDispatchTime = updateFactoryDispatchTime,
   onLinePrinted,
   onAssigned,
+  onReloadJob,
   onBack,
   qz,
 }: {
@@ -128,10 +176,12 @@ export function FactoryOrderJobView({
   fleets: FactoryFleet[];
   assignMotorcade?: typeof assignDeliveryMotorcade;
   markLinePrinted?: typeof markFactoryOrderLinePrinted;
+  markOrderPrinted?: typeof markFactoryOrderPrinted;
   loadLabelCommand?: FactoryLabelCommandLoader;
   saveDispatchTime?: typeof updateFactoryDispatchTime;
   onLinePrinted?: (lineId: string) => void;
   onAssigned?: (fleet: FactoryFleet | null) => void;
+  onReloadJob?: () => void;
   onBack?: () => void;
   qz: ReturnType<typeof useQzTray>;
 }) {
@@ -149,7 +199,13 @@ export function FactoryOrderJobView({
   const [printing, setPrinting] = useState(false);
   const [bulkPrinting, setBulkPrinting] = useState<"all" | "address" | null>(null);
   const [bulkPrintError, setBulkPrintError] = useState(false);
+  const [bulkPrintStatusError, setBulkPrintStatusError] = useState<FactoryPrintStatusFailure | null>(null);
   const [bulkPrintSuccess, setBulkPrintSuccess] = useState<string | null>(null);
+  const [pendingPrintSync, setPendingPrintSync] = useState<{
+    orderId: string;
+    lines: FactoryLabelPrintLine[];
+  } | null>(null);
+  const [statusSyncing, setStatusSyncing] = useState(false);
   const [dispatchOpen, setDispatchOpen] = useState(false);
   const [dispatchDraft, setDispatchDraft] = useState("");
   const [savedDispatchTime, setSavedDispatchTime] = useState(job?.dispatchTime || item.deliveryTime || "");
@@ -274,7 +330,9 @@ export function FactoryOrderJobView({
     if (printBlocked || qz.state !== "connected" || !selectedPrinter || !printableLines.length) return;
     setBulkPrinting("all");
     setBulkPrintError(false);
+    setBulkPrintStatusError(null);
     setBulkPrintSuccess(null);
+    setPendingPrintSync(null);
     try {
       const labelCommands: string[] = [];
       for (const line of printableLines) {
@@ -293,20 +351,57 @@ export function FactoryOrderJobView({
         combineFactoryLabelBase64(labelCommands),
         1,
       );
-      for (const line of printableLines) {
-        try {
-          await markLinePrinted(line.id);
-          onLinePrinted?.(line.id);
-        } catch {
-          // Continue after a successful print even if its status cannot be saved.
-        }
+      const orderId = item.orderId;
+      const printLines = buildFactoryPrintLines(printableLines);
+      if (!orderId) {
+        setPendingPrintSync(null);
+        setBulkPrintStatusError({
+          kind: "reload",
+          messageKey: "factoryBoard.printStatusMissingOrderError",
+        });
+        return;
       }
+      try {
+        await markOrderPrinted(orderId, printLines);
+      } catch (error) {
+        const failure = factoryPrintStatusFailure(error);
+        setPendingPrintSync(
+          failure.kind === "retry" ? { orderId, lines: printLines } : null,
+        );
+        setBulkPrintStatusError(failure);
+        return;
+      }
+      printableLines.forEach((line) => onLinePrinted?.(line.id));
       setBulkPrintSuccess(t("factoryBoard.printAllSuccess"));
     } catch {
       setBulkPrintError(true);
     } finally {
       setBulkPrinting(null);
     }
+  };
+
+  const retryPrintStatusSync = async () => {
+    if (!pendingPrintSync || statusSyncing) return;
+    setStatusSyncing(true);
+    setBulkPrintStatusError(null);
+    try {
+      await markOrderPrinted(pendingPrintSync.orderId, pendingPrintSync.lines);
+      pendingPrintSync.lines.forEach((line) => onLinePrinted?.(line.id));
+      setPendingPrintSync(null);
+      setBulkPrintSuccess(t("factoryBoard.printStatusSyncSuccess"));
+    } catch (error) {
+      const failure = factoryPrintStatusFailure(error);
+      if (failure.kind === "reload") setPendingPrintSync(null);
+      setBulkPrintStatusError(failure);
+    } finally {
+      setStatusSyncing(false);
+    }
+  };
+
+  const reloadAfterPrintFailure = () => {
+    setPendingPrintSync(null);
+    setBulkPrintStatusError(null);
+    onReloadJob?.();
   };
 
   const printAddressLabel = async () => {
@@ -382,6 +477,33 @@ export function FactoryOrderJobView({
             <TriangleAlert aria-hidden="true" />
             <span>{t("factoryBoard.labelPrintError")}</span>
           </p>
+        ) : null}
+        {bulkPrintStatusError ? (
+          <div className="factory-job-notification is-error" role="alert">
+            <TriangleAlert aria-hidden="true" />
+            <span>{t(bulkPrintStatusError.messageKey)}</span>
+            {bulkPrintStatusError.kind === "retry" && pendingPrintSync ? (
+              <Button
+                type="button"
+                variant="outline"
+                disabled={statusSyncing}
+                onClick={() => void retryPrintStatusSync()}
+              >
+                {statusSyncing
+                  ? t("factoryBoard.printStatusSyncing")
+                  : t("factoryBoard.retryPrintStatusSync")}
+              </Button>
+            ) : null}
+            {bulkPrintStatusError.kind === "reload" ? (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={reloadAfterPrintFailure}
+              >
+                {t("factoryBoard.printStatusReload")}
+              </Button>
+            ) : null}
+          </div>
         ) : null}
         {assignSuccess ? (
           <p className="factory-job-notification is-success" role="status">

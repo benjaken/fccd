@@ -15,6 +15,7 @@ import {
   fetchFactoryOrderJob,
   fleetBadgeForDelivery,
   markFactoryOrderLinePrinted,
+  markFactoryOrderPrinted,
   updateFactoryDispatchTime,
   type FactoryFleet,
   type FactoryOrderJob,
@@ -35,6 +36,7 @@ export function FactoryOrderPage({
   loadFleets = fetchFactoryFleets,
   assignMotorcade = assignDeliveryMotorcade,
   markLinePrinted = markFactoryOrderLinePrinted,
+  markOrderPrinted = markFactoryOrderPrinted,
   loadLabelCommand = fetchFactoryLabelCommand,
   saveDispatchTime = updateFactoryDispatchTime,
   subscribeEditPresence = subscribeActiveOrderEditPresence,
@@ -45,6 +47,7 @@ export function FactoryOrderPage({
   loadFleets?: typeof fetchFactoryFleets;
   assignMotorcade?: typeof assignDeliveryMotorcade;
   markLinePrinted?: typeof markFactoryOrderLinePrinted;
+  markOrderPrinted?: typeof markFactoryOrderPrinted;
   loadLabelCommand?: FactoryLabelCommandLoader;
   saveDispatchTime?: typeof updateFactoryDispatchTime;
   subscribeEditPresence?: ActiveOrderEditPresenceSubscriber;
@@ -60,6 +63,7 @@ export function FactoryOrderPage({
   const [fleets, setFleets] = useState<FactoryFleet[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [jobReloadToken, setJobReloadToken] = useState(0);
   const [realtimeEditOrderIds, setRealtimeEditOrderIds] =
     useState<Set<string> | null>(null);
 
@@ -102,7 +106,7 @@ export function FactoryOrderPage({
     return () => {
       cancelled = true;
     };
-  }, [deliveryId, loadDelivery, loadFleets, loadOrderJob]);
+  }, [deliveryId, jobReloadToken, loadDelivery, loadFleets, loadOrderJob]);
 
   const closePage = () => {
     window.close();
@@ -142,6 +146,7 @@ export function FactoryOrderPage({
           fleets={fleets}
           assignMotorcade={assignMotorcade}
           markLinePrinted={markLinePrinted}
+          markOrderPrinted={markOrderPrinted}
           loadLabelCommand={loadLabelCommand}
           saveDispatchTime={saveDispatchTime}
           onLinePrinted={(lineId) =>
@@ -173,6 +178,7 @@ export function FactoryOrderPage({
                 : current,
             )
           }
+          onReloadJob={() => setJobReloadToken((current) => current + 1)}
           onBack={closePage}
           qz={qz}
         />
