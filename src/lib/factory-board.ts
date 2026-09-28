@@ -143,6 +143,19 @@ export function mapFactoryShopOrders(requests: ShopOrderRequest[]): FactoryBoard
     })
 }
 
+export type FactoryOrderLinePrintSnapshot = {
+  productId: string | null
+  packageId: string | null
+  productNameSnapshot: string | null
+  contentSnapshot: string | null
+  quantity: number | null
+  newQuantityText: string | null
+  remarks1: string | null
+  remarks2: string | null
+  labelRemarks: string[]
+  isAddon: boolean
+}
+
 export type FactoryOrderLine = {
   id: string
   label: string
@@ -155,7 +168,16 @@ export type FactoryOrderLine = {
   isAddon?: boolean
   isCancelled?: boolean
   category?: FactoryMenuCategory
+  itemOrder?: number | null
+  printSnapshot?: FactoryOrderLinePrintSnapshot
   changes?: FactoryOrderLineChange[]
+}
+
+export type FactoryLabelPrintLine = FactoryOrderLinePrintSnapshot & {
+  id: string
+  labelNames: string[]
+  itemOrder: number | null
+  remarks: string[]
 }
 
 export type FactoryOrderLineChange = {
@@ -915,53 +937,58 @@ export async function fetchFactoryMultiDayMenu(
 
   for (let index = 0; index < orderIds.length; index += PORTION_CHUNK_SIZE) {
     const chunk = orderIds.slice(index, index + PORTION_CHUNK_SIZE)
-    const { data, error } = await supabase
-      .from("order_lines")
-      .select("order_id, product_name_snapshot, content_snapshot, quantity, type_sort, products(name, product_types(name)), packages(name)")
-      .in("order_id", chunk)
-      .eq("is_void", false)
-    if (error) throw error
-    for (const line of data ?? []) {
-      const orderId = line.order_id as string
-      const delivery = deliveryByOrderId.get(orderId)
-      if (!delivery?.deliveryAt) continue
-      const quantity = Number(line.quantity ?? 0)
-      if (!Number.isFinite(quantity) || quantity === 0) continue
-      const catalog = firstRelation(
-        (line as {
-          products?:
-            | { name?: string | null; product_types?: { name?: string | null } | { name?: string | null }[] | null }
-            | Array<{
-                name?: string | null
-                product_types?: { name?: string | null } | { name?: string | null }[] | null
-              }>
-            | null
-        }).products,
-      )
-      const pkg = firstRelation(
-        (line as { packages?: { name?: string | null } | { name?: string | null }[] | null }).packages,
-      )
-      const productType = firstRelation(catalog?.product_types)
-      const label = resolveFactoryOrderLineDisplayName({
-        catalogName: catalog?.name ?? pkg?.name,
-        snapshotName: line.product_name_snapshot as string | null,
-        content: line.content_snapshot as string | null,
-      })
-      if (!label) continue
-      contributions.push({
-        brandId: brandByOrderId.get(orderId) ?? null,
-        orderId,
-        orderNumber: delivery.orderNumber,
-        deliveryDate: hongKongDateKey(delivery.deliveryAt),
-        deliveryTime: delivery.shipOutTime ?? delivery.deliveryTime,
-        label,
-        quantity,
-        typeSort: line.type_sort == null ? null : Number(line.type_sort),
-        category: factoryMenuCategory({
-          productTypeName: productType?.name ?? null,
-          brandName: brandNameByOrderId.get(orderId) ?? null,
-        }),
-      })
+    for (let offset = 0; ; offset += MENU_LINE_PAGE_SIZE) {
+      const { data, error } = await supabase
+        .from("order_lines")
+        .select("id, order_id, product_name_snapshot, content_snapshot, quantity, type_sort, products(name, product_types(name)), packages(name)")
+        .in("order_id", chunk)
+        .eq("is_void", false)
+        .order("id")
+        .range(offset, offset + MENU_LINE_PAGE_SIZE - 1)
+      if (error) throw error
+      for (const line of data ?? []) {
+        const orderId = line.order_id as string
+        const delivery = deliveryByOrderId.get(orderId)
+        if (!delivery?.deliveryAt) continue
+        const quantity = Number(line.quantity ?? 0)
+        if (!Number.isFinite(quantity) || quantity === 0) continue
+        const catalog = firstRelation(
+          (line as {
+            products?:
+              | { name?: string | null; product_types?: { name?: string | null } | { name?: string | null }[] | null }
+              | Array<{
+                  name?: string | null
+                  product_types?: { name?: string | null } | { name?: string | null }[] | null
+                }>
+              | null
+          }).products,
+        )
+        const pkg = firstRelation(
+          (line as { packages?: { name?: string | null } | { name?: string | null }[] | null }).packages,
+        )
+        const productType = firstRelation(catalog?.product_types)
+        const label = resolveFactoryOrderLineDisplayName({
+          catalogName: catalog?.name ?? pkg?.name,
+          snapshotName: line.product_name_snapshot as string | null,
+          content: line.content_snapshot as string | null,
+        })
+        if (!label) continue
+        contributions.push({
+          brandId: brandByOrderId.get(orderId) ?? null,
+          orderId,
+          orderNumber: delivery.orderNumber,
+          deliveryDate: hongKongDateKey(delivery.deliveryAt),
+          deliveryTime: delivery.shipOutTime ?? delivery.deliveryTime,
+          label,
+          quantity,
+          typeSort: line.type_sort == null ? null : Number(line.type_sort),
+          category: factoryMenuCategory({
+            productTypeName: productType?.name ?? null,
+            brandName: brandNameByOrderId.get(orderId) ?? null,
+          }),
+        })
+      }
+      if ((data?.length ?? 0) < MENU_LINE_PAGE_SIZE) break
     }
   }
 
@@ -978,19 +1005,24 @@ async function fetchOrderPortionTotals(
 
   for (let index = 0; index < orderIds.length; index += PORTION_CHUNK_SIZE) {
     const chunk = orderIds.slice(index, index + PORTION_CHUNK_SIZE)
-    const { data, error } = await supabase
-      .from("order_lines")
-      .select("order_id, quantity")
-      .in("order_id", chunk)
-      .eq("is_void", false)
-    if (error) {
-      throw error
-    }
-    for (const row of data ?? []) {
-      const orderId = row.order_id as string
-      const quantity = Number(row.quantity ?? 0)
-      totals[orderId] =
-        (totals[orderId] ?? 0) + (Number.isFinite(quantity) ? quantity : 0)
+    for (let offset = 0; ; offset += MENU_LINE_PAGE_SIZE) {
+      const { data, error } = await supabase
+        .from("order_lines")
+        .select("id, order_id, quantity")
+        .in("order_id", chunk)
+        .eq("is_void", false)
+        .order("id")
+        .range(offset, offset + MENU_LINE_PAGE_SIZE - 1)
+      if (error) {
+        throw error
+      }
+      for (const row of data ?? []) {
+        const orderId = row.order_id as string
+        const quantity = Number(row.quantity ?? 0)
+        totals[orderId] =
+          (totals[orderId] ?? 0) + (Number.isFinite(quantity) ? quantity : 0)
+      }
+      if ((data?.length ?? 0) < MENU_LINE_PAGE_SIZE) break
     }
   }
 
@@ -1051,7 +1083,7 @@ async function fetchOrderPrintStatuses(
       supabase
         .from("order_lines")
         .select(
-          "order_id, product_id, product_name_snapshot, content_snapshot, is_printed, is_void, bubble_modified_at, updated_at",
+          "order_id, product_id, package_id, product_name_snapshot, content_snapshot, is_printed, is_void, bubble_modified_at, updated_at",
         )
         .in("order_id", chunk),
     ])
@@ -1076,6 +1108,7 @@ async function fetchOrderPrintStatuses(
         isVoid: Boolean(line.is_void),
         isPrintable: Boolean(
           line.product_id ||
+          line.package_id ||
           (line.content_snapshot as string | null)?.trim() ||
           (line.product_name_snapshot as string | null)?.trim(),
         ),
@@ -1177,7 +1210,7 @@ export async function fetchFactoryOrderJob(orderId: string): Promise<FactoryOrde
     supabase
       .from("order_lines")
       .select(
-        "id, product_id, product_name_snapshot, content_snapshot, quantity, new_quantity_text, remarks_1, remarks_2, label_remarks, is_printed, is_void, is_addon, bubble_modified_at, updated_at, type_sort, item_order, temporary_label_display_name, temporary_label_quantity_label, products(name, product_types(name)), packages(name)",
+        "id, product_id, package_id, product_name_snapshot, content_snapshot, quantity, new_quantity_text, remarks_1, remarks_2, label_remarks, is_printed, is_void, is_addon, bubble_modified_at, updated_at, type_sort, item_order, temporary_label_display_name, temporary_label_quantity_label, products(name, product_types(name)), packages(name)",
       )
       .eq("order_id", orderId)
       .order("type_sort")
@@ -1356,6 +1389,24 @@ export async function fetchFactoryOrderJob(orderId: string): Promise<FactoryOrde
         printed: !row.is_void && Boolean(row.is_printed),
         isAddon: Boolean(row.is_addon),
         isCancelled: Boolean(row.is_void),
+        itemOrder: row.item_order == null ? null : Number(row.item_order),
+        printSnapshot: {
+          productId: (row.product_id as string | null) ?? null,
+          packageId: (row.package_id as string | null) ?? null,
+          productNameSnapshot: (row.product_name_snapshot as string | null) ?? null,
+          contentSnapshot: (row.content_snapshot as string | null) ?? null,
+          quantity:
+            row.quantity == null || row.quantity === ""
+              ? null
+              : Number(row.quantity),
+          newQuantityText: (row.new_quantity_text as string | null) ?? null,
+          remarks1: (row.remarks_1 as string | null) ?? null,
+          remarks2: (row.remarks_2 as string | null) ?? null,
+          labelRemarks: Array.isArray(row.label_remarks)
+            ? (row.label_remarks as unknown[]).map((value) => String(value ?? ""))
+            : [],
+          isAddon: Boolean(row.is_addon),
+        },
         changes: changesByLineId.get(row.id as string) ?? [],
         requiresReprint:
           row.is_void
@@ -1410,11 +1461,26 @@ export async function markFactoryOrderLinePrinted(lineId: string): Promise<void>
 
 export async function markFactoryOrderPrinted(
   orderId: string,
-  lineIds: string[],
+  lines: FactoryLabelPrintLine[],
 ): Promise<void> {
   const { error } = await supabase.rpc("mark_factory_order_printed", {
     p_order_id: orderId,
-    p_order_line_ids: lineIds,
+    p_lines: lines.map((line) => ({
+      line_id: line.id,
+      label_names: line.labelNames,
+      quantity: line.quantity,
+      item_order: line.itemOrder,
+      remarks: line.remarks,
+      product_id: line.productId,
+      package_id: line.packageId,
+      product_name_snapshot: line.productNameSnapshot,
+      content_snapshot: line.contentSnapshot,
+      new_quantity_text: line.newQuantityText,
+      remarks_1: line.remarks1,
+      remarks_2: line.remarks2,
+      label_remarks: line.labelRemarks,
+      is_addon: line.isAddon,
+    })),
   })
   if (error) throw error
 }

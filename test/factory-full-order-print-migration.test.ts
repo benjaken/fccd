@@ -24,3 +24,31 @@ describe("atomic factory full-order print migration", () => {
     );
   });
 });
+
+const recordsMigration = readFileSync(
+  resolve(
+    process.cwd(),
+    "supabase/migrations/20260926120000_factory_label_print_records.sql",
+  ),
+  "utf8",
+);
+
+describe("factory label print records migration", () => {
+  it("records the printed line snapshot and rejects stale submissions", () => {
+    expect(recordsMigration).toContain(
+      "create table if not exists public.factory_label_print_records",
+    );
+    expect(recordsMigration).toContain(
+      "drop function if exists public.mark_factory_order_printed(uuid, uuid[])",
+    );
+    expect(recordsMigration).toContain(
+      "create or replace function public.mark_factory_order_printed(\n  p_order_id uuid,\n  p_lines jsonb",
+    );
+    expect(recordsMigration).toContain("factory_order_print_stale");
+    expect(recordsMigration).toContain("or package_id is not null");
+    expect(recordsMigration).toContain("insert into public.factory_label_print_records");
+    expect(recordsMigration).toContain(
+      "grant execute on function public.mark_factory_order_printed(uuid, jsonb)",
+    );
+  });
+});

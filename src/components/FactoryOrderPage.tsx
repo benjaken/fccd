@@ -63,6 +63,7 @@ export function FactoryOrderPage({
   const [fleets, setFleets] = useState<FactoryFleet[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [jobReloadToken, setJobReloadToken] = useState(0);
   const [realtimeEditOrderIds, setRealtimeEditOrderIds] =
     useState<Set<string> | null>(null);
 
@@ -105,7 +106,7 @@ export function FactoryOrderPage({
     return () => {
       cancelled = true;
     };
-  }, [deliveryId, loadDelivery, loadFleets, loadOrderJob]);
+  }, [deliveryId, jobReloadToken, loadDelivery, loadFleets, loadOrderJob]);
 
   const closePage = () => {
     window.close();
@@ -177,6 +178,7 @@ export function FactoryOrderPage({
                 : current,
             )
           }
+          onReloadJob={() => setJobReloadToken((current) => current + 1)}
           onBack={closePage}
           qz={qz}
         />

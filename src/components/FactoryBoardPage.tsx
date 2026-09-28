@@ -238,6 +238,7 @@ export function FactoryBoardPage({
     useState<Set<string> | null>(null);
   const [jobLoading, setJobLoading] = useState(false);
   const [jobError, setJobError] = useState(false);
+  const [jobReloadToken, setJobReloadToken] = useState(0);
   const [pendingReprintJob, setPendingReprintJob] =
     useState<DeliveryListItem | null>(null);
   const [datePickerOpen, setDatePickerOpen] = useState(false);
@@ -467,7 +468,7 @@ export function FactoryBoardPage({
     return () => {
       cancelled = true;
     };
-  }, [loadOrderJob, selectedJob?.orderId]);
+  }, [jobReloadToken, loadOrderJob, selectedJob?.orderId]);
 
   useEffect(() => {
     if (!menuSummary) {
@@ -913,6 +914,7 @@ export function FactoryBoardPage({
                 : current,
             );
           }}
+          onReloadJob={() => setJobReloadToken((current) => current + 1)}
           qz={qz}
         />
       ) : multiDayReport ? (
@@ -1511,9 +1513,11 @@ export function FactoryBoardPage({
                     <th key={`hour-${column.hour}`}>
                       {column.hour === null
                         ? t("factoryBoard.completionTimeUnset")
-                        : t("factoryBoard.completionHour", {
-                            hour: column.hour > 12 ? column.hour - 12 : column.hour,
-                          })}
+                        : column.hour === 0
+                          ? t("factoryBoard.completionHourMidnight")
+                          : t("factoryBoard.completionHour", {
+                              hour: column.hour > 12 ? column.hour - 12 : column.hour,
+                            })}
                     </th>
                   ))}
                 </tr>

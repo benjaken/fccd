@@ -1211,8 +1211,13 @@ describe("FactoryBoardPage", () => {
     await waitFor(() => expect(printAll).toBeEnabled());
     await user.click(printAll);
 
-    await waitFor(() =>
-      expect(markOrderPrinted).toHaveBeenCalledWith("order-1", ["line-a", "line-b"]),
+    await waitFor(() => expect(markOrderPrinted).toHaveBeenCalledTimes(1));
+    expect(markOrderPrinted).toHaveBeenCalledWith(
+      "order-1",
+      expect.arrayContaining([
+        expect.objectContaining({ id: "line-a", labelNames: ["檸檬茶"] }),
+        expect.objectContaining({ id: "line-b", labelNames: ["飯盒餐具包"] }),
+      ]),
     );
     expect(markLinePrinted).not.toHaveBeenCalled();
     expect(loadLabelCommand).toHaveBeenNthCalledWith(
@@ -1284,7 +1289,6 @@ describe("FactoryBoardPage", () => {
     await user.click(printAll);
 
     expect(await screen.findByText(/標籤已送到打印機，但打印狀態保存失敗/)).toBeInTheDocument();
-    expect(screen.getByText("錯誤：status_write_failed")).toBeInTheDocument();
     expect(printLabels).toHaveBeenCalledTimes(1);
     expect(markOrderPrinted).toHaveBeenCalledTimes(1);
 
@@ -1292,6 +1296,53 @@ describe("FactoryBoardPage", () => {
 
     expect(await screen.findByText("打印狀態已成功補回，無需重新打印。")).toBeInTheDocument();
     expect(markOrderPrinted).toHaveBeenCalledTimes(2);
+    expect(printLabels).toHaveBeenCalledTimes(1);
+  });
+
+  it("asks the user to reload instead of retrying when the printed line set is stale", async () => {
+    const user = userEvent.setup();
+    const printLabels = vi.fn(async () => {});
+    const markOrderPrinted = vi.fn(async () => {
+      throw new Error("factory_order_print_stale");
+    });
+    const connectedQzClient: QzTrayClient = {
+      connect: vi.fn(async () => {}),
+      disconnect: vi.fn(async () => {}),
+      listPrinters: vi.fn(async () => ["Zebra ZD421"]),
+      queryStatuses: vi.fn(async () => []),
+      printLabels,
+    };
+    render(
+      <FactoryBoardPage
+        initialDate="2026-08-17"
+        loadBoard={async () => board}
+        loadFleets={async () => []}
+        loadBrands={async () => []}
+        loadOrderJob={async () => ({
+          packingNote: null,
+          dispatchTime: "10:00",
+          arrivalWindow: null,
+          lines: [
+            { id: "line-a", label: "檸檬茶", quantityText: "2", remarks: [], printed: false },
+          ],
+        })}
+        markOrderPrinted={markOrderPrinted}
+        loadLabelCommand={async () => "VEVTUA=="}
+        openOrdersInNewPage={false}
+        qzClient={connectedQzClient}
+      />,
+    );
+
+    await user.click(await screen.findByRole("button", { name: /B-1522/ }));
+    const printAll = await screen.findByRole("button", { name: "印全單（2個標籤）" });
+    await waitFor(() => expect(printAll).toBeEnabled());
+    await user.click(printAll);
+
+    expect(await screen.findByText(/訂單明細已在列印前更新/)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "重試同步狀態" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "重新載入訂單" })).toBeInTheDocument();
+    expect(screen.queryByText(/factory_order_print_stale/)).not.toBeInTheDocument();
+    expect(markOrderPrinted).toHaveBeenCalledTimes(1);
     expect(printLabels).toHaveBeenCalledTimes(1);
   });
 
@@ -1494,6 +1545,33 @@ describe("FactoryBoardPage", () => {
     expect(cells[1]).toHaveTextContent("5");
     expect(cells[2]).toHaveTextContent("3");
     expect(cells[cells.length - 1]).toHaveTextContent("2");
+  });
+
+  it("labels a midnight completion time distinctly from noon", async () => {
+    const user = userEvent.setup();
+    render(
+      <FactoryBoardPage
+        initialDate="2026-08-17"
+        loadBoard={async () => board}
+        loadFleets={async () => []}
+        loadBrands={async () => []}
+        qzClient={qzClient}
+        loadMenuRows={async () => [{
+          label: "午夜菜式",
+          quantity: 1,
+          orders: [
+            { orderId: "order-1", orderNumber: "P-1156", completionTime: "00:15", quantity: 1 },
+          ],
+        }]}
+      />,
+    );
+    await user.click((await screen.findAllByRole("button", { name: "菜式總表" }))[1]!);
+    await user.click(screen.getByRole("button", { name: "提交" }));
+    const summary = screen.getByRole("dialog", { name: /08月18日/ });
+    expect(await within(summary).findByText("午夜菜式")).toBeInTheDocument();
+    expect(within(summary).getByText("凌晨12點完成")).toBeInTheDocument();
+    expect(within(summary).queryByText("0點完成")).not.toBeInTheDocument();
+    expect(within(summary).getByText("12點完成")).toBeInTheDocument();
   });
 
   it("shows a load error instead of an empty menu when dish retrieval fails", async () => {
