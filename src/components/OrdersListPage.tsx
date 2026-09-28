@@ -92,9 +92,13 @@ const STATUS_FILTERS: OrderStatusFilter[] = [
   "awaitingDriver",
   "accepted",
   "ready",
-  "pickedUp",
   "shipping",
   "completed",
+];
+
+const KNOWN_STATUS_FILTERS: OrderStatusFilter[] = [
+  ...STATUS_FILTERS,
+  "pickedUp",
 ];
 
 const ORDER_SKELETON_COLUMNS = [
@@ -216,7 +220,7 @@ export function OrdersListPage({
       : null;
   const effectivePreset: OrderPreset = selectedQueue ?? preset;
   const requestedStatus = searchParams.get("status") ?? "";
-  const status = STATUS_FILTERS.includes(
+  const status = KNOWN_STATUS_FILTERS.includes(
     requestedStatus as OrderStatusFilter,
   )
     ? (requestedStatus as OrderStatusFilter)

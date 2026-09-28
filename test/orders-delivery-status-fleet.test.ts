@@ -30,6 +30,12 @@ describe("order list delivery status fleet suffix", () => {
         labels,
       ),
     ).toBe("已送達(Sun-Line)");
+    expect(
+      formatOrderListDeliveryStatus(
+        { deliveryStatus: "已取貨", fleetName: "Sun-Line" },
+        labels,
+      ),
+    ).toBe("送貨途中(Sun-Line)");
   });
 
   it("does not suffix unassigned or awaiting-acceptance statuses", () => {
