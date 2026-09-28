@@ -41,6 +41,7 @@ const orderResult: OrderListResult = {
       deliveryStatus: "待取貨",
       isSentToFactory: null,
       isAssignedToFleet: false,
+      hasAssignedDriver: true,
       grandTotal: 1610,
       outstanding: 1610,
       currency: "HKD",
@@ -132,7 +133,7 @@ describe("Orders list", () => {
     expect(table.getByText("出車時間：")).toBeInTheDocument();
     expect(table.getByText("送貨時間：")).toBeInTheDocument();
     expect(table.queryByText("送貨狀態：")).not.toBeInTheDocument();
-    const deliveryStatus = table.getAllByText("待取貨").find((badge) =>
+    const deliveryStatus = table.getAllByText("已派司機待取貨").find((badge) =>
       badge.classList.contains("status-badge") && badge.classList.contains("green"),
     );
     expect(deliveryStatus).toBeTruthy();
@@ -404,6 +405,61 @@ describe("Orders list", () => {
         canViewFinance: true,
       })),
     );
+  });
+
+  it("offers subdivided fleet and pickup statuses in the operations filter", async () => {
+    const user = userEvent.setup();
+    const loadOrders = vi.fn().mockResolvedValue(orderResult);
+
+    render(
+      <MemoryRouter>
+        <OrdersListPage loadOrders={loadOrders} loadListConfig={emptyListConfig} />
+      </MemoryRouter>,
+    );
+
+    await screen.findByRole("table");
+    await user.click(screen.getByRole("button", { name: "開啟篩選" }));
+    const statusFilter = screen.getByLabelText("營運狀態");
+    for (const option of [
+      "已確認",
+      "製作中",
+      "未派車隊",
+      "待接單",
+      "已接單未派司機",
+      "已派司機待取貨",
+      "已取貨",
+      "送貨途中",
+      "已送達",
+    ]) {
+      expect(
+        within(statusFilter).getByRole("option", { name: option }),
+      ).toBeInTheDocument();
+    }
+    expect(
+      within(statusFilter).queryByRole("option", { name: "待取貨" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("shows accepted orders without a driver as 已接單未派司機", async () => {
+    const loadOrders = vi.fn().mockResolvedValue({
+      ...orderResult,
+      items: [{
+        ...orderResult.items[0],
+        hasAssignedDriver: false,
+      }],
+    });
+
+    render(
+      <MemoryRouter>
+        <OrdersListPage loadOrders={loadOrders} loadListConfig={emptyListConfig} />
+      </MemoryRouter>,
+    );
+
+    const table = within(await screen.findByRole("table"));
+    const deliveryStatus = table.getAllByText("已接單未派司機").find((badge) =>
+      badge.classList.contains("status-badge") && badge.classList.contains("amber"),
+    );
+    expect(deliveryStatus).toBeTruthy();
   });
 
   it("renders the shared enhanced columns and keeps to-dos on all only", async () => {

@@ -37,13 +37,19 @@ export type OrderStatusFilter =
   | ""
   | "confirmed"
   | "preparing"
+  | "unassignedFleet"
+  | "awaitingDriver"
+  | "acceptedUnassigned"
+  | "assignedPendingPickup"
   | "ready"
   | "pickedUp"
-  | "awaitingDriver"
   | "shipping"
   | "completed";
 
-export type OperationalOrderStatus = Exclude<OrderStatusFilter, "">;
+export type OperationalOrderStatus = Exclude<
+  OrderStatusFilter,
+  "" | "unassignedFleet" | "acceptedUnassigned" | "assignedPendingPickup"
+>;
 
 const LATER_KITCHEN_DELIVERY_STATUSES = [
   "己送達",
@@ -113,6 +119,78 @@ export function orderDeliveryStatusTone(
   return "neutral";
 }
 
+export function orderHasAssignedDriver(
+  deliveryStatus: string | null | undefined,
+  deliveries:
+    | Array<{
+        subdriver_id?: string | null;
+        delivery_status?: string | null;
+      }>
+    | null
+    | undefined,
+) {
+  if (deliveryStatus !== "待取貨") return false;
+  const pending = (deliveries ?? []).filter(
+    (delivery) => delivery.delivery_status === "待取貨",
+  );
+  if (!pending.length) return false;
+  return pending.every((delivery) => Boolean(delivery.subdriver_id));
+}
+
+export function orderListDeliveryStatusI18nKey(order: {
+  deliveryStatus: string | null;
+  hasAssignedDriver?: boolean;
+}) {
+  if (order.deliveryStatus !== "待取貨") return null;
+  return order.hasAssignedDriver
+    ? "orders.statuses.assignedPendingPickup"
+    : "orders.statuses.acceptedUnassigned";
+}
+
+export function orderListDeliveryStatusTone(order: {
+  deliveryStatus: string | null;
+  hasAssignedDriver?: boolean;
+}) {
+  if (order.deliveryStatus === "待取貨" && !order.hasAssignedDriver) {
+    return "amber";
+  }
+  return orderDeliveryStatusTone(order.deliveryStatus);
+}
+
+export function partitionPendingPickupOrderIds(
+  rows: Array<{ order_id: string | null; subdriver_id: string | null }>,
+) {
+  const seenAssigned = new Set<string>();
+  const seenUnassigned = new Set<string>();
+  for (const row of rows) {
+    const orderId = row.order_id?.trim();
+    if (!orderId) continue;
+    if (row.subdriver_id) seenAssigned.add(orderId);
+    else seenUnassigned.add(orderId);
+  }
+  return {
+    unassigned: [...seenUnassigned],
+    assigned: [...seenAssigned].filter((orderId) => !seenUnassigned.has(orderId)),
+  };
+}
+
+async function fetchPendingPickupOrderIds(driverAssigned: boolean) {
+  const { data, error } = await supabase
+    .from("deliveries")
+    .select("order_id, subdriver_id")
+    .eq("delivery_status", "待取貨")
+    .not("order_id", "is", null)
+    .limit(5000);
+  if (error) throw error;
+  const partitioned = partitionPendingPickupOrderIds(
+    (data ?? []) as Array<{
+      order_id: string | null;
+      subdriver_id: string | null;
+    }>,
+  );
+  return driverAssigned ? partitioned.assigned : partitioned.unassigned;
+}
+
 export type OrderListItem = {
   id: string;
   orderNumber: string | null;
@@ -127,6 +205,7 @@ export type OrderListItem = {
   isSentToFactory: boolean | null;
   doNotSendToFactory?: boolean;
   isAssignedToFleet?: boolean;
+  hasAssignedDriver?: boolean;
   grandTotal: number | null;
   outstanding: number | null;
   paidAmount?: number | null;
@@ -230,6 +309,8 @@ type OrderRow = {
     | null;
   deliveries: Array<{
     motorcade_id: string | null;
+    subdriver_id: string | null;
+    delivery_status: string | null;
     delivery_time: string | null;
     ship_out_time: string | null;
     delivery_districts:
@@ -288,6 +369,8 @@ function applyStatusFilter<
       return query.in("delivery_status", ["已取", "已取貨"]);
     case "awaitingDriver":
       return query.eq("delivery_status", "待接單");
+    case "unassignedFleet":
+      return query.eq("delivery_status", "未派車隊");
     case "preparing": {
       const excluded =
         preset === "kitchen"
@@ -331,7 +414,7 @@ export async function fetchOrders({
     ? "planned_delivery_district:delivery_districts!delivery_district_id!inner(name)"
     : "planned_delivery_district:delivery_districts!delivery_district_id(name)";
   const deliverySelection =
-    "deliveries(motorcade_id,delivery_time,ship_out_time,delivery_districts!district_id(name))";
+    "deliveries(motorcade_id,subdriver_id,delivery_status,delivery_time,ship_out_time,delivery_districts!district_id(name))";
   const selectedFields: string = canViewFinance
     ? `id,order_number,customer_name_snapshot,company_name_snapshot,email_snapshot,contact_number_a_snapshot,shipping_address_snapshot,customer_note_snapshot,factory_packing_note,delivery_at,delivery_time,factory_date,ship_out_time,delivery_status,is_sent_to_factory,addon_shopify_pending,do_not_send_to_factory,currency,bubble_created_at,created_at,grand_total,outstanding,order_status_legacy_ids,order_tag_assignments(order_tags(name)),shopify_order_id,shopify_stores(shop_domain),channels(name),shipping_methods(name,display_name),${plannedDistrictSelection},${deliverySelection},order_lines(quantity,is_void,is_addon)`
     : `id,order_number,customer_name_snapshot,company_name_snapshot,email_snapshot,contact_number_a_snapshot,shipping_address_snapshot,customer_note_snapshot,factory_packing_note,delivery_at,delivery_time,factory_date,ship_out_time,delivery_status,is_sent_to_factory,addon_shopify_pending,do_not_send_to_factory,currency,bubble_created_at,created_at,order_status_legacy_ids,order_tag_assignments(order_tags(name)),shopify_order_id,shopify_stores(shop_domain),channels(name),shipping_methods(name,display_name),${plannedDistrictSelection},${deliverySelection},order_lines(quantity,is_void,is_addon)`;
@@ -433,7 +516,15 @@ export async function fetchOrders({
       .gte("delivery_at", `${hongKongDateKey(now)}T00:00:00+08:00`);
   }
 
-  query = applyStatusFilter(query, status, preset);
+  if (status === "acceptedUnassigned" || status === "assignedPendingPickup") {
+    const orderIds = await fetchPendingPickupOrderIds(
+      status === "assignedPendingPickup",
+    );
+    if (!orderIds.length) return { items: [], total: 0 };
+    query = query.eq("delivery_status", "待取貨").in("id", orderIds);
+  } else {
+    query = applyStatusFilter(query, status, preset);
+  }
 
   const [{ data, count, error }, resolvedCatalog, addressDistrictNames] =
     await Promise.all([
@@ -467,6 +558,10 @@ export async function fetchOrders({
       doNotSendToFactory: row.do_not_send_to_factory === true,
       isAssignedToFleet: (row.deliveries ?? []).some(
         (delivery) => Boolean(delivery.motorcade_id),
+      ),
+      hasAssignedDriver: orderHasAssignedDriver(
+        row.delivery_status,
+        row.deliveries,
       ),
       grandTotal: optionalAmount(row.grand_total),
       outstanding: optionalAmount(row.outstanding),
