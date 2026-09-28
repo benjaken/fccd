@@ -132,7 +132,7 @@ describe("Orders list", () => {
     expect(table.getByText("出車時間：")).toBeInTheDocument();
     expect(table.getByText("送貨時間：")).toBeInTheDocument();
     expect(table.queryByText("送貨狀態：")).not.toBeInTheDocument();
-    const deliveryStatus = table.getAllByText("待取貨").find((badge) =>
+    const deliveryStatus = table.getAllByText("已接單 待取貨").find((badge) =>
       badge.classList.contains("status-badge") && badge.classList.contains("green"),
     );
     expect(deliveryStatus).toBeTruthy();
@@ -261,6 +261,26 @@ describe("Orders list", () => {
     const table = within(await screen.findByRole("table"));
     expect(table.getByText("-")).toBeInTheDocument();
     expect(table.getByText("送貨途中")).toHaveClass("status-badge", "blue");
+  });
+
+  it("shows accepted pending pickup with the fleet name", async () => {
+    const loadOrders = vi.fn().mockResolvedValue({
+      ...orderResult,
+      items: [{
+        ...orderResult.items[0],
+        fleetName: "Adam",
+      }],
+    });
+
+    render(
+      <MemoryRouter>
+        <OrdersListPage loadOrders={loadOrders} loadListConfig={emptyListConfig} />
+      </MemoryRouter>,
+    );
+
+    expect(
+      within(await screen.findByRole("table")).getByText("已接單 待取貨(Adam)"),
+    ).toHaveClass("status-badge", "green");
   });
 
   it("shows awaiting-driver delivery status in blue", async () => {

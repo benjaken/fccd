@@ -16,6 +16,7 @@ import { useDeferredFilter } from "@/lib/use-deferred-filter";
 import { printPdf } from "@/lib/print-pdf";
 import {
   fetchOrders,
+  formatOrderListDeliveryStatus,
   orderDeliveryStatusTone,
   ORDERS_PAGE_SIZE,
   updateOrderStatusSelections,
@@ -139,6 +140,16 @@ function orderPaidAmount(
   if (order.paidAmount !== undefined) return order.paidAmount;
   if (order.grandTotal === null || order.outstanding === null) return null;
   return Math.max(0, order.grandTotal - order.outstanding);
+}
+
+function orderDeliveryStatusLabel(
+  order: Pick<OrderListItem, "deliveryStatus" | "fleetName">,
+  translate: (key: string) => string,
+) {
+  return formatOrderListDeliveryStatus(order, {
+    unassigned: translate("orders.deliveryDetails.unassigned"),
+    accepted: translate("orders.statuses.accepted"),
+  });
 }
 
 
@@ -850,7 +861,7 @@ export function OrdersListPage({
                         {order.hasPendingAddonShopify ? <span className="status-badge amber">未處理加單</span> : null}
                       </div>
                       <span className={cn("status-badge", orderDeliveryStatusTone(order.deliveryStatus))}>
-                        {order.deliveryStatus || t("orders.deliveryDetails.unassigned")}
+                        {orderDeliveryStatusLabel(order, t)}
                       </span>
                     </header>
 
@@ -1097,7 +1108,7 @@ export function OrdersListPage({
                   </td>
                   <td>
                     <span className={cn("status-badge", orderDeliveryStatusTone(order.deliveryStatus))}>
-                      {order.deliveryStatus || t("orders.deliveryDetails.unassigned")}
+                      {orderDeliveryStatusLabel(order, t)}
                     </span>
                   </td>
                   <td>
