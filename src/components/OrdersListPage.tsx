@@ -16,8 +16,7 @@ import { useDeferredFilter } from "@/lib/use-deferred-filter";
 import { printPdf } from "@/lib/print-pdf";
 import {
   fetchOrders,
-  orderListDeliveryStatusI18nKey,
-  orderListDeliveryStatusTone,
+  orderDeliveryStatusTone,
   ORDERS_PAGE_SIZE,
   updateOrderStatusSelections,
   type OrderListFilters,
@@ -90,16 +89,11 @@ const STATUS_FILTERS: OrderStatusFilter[] = [
   "preparing",
   "unassignedFleet",
   "awaitingDriver",
-  "acceptedUnassigned",
-  "assignedPendingPickup",
+  "accepted",
+  "ready",
   "pickedUp",
   "shipping",
   "completed",
-];
-
-const KNOWN_STATUS_FILTERS: OrderStatusFilter[] = [
-  ...STATUS_FILTERS,
-  "ready",
 ];
 
 const ORDER_SKELETON_COLUMNS = [
@@ -145,16 +139,6 @@ function orderPaidAmount(
   if (order.paidAmount !== undefined) return order.paidAmount;
   if (order.grandTotal === null || order.outstanding === null) return null;
   return Math.max(0, order.grandTotal - order.outstanding);
-}
-
-function orderDeliveryStatusLabel(
-  order: Pick<OrderListItem, "deliveryStatus" | "hasAssignedDriver">,
-  translate: (key: string) => string,
-) {
-  const key = orderListDeliveryStatusI18nKey(order);
-  return key
-    ? translate(key)
-    : order.deliveryStatus || translate("orders.deliveryDetails.unassigned");
 }
 
 
@@ -221,7 +205,7 @@ export function OrdersListPage({
       : null;
   const effectivePreset: OrderPreset = selectedQueue ?? preset;
   const requestedStatus = searchParams.get("status") ?? "";
-  const status = KNOWN_STATUS_FILTERS.includes(
+  const status = STATUS_FILTERS.includes(
     requestedStatus as OrderStatusFilter,
   )
     ? (requestedStatus as OrderStatusFilter)
@@ -865,8 +849,8 @@ export function OrdersListPage({
                         <span>{order.channelName || t("common.notSet")}</span>
                         {order.hasPendingAddonShopify ? <span className="status-badge amber">未處理加單</span> : null}
                       </div>
-                      <span className={cn("status-badge", orderListDeliveryStatusTone(order))}>
-                        {orderDeliveryStatusLabel(order, t)}
+                      <span className={cn("status-badge", orderDeliveryStatusTone(order.deliveryStatus))}>
+                        {order.deliveryStatus || t("orders.deliveryDetails.unassigned")}
                       </span>
                     </header>
 
@@ -1112,8 +1096,8 @@ export function OrdersListPage({
                     </small>
                   </td>
                   <td>
-                    <span className={cn("status-badge", orderListDeliveryStatusTone(order))}>
-                      {orderDeliveryStatusLabel(order, t)}
+                    <span className={cn("status-badge", orderDeliveryStatusTone(order.deliveryStatus))}>
+                      {order.deliveryStatus || t("orders.deliveryDetails.unassigned")}
                     </span>
                   </td>
                   <td>
