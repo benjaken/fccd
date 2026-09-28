@@ -118,6 +118,70 @@ export function orderDeliveryStatusTone(
   return "neutral";
 }
 
+const ACCEPTED_DELIVERY_STATUSES = new Set([
+  "待取貨",
+  "已取",
+  "已取貨",
+  "送貨途中",
+  "已送達",
+  "己送達",
+]);
+
+type NestedName =
+  | { name: string | null; short_name?: string | null }
+  | Array<{ name: string | null; short_name?: string | null }>
+  | null
+  | undefined;
+
+function nestedTeamName(value: NestedName) {
+  const row = Array.isArray(value) ? value[0] : value;
+  const name = row?.name?.trim() || row?.short_name?.trim() || "";
+  return name || null;
+}
+
+export function orderFleetName(
+  deliveryStatus: string | null | undefined,
+  deliveries:
+    | Array<{
+        delivery_status?: string | null;
+        delivery_teams?: NestedName;
+      }>
+    | null
+    | undefined,
+) {
+  const rows = deliveries ?? [];
+  const matching = rows.find(
+    (delivery) =>
+      delivery.delivery_status === deliveryStatus &&
+      nestedTeamName(delivery.delivery_teams),
+  );
+  if (matching) return nestedTeamName(matching.delivery_teams);
+  const withTeam = rows.find((delivery) => nestedTeamName(delivery.delivery_teams));
+  return withTeam ? nestedTeamName(withTeam.delivery_teams) : null;
+}
+
+export function formatOrderListDeliveryStatus(
+  order: {
+    deliveryStatus: string | null;
+    fleetName?: string | null;
+  },
+  labels: { unassigned: string; accepted: string },
+) {
+  const status = order.deliveryStatus?.trim() || labels.unassigned;
+  const fleet = order.fleetName?.trim();
+  const fleetSuffix = fleet ? `(${fleet})` : "";
+  if (order.deliveryStatus === "待取貨") {
+    return `${labels.accepted} 待取貨${fleetSuffix}`;
+  }
+  if (
+    order.deliveryStatus &&
+    ACCEPTED_DELIVERY_STATUSES.has(order.deliveryStatus)
+  ) {
+    return `${status}${fleetSuffix}`;
+  }
+  return status;
+}
+
 export type OrderListItem = {
   id: string;
   orderNumber: string | null;
@@ -132,6 +196,7 @@ export type OrderListItem = {
   isSentToFactory: boolean | null;
   doNotSendToFactory?: boolean;
   isAssignedToFleet?: boolean;
+  fleetName?: string | null;
   grandTotal: number | null;
   outstanding: number | null;
   paidAmount?: number | null;
@@ -235,11 +300,16 @@ type OrderRow = {
     | null;
   deliveries: Array<{
     motorcade_id: string | null;
+    delivery_status: string | null;
     delivery_time: string | null;
     ship_out_time: string | null;
     delivery_districts:
       | { name: string | null }
       | Array<{ name: string | null }>
+      | null;
+    delivery_teams:
+      | { name: string | null; short_name: string | null }
+      | Array<{ name: string | null; short_name: string | null }>
       | null;
   }> | null;
   shipping_address_snapshot: string | null;
@@ -339,7 +409,7 @@ export async function fetchOrders({
     ? "planned_delivery_district:delivery_districts!delivery_district_id!inner(name)"
     : "planned_delivery_district:delivery_districts!delivery_district_id(name)";
   const deliverySelection =
-    "deliveries(motorcade_id,delivery_time,ship_out_time,delivery_districts!district_id(name))";
+    "deliveries(motorcade_id,delivery_status,delivery_time,ship_out_time,delivery_districts!district_id(name),delivery_teams!motorcade_id(name,short_name))";
   const selectedFields: string = canViewFinance
     ? `id,order_number,customer_name_snapshot,company_name_snapshot,email_snapshot,contact_number_a_snapshot,shipping_address_snapshot,customer_note_snapshot,factory_packing_note,delivery_at,delivery_time,factory_date,ship_out_time,delivery_status,is_sent_to_factory,addon_shopify_pending,do_not_send_to_factory,currency,bubble_created_at,created_at,grand_total,outstanding,order_status_legacy_ids,order_tag_assignments(order_tags(name)),shopify_order_id,shopify_stores(shop_domain),channels(name),shipping_methods(name,display_name),${plannedDistrictSelection},${deliverySelection},order_lines(quantity,is_void,is_addon)`
     : `id,order_number,customer_name_snapshot,company_name_snapshot,email_snapshot,contact_number_a_snapshot,shipping_address_snapshot,customer_note_snapshot,factory_packing_note,delivery_at,delivery_time,factory_date,ship_out_time,delivery_status,is_sent_to_factory,addon_shopify_pending,do_not_send_to_factory,currency,bubble_created_at,created_at,order_status_legacy_ids,order_tag_assignments(order_tags(name)),shopify_order_id,shopify_stores(shop_domain),channels(name),shipping_methods(name,display_name),${plannedDistrictSelection},${deliverySelection},order_lines(quantity,is_void,is_addon)`;
@@ -476,6 +546,7 @@ export async function fetchOrders({
       isAssignedToFleet: (row.deliveries ?? []).some(
         (delivery) => Boolean(delivery.motorcade_id),
       ),
+      fleetName: orderFleetName(row.delivery_status, row.deliveries),
       grandTotal: optionalAmount(row.grand_total),
       outstanding: optionalAmount(row.outstanding),
       paidAmount: paidAmountFromTotals(
