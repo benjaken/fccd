@@ -1253,6 +1253,38 @@ describe("Packages catalog pages", () => {
     expect(screen.getByText("CCFA0406")).toBeInTheDocument();
   });
 
+  it("saves an edited addon price for a package product", async () => {
+    const user = userEvent.setup();
+    const updateProduct = vi.fn().mockResolvedValue(undefined);
+    const loadDetail = vi.fn().mockResolvedValue(packageDetail);
+
+    render(
+      <MemoryRouter initialEntries={["/products/packages/package-1/edit"]}>
+        <Routes>
+          <Route
+            path="/products/packages/:id/edit"
+            element={
+              <PackageDetailPage
+                canEdit
+                loadDetail={loadDetail}
+                updateProduct={updateProduct}
+              />
+            }
+          />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    const price = await screen.findByLabelText("燒雞 附加價格");
+    expect(price).toHaveValue(0);
+    await user.clear(price);
+    await user.type(price, "25");
+    await user.tab();
+    await waitFor(() =>
+      expect(updateProduct).toHaveBeenCalledWith("member-1", { addonPrice: 25 }),
+    );
+  });
+
   it("returns package detail to the page that opened it", async () => {
     render(
       <MemoryRouter

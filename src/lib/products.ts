@@ -1111,7 +1111,6 @@ export async function searchCatalogProducts(
     .from("products")
     .select("id,name,chinese_name,sku,legacy_id")
     .is("archived_at", null)
-    .eq("is_active", true)
     .not("sku", "is", null)
     .neq("sku", "")
     .or(

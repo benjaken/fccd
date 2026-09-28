@@ -96,6 +96,15 @@ describe("product SKU list filter", () => {
     expect(query.neq).toHaveBeenCalledWith("sku", "");
   });
 
+  it("keeps inactive 單點 products findable in catalog search", async () => {
+    const query = createQuery({ data: [], error: null });
+    fromMock.mockReturnValue(query);
+
+    await searchCatalogProducts("燒雞");
+
+    expect(query.eq).not.toHaveBeenCalledWith("is_active", true);
+  });
+
   it("uses the supplier product unit for premium ingredient search results", async () => {
     const query = createQuery({
       data: [
