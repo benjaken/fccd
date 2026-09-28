@@ -86,11 +86,8 @@ const ORDER_QUEUE_TAB_PRESETS = new Set<OrderListConfigPreset>(
 
 const STATUS_FILTERS: OrderStatusFilter[] = [
   "",
-  "confirmed",
-  "preparing",
   "unassignedFleet",
   "awaitingDriver",
-  "accepted",
   "ready",
   "shipping",
   "completed",
@@ -98,6 +95,9 @@ const STATUS_FILTERS: OrderStatusFilter[] = [
 
 const KNOWN_STATUS_FILTERS: OrderStatusFilter[] = [
   ...STATUS_FILTERS,
+  "confirmed",
+  "preparing",
+  "accepted",
   "pickedUp",
 ];
 

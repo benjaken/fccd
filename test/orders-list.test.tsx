@@ -462,11 +462,8 @@ describe("Orders list", () => {
     await user.click(screen.getByRole("button", { name: "開啟篩選" }));
     const statusFilter = screen.getByLabelText("營運狀態");
     for (const option of [
-      "已確認",
-      "製作中",
       "未派車隊",
       "待接單",
-      "已接單",
       "待取貨",
       "送貨途中",
       "已送達",
@@ -475,15 +472,18 @@ describe("Orders list", () => {
         within(statusFilter).getByRole("option", { name: option }),
       ).toBeInTheDocument();
     }
-    expect(
-      within(statusFilter).queryByRole("option", { name: "已接單未派司機" }),
-    ).not.toBeInTheDocument();
-    expect(
-      within(statusFilter).queryByRole("option", { name: "已派司機待取貨" }),
-    ).not.toBeInTheDocument();
-    expect(
-      within(statusFilter).queryByRole("option", { name: "已取貨" }),
-    ).not.toBeInTheDocument();
+    for (const option of [
+      "已確認",
+      "製作中",
+      "已接單",
+      "已取貨",
+      "已接單未派司機",
+      "已派司機待取貨",
+    ]) {
+      expect(
+        within(statusFilter).queryByRole("option", { name: option }),
+      ).not.toBeInTheDocument();
+    }
   });
 
   it("renders the shared enhanced columns and keeps to-dos on all only", async () => {
