@@ -99,14 +99,14 @@ export function operationalOrderStatusTone(status: OperationalOrderStatus) {
 export function orderDeliveryStatusTone(
   deliveryStatus: string | null | undefined,
 ) {
-  if (
-    isOrderDelivered(deliveryStatus) ||
-    isOrderPickedUp(deliveryStatus) ||
-    deliveryStatus === "待取貨"
-  ) {
+  if (isOrderDelivered(deliveryStatus) || deliveryStatus === "待取貨") {
     return "green";
   }
-  if (deliveryStatus === "送貨途中" || deliveryStatus === "待接單") {
+  if (
+    deliveryStatus === "送貨途中" ||
+    isOrderPickedUp(deliveryStatus) ||
+    deliveryStatus === "待接單"
+  ) {
     return "blue";
   }
   if (
@@ -172,6 +172,12 @@ export function formatOrderListDeliveryStatus(
   const fleetSuffix = fleet ? `(${fleet})` : "";
   if (order.deliveryStatus === "待取貨") {
     return `${labels.accepted} 待取貨${fleetSuffix}`;
+  }
+  if (
+    order.deliveryStatus === "送貨途中" ||
+    isOrderPickedUp(order.deliveryStatus)
+  ) {
+    return `送貨途中${fleetSuffix}`;
   }
   if (
     order.deliveryStatus &&
@@ -356,12 +362,11 @@ function applyStatusFilter<
     case "completed":
       return query.in("delivery_status", ["己送達", "已送達"]);
     case "shipping":
-      return query.eq("delivery_status", "送貨途中");
+    case "pickedUp":
+      return query.in("delivery_status", ["送貨途中", "已取", "已取貨"]);
     case "accepted":
     case "ready":
       return query.eq("delivery_status", "待取貨");
-    case "pickedUp":
-      return query.in("delivery_status", ["已取", "已取貨"]);
     case "awaitingDriver":
       return query.eq("delivery_status", "待接單");
     case "unassignedFleet":

@@ -263,6 +263,28 @@ describe("Orders list", () => {
     expect(table.getByText("送貨途中")).toHaveClass("status-badge", "blue");
   });
 
+  it("treats picked-up orders as in transit", async () => {
+    const loadOrders = vi.fn().mockResolvedValue({
+      ...orderResult,
+      items: [{
+        ...orderResult.items[0],
+        deliveryStatus: "已取貨",
+        fleetName: "Sun-Line",
+        statuses: [],
+      }],
+    });
+
+    render(
+      <MemoryRouter>
+        <OrdersListPage loadOrders={loadOrders} loadListConfig={emptyListConfig} />
+      </MemoryRouter>,
+    );
+
+    expect(
+      within(await screen.findByRole("table")).getByText("送貨途中(Sun-Line)"),
+    ).toHaveClass("status-badge", "blue");
+  });
+
   it("shows accepted pending pickup with the fleet name", async () => {
     const loadOrders = vi.fn().mockResolvedValue({
       ...orderResult,
@@ -446,7 +468,6 @@ describe("Orders list", () => {
       "待接單",
       "已接單",
       "待取貨",
-      "已取貨",
       "送貨途中",
       "已送達",
     ]) {
@@ -459,6 +480,9 @@ describe("Orders list", () => {
     ).not.toBeInTheDocument();
     expect(
       within(statusFilter).queryByRole("option", { name: "已派司機待取貨" }),
+    ).not.toBeInTheDocument();
+    expect(
+      within(statusFilter).queryByRole("option", { name: "已取貨" }),
     ).not.toBeInTheDocument();
   });
 
