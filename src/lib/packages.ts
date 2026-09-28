@@ -516,6 +516,23 @@ export async function addPackageProduct(
   if (error) throw error;
 }
 
+export async function updatePackageProduct(
+  id: string,
+  input: { addonPrice?: number; quantity?: number },
+) {
+  const values: Record<string, number | string> = {
+    updated_at: new Date().toISOString(),
+  };
+  if (input.addonPrice !== undefined) values.addon_price = input.addonPrice;
+  if (input.quantity !== undefined) values.quantity = input.quantity;
+
+  const { error } = await supabase
+    .from("package_products")
+    .update(values)
+    .eq("id", id);
+  if (error) throw error;
+}
+
 export async function removePackageProduct(id: string) {
   const { error } = await supabase.from("package_products").delete().eq("id", id);
   if (error) throw error;

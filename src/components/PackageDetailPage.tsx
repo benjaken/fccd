@@ -19,6 +19,7 @@ import {
   fetchPackageDetail,
   removePackageChoiceSet,
   removePackageProduct,
+  updatePackageProduct,
   type PackageChoiceSet,
   type PackageDetail,
   type PackageMember,
@@ -173,6 +174,51 @@ export function PackageProductSearch({
   );
 }
 
+function PackagePriceInput({
+  value,
+  disabled,
+  label,
+  onCommit,
+}: {
+  value: number | null;
+  disabled: boolean;
+  label: string;
+  onCommit: (value: number) => void;
+}) {
+  const [draft, setDraft] = useState(value === null ? "" : String(value));
+
+  useEffect(() => {
+    setDraft(value === null ? "" : String(value));
+  }, [value]);
+
+  const commit = () => {
+    const parsed = Number.parseFloat(draft);
+    const next = Number.isFinite(parsed) && parsed >= 0 ? parsed : 0;
+    if (next !== (value ?? 0)) onCommit(next);
+    setDraft(String(next));
+  };
+
+  return (
+    <input
+      type="number"
+      min="0"
+      step="0.01"
+      aria-label={label}
+      value={draft}
+      disabled={disabled}
+      onChange={(event) => setDraft(event.target.value)}
+      onBlur={commit}
+      onKeyDown={(event) => {
+        if (event.key === "Enter") {
+          event.preventDefault();
+          commit();
+          event.currentTarget.blur();
+        }
+      }}
+    />
+  );
+}
+
 export function PackageDetailPage({
   canEdit = false,
   loadDetail = fetchPackageDetail,
@@ -181,6 +227,7 @@ export function PackageDetailPage({
   removeChoiceSet = removePackageChoiceSet,
   addProduct = addPackageProduct,
   removeProduct = removePackageProduct,
+  updateProduct = updatePackageProduct,
 }: {
   canEdit?: boolean;
   loadDetail?: DetailLoader;
@@ -189,6 +236,7 @@ export function PackageDetailPage({
   removeChoiceSet?: typeof removePackageChoiceSet;
   addProduct?: typeof addPackageProduct;
   removeProduct?: typeof removePackageProduct;
+  updateProduct?: typeof updatePackageProduct;
 }) {
   const { t, i18n } = useTranslation();
   const location = useLocation();
@@ -371,7 +419,23 @@ export function PackageDetailPage({
                 productLabel(product, t("common.notSet"))
               )}
             </td>
-            <td>{money(product.addonPrice)}</td>
+            <td>
+              {editing ? (
+                <PackagePriceInput
+                  value={product.addonPrice}
+                  disabled={pendingAction === product.id}
+                  label={`${productLabel(product, t("common.notSet"))} ${t("packageDetail.addonPrice")}`}
+                  onCommit={(addonPrice) => {
+                    setPendingAction(product.id);
+                    void updateProduct(product.id, { addonPrice })
+                      .then(() => refreshDetail())
+                      .finally(() => setPendingAction(null));
+                  }}
+                />
+              ) : (
+                money(product.addonPrice)
+              )}
+            </td>
             <td>{product.quantity ?? t("common.notSet")}</td>
             {editing ? (
               <td className="table-actions-cell">
