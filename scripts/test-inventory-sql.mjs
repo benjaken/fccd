@@ -35,11 +35,13 @@ try {
     'supabase/migrations/20260909240000_hide_reversed_pack_consumptions.sql',
     'test/sql/inventory-countable-pack-units.sql',
     'supabase/migrations/20260909250000_forecast_unconsumed_window_deliveries.sql',
-    'test/sql/inventory-forecast-delivery-window.sql',
     'supabase/migrations/20260909260000_restore_remaining_pack_stocktake_units.sql',
     'test/sql/inventory-leftover-pack-units.sql',
     'supabase/migrations/20260910014636_aggregate_ledger_order_consumptions.sql',
     'test/sql/inventory-ledger-aggregate.sql',
+    'supabase/migrations/20260928150000_defer_future_consumption_reversal_stock_credit.sql',
+    'test/sql/inventory-future-reversal.sql',
+    'test/sql/inventory-forecast-delivery-window.sql',
   ]) {
     const sql = (await readFile(new URL(`../${file}`, import.meta.url), 'utf8'))
       .replace(/^\\set .*$/gm, '');

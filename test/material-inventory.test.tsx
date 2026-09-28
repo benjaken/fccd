@@ -41,6 +41,10 @@ const aggregateLedgerMigration = readFileSync(
   "supabase/migrations/20260910014636_aggregate_ledger_order_consumptions.sql",
   "utf8",
 );
+const futureReversalMigration = readFileSync(
+  "supabase/migrations/20260928150000_defer_future_consumption_reversal_stock_credit.sql",
+  "utf8",
+);
 
 describe("material inventory ledger", () => {
   beforeEach(async () => {
@@ -87,6 +91,15 @@ describe("material inventory ledger", () => {
     expect(aggregateLedgerMigration).toContain("orders.order_number");
     expect(aggregateLedgerMigration).toContain("consumption.consumed_at");
     expect(aggregateLedgerMigration).toContain("consumption.calculation_source");
+  });
+
+  it("does not credit a reversed future consumption before its deduction", () => {
+    expect(futureReversalMigration).toContain(
+      "greatest(consumption.reversed_at, consumption.consumed_at)",
+    );
+    expect(futureReversalMigration).toContain("consumption.reversed_at is not null");
+    expect(futureReversalMigration).toContain("material_inventory_current_balance");
+    expect(futureReversalMigration).toContain("material_inventory_ledger");
   });
 
   it("shows ingredient and packaging tabs, ledger detail, and stock correction", async () => {
