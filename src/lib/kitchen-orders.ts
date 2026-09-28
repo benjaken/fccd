@@ -8,7 +8,10 @@ export const KITCHEN_ORDERS_FROM = "kitchen";
 
 export type KitchenOrderStatusFilter = Exclude<
   OrderStatusFilter,
-  "confirmed"
+  | "confirmed"
+  | "unassignedFleet"
+  | "acceptedUnassigned"
+  | "assignedPendingPickup"
 >;
 
 export const KITCHEN_STATUS_FILTERS: KitchenOrderStatusFilter[] = [
