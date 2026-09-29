@@ -401,7 +401,7 @@ export function buildFactoryUnsentReminderContent(
   return content(`送工場逾期提醒 ${value.order_number}`, [
     `${value.recipient_name}：`,
     "",
-    `訂單 ${value.order_number} 距離送餐時間不足 12 小時，仍未發送到工場。`,
+    `訂單 ${value.order_number} 明天送餐，仍未發送到工場。`,
     `客戶：${value.customer_name}`,
     `送餐日期：${value.delivery_date}`,
     `送餐時間：${value.delivery_time}`,

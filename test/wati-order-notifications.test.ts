@@ -543,7 +543,7 @@ describe("WATI order notifications", () => {
     expect(internalTemplateConfig).toContain('templateEnv: "WATI_FACTORY_UNSENT_TEMPLATE_NAME"');
     expect(worker).toContain('internalWatiTemplate("factoryUnsentReminder")');
     expect(worker).toContain("buildFactoryUnsentReminderContent(values)");
-    expect(worker).toContain("factoryUnsentReminderAt(order)");
+    expect(worker).toContain("factoryUnsentReminderTiming(");
     expect(worker).toContain("from: EMAIL_FROM");
     expect(worker).not.toContain("notificationRecipientAllowlist");
     expect(worker).not.toContain("notification_recipient_not_allowlisted");

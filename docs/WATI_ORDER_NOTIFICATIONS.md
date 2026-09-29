@@ -46,7 +46,7 @@ There is deliberately no payment or outstanding-balance reminder.
 | Manual order confirmation | Customer | Order-page send action | Controlled separately | Controlled separately |
 | Same-day delivery reminder | Customer | Automatic on delivery date | Automatic control | Automatic control |
 | Same-day pickup reminder | Customer | Automatic on pickup date | Automatic control | Automatic control |
-| Factory-unsent reminder | Internal | 12 hours before delivery window | Automatic control | Automatic control |
+| Factory-unsent reminder | Internal | 17:00 on the day before delivery | Automatic control | Automatic control |
 | Unassigned-driver reminder | Internal | 09:00–21:00 every three hours | Automatic control | Automatic control |
 | Order reconciliation | Internal | Daily and urgent reconciliation runs | Automatic control | Automatic control |
 | Manual Utility events | Customer/operational | Explicit service-role action | Inactive until verified | No shared email copy |
@@ -179,10 +179,10 @@ final rollout approval, which keeps both WATI and email stopped.
 
 ## Factory-unsent internal reminder
 
-This replaces the former immediate internal new-order notification. For each
-order that has not been sent to the factory, the worker waits until 12 hours
-before the start of the delivery window and checks `is_sent_to_factory` again.
-It skips orders marked `do_not_send_to_factory`.
+This replaces the former immediate internal new-order notification. At 17:00
+Hong Kong time on the day before delivery, the worker checks
+`is_sent_to_factory` again and sends the reminder only if the order is still
+unsent. It skips cancelled orders and orders marked `do_not_send_to_factory`.
 
 - Users with `email_noti` enabled receive the internal email.
 - `order_first_notification_recipients` receive the internal WATI reminder.
