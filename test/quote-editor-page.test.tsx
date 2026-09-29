@@ -962,6 +962,28 @@ describe("Quote editor", () => {
     expect(shipOutTime).toHaveDisplayValue("Dispatch time");
     expect(screen.getByRole("option", { name: "08:30" })).toBeInTheDocument();
     expect(screen.getByRole("option", { name: "13:15" })).toBeInTheDocument();
+    await user.selectOptions(shipOutTime, "custom");
+    const customShipOutTime = screen.getByLabelText("Custom dispatch time");
+    await user.type(customShipOutTime, "10:45");
+    expect(customShipOutTime).toHaveValue("10:45");
+  });
+
+  it.each([
+    ["quote", "/quotes/quote-1/edit"],
+    ["order", "/orders/order-1/edit"],
+  ])("shows an existing custom dispatch time when editing a %s", async (documentType, path) => {
+    renderEditor({
+      documentType: documentType as "quote" | "order",
+      loadSummary: vi.fn().mockResolvedValue({
+        id: documentType === "order" ? "order-1" : "quote-1",
+        orderNumber: documentType === "order" ? "FCCO-CUSTOM-TIME" : "FCLQ-CUSTOM-TIME",
+        channelId: "channel-1",
+        draft: { ...emptyQuoteDraft, shipOutTime: "10:45" },
+      }),
+    }, path);
+
+    await waitFor(() => expect(screen.getByLabelText("Dispatch time")).toHaveValue("custom"));
+    expect(screen.getByLabelText("Custom dispatch time")).toHaveValue("10:45");
   });
 
   it("removes duplicate districts by normalized name", () => {

@@ -452,7 +452,10 @@ export function QuoteEditorPage({
     () => deliveryTimeDict.items.map((item) => item.value),
     [deliveryTimeDict.items],
   );
-  const shipOutTimeOptions = shipOutTimeDict.items.map((item) => item.value);
+  const shipOutTimeOptions = useMemo(
+    () => shipOutTimeDict.items.map((item) => item.value),
+    [shipOutTimeDict.items],
+  );
   const quoteStatusOptions = quoteStatusDict.items.map((item) => ({
     value: item.value,
     label: dictItemLabel(item, i18n.language),
@@ -500,6 +503,7 @@ export function QuoteEditorPage({
   const [unitPrice, setUnitPrice] = useState("");
   const [lineRemarks, setLineRemarks] = useState("");
   const [deliveryTimeMode, setDeliveryTimeMode] = useState("");
+  const [shipOutTimeMode, setShipOutTimeMode] = useState("");
   const [searching, setSearching] = useState(false);
   const [adding, setAdding] = useState(false);
   const [packageChoiceOpen, setPackageChoiceOpen] = useState(false);
@@ -592,6 +596,13 @@ export function QuoteEditorPage({
     });
     setDeliveryTimeMode("custom");
   }, [deliveryTimeDict.loading, deliveryTimeOptions, draft.deliveryTime]);
+
+  useEffect(() => {
+    if (shipOutTimeDict.loading || !draft.shipOutTime.trim()) return;
+    setShipOutTimeMode(
+      shipOutTimeOptions.includes(draft.shipOutTime) ? "" : "custom",
+    );
+  }, [draft.shipOutTime, shipOutTimeDict.loading, shipOutTimeOptions]);
 
   const activeQuote = useMemo(
     () => created ?? (pendingEnquiry ? null : id ? { id, orderNumber: "" } : null),
@@ -2899,7 +2910,7 @@ export function QuoteEditorPage({
             <label><span>{t("quoteEditor.fields.shippingMethod")} *</span><FilterableSelect required aria-label={t("quoteEditor.fields.shippingMethod")} value={draft.shippingMethodId} onChange={(event) => changeShippingMethod(event.target.value)} aria-invalid={Boolean(fieldErrors.shippingMethodId)}><option value="">{t("common.notSet")}</option>{options.shippingMethods.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</FilterableSelect>{fieldErrors.shippingMethodId && <em>{fieldErrors.shippingMethodId}</em>}</label>
             <label><span>{t("quoteEditor.fields.deliveryDate")} *</span><input required aria-label={t("quoteEditor.fields.deliveryDate")} type="date" value={draft.deliveryDate} onChange={(event) => patchDraft({ deliveryDate: event.target.value })} aria-invalid={Boolean(fieldErrors.deliveryDate)} />{fieldErrors.deliveryDate && <em>{fieldErrors.deliveryDate}</em>}</label>
             <label><span>{t("quoteEditor.fields.deliveryTime")}</span><div className="quote-time-control"><FilterableSelect aria-label={t("quoteEditor.fields.deliveryTime")} value={deliveryTimeMode === "custom" ? "custom" : draft.deliveryTime} onChange={(event) => { const value = event.target.value; setDeliveryTimeMode(value === "custom" ? "custom" : ""); patchDraft({ deliveryTime: value === "custom" ? "" : value }); }}><option value="">{t("quoteEditor.placeholders.deliveryTimeSelectPlaceholder")}</option><option value="custom">{t("quoteEditor.custom")}</option>{deliveryTimeOptions.map((time) => <option key={time} value={time}>{time}</option>)}</FilterableSelect>{deliveryTimeMode === "custom" && <input value={draft.deliveryTime} onChange={(event) => patchDraft({ deliveryTime: event.target.value })} placeholder={t("quoteEditor.placeholders.customDeliveryTimePlaceholder")} />}</div></label>
-            <label><span>{t("quoteEditor.fields.shipOutTime")}</span><FilterableSelect value={draft.shipOutTime} onChange={(event) => patchDraft({ shipOutTime: event.target.value })}><option value="">{t("quoteEditor.placeholders.shipOutTimeSelectPlaceholder")}</option>{shipOutTimeOptions.map((time) => <option key={time} value={time}>{time}</option>)}</FilterableSelect></label>
+            <label><span>{t("quoteEditor.fields.shipOutTime")}</span><div className="quote-time-control"><FilterableSelect aria-label={t("quoteEditor.fields.shipOutTime")} value={shipOutTimeMode === "custom" ? "custom" : draft.shipOutTime} onChange={(event) => { const value = event.target.value; setShipOutTimeMode(value === "custom" ? "custom" : ""); patchDraft({ shipOutTime: value === "custom" ? "" : value }); }}><option value="">{t("quoteEditor.placeholders.shipOutTimeSelectPlaceholder")}</option><option value="custom">{t("quoteEditor.custom")}</option>{shipOutTimeOptions.map((time) => <option key={time} value={time}>{time}</option>)}</FilterableSelect>{shipOutTimeMode === "custom" && <input aria-label={t("quoteEditor.fields.customShipOutTime")} type="time" step="60" value={draft.shipOutTime} onChange={(event) => patchDraft({ shipOutTime: event.target.value })} />}</div></label>
             <label><span>{t("quoteEditor.fields.customerNote")}<small>{t("quoteEditor.fields.customerNoteHint")}</small></span><textarea rows={2} value={draft.customerNote} onChange={(event) => patchDraft({ customerNote: event.target.value })} /></label>
             <label><span>{t("quoteEditor.fields.packingNote")}<small>{t("quoteEditor.fields.packingNoteHint")}</small></span><textarea rows={2} value={draft.packingNote} onChange={(event) => patchDraft({ packingNote: event.target.value })} /></label>
             <label><span>{t("quoteEditor.fields.salesPartner")}</span><FilterableSelect value={draft.salesPartnerId} onChange={(event) => patchDraft({ salesPartnerId: event.target.value })}><option value="">{t("common.notSet")}</option>{options.salesPartners.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</FilterableSelect></label>
