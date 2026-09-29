@@ -10,6 +10,7 @@ import {
   type OrderNotificationValues,
   type UnassignedDriverReminderOrder,
 } from "../_shared/order-notification-content.ts";
+import { factoryUnsentReminderTiming } from "../_shared/factory-unsent-reminder.ts";
 import {
   formatNotificationDeliveryAddress,
   resolveNotificationDeliveryMethod,
@@ -240,12 +241,7 @@ function deliveryStartAt(order: OrderRow) {
   );
 }
 
-function factoryUnsentReminderAt(order: OrderRow) {
-  const deliveryStart = deliveryStartAt(order);
-  return deliveryStart
-    ? new Date(deliveryStart.getTime() - 12 * 60 * 60_000)
-    : null;
-}
+const FACTORY_REMINDER_HOUR_HK = 17;
 
 function isCancelledStatus(value: string | null | undefined) {
   return /(取消|cancelled)/i.test(value || "");
@@ -1168,8 +1164,8 @@ Deno.serve(async (request) => {
         continue;
       }
 
-      const reminderAt = factoryUnsentReminderAt(order);
-      if (!reminderAt) {
+      const deliveryStart = deliveryStartAt(order);
+      if (!deliveryStart) {
         await admin.from("order_internal_notification_outbox").update({
           status: "skipped",
           last_error: "delivery_schedule_missing",
@@ -1178,14 +1174,55 @@ Deno.serve(async (request) => {
         }).eq("id", job.id);
         continue;
       }
-      if (Date.now() < reminderAt.getTime()) {
+
+      const now = new Date();
+      const reminderTiming = factoryUnsentReminderTiming(
+        deliveryStart,
+        now,
+        FACTORY_REMINDER_HOUR_HK,
+      );
+      if (!reminderTiming) {
+        await admin.from("order_internal_notification_outbox").update({
+          status: "skipped",
+          last_error: "delivery_schedule_missing",
+          locked_at: null,
+          updated_at: now.toISOString(),
+        }).eq("id", job.id);
+        continue;
+      }
+
+      if (!reminderTiming.deliveryIsTomorrow) {
+        // Delivery date is not tomorrow yet. Reschedule to 17:00 Hong Kong time
+        // on the day before delivery so the reminder is reconsidered then.
+        if (!reminderTiming.isDue) {
+          await admin.from("order_internal_notification_outbox").update({
+            status: "pending",
+            attempts: Math.max(0, job.attempts - 1),
+            scheduled_at: reminderTiming.reminderAt.toISOString(),
+            last_error: null,
+            locked_at: null,
+            updated_at: now.toISOString(),
+          }).eq("id", job.id);
+          continue;
+        }
+        // Already past the reminder window (delivery today or earlier) — the
+        // order is overdue and the dedicated reminder no longer applies.
+        await admin.from("order_internal_notification_outbox").update({
+          status: "skipped",
+          last_error: "delivery_not_tomorrow",
+          locked_at: null,
+          updated_at: now.toISOString(),
+        }).eq("id", job.id);
+        continue;
+      }
+      if (!reminderTiming.isDue) {
         await admin.from("order_internal_notification_outbox").update({
           status: "pending",
           attempts: Math.max(0, job.attempts - 1),
-          scheduled_at: reminderAt.toISOString(),
+          scheduled_at: reminderTiming.reminderAt.toISOString(),
           last_error: null,
           locked_at: null,
-          updated_at: new Date().toISOString(),
+          updated_at: now.toISOString(),
         }).eq("id", job.id);
         continue;
       }
