@@ -326,7 +326,7 @@ describe("FactoryBoardPage", () => {
       /\.factory-delivery-note-lines tbody tr:last-child td\s*\{[^}]*border-bottom:\s*1px solid #222222 !important/s,
     );
     expect(stylesheet).toMatch(
-      /\.factory-delivery-note-print > footer,\s*\.order-delivery-note-sheet > footer\s*\{[^}]*position:\s*absolute[^}]*bottom:\s*10mm[^}]*font-size:\s*11pt/s,
+      /\.factory-delivery-note-print > footer,\s*\.order-delivery-note-sheet > footer\s*\{[^}]*margin-top:\s*auto[^}]*font-size:\s*11pt/s,
     );
     expect(stylesheet).toMatch(
       /\.factory-delivery-note-lines th,\s*\.factory-delivery-note-lines td\s*\{[^}]*color:\s*#000000 !important[^}]*opacity:\s*1 !important/s,

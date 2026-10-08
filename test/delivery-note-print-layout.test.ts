@@ -11,10 +11,19 @@ describe("delivery-note print layouts", () => {
       /@page factory-delivery-note\s*\{[^}]*size:\s*A4 portrait[^}]*margin:\s*0/s,
     );
     expect(stylesheet).toMatch(
-      /\.factory-delivery-note-print,\s*\.order-delivery-note-sheet\s*\{[^}]*width:\s*210mm[^}]*height:\s*297mm[^}]*padding:\s*12mm 12mm 22mm[^}]*page:\s*factory-delivery-note/s,
+      /\.factory-delivery-note-print,\s*\.order-delivery-note-sheet\s*\{[^}]*display:\s*flex !important[^}]*width:\s*210mm[^}]*height:\s*297mm[^}]*max-height:\s*297mm[^}]*padding:\s*12mm 12mm 10mm[^}]*overflow:\s*hidden[^}]*page:\s*factory-delivery-note/s,
     );
     expect(stylesheet).toMatch(
-      /\.factory-delivery-note-print > footer,\s*\.order-delivery-note-sheet > footer\s*\{[^}]*right:\s*12mm[^}]*bottom:\s*10mm[^}]*left:\s*12mm/s,
+      /\.factory-delivery-note-print > footer,\s*\.order-delivery-note-sheet > footer\s*\{[^}]*margin-top:\s*auto[^}]*font-size:\s*11pt/s,
+    );
+    expect(stylesheet).toMatch(
+      /\.factory-delivery-note-lines\s*\{[^}]*table-layout:\s*fixed/s,
+    );
+    expect(stylesheet).toMatch(
+      /\.factory-delivery-note-lines th,\s*\.factory-delivery-note-lines td\s*\{[^}]*overflow-wrap:\s*anywhere[^}]*word-break:\s*break-word/s,
+    );
+    expect(stylesheet).toMatch(
+      /\.factory-delivery-note-line-remarks\s*\{[^}]*display:\s*block/s,
     );
     expect(stylesheet).toMatch(
       /\.factory-delivery-note-print,\s*\.order-delivery-note-sheet\s*\{[^}]*font-size:\s*16pt/s,
@@ -39,7 +48,9 @@ describe("delivery-note print layouts", () => {
       .find((rule) => rule.includes("width: 210mm") && rule.includes("page: factory-delivery-note"));
 
     expect(orderListPrintRule).toContain("height: 297mm");
-    expect(orderListPrintRule).toContain("padding: 12mm 12mm 22mm");
+    expect(orderListPrintRule).toContain("max-height: 297mm");
+    expect(orderListPrintRule).toContain("padding: 12mm 12mm 10mm");
+    expect(orderListPrintRule).toContain("overflow: hidden");
   });
 
   it("keeps the meat delivery note inside a deterministic 10mm safe area", () => {
