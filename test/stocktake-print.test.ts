@@ -1,7 +1,26 @@
 import { buildStocktakePrintHtml, writeStocktakePrintWindow } from "@/lib/stocktake-print";
 import { describe, expect, it } from "vitest";
+import type { PackingStocktakeItem } from "@/lib/packing-stocktakes";
 
 describe("stocktake print page size", () => {
+  it("keeps long supplier details together and leaves the count field blank", () => {
+    const row: PackingStocktakeItem = {
+      id: "item-1", ingredientId: null, stocktakeAt: null, sku: null,
+      ingredientType: null, name: "急凍魚柳 400-500g 24袋/箱",
+      quantity: 10, currentQuantity: null, currentStocktakeAt: null, unit: "包",
+      supplierName: "壽桃牌（新順福食品有限公司）", supplierPhone: "2345 6789",
+    };
+    const printDocument = document.implementation.createHTMLDocument();
+    printDocument.documentElement.innerHTML = buildStocktakePrintHtml([row], "盤點紙", "列印");
+    const header = printDocument.querySelector("thead th");
+    expect(header?.getAttribute("colspan")).toBe("2");
+    expect(header?.querySelector(".supplier-name")?.textContent).toBe(row.supplierName);
+    expect(header?.querySelector(".supplier-phone")?.textContent).toBe(row.supplierPhone);
+    expect(printDocument.querySelector(".count-input")?.getAttribute("aria-label")).toBe(`${row.name}盤點數量`);
+    expect(printDocument.querySelector<HTMLInputElement>(".count-input")?.value).toBe("");
+    expect(printDocument.querySelectorAll(".column")).toHaveLength(4);
+  });
+
   it("declares A4 landscape on the sheet", () => {
     const html = buildStocktakePrintHtml([], "盤點紙", "列印");
     expect(html).toContain("@page{size:A4 landscape;margin:5mm}");
