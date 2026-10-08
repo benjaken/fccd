@@ -1,8 +1,40 @@
-import { buildStocktakePrintHtml, writeStocktakePrintWindow } from "@/lib/stocktake-print";
+import { buildStocktakePrintHtml, fitStocktakePrintSheet, writeStocktakePrintWindow } from "@/lib/stocktake-print";
 import { describe, expect, it } from "vitest";
 import type { PackingStocktakeItem } from "@/lib/packing-stocktakes";
 
 describe("stocktake print page size", () => {
+  it("shrinks an overflowing sheet while keeping the print action outside the scaling", () => {
+    const printDocument = document.implementation.createHTMLDocument();
+    printDocument.documentElement.innerHTML = buildStocktakePrintHtml([], "盤點紙", "列印");
+    const sheet = printDocument.querySelector<HTMLElement>(".sheet")!;
+    sheet.getBoundingClientRect = () => ({ height: 900 } as DOMRect);
+    fitStocktakePrintSheet(printDocument);
+    expect(Number(sheet.style.zoom)).toBeCloseTo((196 * 96 / 25.4) / 900);
+    expect(sheet.contains(printDocument.querySelector(".print-action"))).toBe(false);
+    sheet.getBoundingClientRect = () => ({ height: 600 } as DOMRect);
+    fitStocktakePrintSheet(printDocument);
+    expect(sheet.style.zoom).toBe("1");
+  });
+
+  it("assigns the longest wrapped group first to balance page height", () => {
+    const base: PackingStocktakeItem = {
+      id: "item", ingredientId: null, stocktakeAt: null, sku: null,
+      ingredientType: null, name: "短名稱", quantity: null,
+      currentQuantity: null, currentStocktakeAt: null, unit: "包",
+      supplierPhone: "12345678",
+    };
+    const rows = [
+      ...Array.from({ length: 3 }, (_, index) => ({ ...base, id: `short-${index}`, supplierName: "短貨品供應商" })),
+      { ...base, id: "long", supplierName: "長貨品供應商", name: "長".repeat(120) },
+    ];
+    const printDocument = document.implementation.createHTMLDocument();
+    printDocument.documentElement.innerHTML = buildStocktakePrintHtml(rows, "盤點紙", "列印");
+    const columns = printDocument.querySelectorAll(".column");
+    expect(columns[0]?.querySelector(".supplier-name")?.textContent).toBe("長貨品供應商");
+    expect(columns[1]?.querySelector(".supplier-name")?.textContent).toBe("短貨品供應商");
+    expect(printDocument.querySelectorAll(".count-input")).toHaveLength(4);
+  });
+
   it("keeps long supplier details together and leaves the count field blank", () => {
     const row: PackingStocktakeItem = {
       id: "item-1", ingredientId: null, stocktakeAt: null, sku: null,
