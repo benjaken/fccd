@@ -114,6 +114,15 @@ describe("Shop order quantity report", () => {
         pricePerKg: 21.4,
         pricePerPackage: 42.8,
       },
+      {
+        productId: "prepared-brisket",
+        productName: "熟滷水牛展片",
+        productUnit: "包",
+        sortOrder: 2,
+        monthNumber: 9,
+        pricePerKg: 126.0551,
+        pricePerPackage: 252.1102,
+      },
     ]);
     reports.fetchMonthlyRawMeatAveragePrices.mockResolvedValue([
       {
@@ -296,6 +305,7 @@ describe("Shop order quantity report", () => {
       screen.getByText("Expand monthly matrix").closest("details"),
     ).toHaveAttribute("open");
     expect(screen.getAllByText("$42.80").length).toBeGreaterThanOrEqual(2);
+    expect(screen.getAllByText("$252.12").length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText("2KG/包").length).toBeGreaterThanOrEqual(1);
 
     await user.click(screen.getByRole("button", { name: "Per KG" }));

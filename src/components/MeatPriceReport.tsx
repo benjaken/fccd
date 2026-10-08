@@ -25,8 +25,15 @@ const MONTHS = Array.from({ length: 12 }, (_, index) => index + 1);
 const FIRST_DATA_YEAR = 2023;
 type PriceUnit = "kg" | "package";
 
+function cents(value: number) {
+  return Math.round(value * 100) / 100;
+}
+
 function getPrice(row: MonthlyPreparedMeatPriceRow, unit: PriceUnit) {
-  return unit === "kg" ? row.pricePerKg : row.pricePerPackage;
+  if (unit === "kg") return row.pricePerKg;
+  if (!(row.pricePerKg > 0)) return row.pricePerPackage;
+  const kgPerPackage = row.pricePerPackage / row.pricePerKg;
+  return cents(cents(row.pricePerKg) * kgPerPackage);
 }
 
 /** Pack size implied by 每包價 ÷ 每公斤價, e.g. 2KG/包. */
