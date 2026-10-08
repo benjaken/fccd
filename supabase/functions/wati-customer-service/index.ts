@@ -72,6 +72,7 @@ import {
 import {
   BRAND_WHATSAPP_CHANNEL,
   customerServicePhoneAllowed,
+  customerServicePhoneBlocked,
   excludeGuestContacts,
   isBrandWhatsAppChannel,
   isHumanOperatorMessage,
@@ -590,9 +591,13 @@ async function loadBotControls(admin: AdminClient) {
   const allowedPhones = parseAllowedCustomerServicePhones(
     row?.allowed_phones || [],
   );
+  const blockedPhones = parseAllowedCustomerServicePhones(
+    env("CUSTOMER_SERVICE_BLOCKED_PHONES"),
+  );
   return {
     botEnabled: Boolean(row?.bot_enabled),
     allowedPhones,
+    blockedPhones,
     weekdayAutoReplyStart: normalizeScheduleTime(
       row?.weekday_auto_reply_start ?? row?.auto_reply_start,
       "19:00",
@@ -3575,6 +3580,9 @@ Deno.serve(async (request) => {
       return jsonResponse({ ok: true, delivery_status: deliveryStatusForEvent(event.eventType) });
     }
     const controls = await loadBotControls(admin);
+    if (customerServicePhoneBlocked(event.waId, controls.blockedPhones)) {
+      return jsonResponse({ ok: true, ignored: "phone_blocked" });
+    }
     if (!customerServicePhoneAllowed(event.waId, controls.allowedPhones)) {
       return jsonResponse({ ok: true, ignored: "phone_not_allowed" });
     }

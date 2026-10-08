@@ -10,6 +10,10 @@ const migration = readFileSync(
   ),
   "utf8",
 );
+const webhook = readFileSync(
+  resolve(process.cwd(), "supabase/functions/wati-customer-service/index.ts"),
+  "utf8",
+);
 
 describe("customer-service allowlist 8613828747224", () => {
   it("restricts develop-branch auto-reply to the pilot WhatsApp number all day", () => {
@@ -23,5 +27,11 @@ describe("customer-service allowlist 8613828747224", () => {
     );
     expect(migration).not.toContain("auto_reply_start = '19:00'");
     expect(migration).not.toContain("auto_reply_end = '09:00'");
+  });
+
+  it("lets an environment block the pilot number without an allowlist", () => {
+    expect(webhook).toContain("CUSTOMER_SERVICE_BLOCKED_PHONES");
+    expect(webhook).toContain("customerServicePhoneBlocked");
+    expect(webhook).toContain('ignored: "phone_blocked"');
   });
 });

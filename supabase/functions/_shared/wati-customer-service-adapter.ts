@@ -74,6 +74,17 @@ export function customerServicePhoneAllowed(
   );
 }
 
+export function customerServicePhoneBlocked(
+  phone: string | null | undefined,
+  blocked: readonly string[],
+) {
+  if (!blocked.length) return false;
+  const incoming = new Set(customerServicePhoneAliases(phone));
+  return blocked.some((entry) =>
+    customerServicePhoneAliases(entry).some((alias) => incoming.has(alias)),
+  );
+}
+
 export function timingSafeEqual(left: string, right: string) {
   const max = Math.max(left.length, right.length);
   let diff = left.length === right.length ? 0 : 1;

@@ -37,6 +37,7 @@ import {
   buildSessionFileUrl,
   buildSessionMessageUrl,
   customerServicePhoneAllowed,
+  customerServicePhoneBlocked,
   deliverWatiSessionImage,
   excludeGuestContacts,
   isHumanOperatorMessage,
@@ -2808,6 +2809,17 @@ describe("WATI adapter", () => {
     );
     expect(customerServicePhoneAllowed("85291234567", allowed)).toBe(false);
     expect(customerServicePhoneAllowed("8613828747224", [])).toBe(true);
+  });
+
+  it("blocks an environment-specific phone even when the allowlist is empty", () => {
+    const blocked = parseAllowedCustomerServicePhones("8613828747224");
+    expect(customerServicePhoneBlocked("8613828747224", blocked)).toBe(true);
+    expect(customerServicePhoneBlocked("13828747224", blocked)).toBe(true);
+    expect(customerServicePhoneBlocked("+86 138 2874 7224", blocked)).toBe(
+      true,
+    );
+    expect(customerServicePhoneBlocked("85291234567", blocked)).toBe(false);
+    expect(customerServicePhoneBlocked("8613828747224", [])).toBe(false);
   });
 
   it("never keeps the guest phone in staff notify recipients", () => {
