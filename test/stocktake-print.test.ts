@@ -1,8 +1,21 @@
-import { buildStocktakePrintHtml, writeStocktakePrintWindow } from "@/lib/stocktake-print";
+import { buildStocktakePrintHtml, fitStocktakePrintSheet, writeStocktakePrintWindow } from "@/lib/stocktake-print";
 import { describe, expect, it } from "vitest";
 import type { PackingStocktakeItem } from "@/lib/packing-stocktakes";
 
 describe("stocktake print page size", () => {
+  it("shrinks an overflowing sheet while keeping the print action outside the scaling", () => {
+    const printDocument = document.implementation.createHTMLDocument();
+    printDocument.documentElement.innerHTML = buildStocktakePrintHtml([], "盤點紙", "列印");
+    const sheet = printDocument.querySelector<HTMLElement>(".sheet")!;
+    sheet.getBoundingClientRect = () => ({ height: 900 } as DOMRect);
+    fitStocktakePrintSheet(printDocument);
+    expect(Number(sheet.style.zoom)).toBeCloseTo((196 * 96 / 25.4) / 900);
+    expect(sheet.contains(printDocument.querySelector(".print-action"))).toBe(false);
+    sheet.getBoundingClientRect = () => ({ height: 600 } as DOMRect);
+    fitStocktakePrintSheet(printDocument);
+    expect(sheet.style.zoom).toBe("1");
+  });
+
   it("assigns the longest wrapped group first to balance page height", () => {
     const base: PackingStocktakeItem = {
       id: "item", ingredientId: null, stocktakeAt: null, sku: null,

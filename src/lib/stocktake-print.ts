@@ -43,12 +43,23 @@ export function buildStocktakePrintHtml(rows: PackingStocktakeItem[], title: str
   });
 
   return `<!doctype html><html lang="zh-HK"><head><meta charset="utf-8"><title>${escapeHtml(title)}</title><style>
-@page{size:A4 landscape;margin:5mm}*{box-sizing:border-box}html,body{margin:0;background:#fff;color:#111;font-family:Arial,"Noto Sans TC",sans-serif;font-size:10px}.sheet{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;align-items:start}.column{min-width:0}.supplier{margin:0 0 1px;break-inside:avoid}.supplier table{width:100%;border-collapse:collapse;table-layout:fixed}.supplier-column{width:35%}.phone-column{width:35%}.count-column{width:20%}.unit-column{width:10%}.supplier th,.supplier td{border:1px solid #d5d9dd;padding:2px 4px;height:14px;text-align:left;vertical-align:middle}.supplier th{background:#d7d7d7;font-weight:700}.supplier-name,.supplier-phone{display:block;overflow-wrap:anywhere;white-space:normal;line-height:1.1}.supplier-phone{font-weight:400;font-variant-numeric:tabular-nums}.item{overflow-wrap:anywhere;white-space:normal;line-height:1.15}.count-heading,.supplier th:last-child,.unit{text-align:center}.count{padding:0!important}.count-input{display:block;width:100%;height:100%;min-height:11px;border:0;background:#fff;padding:1px 3px;text-align:center;font:inherit;outline:none}.count-input:focus{box-shadow:inset 0 0 0 2px #0f4c5c}.print-action{position:fixed;right:24px;bottom:24px}.print-action>button{min-width:120px}@media print{.print-action{display:none}html,body{font-size:10px}.supplier th,.supplier td{height:12px;padding:0 2px}.count-input{min-height:11px;padding:0 2px}}
+@page{size:A4 landscape;margin:5mm}*{box-sizing:border-box}html,body{margin:0;background:#fff;color:#111;font-family:Arial,"Noto Sans TC",sans-serif;font-size:16px}.sheet{font-size:10px;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;align-items:start}.column{min-width:0}.supplier{margin:0 0 1px;break-inside:avoid}.supplier table{width:100%;border-collapse:collapse;table-layout:fixed}.supplier-column{width:35%}.phone-column{width:35%}.count-column{width:20%}.unit-column{width:10%}.supplier th,.supplier td{border:1px solid #d5d9dd;padding:2px 4px;height:14px;text-align:left;vertical-align:middle}.supplier th{background:#d7d7d7;font-weight:700}.supplier-name,.supplier-phone{display:block;overflow-wrap:anywhere;white-space:normal;line-height:1.1}.supplier-phone{font-weight:400;font-variant-numeric:tabular-nums}.item{overflow-wrap:anywhere;white-space:normal;line-height:1.15}.count-heading,.supplier th:last-child,.unit{text-align:center}.count{padding:0!important}.count-input{display:block;width:100%;height:100%;min-height:11px;border:0;background:#fff;padding:1px 3px;text-align:center;font:inherit;outline:none}.count-input:focus{box-shadow:inset 0 0 0 2px #0f4c5c}.print-action{position:fixed;right:24px;bottom:24px}.print-action>button{min-width:120px;min-height:40px;font-size:14px}.print-action svg{width:16px;height:16px}@media print{.print-action{display:none}.sheet{width:287mm;font-size:10px}.supplier th,.supplier td{height:12px;padding:0 2px}.count-input{min-height:11px;padding:0 2px}}
 </style></head><body><main class="sheet">${columns.map((column) => `<div class="column">${column.html}</div>`).join("")}</main><div id="stocktake-print-action" class="print-action" data-label="${escapeHtml(printLabel)}"></div></body></html>`;
 }
 
 /** Wins over app stylesheets that set an unnamed `@page { size: A4 portrait }`. */
 const STOCKTAKE_PAGE_STYLE = "@page{size:A4 landscape;margin:5mm}";
+
+export function fitStocktakePrintSheet(printDocument: Document) {
+  const sheet = printDocument.querySelector<HTMLElement>(".sheet");
+  if (!sheet) return;
+  sheet.style.zoom = "1";
+  // A4 landscape has 200mm of height after margins. Leave 4mm for
+  // rounding and browser pagination, and scale only the inventory sheet.
+  const availableHeight = 196 * 96 / 25.4;
+  const height = sheet.getBoundingClientRect().height;
+  sheet.style.zoom = String(height > availableHeight ? availableHeight / height : 1);
+}
 
 export function writeStocktakePrintWindow(printWindow: Window, rows: PackingStocktakeItem[], title: string, printLabel: string) {
   printWindow.document.open();
@@ -64,4 +75,9 @@ export function writeStocktakePrintWindow(printWindow: Window, rows: PackingStoc
   pageStyle.dataset.stocktakePage = "landscape";
   pageStyle.textContent = STOCKTAKE_PAGE_STYLE;
   printWindow.document.head.appendChild(pageStyle);
+  printWindow.addEventListener?.("beforeprint", () => fitStocktakePrintSheet(printWindow.document));
+  printWindow.addEventListener?.("afterprint", () => {
+    const sheet = printWindow.document.querySelector<HTMLElement>(".sheet");
+    if (sheet) sheet.style.zoom = "1";
+  });
 }
