@@ -295,10 +295,11 @@ describe("Shop order quantity report", () => {
     expect(
       screen.getByText("Expand monthly matrix").closest("details"),
     ).toHaveAttribute("open");
-    expect(screen.getAllByText("$21.40").length).toBeGreaterThanOrEqual(2);
-
-    await user.click(screen.getByRole("button", { name: "Per package" }));
     expect(screen.getAllByText("$42.80").length).toBeGreaterThanOrEqual(2);
+    expect(screen.getAllByText("2KG/包").length).toBeGreaterThanOrEqual(1);
+
+    await user.click(screen.getByRole("button", { name: "Per KG" }));
+    expect(screen.getAllByText("$21.40").length).toBeGreaterThanOrEqual(2);
 
     view.unmount();
     renderReport(

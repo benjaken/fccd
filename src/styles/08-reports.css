@@ -1604,6 +1604,8 @@
 }
 
 .meat-price-table th:first-child button {
+  display: grid;
+  gap: 2px;
   width: 100%;
   border: 0;
   background: transparent;
@@ -1611,6 +1613,12 @@
   font: inherit;
   font-weight: 750;
   text-align: left;
+}
+
+.meat-price-table th:first-child button small {
+  color: var(--muted-foreground);
+  font-size: 12px;
+  font-weight: 650;
 }
 
 .meat-price-table thead th:first-child {

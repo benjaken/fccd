@@ -29,11 +29,26 @@ function getPrice(row: MonthlyPreparedMeatPriceRow, unit: PriceUnit) {
   return unit === "kg" ? row.pricePerKg : row.pricePerPackage;
 }
 
+/** Pack size implied by 每包價 ÷ 每公斤價, e.g. 2KG/包. */
+function packageSpecLabel(product: ProductPriceRow) {
+  const sample = [...product.prices.values()].find(
+    (row) => row.pricePerKg > 0 && Number.isFinite(row.pricePerPackage),
+  );
+  if (!sample) return null;
+  const kg =
+    Math.round((sample.pricePerPackage / sample.pricePerKg) * 1000) / 1000;
+  if (!Number.isFinite(kg) || kg <= 0) return null;
+  const amount = Number.isInteger(kg)
+    ? String(kg)
+    : kg.toFixed(3).replace(/0+$/, "").replace(/\.$/, "");
+  return `${amount}KG/${product.unit?.trim() || "包"}`;
+}
+
 export function MeatPriceReport({ mode }: { mode: MeatPriceMode }) {
   const { t, i18n } = useTranslation();
   const currentYear = new Date().getFullYear();
   const [year, setYear] = useState(currentYear);
-  const [unit, setUnit] = useState<PriceUnit>("kg");
+  const [unit, setUnit] = useState<PriceUnit>("package");
   const [rows, setRows] = useState<MonthlyPreparedMeatPriceRow[]>([]);
   const [selectedProductId, setSelectedProductId] = useState<string | null>(
     null,
@@ -316,7 +331,14 @@ export function MeatPriceReport({ mode }: { mode: MeatPriceMode }) {
               badge={
                 unit === "kg"
                   ? t("reports.perKg")
-                  : `${t("reports.perPackage")} · ${selectedProduct?.unit ?? t("reports.package")}`
+                  : [
+                      t("reports.perPackage"),
+                      selectedProduct
+                        ? packageSpecLabel(selectedProduct)
+                        : null,
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")
               }
               ariaLabel={t("reports.productPriceTrend", {
                 product: selectedProduct?.name,
@@ -361,7 +383,12 @@ export function MeatPriceReport({ mode }: { mode: MeatPriceMode }) {
                     onClick={() => setSelectedProductId(product.id)}
                   >
                     <th scope="row">
-                      <button type="button">{product.name}</button>
+                      <button type="button">
+                        <span>{product.name}</span>
+                        {unit === "package" ? (
+                          <small>{packageSpecLabel(product)}</small>
+                        ) : null}
+                      </button>
                     </th>
                     {MONTHS.map((month) => {
                       const price = product.prices.get(month);
