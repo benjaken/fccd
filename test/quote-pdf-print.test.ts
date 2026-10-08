@@ -136,7 +136,9 @@ describe("quote PDF print stylesheet", () => {
     expect(css).toMatch(
       /@media screen\s*\{[\s\S]*body:has\(\.quote-pdf-editor\) \.quote-pdf-editor,\s*\.document-editor-shell \.quote-pdf-editor\s*\{[^}]*height:\s*auto !important;[^}]*overflow:\s*visible !important;/,
     );
-    expect(css).toMatch(/@media screen\s*\{[\s\S]*\.quote-pdf-sheet\s*\{\s*overflow:\s*clip;/);
+    // The base sheet rule occurs later and uses overflow:hidden. The screen
+    // override must win the cascade or the sheet becomes a scroll container.
+    expect(css).toMatch(/@media screen\s*\{[\s\S]*\.quote-pdf-sheet\s*\{\s*overflow:\s*clip !important;/);
     expect(css).toMatch(
       /@media print\s*\{[\s\S]*html:has\(\.quote-pdf-editor\),[\s\S]*height:\s*auto !important;[\s\S]*overflow:\s*visible !important;/,
     );

@@ -1116,7 +1116,7 @@ body:has(.quote-pdf-editor) .sidebar {
   /* clip is not a scroll container, so the window receives the wheel
      without a first click. Print stays overflow:hidden. */
   .quote-pdf-sheet {
-    overflow: clip;
+    overflow: clip !important;
   }
 }
 
