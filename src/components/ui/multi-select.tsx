@@ -55,6 +55,8 @@ export function MultiSelect({
       : [...current, itemId];
     valueRef.current = next;
     onChange(next);
+    setOpen(false);
+    setQuery("");
   };
 
   const handleTriggerKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
