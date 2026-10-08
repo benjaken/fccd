@@ -33,5 +33,6 @@ describe("reopen premature self-arranged fleet completions", () => {
     expect(migration).toContain("delivery_status = '待取貨'");
     expect(migration).toContain("driver_confirmation_status = 'accepted'");
     expect(migration).toContain("now() < private.delivery_window_end_at(");
+    expect(migration).toContain("where delivery.id = premature.id");
   });
 });

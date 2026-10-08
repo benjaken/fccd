@@ -156,19 +156,23 @@ set
   driver_confirmation_status = 'accepted',
   delivery_status = '待取貨',
   updated_at = now()
-from public.delivery_teams team
-left join public.orders orders on orders.id = delivery.order_id
-where team.id = delivery.motorcade_id
-  and team.name in ('自行叫車', '自主叫車')
-  and delivery.fulfilled_at is not null
-  and coalesce(delivery.delivery_status, '') in ('已送達', '己送達')
-  and (
-    private.delivery_window_end_at(
-      coalesce(delivery.delivery_at, orders.delivery_at),
-      coalesce(delivery.delivery_time, orders.delivery_time)
-    ) is null
-    or now() < private.delivery_window_end_at(
-      coalesce(delivery.delivery_at, orders.delivery_at),
-      coalesce(delivery.delivery_time, orders.delivery_time)
+from (
+  select open_delivery.id
+  from public.deliveries open_delivery
+  join public.delivery_teams team on team.id = open_delivery.motorcade_id
+  left join public.orders orders on orders.id = open_delivery.order_id
+  where team.name in ('自行叫車', '自主叫車')
+    and open_delivery.fulfilled_at is not null
+    and coalesce(open_delivery.delivery_status, '') in ('已送達', '己送達')
+    and (
+      private.delivery_window_end_at(
+        coalesce(open_delivery.delivery_at, orders.delivery_at),
+        coalesce(open_delivery.delivery_time, orders.delivery_time)
+      ) is null
+      or now() < private.delivery_window_end_at(
+        coalesce(open_delivery.delivery_at, orders.delivery_at),
+        coalesce(open_delivery.delivery_time, orders.delivery_time)
+      )
     )
-  );
+) premature
+where delivery.id = premature.id;
