@@ -15,4 +15,15 @@ describe("order number standardization migration", () => {
     expect(migration).toContain("update public.orders");
     expect(migration).toContain("update public.payments as payment");
   });
+
+  it("keeps a typed hash on Catering split numbers such as 7041A", () => {
+    const migration = readFileSync(
+      resolve("supabase/migrations/20261008120000_keep_catering_split_order_number_hash.sql"),
+      "utf8",
+    );
+
+    expect(migration).toContain("normalized.had_hash");
+    expect(migration).toContain("normalized.value ~ '^[0-9]+[A-Za-z]+$'");
+    expect(migration).toContain("btrim(order_number) in ('7041A', '7041B')");
+  });
 });
