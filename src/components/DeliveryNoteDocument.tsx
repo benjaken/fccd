@@ -69,11 +69,44 @@ export type DeliveryNoteOrder = {
   shopifyStoreDomain?: string | null;
 };
 
-const DELIVERY_NOTE_PAGE_LINE_UNITS = 11;
+/* A4 content box is 297mm minus 12mm top and 10mm bottom padding.
+   Header, order line, and address block take about 100mm, leaving room
+   for roughly 14 single-height rows before the footer. */
+const DELIVERY_NOTE_PAGE_LINE_UNITS = 14;
 const DELIVERY_NOTE_LINE_CHARACTERS = 28;
 
 export function visibleDeliveryNoteRemarks(remarks: string[]) {
   return remarks.map((remark) => remark.trim()).filter(Boolean);
+}
+
+export function deliveryNoteRemarkText(remarks: string[]) {
+  const visible = visibleDeliveryNoteRemarks(remarks);
+  return visible.length ? `（${visible.join("、")}）` : "";
+}
+
+function textLineUnits(text: string) {
+  const length = Array.from(text).length;
+  if (!length) return 0;
+  return Math.max(1, Math.ceil(length / DELIVERY_NOTE_LINE_CHARACTERS));
+}
+
+/* Long names stay inside the table: remarks drop to a second line instead
+   of widening the row until the right border falls off the page. */
+export function deliveryNoteLineLayout(label: string, remarks: string[]) {
+  const remarkText = deliveryNoteRemarkText(remarks);
+  const labelUnits = Math.max(1, textLineUnits(label));
+  if (!remarkText) {
+    return { remarkText, splitRemarks: false, units: labelUnits };
+  }
+  const combined = `${label} ${remarkText}`;
+  if (Array.from(combined).length <= DELIVERY_NOTE_LINE_CHARACTERS) {
+    return { remarkText, splitRemarks: false, units: 1 };
+  }
+  return {
+    remarkText,
+    splitRemarks: true,
+    units: labelUnits + textLineUnits(remarkText),
+  };
 }
 
 function paginateDeliveryNoteLines(lines: FactoryOrderJob["lines"]) {
@@ -83,11 +116,10 @@ function paginateDeliveryNoteLines(lines: FactoryOrderJob["lines"]) {
   let usedUnits = 0;
 
   for (const line of lines) {
-    const text = [line.label, ...visibleDeliveryNoteRemarks(line.remarks)].join(" ");
-    const lineUnits = Math.max(
-      1,
-      Math.ceil(Array.from(text).length / DELIVERY_NOTE_LINE_CHARACTERS),
-    );
+    const lineUnits = deliveryNoteLineLayout(
+      line.label,
+      line.remarks,
+    ).units;
     if (page.length && usedUnits + lineUnits > DELIVERY_NOTE_PAGE_LINE_UNITS) {
       pages.push(page);
       page = [];
@@ -205,7 +237,7 @@ export function DeliveryNoteDocument({
         </thead>
         <tbody>
           {pageLines.map((line) => {
-            const remarks = visibleDeliveryNoteRemarks(line.remarks);
+            const layout = deliveryNoteLineLayout(line.label, line.remarks);
             return (
               <tr key={line.id}>
                 <td>
@@ -214,8 +246,21 @@ export function DeliveryNoteDocument({
                   })}
                 </td>
                 <td>
-                  {line.label}
-                  {remarks.length ? `（${remarks.join("、")}）` : ""}
+                  {layout.splitRemarks ? (
+                    <>
+                      <span className="factory-delivery-note-line-label">
+                        {line.label}
+                      </span>
+                      <span className="factory-delivery-note-line-remarks">
+                        {layout.remarkText}
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      {line.label}
+                      {layout.remarkText ? ` ${layout.remarkText}` : ""}
+                    </>
+                  )}
                 </td>
               </tr>
             );
