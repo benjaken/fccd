@@ -118,6 +118,20 @@ describe("order delivery lifecycle", () => {
     });
   });
 
+  it("moves an existing delivery onto the order date when resent to the factory", () => {
+    const migration = readFileSync(
+      "supabase/migrations/20261008023000_sync_factory_delivery_schedule.sql",
+      "utf8",
+    );
+
+    expect(migration).toContain("delivery_at = new.delivery_at");
+    expect(migration).toContain(
+      "after update of is_sent_to_factory, delivery_district_id,",
+    );
+    expect(migration).toContain("delivery_at, delivery_time, ship_out_time");
+    expect(migration).not.toContain("if exists (\n    select 1\n    from public.deliveries delivery\n    where delivery.order_id = new.id\n  ) then\n    return new;");
+  });
+
   it("enforces the lifecycle at the database boundary", () => {
     const migration = readFileSync(
       "supabase/migrations/20260824120000_defer_delivery_until_factory_send.sql",
