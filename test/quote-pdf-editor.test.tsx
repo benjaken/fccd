@@ -861,7 +861,7 @@ describe("editable quote PDF page", () => {
     }
   });
 
-  it("keeps the signature on the product page when only print-hidden modules overflow", async () => {
+  it("moves the signature when print-hidden controls would clip it in the editor", async () => {
     const rectSpy = vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function () {
       const productRowRect = measuredProductRowRect(this);
       if (productRowRect) return productRowRect;
@@ -880,6 +880,9 @@ describe("editable quote PDF page", () => {
           return { x: 0, y: 580, top: 580, right: 800, bottom: 700, left: 0, width: 800, height: 120, toJSON: () => ({}) } as DOMRect;
         }
         if (module.querySelector(".quote-pdf-signature")) {
+          if (module.closest<HTMLElement>("[data-pdf-auto-page]")?.dataset.pdfAutoPage === "modules") {
+            return { x: 0, y: 100, top: 100, right: 800, bottom: 260, left: 0, width: 800, height: 160, toJSON: () => ({}) } as DOMRect;
+          }
           return { x: 0, y: 980, top: 980, right: 800, bottom: 1140, left: 0, width: 800, height: 160, toJSON: () => ({}) } as DOMRect;
         }
         return { x: 0, y: 900, top: 900, right: 800, bottom: 980, left: 0, width: 800, height: 80, toJSON: () => ({}) } as DOMRect;
@@ -894,10 +897,9 @@ describe("editable quote PDF page", () => {
     renderPage(vi.fn().mockResolvedValue(lunchBoxResult));
 
     try {
-      await screen.findByRole("heading", { name: "便當報價" });
+      await screen.findAllByRole("heading", { name: "便當報價" });
       await waitFor(() => {
-        expect(screen.getByRole("region", { name: "簽署確認" }).closest("main")).not.toHaveAccessibleName("PDF 第 2 頁");
-        expect(screen.queryByRole("main", { name: "PDF 第 2 頁" })).not.toBeInTheDocument();
+        expect(screen.getByRole("region", { name: "簽署確認" }).closest("main")).toHaveAccessibleName("PDF 第 2 頁");
       });
     } finally {
       rectSpy.mockRestore();
@@ -908,6 +910,9 @@ describe("editable quote PDF page", () => {
     const rectSpy = vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function () {
       const productRowRect = measuredProductRowRect(this);
       if (productRowRect) return productRowRect;
+      if (this.classList.contains("quote-pdf-sheet")) {
+        return { x: 0, y: 0, top: 0, right: 800, bottom: 1200, left: 0, width: 800, height: 1200, toJSON: () => ({}) } as DOMRect;
+      }
       const isFooter = this.hasAttribute("data-pdf-auto-footer");
       const isOverflowingSignature = Boolean(this.querySelector(".quote-pdf-signature"))
         && this.closest<HTMLElement>("[data-pdf-auto-page]")?.dataset.pdfAutoPage === "products";

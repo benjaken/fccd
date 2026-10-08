@@ -276,9 +276,19 @@ export function usePdfAutoPageBreaks(
       if (!footer || !modules.length) continue;
 
       const footerTop = pageContentBottom(page, footer);
+      const pageRect = page.getBoundingClientRect();
+      const visibleBottom = pageRect.height > 0
+        ? pageRect.bottom - (Number.parseFloat(window.getComputedStyle(page).paddingBottom) || 0)
+        : Number.POSITIVE_INFINITY;
       const overflowingModule = modules.find((module) => (
         !isPrintHiddenPdfModule(module)
-        && pdfModulePrintableBottom(module, page) > footerTop - 1
+        && (
+          pdfModulePrintableBottom(module, page) > footerTop - 1
+          // Editor-only controls still occupy space on screen. A module can
+          // fit after those controls disappear in print yet be clipped in
+          // the editor's fixed-height sheet.
+          || module.getBoundingClientRect().bottom > visibleBottom - 1
+        )
       ));
       if (!overflowingModule) continue;
 
