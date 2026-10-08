@@ -8,6 +8,7 @@ import {
   factoryMultiDayPrintedDate,
   factoryMultiDayRangeLabels,
   factoryVisibleDates,
+  factoryLineRequiresReprint,
   factoryOrderPrintStatus,
   factoryEligibleDeliveries,
   excludeReschedulePending,
@@ -459,6 +460,41 @@ describe("factory board helpers", () => {
         ],
       }),
     ).toBe("complete");
+  });
+
+  it("keeps a printed line marked printed when a stale change row is still open", () => {
+    expect(
+      factoryLineRequiresReprint({
+        isVoid: false,
+        isPrinted: true,
+        hasOwnContentChange: true,
+        orderRequiresReprint: false,
+      }),
+    ).toBe(false);
+    expect(
+      factoryLineRequiresReprint({
+        isVoid: false,
+        isPrinted: false,
+        hasOwnContentChange: true,
+        orderRequiresReprint: false,
+      }),
+    ).toBe(true);
+    expect(
+      factoryLineRequiresReprint({
+        isVoid: false,
+        isPrinted: false,
+        hasOwnContentChange: false,
+        orderRequiresReprint: true,
+      }),
+    ).toBe(true);
+    expect(
+      factoryLineRequiresReprint({
+        isVoid: true,
+        isPrinted: false,
+        hasOwnContentChange: true,
+        orderRequiresReprint: true,
+      }),
+    ).toBe(false);
   });
 
   it("requires reprinting when a new edit explicitly invalidates printing", () => {

@@ -1055,6 +1055,21 @@ export function factoryOrderPrintStatus(input: {
   return allPrinted ? "complete" : "incomplete"
 }
 
+// A line that is already marked printed keeps the printed corner. An unresolved
+// audit row can be left behind when print state is confirmed without closing
+// that row (for example the "already printed" save). Real edits clear
+// is_printed, so those lines still show the reprint warning.
+export function factoryLineRequiresReprint(input: {
+  isVoid: boolean
+  isPrinted: boolean
+  hasOwnContentChange: boolean
+  orderRequiresReprint: boolean
+}): boolean {
+  if (input.isVoid || input.isPrinted) return false
+  if (input.hasOwnContentChange) return true
+  return input.orderRequiresReprint
+}
+
 async function fetchOrderPrintStatuses(
   orderIds: string[],
 ): Promise<Record<string, FactoryOrderPrintStatus>> {
@@ -1408,21 +1423,16 @@ export async function fetchFactoryOrderJob(orderId: string): Promise<FactoryOrde
           isAddon: Boolean(row.is_addon),
         },
         changes: changesByLineId.get(row.id as string) ?? [],
-        requiresReprint:
-          row.is_void
-            ? false
-            : pendingLineChanges.length > 0
-              ? (changesByLineId.get(row.id as string) ?? []).some(
-                  (change) => change.operation !== "delete",
-                )
-              : requiresReprint &&
-                (!row.is_printed ||
-                  (Boolean(factoryPrintDate) &&
-                    Date.parse(
-                      ((row.bubble_modified_at as string | null) ??
-                        (row.updated_at as string | null) ??
-                        ""),
-                    ) > Date.parse(factoryPrintDate ?? ""))),
+        requiresReprint: factoryLineRequiresReprint({
+          isVoid: Boolean(row.is_void),
+          isPrinted: Boolean(row.is_printed),
+          hasOwnContentChange:
+            pendingLineChanges.length > 0 &&
+            (changesByLineId.get(row.id as string) ?? []).some(
+              (change) => change.operation !== "delete",
+            ),
+          orderRequiresReprint: pendingLineChanges.length === 0 && requiresReprint,
+        }),
       }
     }),
   }
