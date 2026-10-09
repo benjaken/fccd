@@ -1,24 +1,5 @@
-# Block all crawlers — internal platform, not for public search indexing.
+# Allow crawlers to fetch every URL so they can read the noindex directive.
+# Do not add Disallow: / — a blocked crawler never sees the meta robots tag
+# and the URL can stay in search results indefinitely.
 User-agent: *
-Disallow: /
-
-User-agent: Googlebot
-Disallow: /
-
-User-agent: Googlebot-Image
-Disallow: /
-
-User-agent: Bingbot
-Disallow: /
-
-User-agent: Slurp
-Disallow: /
-
-User-agent: DuckDuckBot
-Disallow: /
-
-User-agent: Baiduspider
-Disallow: /
-
-User-agent: YandexBot
-Disallow: /
+Allow: /
