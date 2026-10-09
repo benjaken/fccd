@@ -1,5 +1,5 @@
 # Allow crawlers to fetch every URL so they can read the noindex directive.
-# Do not add Disallow: / — a blocked crawler never sees the meta robots tag
-# and the URL can stay in search results indefinitely.
+# Blocking the whole site would stop crawlers from seeing that tag, and
+# already indexed URLs could stay in search results indefinitely.
 User-agent: *
 Allow: /
