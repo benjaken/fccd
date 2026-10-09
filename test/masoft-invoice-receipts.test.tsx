@@ -154,4 +154,25 @@ describe("MasoftInvoiceReceiptsPage", () => {
     expect(selectedTotals).toHaveTextContent("HK$115.00");
     expect(screen.getByRole("button", { name: "Update selected INV" })).toBeInTheDocument();
   });
+
+  it("clears hidden selections and their totals when the brand filter changes", async () => {
+    const kitchen = { ...settlement, id: "kitchen", invoiceNumber: "INV-K", channelId: "kitchen", channelName: "Kitchen", grossAmount: 200, netAmount: 190 };
+    const loadSettlements = vi.fn().mockImplementation(async ({ channelId }: { channelId: string | null }) => ({
+      total: channelId ? 1 : 2, items: channelId ? [kitchen] : [settlement, kitchen],
+    }));
+    const user = userEvent.setup();
+    render(<MemoryRouter><MasoftInvoiceReceiptsPage canViewFinance loadSettlements={loadSettlements}
+      loadFilterOptions={async () => ({ channels: [{ id: "kitchen", name: "Kitchen" }], paymentMethods: [] })}
+      loadMonthTotals={async () => ({ monthKey: "2026-09", grossAmount: 0, netAmount: 0 })} /></MemoryRouter>);
+    await screen.findByText("INV-1001");
+    await user.click(screen.getByRole("checkbox", { name: "Select all receipts on this page" }));
+    expect(screen.getByTestId("masoft-selected-totals")).toHaveTextContent("HK$320.00");
+    await user.selectOptions(screen.getByRole("combobox", { name: "Brand" }), "kitchen");
+    await waitFor(() => expect(screen.queryByText("INV-1001")).not.toBeInTheDocument());
+    expect(screen.queryByTestId("masoft-selected-totals")).not.toBeInTheDocument();
+    expect(screen.getByRole("checkbox", { name: "Select receipt INV-K" })).not.toBeChecked();
+    await user.click(screen.getByRole("checkbox", { name: "Select receipt INV-K" }));
+    expect(screen.getByTestId("masoft-selected-totals")).toHaveTextContent("HK$200.00");
+    expect(screen.getByTestId("masoft-selected-totals")).toHaveTextContent("HK$190.00");
+  });
 });

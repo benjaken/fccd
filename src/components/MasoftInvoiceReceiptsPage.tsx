@@ -133,6 +133,7 @@ export function MasoftInvoiceReceiptsPage({
   }, [amountMin, canViewFinance, channelId, date, dateMode, endDate, isMobileList, loadSettlements, methodId, orderNumber, page, payoutAscending, reloadKey, startDate]);
 
   useEffect(() => void load(), [load]);
+  useEffect(() => { setSelected(new Map()); }, [amountMin, channelId, date, dateMode, endDate, methodId, orderNumber, startDate]);
   useEffect(() => {
     if (previousMobileListRef.current === isMobileList) return;
     previousMobileListRef.current = isMobileList;
