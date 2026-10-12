@@ -14,7 +14,38 @@
 .portal-order{border-bottom:1px solid var(--border);padding:12px 0}.portal-actions{display:flex;gap:12px;flex-wrap:wrap}
 .customer-portal .portal-error{color:var(--destructive)}.customer-portal .portal-notice{color:var(--primary)}
 .portal-login form{max-width:600px}.portal-login h1{margin-top:32px}
-@media(max-width:640px){.customer-portal{padding:22px 14px 40px}.customer-portal form,.portal-checkout{grid-template-columns:1fr}.customer-portal nav a{flex:1;justify-content:center;min-height:44px}.portal-points-summary{flex-wrap:wrap}.customer-portal h1{font-size:24px}}
+@media(max-width:640px){
+  .customer-portal{padding:16px 14px 36px}
+  .customer-portal form,.portal-checkout{grid-template-columns:1fr}
+  .portal-points-summary{flex-wrap:wrap;gap:12px;padding:16px 0}
+  .portal-points-summary strong{font-size:24px}
+  .customer-portal h1{font-size:22px;margin:12px 0}
+  .portal-hero{padding:20px 16px}
+  /* Icon grid with horizontal labels — avoid flex:1 columns that stack CJK vertically. */
+  .customer-portal nav[aria-label]{
+    display:grid;
+    grid-template-columns:repeat(4,minmax(0,1fr));
+    gap:8px;
+    margin:16px 0 8px;
+  }
+  .customer-portal nav[aria-label] a{
+    flex:unset;
+    flex-direction:column;
+    justify-content:flex-start;
+    align-items:center;
+    gap:6px;
+    min-height:72px;
+    padding:10px 6px;
+    text-align:center;
+    font-size:12px;
+    font-weight:600;
+    line-height:1.3;
+    writing-mode:horizontal-tb;
+    white-space:normal;
+    overflow-wrap:anywhere;
+  }
+  .customer-portal nav[aria-label] a svg{flex-shrink:0}
+}
 
 .customer-portal nav a{text-decoration:none}.customer-portal nav a:focus-visible{outline:2px solid var(--ring);outline-offset:2px}
 /* Public sign-in follows the driver portal card layout. */
@@ -61,4 +92,41 @@
 .otp-personal-workspace .self-service-header{display:none}
 .otp-personal-workspace .self-service-shell,.otp-personal-workspace .self-service-loading{min-height:0;background:transparent;padding:24px 0;color:var(--foreground)}
 .otp-personal-workspace .self-service-shell>section{margin:24px 0}
-@media(max-width:640px){.customer-portal .portal-workspace-header{gap:12px}.portal-brand-link img{width:126px;height:48px}.portal-workspace-title>strong{font-size:17px}.portal-header-actions{gap:8px;width:100%}.customer-portal .portal-header-actions .customer-login-modes{width:min(240px,100%);min-width:0}.customer-portal .portal-header-actions .customer-login-modes a{min-width:0;padding:10px 8px}.customer-portal .portal-access-state{margin-top:32px;padding:28px 20px}}
+@media(max-width:640px){
+  .customer-portal .portal-workspace-header{
+    display:grid;
+    grid-template-columns:minmax(0,1fr) auto;
+    align-items:center;
+    gap:10px 12px;
+    min-height:0;
+    padding:0 0 16px;
+  }
+  .portal-brand-link{grid-column:1;grid-row:1}
+  .portal-brand-link img{width:118px;height:42px}
+  .portal-workspace-title{grid-column:1/-1;grid-row:2;gap:4px}
+  .portal-workspace-title>strong{font-size:16px}
+  .portal-header-actions{
+    grid-column:1/-1;
+    grid-row:3;
+    width:100%;
+    margin-left:0;
+    gap:8px;
+    justify-content:stretch;
+  }
+  .customer-portal .portal-header-actions .customer-login-modes{
+    flex:1;
+    width:auto;
+    min-width:0;
+  }
+  .customer-portal .portal-header-actions .customer-login-modes a{
+    min-width:0;
+    padding:10px 8px;
+    font-size:13px;
+  }
+  .portal-header-actions>button{
+    flex-shrink:0;
+    padding-inline:10px;
+  }
+  .customer-portal .portal-access-state{margin-top:32px;padding:28px 20px}
+  .portal-row{gap:12px;padding:14px 0;align-items:flex-start}
+}

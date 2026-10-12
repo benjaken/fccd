@@ -8,7 +8,7 @@ i18n.addResourceBundle("zh-HK", "translation", { portal: {
   backToOrders:"返回訂單紀錄",
   financialDocuments:"收據及發票",documentsHint:"付款完成並經核實後，可預覽及下載收據、發票。積分全額結清的訂單亦可下載。",download:{receipt:"下載收據",invoice:"下載發票"},
   reviewPayments:"付款單據審核",financeAccessRequired:"請以獲授權的財務帳戶登入後再使用。",paymentMethod:"付款方式",chooseMethod:"選擇付款方式",reviewReason:"審核原因",reviewReasonPlaceholder:"拒絕時須填寫原因",noReview:"沒有待審核付款單據。",viewEvidence:"查看單據",acceptPayment:"核實付款",rejectPayment:"要求重新提交",
-  receipts:"上載付款單據",evidenceHint:"支援 JPG、PNG、PDF，每檔最多 10MB。上載後待財務審核，不會立即標記已付款。",evidenceSubmitted:"付款單據已提交，等待審核。",chooseOrder:"選擇待付款訂單",paymentAmount:"付款金額",receiptFile:"付款單據",submitEvidence:"提交單據",evidenceStatus:{pending:"待審核",accepted:"已核實",rejected:"需重新提交"},
+  receipts:"付款單據",evidenceHint:"支援 JPG、PNG、PDF，每檔最多 10MB。上載後待財務審核，不會立即標記已付款。",evidenceSubmitted:"付款單據已提交，等待審核。",chooseOrder:"選擇待付款訂單",paymentAmount:"付款金額",receiptFile:"付款單據",submitEvidence:"提交單據",evidenceStatus:{pending:"待審核",accepted:"已核實",rejected:"需重新提交"},
   email:"電郵", password:"密碼", emailPlaceholder:"輸入電郵地址", passwordPlaceholder:"輸入密碼", login:"登入", register:"建立受邀帳戶", verifyEmail:"請查閱電郵完成驗證，再登入接受邀請。",
   forgotPassword:"重設密碼", resetSent:"重設密碼電郵已發出，請查閱收件箱。", lookup:"使用電話及電郵查單", invitation:"機構邀請", acceptInvite:"接受邀請", joined:"已加入機構。",
   membershipRequired:"此帳戶尚未取得機構訂購權限。請先完成電郵驗證，並透過機構管理員提供的邀請連結加入；如已加入，請聯絡管理員確認帳戶及機構是否仍有效。", loadFailed:"暫時無法載入機構資料，請重試；如問題持續，請聯絡客服。", operationFailed:"操作未完成，請核對資料及權限後重試。", retry:"重試", navigation:"客戶功能",
