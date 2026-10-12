@@ -1,0 +1,36 @@
+import i18n from "@/i18n";
+
+i18n.addResourceBundle("zh-HK", "translation", { portal: {
+  title:"機構訂購平台", logout:"登出", loading:"載入中…", welcome:"歡迎使用 FCCD", loginDescription:"登入所屬機構，查看指定餐單及訂購。",
+  refreshPayment:"更新付款狀態",
+  backToOrders:"返回訂單紀錄",
+  financialDocuments:"收據及發票",documentsHint:"付款完成並經核實後，可預覽及下載收據、發票。積分全額結清的訂單亦可下載。",download:{receipt:"下載收據",invoice:"下載發票"},
+  reviewPayments:"付款單據審核",financeAccessRequired:"請以獲授權的財務帳戶登入後再使用。",paymentMethod:"付款方式",chooseMethod:"選擇付款方式",reviewReason:"審核原因",reviewReasonPlaceholder:"拒絕時須填寫原因",noReview:"沒有待審核付款單據。",viewEvidence:"查看單據",acceptPayment:"核實付款",rejectPayment:"要求重新提交",
+  receipts:"上載付款單據",evidenceHint:"支援 JPG、PNG、PDF，每檔最多 10MB。上載後待財務審核，不會立即標記已付款。",evidenceSubmitted:"付款單據已提交，等待審核。",chooseOrder:"選擇待付款訂單",paymentAmount:"付款金額",receiptFile:"付款單據",submitEvidence:"提交單據",evidenceStatus:{pending:"待審核",accepted:"已核實",rejected:"需重新提交"},
+  email:"電郵", password:"密碼", emailPlaceholder:"輸入電郵地址", passwordPlaceholder:"輸入密碼", login:"登入", register:"建立受邀帳戶", verifyEmail:"請查閱電郵完成驗證，再登入接受邀請。",
+  forgotPassword:"重設密碼", resetSent:"重設密碼電郵已發出，請查閱收件箱。", lookup:"使用電話及電郵查單", invitation:"機構邀請", acceptInvite:"接受邀請", joined:"已加入機構。",
+  membershipRequired:"請使用已驗證並獲邀加入機構的帳戶登入。", operationFailed:"操作未完成，請核對資料及權限後重試。", retry:"重試", navigation:"客戶功能",
+  home:"主頁", menus:"最新餐單", orders:"訂單紀錄", points:"獎勵積分", team:"團隊管理", addresses:"送貨地址", profile:"個人資料",
+  headline:"幾步就訂好。", homeDescription:"選擇指定餐單，確認送貨資料，快捷完成訂購。", orderNow:"立即訂購", details:"查看明細", pointUnit:"分", redeemValue:"可抵 {{value}} 餐費",
+  choose:"選擇餐單", noMenus:"目前沒有可訂購餐單，請聯絡營運核對授權。", available:"可訂 {{count}} 份", quantityLabel:"{{name}} 數量", chooseAddress:"選擇送貨地址", addAddress:"新增地址",
+  usePoints:"使用積分", pointsHint:"每 10 分抵 HK$0.01，可全額抵扣餐費；運費另付。", shipping:"運費", payable:"應付金額", submitting:"提交中…", confirmOrder:"確認訂購",
+  orderCreated:"訂單已建立。請按訂單應付金額完成付款。", noOrders:"目前沒有訂單。", confirmed:"已確認", settled:"已結清", awaitingPayment:"待付款", reorder:"再次訂購",
+  reorderNotice:"已帶入仍可供應的餐點，請核對數量及最新價格；未提供的餐點不會加入。", cancelReason:"請輸入取消原因", cancelRequested:"已提交取消申請，等待營運確認。", requestCancel:"申請取消", cancelPending:"取消申請已提交",
+  rewardRules:"機構積分六品牌共用。暫定每 HK$1 餐費賺 100 分，100 分抵 HK$0.1；完成訂單後入帳，有效期一年。", expires:"到期", noLedger:"目前沒有積分交易。",
+  ledger:{earn:"完成訂單儲分",redeem:"積分抵扣",return:"退款退分",expire:"積分到期",clawback:"退款追回積分"},
+  addressFields:{label:"地址名稱",recipient:"收件人",phone:"電話",address:"送貨地址"},addressPlaceholders:{label:"例如：辦公室",recipient:"輸入收件人姓名",phone:"輸入聯絡電話",address:"輸入完整送貨地址"},
+  save:"儲存", saved:"已儲存。", roles:{admin:"機構管理員",member:"機構成員"},active:"有效",inactive:"已停用",remove:"停用成員",createInvite:"建立邀請連結",inviteLink:"邀請連結（7 日內有效，請交予指定收件人）",
+}}, true, true);
+i18n.addResourceBundle("en", "translation", { portal: {
+  title:"Organization ordering",logout:"Sign out",loading:"Loading…",welcome:"Welcome to FCCD",loginDescription:"Sign in to your organization to order from assigned menus.",
+  refreshPayment:"Refresh payment status",
+  backToOrders:"Back to orders",
+  financialDocuments:"Receipts and invoices",documentsHint:"Download receipts and invoices after payment verification. Orders fully settled with points are also eligible.",download:{receipt:"Download receipt",invoice:"Download invoice"},
+  reviewPayments:"Payment evidence review",financeAccessRequired:"Sign in with an authorized finance account.",paymentMethod:"Payment method",chooseMethod:"Choose payment method",reviewReason:"Review reason",reviewReasonPlaceholder:"A reason is required for rejection",noReview:"No evidence awaiting review.",viewEvidence:"View evidence",acceptPayment:"Verify payment",rejectPayment:"Request resubmission",
+  receipts:"Payment evidence",evidenceHint:"JPG, PNG or PDF, up to 10 MB. Uploads require finance review before being marked paid.",evidenceSubmitted:"Evidence submitted for review.",chooseOrder:"Choose unpaid order",paymentAmount:"Payment amount",receiptFile:"Payment evidence file",submitEvidence:"Submit evidence",evidenceStatus:{pending:"Pending review",accepted:"Verified",rejected:"Resubmit"},
+  email:"Email",password:"Password",emailPlaceholder:"Enter email",passwordPlaceholder:"Enter password",login:"Sign in",register:"Create invited account",verifyEmail:"Verify your email, then sign in to accept the invitation.",
+  forgotPassword:"Reset password",resetSent:"Check your inbox for the reset link.",lookup:"Look up orders by phone and email",invitation:"Organization invitation",acceptInvite:"Accept invitation",joined:"Organization joined.",
+  membershipRequired:"Sign in with a verified account invited to an organization.",operationFailed:"Could not complete the action. Check your details and permissions, then retry.",retry:"Retry",navigation:"Customer navigation",
+  home:"Home",menus:"Menus",orders:"Orders",points:"Rewards",team:"Team",addresses:"Addresses",profile:"Profile",headline:"Your order, in a few steps.",homeDescription:"Choose a menu and confirm delivery details.",orderNow:"Order now",details:"View details",pointUnit:"points",redeemValue:"Redeem for {{value}} in food",
+  choose:"Choose menu",noMenus:"No menus available. Contact operations to check access.",available:"{{count}} available",quantityLabel:"{{name}} quantity",chooseAddress:"Choose address",addAddress:"Add address",usePoints:"Use points",pointsHint:"10 points = HK$0.01. Food can be covered in full; delivery is paid separately.",shipping:"Delivery",payable:"Amount due",submitting:"Submitting…",confirmOrder:"Confirm order",orderCreated:"Order created. Please pay the amount due.",noOrders:"No orders yet.",confirmed:"Confirmed",settled:"Settled",awaitingPayment:"Awaiting payment",reorder:"Order again",reorderNotice:"Available items were copied. Review quantities and current prices; unavailable items were omitted.",cancelReason:"Enter cancellation reason",cancelRequested:"Cancellation requested. Awaiting operations review.",requestCancel:"Request cancellation",cancelPending:"Cancellation requested",rewardRules:"Points are shared across all six brands. Earn 100 points per HK$1 food; 100 points redeem HK$0.1. Posted on completion; valid for one year.",expires:"Expires",noLedger:"No rewards transactions yet.",ledger:{earn:"Order rewards",redeem:"Redemption",return:"Returned points",expire:"Expired points",clawback:"Refund clawback"},addressFields:{label:"Label",recipient:"Recipient",phone:"Phone",address:"Delivery address"},addressPlaceholders:{label:"e.g. Office",recipient:"Enter recipient",phone:"Enter phone",address:"Enter full address"},save:"Save",saved:"Saved.",roles:{admin:"Organization admin",member:"Member"},active:"Active",inactive:"Inactive",remove:"Deactivate",createInvite:"Create invitation link",inviteLink:"Invitation link (valid for 7 days; share with the specified recipient)",
+}}, true, true);

@@ -1179,7 +1179,7 @@ export const workspaceLinks: Array<{
   },
   {
     key: "customer",
-    to: "/self_service_search",
+    to: "/customer",
     icon: Users,
     permissionKey: "workspace.customer",
   },

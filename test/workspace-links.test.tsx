@@ -66,7 +66,7 @@ describe("Workspace switcher", () => {
     expect(i18n.t("workspace.delivery")).toBe("司機送貨");
     expect(i18n.t("workspace.customer")).toBe("客戶自助");
     const customerLink = workspaceLinks.find((item) => item.key === "customer");
-    expect(customerLink).toMatchObject({ to: "/self_service_search" });
+    expect(customerLink).toMatchObject({ to: "/customer" });
     expect(customerLink).not.toHaveProperty("disabled");
     expect(i18n.exists("workspace.catering")).toBe(false);
     expect(i18n.t("workspace.restaurant")).toBe("餐廳版面");
@@ -123,6 +123,6 @@ describe("Workspace switcher", () => {
         (key) => key === "workspace.customer",
         noSectionAccess,
       ),
-    ).toBe("/self_service_search");
+    ).toBe("/customer");
   });
 });

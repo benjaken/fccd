@@ -1,0 +1,19 @@
+.customer-portal{padding:28px;width:100%;color:var(--foreground);background:var(--background);min-height:100vh}
+.customer-portal header{display:flex;align-items:center;gap:20px;padding-bottom:24px;border-bottom:1px solid var(--border);flex-wrap:wrap}
+.portal-wordmark{font-size:28px;font-weight:800;color:var(--primary)}
+.customer-portal header>span{flex:1}.customer-portal nav{display:flex;gap:8px;flex-wrap:wrap;margin:24px 0}
+.customer-portal nav a{display:flex;align-items:center;gap:8px;border:0;border-radius:8px;padding:12px;background:var(--muted);color:var(--foreground)}
+.customer-portal nav a[aria-current]{background:var(--nav-active-bg);color:var(--nav-active-fg)}
+.customer-portal section{margin:24px 0}.customer-portal h1{font-size:28px;margin:16px 0}.customer-portal h2{font-size:20px;margin:16px 0}
+.customer-portal p{margin:8px 0;color:var(--muted-foreground)}.customer-portal label{display:flex;flex-direction:column;gap:8px}
+.customer-portal form,.portal-checkout{display:grid;gap:16px;grid-template-columns:repeat(2,minmax(0,1fr));margin:20px 0}
+.customer-portal input,.customer-portal select{border:1px solid var(--input);background:var(--background);color:var(--foreground);padding:12px;border-radius:8px;min-width:0;font-size:16px;width:100%}
+.portal-row{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;padding:16px 0;border-bottom:1px solid var(--border)}
+.portal-row>input{width:90px}.portal-row label span{color:var(--muted-foreground)}
+.portal-hero{padding:24px;background:var(--muted);border-radius:12px}.portal-points-summary{display:flex;align-items:center;gap:20px;padding:20px 0}.portal-points-summary>div{flex:1}.portal-points-summary strong{font-size:28px}
+.portal-order{border-bottom:1px solid var(--border);padding:12px 0}.portal-actions{display:flex;gap:12px;flex-wrap:wrap}
+.customer-portal .portal-error{color:var(--destructive)}.customer-portal .portal-notice{color:var(--primary)}
+.portal-login form{max-width:600px}.portal-login h1{margin-top:32px}
+@media(max-width:640px){.customer-portal{padding:22px 14px 40px}.customer-portal form,.portal-checkout{grid-template-columns:1fr}.customer-portal nav a{flex:1;justify-content:center;min-height:44px}.portal-points-summary{flex-wrap:wrap}.customer-portal h1{font-size:24px}}
+
+.customer-portal nav a{text-decoration:none}.customer-portal nav a:focus-visible{outline:2px solid var(--ring);outline-offset:2px}

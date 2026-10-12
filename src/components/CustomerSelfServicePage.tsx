@@ -308,7 +308,7 @@ function StatusBadges({ order }: { order: CustomerSelfServiceOrderDetail }) {
   </div>;
 }
 
-function ReceiptDocument({ order, documentRef, scale = 1 }: { order: CustomerSelfServiceOrderDetail; documentRef?: RefObject<HTMLDivElement | null>; scale?: number }) {
+function ReceiptDocument({ order, documentRef, scale = 1, documentKind = "receipt" }: { order: CustomerSelfServiceOrderDetail; documentRef?: RefObject<HTMLDivElement | null>; scale?: number; documentKind?: "receipt" | "invoice" }) {
   const subtotal = order.lines.reduce((total, line) => total + customerOrderLineTotal(line), 0);
   const shippingFee = customerOrderShippingFee(order, subtotal);
   const discount = customerOrderDiscount(order);
@@ -322,12 +322,12 @@ function ReceiptDocument({ order, documentRef, scale = 1 }: { order: CustomerSel
       ? `Overpaid: ${receiptMoney(Math.abs(order.outstanding), true)}`
       : "Payment Status: Paid";
   return (
-    <div className="quote-pdf-sheet receipt-pdf-sheet self-service-receipt-document" ref={documentRef} aria-label="唯讀收據 PDF" style={{ transform: `scale(${scale})`, transformOrigin: "top left" }}>
+    <div className="quote-pdf-sheet receipt-pdf-sheet self-service-receipt-document" ref={documentRef} aria-label={documentKind === "invoice" ? "唯讀發票 PDF" : "唯讀收據 PDF"} style={{ transform: `scale(${scale})`, transformOrigin: "top left" }}>
       <header className="receipt-pdf-letterhead">
         <img src={getDocumentLogoPath(...brandValues)} alt={getBrandLogoAlt(...brandValues)} />
         <div className="receipt-pdf-document-heading">
-          <h1>RECEIPT</h1>
-          <input aria-label="收據編號" readOnly tabIndex={-1} value={`REC/${order.orderNumber}`} />
+          <h1>{documentKind === "invoice" ? "INVOICE" : "RECEIPT"}</h1>
+          <input aria-label={documentKind === "invoice" ? "發票編號" : "收據編號"} readOnly tabIndex={-1} value={`${documentKind === "invoice" ? "INV" : "REC"}/${order.orderNumber}`} />
         </div>
       </header>
 
@@ -400,7 +400,8 @@ function ReceiptDocument({ order, documentRef, scale = 1 }: { order: CustomerSel
   );
 }
 
-function ReceiptPreview({ order, onClose, printReceipt }: { order: CustomerSelfServiceOrderDetail; onClose: () => void; printReceipt: PrintReceiptFn }) {
+export function ReceiptPreview({ order, onClose, printReceipt, documentKind = "receipt" }: { order: CustomerSelfServiceOrderDetail; onClose: () => void; printReceipt: PrintReceiptFn; documentKind?: "receipt" | "invoice" }) {
+  const documentName = documentKind === "invoice" ? "發票" : "收據";
   const documentRef = useRef<HTMLDivElement>(null);
   const previewRef = useRef<HTMLDivElement>(null);
   const [previewSize, setPreviewSize] = useState<{ width: number; height: number; scale: number } | null>(null);
@@ -433,7 +434,7 @@ function ReceiptPreview({ order, onClose, printReceipt }: { order: CustomerSelfS
   const printDocument = typeof document !== "undefined"
     ? createPortal(
         <div className="self-service-receipt-print-root" data-testid="self-service-receipt-print-root" aria-hidden="true">
-          <ReceiptDocument order={order} />
+          <ReceiptDocument order={order} documentKind={documentKind} />
         </div>,
         document.body,
       )
@@ -444,18 +445,18 @@ function ReceiptPreview({ order, onClose, printReceipt }: { order: CustomerSelfS
     <div className="self-service-receipt-layer" role="dialog" aria-modal="true" aria-labelledby="receipt-preview-title">
       <button className="self-service-receipt-scrim" onClick={onClose} aria-label="關閉收據預覽" />
       <article className="self-service-receipt-modal">
-        <header><div><span>PDF 預覽</span><h2 id="receipt-preview-title">收據 {order.orderNumber}</h2></div><Button variant="ghost" size="icon" onClick={onClose} aria-label="關閉"><X /></Button></header>
+        <header><div><span>PDF 預覽</span><h2 id="receipt-preview-title">{documentName} {order.orderNumber}</h2></div><Button variant="ghost" size="icon" onClick={onClose} aria-label="關閉"><X /></Button></header>
         <div className="self-service-receipt-preview" ref={previewRef}>
           <div
             className="self-service-receipt-stage"
             style={previewSize ? { width: previewSize.width, height: previewSize.height } : undefined}
           >
-            <ReceiptDocument order={order} documentRef={documentRef} scale={previewSize?.scale ?? 1} />
+            <ReceiptDocument order={order} documentRef={documentRef} scale={previewSize?.scale ?? 1} documentKind={documentKind} />
           </div>
         </div>
         <footer>
           <span><Check />使用瀏覽器列印並可另存為 PDF</span>
-          <Button variant="outline" onClick={() => printReceipt("收據", `REC/${order.orderNumber}`)}><Download />下載收據</Button>
+          <Button variant="outline" onClick={() => printReceipt(documentName, `${documentKind === "invoice" ? "INV" : "REC"}/${order.orderNumber}`)}><Download />下載{documentName}</Button>
         </footer>
       </article>
     </div>
