@@ -26,7 +26,7 @@ Finance reviewers must have an existing `user_profiles.role` of Super Admin, Adm
 
 This is the first implementation slice, not a claim that the entire PRD is complete:
 
-- Address editing/archive (`20261012140000`), admin role handover and invitation revoke/list (`20261012150000`), saved-order templates (`20261012160000`), staff org/menu/pricing ops UI (`20261012170000`), and employee menu subsets (`20261012180000_customer_portal_member_menu_scopes.sql`) are implemented. Global reward-rule editors and weekly-menu publishing remain separate.
+- Address editing/archive (`20261012140000`), admin role handover and invitation revoke/list (`20261012150000`), saved-order templates (`20261012160000`), staff org/menu/pricing ops UI (`20261012170000`), employee menu subsets (`20261012180000`), and global reward-rule editors (`20261012190000_customer_portal_reward_rules_ops.sql`, `/settings/customer-portal/reward-rules`) are implemented. Weekly-menu publishing remains separate.
 - Membership-authorized add-on checkout, manual add-on payments and points integration; enforce same-brand add-ons in the existing cross-channel RPCs without breaking legacy sessions. Existing PayPal add-ons still use the legacy workflow.
 - Cancellation approval, per-add-on cancellation, partial refunds, expiry-preserving point returns and negative-point clawback. The initial customer cancellation RPC only creates an auditable request and does not claim to cancel delivery or refund money.
 - Link legacy/Shopify orders to organizations after validated identity reconciliation; configure safe Shopify edit links, conflict review and customer result notifications. The initial portal lists orders created by the portal, not unvalidated historical/company-name matches.

@@ -92,6 +92,7 @@ const EXACT_PAGE_KEYS: Array<{ prefix: string; pageKey: string }> = [
   { prefix: "/settings/dictionaries", pageKey: "settings.dictionaries" },
   { prefix: "/settings/districts", pageKey: "settings.districts" },
   { prefix: "/settings/customer-faq", pageKey: "settings.customer_faq" },
+  { prefix: "/settings/customer-portal/reward-rules", pageKey: "settings.customer_portal.reward_rules" },
   { prefix: "/settings/customer-portal", pageKey: "settings.customer_portal" },
   { prefix: "/settings/attachments", pageKey: "settings.attachments" },
   { prefix: "/restaurant/settings/supplier-cost-categories", pageKey: "restaurant.settings.supplier_cost_categories" },
@@ -442,7 +443,7 @@ function tabPermissionKeys(tabs: readonly ReportTabKey[]) {
 }
 
 const PAGE_ACCESS_CHILD_KEYS: Record<string, string[]> = {
-  promotion: ["settings.wati_email_logs", "settings.customer_faq", "settings.customer_portal", "settings.dictionaries", "settings.notifications", "settings.districts", "settings.attachments"],
+  promotion: ["settings.wati_email_logs", "settings.customer_faq", "settings.customer_portal", "settings.customer_portal.reward_rules", "settings.dictionaries", "settings.notifications", "settings.districts", "settings.attachments"],
   restaurant: ["restaurant.daily_sales", "restaurant.daily_purchases", "restaurant.inventory"],
   kitchen: [
     "kitchen.ingredients",
@@ -494,6 +495,7 @@ const PAGE_ACCESS_CHILD_KEYS: Record<string, string[]> = {
   "settings.districts": ["settings.districts.edit"],
   "settings.customer_faq": ["settings.customer_faq.edit"],
   "settings.customer_portal": ["settings.customer_portal.edit"],
+  "settings.customer_portal.reward_rules": ["settings.customer_portal.reward_rules.edit"],
   workspace: [
     "workspace.factory",
     "workspace.restaurant",

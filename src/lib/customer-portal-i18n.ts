@@ -44,6 +44,20 @@ i18n.addResourceBundle("zh-HK", "translation", { portalOps: {
   chooseProduct:"選擇產品",addItem:"加入餐點",removeItem:"移除餐點",
   backToList:"返回機構列表",backToOrg:"返回機構",
 }}, true, true);
+i18n.addResourceBundle("zh-HK", "translation", { portalRewardRules: {
+  description:"設定全平台「每 HK$1 合資格餐費可獲積分」版本。新單於提交時鎖定生效版本；已生效版本不可覆寫。",
+  loading:"載入中…",saved:"已新增積分規則版本。",close:"關閉",save:"儲存",
+  accessDenied:"沒有客戶積分規則權限。",operationFailed:"操作未完成，請重試。",
+  invalidRewardRule:"請輸入 0 至 100000 的儲分比例，並指定生效時間。",
+  duplicateEffectiveAt:"此生效時間已有規則版本，請改用其他時間。",
+  createVersion:"新增規則版本",pointsPerHkd:"每 HK$1 可獲積分（R）",
+  pointsPerHkdHint:"例如 R=100 時，合資格餐費 HK$100 完成後入帳 10,000 分。R=0 只暫停賺分，不影響兌換。",
+  effectiveAt:"生效時間",effectiveAtHint:"只影響生效時間之後提交的新單；已鎖定規則的舊單不變。",
+  createdAt:"建立時間",status:"狀態",active:"目前生效",scheduled:"已排程",superseded:"已取代",
+  currentActive:"目前生效：每 HK$1 賺 {{rate}} 分（自 {{at}}）",
+  redemptionFixed:"兌換率維持固定：100 分抵 HK$0.1；每次用分為 10 的整數倍。此頁只調整賺分比例。",
+  noRules:"尚未有積分規則版本。",history:"規則版本紀錄",
+}}, true, true);
 i18n.addResourceBundle("en", "translation", { portal: {
   title:"Customer portal",customerMode:"Customer sign-in mode",personalCustomer:"Individual customer",organizationCustomer:"Organization customer",logout:"Sign out",loading:"Loading…",welcome:"Welcome to FCCD",loginDescription:"Sign in to your organization to order from assigned menus.",
   otpDescription:"Enter your email to sign in with a verification code.",otpCode:"8-digit verification code",otpPlaceholder:"Enter the 8-digit code from your email",otpSend:"Send verification code",otpVerify:"Verify and sign in",otpResend:"Resend code",otpChangeEmail:"Change email",otpSent:"If the email can receive a code, check your inbox and spam folder.",otpSendFailed:"Unable to send a code. Please try again later.",otpInvalid:"The code is invalid or expired. Check it or request a new code.",otpPrivacy:"Your email is used to verify your sign-in identity.",otpProfileHint:"This account signs in with email verification codes. No password is required.",personalContext:"Current identity: Individual",organizationContext:"Current identity: Organization",
@@ -79,4 +93,18 @@ i18n.addResourceBundle("en", "translation", { portalOps: {
   fee:"Delivery fee",items:"Items",product:"Product",sku:"SKU",unitPrice:"Unit price",stock:"Available qty",
   chooseProduct:"Choose product",addItem:"Add item",removeItem:"Remove item",
   backToList:"Back to organizations",backToOrg:"Back to organization",
+}}, true, true);
+i18n.addResourceBundle("en", "translation", { portalRewardRules: {
+  description:"Configure platform-wide earn rates as versioned rules (points per HK$1 of eligible food). New orders lock the active version at submit; past versions are immutable.",
+  loading:"Loading…",saved:"Reward rule version created.",close:"Close",save:"Save",
+  accessDenied:"You do not have customer reward-rule access.",operationFailed:"Could not complete the action. Please retry.",
+  invalidRewardRule:"Enter an earn rate between 0 and 100000 and choose an effective time.",
+  duplicateEffectiveAt:"A rule already uses that effective time. Choose a different time.",
+  createVersion:"Create rule version",pointsPerHkd:"Points per HK$1 (R)",
+  pointsPerHkdHint:"Example: R=100 awards 10,000 points for HK$100 eligible food on completion. R=0 pauses earning only.",
+  effectiveAt:"Effective at",effectiveAtHint:"Applies only to orders submitted on or after this time; locked historical orders stay unchanged.",
+  createdAt:"Created at",status:"Status",active:"Active now",scheduled:"Scheduled",superseded:"Superseded",
+  currentActive:"Active now: {{rate}} points per HK$1 (since {{at}})",
+  redemptionFixed:"Redemption stays fixed: 100 points = HK$0.1; redemptions must be multiples of 10. This page only changes the earn rate.",
+  noRules:"No reward rule versions yet.",history:"Rule version history",
 }}, true, true);

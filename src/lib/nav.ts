@@ -12,6 +12,7 @@ import {
   CircleDollarSign,
   ClipboardCheck,
   ClipboardList,
+  Coins,
   Factory,
   FileArchive,
   FileImage,
@@ -742,6 +743,12 @@ export const secondaryNav: Record<string, NavItem[]> = {
       permissionKey: "settings.customer_portal",
     },
     {
+      key: "customerPortalRewardRules",
+      to: "/settings/customer-portal/reward-rules",
+      icon: Coins,
+      permissionKey: "settings.customer_portal.reward_rules",
+    },
+    {
       key: "dictionaries",
       to: "/settings/dictionaries",
       icon: ListFilter,
@@ -1157,6 +1164,8 @@ export const SECTION_CHILD_KEYS: Record<string, string[]> = {
     "settings.customer_faq.edit",
     "settings.customer_portal",
     "settings.customer_portal.edit",
+    "settings.customer_portal.reward_rules",
+    "settings.customer_portal.reward_rules.edit",
     "settings.attachments",
   ],
 };
