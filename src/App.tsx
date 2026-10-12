@@ -99,7 +99,7 @@ import {
 } from "@/components/FactoryWarehousePages";
 import { DriverDeliveryPage } from "@/components/DriverDeliveryPage";
 import { CustomerSelfServicePage } from "@/components/CustomerSelfServicePage";
-import { CustomerPortalPage } from "@/components/CustomerPortalPage";
+import { CustomerEntryPage } from "@/components/CustomerEntryPage";
 import { CustomerPaymentReviewPage } from "@/components/CustomerPaymentReviewPage";
 import { RawMeatInventoryCalcPage } from "@/components/RawMeatInventoryCalcPage";
 import { SpiceUsagePage } from "@/components/SpiceUsagePage";
@@ -2725,7 +2725,7 @@ function App() {
       <Route
         path="/customer/*"
         element={
-          <CustomerPortalPage />
+          <CustomerEntryPage />
         }
       />
       <Route

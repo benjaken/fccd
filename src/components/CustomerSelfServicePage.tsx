@@ -5,10 +5,11 @@ import {
   useState,
   type FormEvent,
   type RefObject,
+  type ReactNode,
 } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
-import { useNavigate, useParams } from "react-router-dom";
+import { useMatch, useNavigate, useParams } from "react-router-dom";
 import {
   ArrowLeft,
   CalendarDays,
@@ -31,6 +32,7 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { CustomerPortalAccessState } from "@/components/customer-portal/CustomerWorkspaceChrome";
 import { SidePanel } from "@/components/ui/side-panel";
 import { PdfAutoResizeTextarea } from "@/components/PdfAutoResizeTextarea";
 import {
@@ -221,7 +223,7 @@ function BrandLogo({ detail }: { detail?: CustomerSelfServiceOrderDetail | null 
   );
 }
 
-function LoginView({ onLogin, login }: { onLogin: (value: CustomerSelfServiceSession) => void; login: LoginFn }) {
+function LoginView({ onLogin, login, loginIntro }: { onLogin: (value: CustomerSelfServiceSession) => void; login: LoginFn; loginIntro?: ReactNode }) {
   const { t } = useTranslation();
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
@@ -239,11 +241,14 @@ function LoginView({ onLogin, login }: { onLogin: (value: CustomerSelfServiceSes
   return (
     <main className="self-service-login-shell">
       <section className="self-service-login-wrap" aria-labelledby="self-service-title">
-        <BrandLogo />
-        <div className="self-service-login-heading">
-          <span>客戶自助服務</span>
-          <h1 id="self-service-title">查詢你的到會訂單</h1>
+        <div className="self-service-login-branding">
+          <BrandLogo />
+          <div className="self-service-login-heading">
+            <span>客戶自助服務</span>
+            <h1 id="self-service-title">查詢你的到會訂單</h1>
+          </div>
         </div>
+        {loginIntro}
         <form className="self-service-login-card" onSubmit={submit}>
           <label htmlFor="self-service-phone"><span><Phone />電話號碼</span>
             <input id="self-service-phone" inputMode="tel" autoComplete="tel" value={phone} onChange={(event) => setPhone(event.target.value)} placeholder={t("customerSelfService.phonePlaceholder")} autoFocus />
@@ -267,7 +272,7 @@ function PortalHeader({ session, onLogout, detail }: { session: CustomerSelfServ
     <header className="self-service-header">
       <BrandLogo detail={detail} />
       <div className="self-service-account">
-        <span><Phone />{session.maskedPhone}</span>
+        {session.maskedPhone&&<span><Phone />{session.maskedPhone}</span>}
         <span><Mail />{session.maskedEmail}</span>
         <Button variant="outline" size="sm" onClick={onLogout}><LogOut />離開</Button>
       </div>
@@ -602,9 +607,15 @@ export function CustomerSelfServicePage({
   loadAddonOptions = fetchCustomerSelfServiceAddonOptions,
   logout = logoutCustomerSelfService,
   printReceipt = printPdf,
-}: { login?: LoginFn; restore?: RestoreFn; loadDetail?: DetailFn; loadAddonOptions?: AddonOptionsFn; logout?: LogoutFn; printReceipt?: PrintReceiptFn }) {
+  routeBase = "/self_service_search",
+  loginPath = routeBase,
+  loginIntro,
+  otpOnly = false,
+}: { login?: LoginFn; restore?: RestoreFn; loadDetail?: DetailFn; loadAddonOptions?: AddonOptionsFn; logout?: LogoutFn; printReceipt?: PrintReceiptFn; routeBase?: string; loginPath?: string; loginIntro?: ReactNode; otpOnly?: boolean }) {
   const navigate = useNavigate();
-  const { orderId = "" } = useParams<{ orderId?: string }>();
+  const params = useParams<{ orderId?: string }>();
+  const detailMatch = useMatch(`${routeBase}/:orderId`);
+  const orderId = detailMatch?.params.orderId ?? params.orderId ?? "";
   const demoMode = import.meta.env.DEV
     && typeof window !== "undefined"
     && new URLSearchParams(window.location.search).get("demo") === "1";
@@ -621,7 +632,11 @@ export function CustomerSelfServicePage({
       setLoading(false);
       return;
     }
-    restore().then(setSession).finally(() => setLoading(false));
+    let active = true;
+    restore().then(value => { if (active) setSession(value); })
+      .catch(() => { if (active) setDetailError("暫時無法載入訂單，請重新查詢。"); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
   }, [demoMode, restore]);
 
   useEffect(() => {
@@ -666,29 +681,34 @@ export function CustomerSelfServicePage({
     void captureCustomerAddonPaypalCheckout(session.token, checkoutId)
       .then((result) => {
         if (result.orderId) {
-          navigate(`/self_service_search/${encodeURIComponent(result.orderId)}`, { replace: true });
+          navigate(`${routeBase}/${encodeURIComponent(result.orderId)}`, { replace: true });
         }
         setPaymentNotice("PayPal 付款成功，加單項目已加入訂單。");
       })
       .catch(() => setDetailError("PayPal 付款狀態暫時未能確認，請稍後重新查詢訂單；請勿重複付款。"))
       .finally(() => { cleanup(); setLoading(false); });
-  }, [demoMode, navigate, session]);
+  }, [demoMode, navigate, routeBase, session]);
 
   function selectOrder(order: CustomerSelfServiceOrderSummary) {
     if (!session) return;
-    navigate(`/self_service_search/${encodeURIComponent(order.id)}`);
+    navigate(`${routeBase}/${encodeURIComponent(order.id)}`);
   }
 
   async function leave() {
-    if (session) await logout(session.token).catch(() => undefined);
+    if (session) {
+      try { await logout(session.token); }
+      catch { setDetailError("登出未完成，請重試。"); return; }
+    }
     setDetail(null); setSession(null);
-    navigate("/self_service_search", { replace: true });
+    navigate(loginPath, { replace: true });
   }
 
+  if (loading && !session && otpOnly) return <CustomerPortalAccessState error="" busy={false} onRetry={()=>{}} />;
   if (loading && !session) return <main className="self-service-loading"><LoaderCircle className="self-service-spin" /><span>正在載入客戶自助服務…</span></main>;
-  if (!session) return <LoginView login={login} onLogin={setSession} />;
-  if (detailError) return <main className="self-service-loading"><p role="alert">{detailError}</p><Button onClick={() => { setDetailError(""); navigate("/self_service_search"); }}>返回訂單列表</Button></main>;
+  if (!session && otpOnly) return <CustomerPortalAccessState error={detailError || "暫時無法載入訂單，請重新查詢。"} busy={loading} onRetry={() => {setLoading(true);setDetailError("");void restore().then(setSession).catch(()=>setDetailError("暫時無法載入訂單，請重新查詢。")).finally(()=>setLoading(false));}} />;
+  if (!session) return <LoginView login={login} onLogin={setSession} loginIntro={loginIntro} />;
+  if (detailError) return <main className="self-service-loading"><p role="alert">{detailError}</p><Button onClick={() => { setDetailError(""); navigate(routeBase); }}>返回訂單列表</Button></main>;
   if (loading) return <main className="self-service-loading"><LoaderCircle className="self-service-spin" /><span>正在載入訂單…</span></main>;
-  if (detail) return <DetailView session={session} order={detail} onBack={() => navigate("/self_service_search")} onLogout={() => void leave()} printReceipt={printReceipt} loadAddonOptions={demoMode ? loadDemoAddonOptions : loadAddonOptions} paymentNotice={paymentNotice} />;
+  if (detail) return <DetailView session={session} order={detail} onBack={() => navigate(routeBase)} onLogout={() => void leave()} printReceipt={printReceipt} loadAddonOptions={demoMode ? loadDemoAddonOptions : loadAddonOptions} paymentNotice={paymentNotice} />;
   return <OrdersView session={session} onSelect={(order) => void selectOrder(order)} onLogout={() => void leave()} />;
 }

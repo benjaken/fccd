@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Link, NavLink, Navigate, Outlet, Route, Routes, useMatch, useNavigate, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { ShoppingBag, Coins, Users, MapPin, ReceiptText, LogOut, Home, UserRound } from "lucide-react";
@@ -8,9 +8,11 @@ import { fetchPortal, acceptPortalInvite, submitPortalOrder, portalCart, fetchPo
 import { ReceiptPreview } from "@/components/CustomerSelfServicePage";
 import type { CustomerSelfServiceOrderDetail } from "@/lib/customer-self-service";
 import { printPdf } from "@/lib/print-pdf";
+import { CustomerWorkspaceHeader, CustomerPortalAccessState } from "@/components/customer-portal/CustomerWorkspaceChrome";
 import "./customer-portal.css";
 import "@/lib/customer-portal-i18n";
 
+import { CustomerOtpLogin } from "@/components/customer-portal/CustomerOtpLogin";
 import { CustomerHomePage } from "@/components/customer-portal/CustomerHomePage";
 import { CustomerMenusPage } from "@/components/customer-portal/CustomerMenusPage";
 import { CustomerOrdersPage } from "@/components/customer-portal/CustomerOrdersPage";
@@ -24,12 +26,19 @@ import { CustomerProfilePage } from "@/components/customer-portal/CustomerProfil
 type Page = "home" | "menus" | "orders" | "receipts" | "points" | "team" | "addresses" | "profile";
 const nav: Array<[Page, typeof Home]> = [["home",Home],["menus",ShoppingBag],["orders",ReceiptText],["receipts",ReceiptText],["points",Coins],["team",Users],["addresses",MapPin],["profile",UserRound]];
 
-function useCustomerPortalController(load: typeof fetchPortal) {
+function portalErrorKey(error: unknown, fallback: string) {
+  const message = error && typeof error === "object" && "message" in error ? error.message : null;
+  if (message === "customer_membership_required") return "portal.membershipRequired";
+  if (message === "email_verification_required") return "portal.verifyEmail";
+  return fallback;
+}
+
+function useCustomerPortalController(load: typeof fetchPortal, onMembershipChanged?: () => void) {
   const { t } = useTranslation();
   const [params, setParams] = useSearchParams();
   const [loggedIn, setLoggedIn] = useState(false);
   const [authLoading, setAuthLoading] = useState(true);
-  const [email, setEmail] = useState(""); const [password, setPassword] = useState("");
+  const [email, setEmail] = useState("");
   const [data, setData] = useState<PortalSnapshot | null>(null);
   const navigate = useNavigate();
   const match = useMatch("/customer/:page/*");
@@ -66,28 +75,22 @@ function useCustomerPortalController(load: typeof fetchPortal) {
   useEffect(() => {
     if (!loggedIn) return;
     let active=true;
+    setError("");
     void load().then(value=>{if(active){setData(value);setAddressId(value.addresses[0]?.id||"");}})
-      .catch(()=>{if(active)setError(t("portal.membershipRequired"));});
+      .catch(error=>{if(active){setError(t(portalErrorKey(error,"portal.loadFailed")));if(portalErrorKey(error,"")==="portal.membershipRequired")onMembershipChanged?.();}});
     return ()=>{active=false;};
   }, [loggedIn,load,t]);
   useEffect(()=>{if(page!=="receipts"||!loggedIn)return;let active=true;
     void fetchPortalEvidence().then(rows=>{if(active)setEvidence(rows);}).catch(()=>{if(active)setError(t("portal.operationFailed"));});
     return()=>{active=false;};},[page,loggedIn,t]);
-  async function run(action: () => Promise<unknown>, success?: string) {
+  async function run(action: () => Promise<unknown>, success?: string, failureKey = "portal.operationFailed") {
     if(busy)return;setBusy(true);setError("");setNotice("");
-    try {await action();if(success)setNotice(success);} catch {setError(t("portal.operationFailed"));} finally {setBusy(false);}
+    try {await action();if(success)setNotice(success);} catch (error) {setError(t(portalErrorKey(error,failureKey)));} finally {setBusy(false);}
   }
   function chooseMenu(m: PortalMenu, previous?: PortalSnapshot["orders"][number]) {
     navigate(`/customer/menus/${encodeURIComponent(m.id)}`);setPoints(0);requestId.current=null;setError("");
     setQuantities(previous ? Object.fromEntries(previous.lines.filter(l=>m.items.some(i=>i.product_id===l.product_id)).map(l=>[l.product_id,l.quantity])) : {});
     if(previous)setNotice(t("portal.reorderNotice"));
-  }
-  async function authenticate(event: FormEvent, signup=false) {
-    event.preventDefault();await run(async()=>{
-      const result=signup? await supabase.auth.signUp({email,password,options:{emailRedirectTo:window.location.origin+"/customer"+(inviteToken?"?invite="+encodeURIComponent(inviteToken):"")}}):await supabase.auth.signInWithPassword({email,password});
-      if(result.error)throw result.error;
-      if(signup)setNotice(t("portal.verifyEmail"));
-    });
   }
   const cart=menu&&data?portalCart(menu,quantities,points,data.balance):null;
   async function checkout() {
@@ -97,30 +100,22 @@ function useCustomerPortalController(load: typeof fetchPortal) {
       requestId.current=null;setQuantities({});setPoints(0);setPage("orders");await refresh();},t("portal.orderCreated"));
   }
 
-  return {t,params,setParams,loggedIn,authLoading,email,setEmail,password,setPassword,data,page,menu,quantities,setQuantities,points,setPoints,addressId,setAddressId,busy,error,setError,notice,inviteLink,inviteEmail,setInviteEmail,receiptOrder,setReceiptOrder,receiptFile,setReceiptFile,receiptAmount,setReceiptAmount,evidence,setEvidence,financialDocument,setFinancialDocument,address,setAddress,requestId,inviteToken,refresh,run,chooseMenu,authenticate,cart,checkout,setPage,setData,setInviteLink};
+  return {t,params,setParams,loggedIn,authLoading,email,setEmail,data,page,menu,quantities,setQuantities,points,setPoints,addressId,setAddressId,busy,error,setError,notice,inviteLink,inviteEmail,setInviteEmail,receiptOrder,setReceiptOrder,receiptFile,setReceiptFile,receiptAmount,setReceiptAmount,evidence,setEvidence,financialDocument,setFinancialDocument,address,setAddress,requestId,inviteToken,refresh,run,chooseMenu,cart,checkout,setPage,setData,setInviteLink};
 }
 
 export type CustomerPortalController = ReturnType<typeof useCustomerPortalController>;
 
-export function CustomerPortalPage({ load = fetchPortal }: { load?: typeof fetchPortal }) {
-  const portal = useCustomerPortalController(load);
-  const {t, setParams, loggedIn, authLoading, email, setEmail, password, setPassword, data, setQuantities, points, busy, error, notice, financialDocument, setFinancialDocument, inviteToken, refresh, run, authenticate, setPage, setData, setInviteLink} = portal;
-  return <main className="customer-portal">
-    <header><Link to="/customer" className="portal-wordmark">FCCD</Link><span>{data?.organization.name||t("portal.title")}</span>
-      {loggedIn&&<Button variant="ghost" disabled={busy} onClick={()=>void run(async()=>{const r=await supabase.auth.signOut();if(r.error)throw r.error;setData(null);setQuantities({});setInviteLink("");setPage("home");})}><LogOut size={16}/>{t("portal.logout")}</Button>}</header>
-    {error&&<p role="alert" className="portal-error">{error}</p>}{notice&&<p role="status" className="portal-notice">{notice}</p>}
+export function CustomerPortalPage({ load = fetchPortal, loginIntro, contextSelector, onMembershipChanged }: { load?: typeof fetchPortal; loginIntro?: ReactNode; contextSelector?: ReactNode; onMembershipChanged?: () => void }) {
+  const portal = useCustomerPortalController(load,onMembershipChanged);
+  const {t, setParams, loggedIn, authLoading, email, setEmail, data, setQuantities, points, busy, error, notice, financialDocument, setFinancialDocument, inviteToken, refresh, run,  setPage, setData, setInviteLink} = portal;
+  return <main className={`customer-portal${!loggedIn ? " portal-auth-shell" : ""}`}>
+    {loggedIn&&<CustomerWorkspaceHeader title={data?.organization.name} contextSelector={contextSelector} actions={
+      <Button variant="ghost" disabled={busy} onClick={()=>void run(async()=>{const revoked=await supabase.rpc("customer_personal_logout");if(revoked.error)throw revoked.error;const r=await supabase.auth.signOut();if(r.error)throw r.error;setData(null);setQuantities({});setInviteLink("");setPage("home");})}><LogOut size={16}/>{t("portal.logout")}</Button>} />}
+    {loggedIn&&<>{error&&data&&<p role="alert" className="portal-error">{error}</p>}{notice&&<p role="status" className="portal-notice">{notice}</p>}</>}
     {financialDocument&&<ReceiptPreview order={financialDocument.order} documentKind={financialDocument.kind} printReceipt={printPdf} onClose={()=>setFinancialDocument(null)}/>}
-    {authLoading?<p role="status">{t("portal.loading")}</p>:!loggedIn?<section className="portal-login">
-      <h1>{t("portal.welcome")}</h1><p>{t("portal.loginDescription")}</p>
-      <form onSubmit={authenticate}><label>{t("portal.email")}<input type="email" required autoComplete="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder={t("portal.emailPlaceholder")}/></label>
-        <label>{t("portal.password")}<input type="password" required minLength={8} autoComplete="current-password" value={password} onChange={e=>setPassword(e.target.value)} placeholder={t("portal.passwordPlaceholder")}/></label>
-        <Button disabled={busy}>{t("portal.login")}</Button>
-        {inviteToken&&<Button type="button" variant="outline" disabled={busy||!email||password.length<8} onClick={e=>void authenticate(e,true)}>{t("portal.register")}</Button>}
-        <Button type="button" variant="ghost" disabled={busy||!email} onClick={()=>void run(async()=>{const r=await supabase.auth.resetPasswordForEmail(email,{redirectTo:window.location.origin+"/reset-password"});if(r.error)throw r.error;},t("portal.resetSent"))}>{t("portal.forgotPassword")}</Button>
-      </form><Link to="/self_service_search">{t("portal.lookup")}</Link>
-    </section>:<>
-      {inviteToken&&<section><h2>{t("portal.invitation")}</h2><Button disabled={busy} onClick={()=>void run(async()=>{await acceptPortalInvite(inviteToken);setParams({});await refresh();},t("portal.joined"))}>{t("portal.acceptInvite")}</Button></section>}
-      {!data?<section><p>{t("portal.membershipRequired")}</p><Button disabled={busy} onClick={()=>void run(refresh)}>{t("portal.retry")}</Button></section>:<>
+    {authLoading?<p role="status">{t("portal.loading")}</p>:!loggedIn?<CustomerOtpLogin mode="organization" modeSelector={loginIntro} />:<>
+      {inviteToken&&<section><h2>{t("portal.invitation")}</h2><Button disabled={busy} onClick={()=>void run(async()=>{await acceptPortalInvite(inviteToken);setParams({});await refresh();onMembershipChanged?.();},t("portal.joined"))}>{t("portal.acceptInvite")}</Button></section>}
+      {!data?<CustomerPortalAccessState error={error} busy={busy} onRetry={()=>void run(refresh,undefined,"portal.loadFailed")} />:<>
         <nav aria-label={t("portal.navigation")}>{nav.filter(([key])=>key!=="team"||data.role==="admin").map(([key,Icon])=><NavLink key={key} to={key === "home" ? "/customer" : `/customer/${key}`} end={key === "home"}><Icon size={18}/>{t("portal."+key)}</NavLink>)}</nav>
         <Routes>
           <Route element={<Outlet context={portal} />}>

@@ -6,7 +6,7 @@ import { portalCart, type PortalMenu, type PortalSnapshot } from "@/lib/customer
 
 const mocks=vi.hoisted(()=>({submit:vi.fn(), getSession:vi.fn(), signin:vi.fn()}));
 vi.mock("@/lib/supabase",()=>({supabase:{auth:{getSession:mocks.getSession,
-  onAuthStateChange:()=>({data:{subscription:{unsubscribe:vi.fn()}}}),signInWithPassword:mocks.signin},rpc:mocks.submit}}));
+  onAuthStateChange:()=>({data:{subscription:{unsubscribe:vi.fn()}}}),signInWithOtp:mocks.signin},rpc:mocks.submit}}));
 const menu:PortalMenu={id:"m",name:"指定餐單",brand:"HK Party Food",channel_id:"brand",delivery_date:"2026-10-14",delivery_time:"12:00",cutoff_at:"2026-10-13T07:00:00Z",shipping_fee:50,
   items:[{id:"i",product_id:"p",name:"雞扒餐",unit_price:48,available_quantity:20}]};
 const snapshot:PortalSnapshot={organization:{id:"org",name:"示例機構"},role:"member",balance:20000,menus:[menu],addresses:[{id:"a",label:"辦公室",recipient:"陳先生",phone:"91234567",address:"九龍辦公室"}],members:[],orders:[],ledger:[]};
@@ -14,6 +14,17 @@ function RouterProbe(){const location=useLocation();const navigate=useNavigate()
 function mount(data=snapshot,path="/customer"){return render(<MemoryRouter initialEntries={[path]}><RouterProbe/><Routes><Route path="/customer/*" element={<CustomerPortalPage load={async()=>data}/>}/></Routes></MemoryRouter>);}
 beforeEach(()=>{mocks.getSession.mockResolvedValue({data:{session:{user:{id:"user"}}}});mocks.submit.mockReset();});
 describe("organization portal",()=>{
+  it("shows the shared OTP login and sends an institution email code",async()=>{
+    mocks.getSession.mockResolvedValue({data:{session:null}});
+    mocks.signin.mockResolvedValue({error:null});
+    mount();
+    expect(await screen.findByRole("region",{name:"歡迎使用 FCCD"})).toBeInTheDocument();
+    expect(screen.queryByLabelText("密碼")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button",{name:"重設密碼"})).not.toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("電郵"),{target:{value:"member@example.com"}});
+    fireEvent.click(screen.getByRole("button",{name:"發送驗證碼"}));
+    await waitFor(()=>expect(mocks.signin).toHaveBeenCalledWith({email:"member@example.com",options:{shouldCreateUser:true}}));
+  });
   it("shows assigned menus, shared redemption value and no pricing tier",async()=>{
     mount();await screen.findByText("幾步就訂好。");expect(screen.getByText("可抵 HK$20.00 餐費")).toBeInTheDocument();
     expect(screen.queryByText(/ABC|tariff|Normal/)).not.toBeInTheDocument();expect(screen.queryByText("團隊管理")).not.toBeInTheDocument();
@@ -30,8 +41,22 @@ describe("organization portal",()=>{
     fireEvent.change(screen.getByLabelText("雞扒餐 數量"),{target:{value:"1"}});expect(screen.getByText("確認訂購")).toBeDisabled();
   });
   it("reports access failure instead of exposing institution data",async()=>{
-    render(<MemoryRouter><CustomerPortalPage load={async()=>{throw new Error("denied");}}/></MemoryRouter>);
-    await waitFor(()=>expect(screen.getByRole("alert")).toHaveTextContent("獲邀"));expect(screen.queryByText("示例機構")).not.toBeInTheDocument();
+    render(<MemoryRouter><CustomerPortalPage load={async()=>{throw {message:"customer_membership_required",code:"42501"};}}/></MemoryRouter>);
+    await waitFor(()=>expect(screen.getByRole("alert")).toHaveTextContent("此帳戶尚未取得機構訂購權限"));expect(screen.queryByText("示例機構")).not.toBeInTheDocument();
+  });
+  it("reports loading failures separately and recovers after retry",async()=>{
+    const load=vi.fn().mockRejectedValueOnce(new Error("network failure")).mockResolvedValue(snapshot);
+    render(<MemoryRouter><CustomerPortalPage load={load}/></MemoryRouter>);
+    await waitFor(()=>expect(screen.getByRole("alert")).toHaveTextContent("暫時無法載入機構資料"));
+    expect(screen.queryByText(/尚未取得機構訂購權限/)).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button",{name:"重試"}));
+    await screen.findByText("幾步就訂好。");expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+  it("shows a loading message while organization details are pending",async()=>{
+    render(<MemoryRouter><CustomerPortalPage load={()=>new Promise(()=>{})}/></MemoryRouter>);
+    await waitFor(()=>expect(screen.getByRole("button",{name:"登出"})).toBeInTheDocument());
+    expect(screen.getByRole("status")).toHaveTextContent("正在取得你的機構資料");
+    expect(screen.queryByText(/尚未取得機構訂購權限/)).not.toBeInTheDocument();
   });
   it("rejects fractional quantities, overstock and invalid redemptions",()=>{
     expect(portalCart(menu,{p:2},10000,20000)).toMatchObject({valid:true,foodCents:9600,payableCents:13600});

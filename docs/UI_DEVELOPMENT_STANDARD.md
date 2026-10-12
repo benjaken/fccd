@@ -8,6 +8,14 @@ layout, theme, status colors, and preview sign-in.
 
 ## 0. Product name
 
+客戶公開登入頁使用同一個 480px 內容區：Logo 與兩行標題並排於頂部，其下是個人／機構切換、登入說明及獨立白色表單卡片。兩種身份均使用電郵及 8 位 OTP；訊息顯示於表單內。舊電話／電郵查單只保留在相容入口，內部員工登入不變。
+
+`/customer` 的模式連結以 `aria-current="page"` 標示目前身份，操作區最少 44px 高並支援鍵盤焦點。登入使用同一 Auth 身份；工作區資料及購物車按個人／機構隔離，機構授權由服務端核實。
+
+未登入頁面不顯示身份切換；登入後僅在服務端確認兩種身份均可用時顯示。個人頁面與機構頁面共用 Logo 頁首、右上角操作區及載入／錯誤卡片，既有訂單內容按身份保留各自權限。
+
+機構頁首使用現有 `/assets/fc-catering-logo.svg`，左側為 Logo 及身份／機構名稱，右上角為身份切換及登出；不再顯示下方切換列。手機容許右側操作區換行並保持靠右。載入／錯誤狀態使用獨立卡片，錯誤訊息保留 `role="alert"`，重試及登出操作保持原有授權。
+
 - Short name: **FCCD**
 - Full name: **Food Channel Catering Delivery**
 - UI brand tokens live under `brand.name` / `brand.system` / `brand.fullName` in

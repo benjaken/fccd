@@ -17,3 +17,48 @@
 @media(max-width:640px){.customer-portal{padding:22px 14px 40px}.customer-portal form,.portal-checkout{grid-template-columns:1fr}.customer-portal nav a{flex:1;justify-content:center;min-height:44px}.portal-points-summary{flex-wrap:wrap}.customer-portal h1{font-size:24px}}
 
 .customer-portal nav a{text-decoration:none}.customer-portal nav a:focus-visible{outline:2px solid var(--ring);outline-offset:2px}
+/* Public sign-in follows the driver portal card layout. */
+.customer-portal.portal-auth-shell{display:grid;place-items:center;min-height:100dvh;padding:28px 20px;background:radial-gradient(circle at 10% 0%,color-mix(in srgb,var(--primary) 16%,transparent),transparent 34%),radial-gradient(circle at 100% 90%,color-mix(in srgb,var(--muted-foreground) 10%,transparent),transparent 33%),var(--background)}
+.customer-portal .portal-login{width:min(100%,430px);margin:0;padding:42px 34px 36px;border:1px solid var(--border);border-radius:28px;background:var(--card);box-shadow:0 24px 70px color-mix(in srgb,var(--foreground) 13%,transparent)}
+.portal-login-mark{display:grid;place-items:center;width:64px;height:64px;margin-bottom:26px;border-radius:20px;background:var(--primary);color:var(--primary-foreground);box-shadow:0 12px 26px color-mix(in srgb,var(--primary) 25%,transparent)}
+.portal-login-mark svg{width:31px;height:31px}
+.customer-portal .portal-login-brand{margin:0 0 7px;color:var(--primary);font-size:14px;font-weight:800;letter-spacing:.13em}
+.customer-portal .portal-login-platform{margin:0 0 8px;font-size:14px;font-weight:600}
+.customer-portal .portal-login h1{margin:0;font-size:clamp(24px,2vw,30px);line-height:1.2;letter-spacing:-.035em}
+.customer-portal .portal-login h1+p{margin:14px 0 30px;line-height:1.65}
+.customer-portal .portal-login form{grid-template-columns:minmax(0,1fr);gap:16px;margin:0 0 20px}
+.portal-login label{font-size:14px;font-weight:700}
+.portal-login input{height:52px;padding:0 15px;border-radius:12px;font-size:17px;font-weight:400}
+.portal-login input:focus-visible{outline:2px solid var(--ring);outline-offset:2px}
+.portal-login form>button{min-height:48px;font-size:16px}
+.portal-login form>button[type="submit"]{height:52px;margin-top:4px}
+.portal-login-lookup{display:block;text-align:center;font-size:14px;color:var(--primary);text-decoration:underline;text-underline-offset:4px}
+.portal-login-lookup:focus-visible{outline:2px solid var(--ring);outline-offset:4px;border-radius:4px}
+.customer-portal .portal-login .portal-error,.customer-portal .portal-login .portal-notice{margin:0 0 16px;line-height:1.6}
+@media(max-width:640px){.customer-portal .portal-login{padding:34px 24px 29px;border-radius:22px}}
+
+.customer-login-modes,.customer-portal nav.customer-login-modes{display:flex;gap:8px;padding:4px;margin:0 0 24px;border:1px solid var(--border);border-radius:12px;background:var(--muted)}
+.customer-login-modes a,.customer-portal nav.customer-login-modes a{display:flex;flex:1;align-items:center;justify-content:center;min-height:44px;padding:10px 12px;border-radius:8px;background:transparent;color:var(--muted-foreground);font-size:14px;font-weight:700;text-decoration:none}
+.customer-login-modes a[aria-current="page"],.customer-portal nav.customer-login-modes a[aria-current="page"]{background:var(--primary);color:var(--primary-foreground)}
+.customer-login-modes a:focus-visible{outline:2px solid var(--ring);outline-offset:2px}
+.customer-context-switch{display:flex;align-items:center;gap:20px;flex-wrap:wrap;padding:16px 28px;border-bottom:1px solid var(--border);background:var(--background);color:var(--foreground)}
+.customer-context-switch .customer-login-modes{width:min(100%,480px);margin:0}
+
+.customer-portal .portal-workspace-header{gap:24px;padding:0 0 24px;min-height:92px}
+.portal-brand-link{display:flex;align-items:center;flex-shrink:0}
+.portal-brand-link img{display:block;width:170px;height:60px;object-fit:contain}
+.portal-workspace-title{display:grid;gap:6px;flex:1;min-width:0}
+.portal-workspace-title>span{color:var(--primary);font-size:13px;font-weight:700}
+.portal-workspace-title>strong{font-size:20px;line-height:1.4;overflow-wrap:anywhere}
+.portal-header-actions{display:flex;align-items:center;justify-content:flex-end;gap:16px;margin-left:auto}
+.customer-portal .portal-header-actions .customer-login-modes{width:240px;margin:0;flex-wrap:nowrap}
+.customer-portal .portal-access-state{display:grid;justify-items:center;gap:16px;width:min(100%,560px);margin:64px auto 32px;padding:40px 32px;border:1px solid var(--border);border-radius:18px;background:var(--card);text-align:center}
+.portal-state-icon{display:grid;place-items:center;width:56px;height:56px;border-radius:16px;background:var(--muted);color:var(--primary)}
+.portal-state-icon svg{width:28px;height:28px}
+.customer-portal .portal-access-state h1{margin:0;font-size:24px;line-height:1.4}
+.customer-portal .portal-access-state p{margin:0;max-width:420px;font-size:15px;line-height:1.8;color:var(--muted-foreground)}
+.portal-access-state>button{min-width:112px;min-height:44px;margin-top:8px}
+.otp-personal-workspace .self-service-header{display:none}
+.otp-personal-workspace .self-service-shell,.otp-personal-workspace .self-service-loading{min-height:0;background:transparent;padding:24px 0;color:var(--foreground)}
+.otp-personal-workspace .self-service-shell>section{margin:24px 0}
+@media(max-width:640px){.customer-portal .portal-workspace-header{gap:12px}.portal-brand-link img{width:126px;height:48px}.portal-workspace-title>strong{font-size:17px}.portal-header-actions{gap:8px;width:100%}.customer-portal .portal-header-actions .customer-login-modes{width:min(240px,100%);min-width:0}.customer-portal .portal-header-actions .customer-login-modes a{min-width:0;padding:10px 8px}.customer-portal .portal-access-state{margin-top:32px;padding:28px 20px}}
