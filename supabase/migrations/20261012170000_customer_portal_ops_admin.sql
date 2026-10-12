@@ -3,7 +3,7 @@ insert into public.app_pages (
   page_key, display_name, route, sort_order, is_high_risk, parent_page_key, page_kind
 ) values
   ('settings.customer_portal', '客戶訂購營運', '/settings/customer-portal', 126, false, 'promotion', 'page'),
-  ('settings.customer_portal.edit', '編輯客戶訂購營運', null, 127, true, 'settings.customer_portal', 'action')
+  ('settings.customer_portal.edit', '編輯客戶訂購營運', '/settings/customer-portal/actions/edit', 127, true, 'settings.customer_portal', 'action')
 on conflict (page_key) do update set
   display_name = excluded.display_name,
   route = excluded.route,
