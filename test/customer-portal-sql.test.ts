@@ -30,6 +30,7 @@ beforeEach(async()=>{
   await db.exec(readFileSync("supabase/migrations/20261012092000_customer_financial_documents.sql","utf8"));
   await db.exec("create table public.user_profiles(id uuid primary key,role text)");
   await db.exec(readFileSync("supabase/migrations/20261012093000_customer_finance_review_access.sql","utf8"));
+  await db.exec(readFileSync("supabase/migrations/20261012140000_customer_portal_address_edit.sql","utf8"));
   await db.exec(`select set_config('test.user_id','${ids.user}',false);
     insert into auth.users values('${ids.user}','admin@example.com',now()),('${ids.other}','member@example.com',now());
     insert into customer_organizations(id,name) values('${ids.org}','Org');
@@ -115,5 +116,18 @@ describe("customer portal SQL transactions",()=>{
     await expect(db.query("select customer_portal_review_queue()")).rejects.toThrow("finance_access_required");
     await db.exec(`insert into user_profiles(id,role) values('${ids.user}','Accounting')`);
     expect((await db.query<{q:{evidence:unknown[]}}>("select customer_portal_review_queue() q")).rows[0].q.evidence).toEqual([]);
+  });
+  it("updates and archives organization addresses without exposing them to nonmembers",async()=>{
+    await db.query("select customer_portal_update_address($1,'Warehouse','Lee','91234568','Kowloon warehouse')",[ids.address]);
+    const updated=await db.query<{label:string;recipient:string;phone:string;address:string}>(
+      "select label,recipient,phone,address from customer_addresses where id=$1",[ids.address]);
+    expect(updated.rows[0]).toEqual({label:"Warehouse",recipient:"Lee",phone:"91234568",address:"Kowloon warehouse"});
+    await db.query("select customer_portal_archive_address($1)",[ids.address]);
+    const snap=await db.query<{s:{addresses:unknown[]}}>("select customer_portal_snapshot() s");
+    expect(snap.rows[0].s.addresses).toEqual([]);
+    await expect(order("00000000-0000-0000-0000-000000000011")).rejects.toThrow("address_required");
+    await expect(db.query("select customer_portal_update_address($1,'X','Y','91234567','Still here')",[ids.address])).rejects.toThrow("address_required");
+    await db.exec(`select set_config('test.user_id','${ids.other}',false)`);
+    await expect(db.query("select customer_portal_archive_address($1)",[ids.address])).rejects.toThrow("customer_membership_required");
   });
 });

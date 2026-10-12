@@ -4,16 +4,36 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { CustomerPortalPage } from "@/components/CustomerPortalPage";
 import { portalCart, type PortalMenu, type PortalSnapshot } from "@/lib/customer-portal";
 
-const mocks=vi.hoisted(()=>({submit:vi.fn(), getSession:vi.fn(), signin:vi.fn()}));
+const mocks=vi.hoisted(()=>({
+  submit:vi.fn(), getSession:vi.fn(), signin:vi.fn(),
+  saveAddress:vi.fn(async()=>"new-address"),
+  updateAddress:vi.fn(async()=>undefined),
+  archiveAddress:vi.fn(async()=>undefined),
+}));
 vi.mock("@/lib/supabase",()=>({supabase:{auth:{getSession:mocks.getSession,
   onAuthStateChange:()=>({data:{subscription:{unsubscribe:vi.fn()}}}),signInWithOtp:mocks.signin},rpc:mocks.submit}}));
+vi.mock("@/lib/customer-portal", async importOriginal => {
+  const actual = await importOriginal<typeof import("@/lib/customer-portal")>();
+  return {
+    ...actual,
+    savePortalAddress: mocks.saveAddress,
+    updatePortalAddress: mocks.updateAddress,
+    archivePortalAddress: mocks.archiveAddress,
+  };
+});
 const menu:PortalMenu={id:"m",name:"指定餐單",brand:"HK Party Food",channel_id:"brand",delivery_date:"2026-10-14",delivery_time:"12:00",cutoff_at:"2026-10-13T07:00:00Z",shipping_fee:50,
   items:[{id:"i",product_id:"p",name:"雞扒餐",unit_price:48,available_quantity:20}]};
 const snapshot:PortalSnapshot={organization:{id:"org",name:"示例機構"},role:"member",balance:20000,menus:[menu],addresses:[{id:"a",label:"辦公室",recipient:"陳先生",phone:"91234567",address:"九龍辦公室"}],members:[],orders:[],ledger:[]};
 function RouterProbe(){const location=useLocation();const navigate=useNavigate();return <><output data-testid="pathname">{location.pathname}</output><button onClick={()=>navigate(-1)}>測試返回</button></>;}
 function mount(data=snapshot,path="/customer"){return render(<MemoryRouter initialEntries={[path]}><RouterProbe/><Routes><Route path="/customer/*" element={<CustomerPortalPage load={async()=>data}/>}/></Routes></MemoryRouter>);}
 function openMenu(){fireEvent.click(screen.getByRole("button",{name:"開啟選單"}));}
-beforeEach(()=>{mocks.getSession.mockResolvedValue({data:{session:{user:{id:"user"}}}});mocks.submit.mockReset();});
+beforeEach(()=>{
+  mocks.getSession.mockResolvedValue({data:{session:{user:{id:"user"}}}});
+  mocks.submit.mockReset();
+  mocks.saveAddress.mockClear();
+  mocks.updateAddress.mockClear();
+  mocks.archiveAddress.mockClear();
+});
 describe("organization portal",()=>{
   it("shows the shared OTP login and sends an institution email code",async()=>{
     mocks.getSession.mockResolvedValue({data:{session:null}});
@@ -96,5 +116,16 @@ describe("organization portal",()=>{
     mount(data,"/customer/orders/order-1");await screen.findByRole("heading",{name:"FCCD-1"});
     expect(screen.getByText("雞扒餐 × 2")).toBeInTheDocument();fireEvent.click(screen.getByRole("link",{name:"返回訂單紀錄"}));
     await screen.findByRole("heading",{name:"訂單紀錄"});expect(screen.getByTestId("pathname").textContent).toBe("/customer/orders");
+  });
+  it("edits and archives delivery addresses from the addresses page",async()=>{
+    mount(snapshot,"/customer/addresses");
+    await screen.findByRole("heading",{name:"送貨地址"});
+    fireEvent.click(screen.getByRole("button",{name:"編輯地址"}));
+    expect(screen.getByRole("heading",{name:"編輯地址"})).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("地址名稱"),{target:{value:"倉庫"}});
+    fireEvent.click(screen.getByRole("button",{name:"儲存"}));
+    await waitFor(()=>expect(mocks.updateAddress).toHaveBeenCalledWith("a",expect.objectContaining({label:"倉庫",recipient:"陳先生",phone:"91234567",address:"九龍辦公室"})));
+    fireEvent.click(screen.getByRole("button",{name:"刪除地址"}));
+    await waitFor(()=>expect(mocks.archiveAddress).toHaveBeenCalledWith("a"));
   });
 });

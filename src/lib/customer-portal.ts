@@ -27,6 +27,10 @@ export const invitePortalMember = (email: string) => rpc<string>("customer_porta
 export const removePortalMember = (id: string) => rpc<void>("customer_portal_remove_member", { p_user_id: id });
 export const savePortalAddress = (a: { label: string; recipient: string; phone: string; address: string }) =>
   rpc<string>("customer_portal_save_address", { p_label: a.label, p_recipient: a.recipient, p_phone: a.phone, p_address: a.address });
+export const updatePortalAddress = (id: string, a: { label: string; recipient: string; phone: string; address: string }) =>
+  rpc<void>("customer_portal_update_address", { p_id: id, p_label: a.label, p_recipient: a.recipient, p_phone: a.phone, p_address: a.address });
+export const archivePortalAddress = (id: string) =>
+  rpc<void>("customer_portal_archive_address", { p_id: id });
 export const submitPortalOrder = (requestId: string, menuId: string, addressId: string,
   items: Array<{ product_id: string; quantity: number }>, points: number) =>
   rpc<string>("customer_portal_submit_order", { p_request_id: requestId, p_menu_id: menuId, p_address_id: addressId, p_items: items, p_points: points });

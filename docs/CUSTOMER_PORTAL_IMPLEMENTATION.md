@@ -26,7 +26,7 @@ Finance reviewers must have an existing `user_profiles.role` of Super Admin, Adm
 
 This is the first implementation slice, not a claim that the entire PRD is complete:
 
-- Organization/menu/pricing operational configuration screens, member role transfer, invitation revocation, saved-order templates and address editing/deletion.
+- Organization/menu/pricing operational configuration screens, member role transfer, invitation revocation and saved-order templates. Address editing and soft-delete (archive) are available to organization members via `customer_portal_update_address` / `customer_portal_archive_address` (`20261012140000_customer_portal_address_edit.sql`).
 - Membership-authorized add-on checkout, manual add-on payments and points integration; enforce same-brand add-ons in the existing cross-channel RPCs without breaking legacy sessions. Existing PayPal add-ons still use the legacy workflow.
 - Cancellation approval, per-add-on cancellation, partial refunds, expiry-preserving point returns and negative-point clawback. The initial customer cancellation RPC only creates an auditable request and does not claim to cancel delivery or refund money.
 - Link legacy/Shopify orders to organizations after validated identity reconciliation; configure safe Shopify edit links, conflict review and customer result notifications. The initial portal lists orders created by the portal, not unvalidated historical/company-name matches.
