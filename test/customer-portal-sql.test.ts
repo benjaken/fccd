@@ -31,6 +31,8 @@ beforeEach(async()=>{
   await db.exec("create table public.user_profiles(id uuid primary key,role text)");
   await db.exec(readFileSync("supabase/migrations/20261012093000_customer_finance_review_access.sql","utf8"));
   await db.exec(readFileSync("supabase/migrations/20261012140000_customer_portal_address_edit.sql","utf8"));
+  await db.exec(readFileSync("supabase/migrations/20261012150000_customer_portal_team_handover.sql","utf8"));
+  await db.exec(readFileSync("supabase/migrations/20261012160000_customer_portal_order_templates.sql","utf8"));
   await db.exec(`select set_config('test.user_id','${ids.user}',false);
     insert into auth.users values('${ids.user}','admin@example.com',now()),('${ids.other}','member@example.com',now());
     insert into customer_organizations(id,name) values('${ids.org}','Org');
@@ -88,6 +90,33 @@ describe("customer portal SQL transactions",()=>{
     await db.query("select customer_portal_accept_invite($1)",[rows[0].token]);
     await expect(db.query("select customer_portal_accept_invite($1)",[rows[0].token])).rejects.toThrow("invalid_invitation");
   });
+  it("supports admin handover and pending invitation revoke",async()=>{
+    await expect(db.query("select customer_portal_set_member_role($1,'member')",[ids.user])).rejects.toThrow("last_admin_required");
+    const {rows}=await db.query<{token:string}>("select customer_portal_invite('member@example.com') token");
+    const pending=await db.query<{s:{invitations:Array<{id:string;email:string}>}}>("select customer_portal_snapshot() s");
+    expect(pending.rows[0].s.invitations).toEqual([expect.objectContaining({email:"member@example.com"})]);
+    await db.exec(`select set_config('test.user_id','${ids.other}',false)`);
+    await db.query("select customer_portal_accept_invite($1)",[rows[0].token]);
+    await db.exec(`select set_config('test.user_id','${ids.user}',false)`);
+    await db.query("select customer_portal_set_member_role($1,'admin')",[ids.other]);
+    await db.query("select customer_portal_set_member_role($1,'member')",[ids.user]);
+    const roles=await db.query<{user_id:string;role:string}>(
+      "select user_id,role from customer_memberships where organization_id=$1 and is_active order by role,user_id",[ids.org]);
+    expect(roles.rows).toEqual([
+      {user_id:ids.other,role:"admin"},
+      {user_id:ids.user,role:"member"},
+    ]);
+    await db.exec(`select set_config('test.user_id','${ids.other}',false)`);
+    const again=await db.query<{token:string}>("select customer_portal_invite('second@example.com') token");
+    const listed=await db.query<{s:{invitations:Array<{id:string}>}}>("select customer_portal_snapshot() s");
+    const secondId=listed.rows[0].s.invitations[0].id;
+    await db.query("select customer_portal_revoke_invitation($1)",[secondId]);
+    expect((await db.query<{s:{invitations:unknown[]}}>("select customer_portal_snapshot() s")).rows[0].s.invitations).toEqual([]);
+    await db.exec(`insert into auth.users values('00000000-0000-0000-0000-000000000099','second@example.com',now())`);
+    await db.exec(`select set_config('test.user_id','00000000-0000-0000-0000-000000000099',false)`);
+    await expect(db.query("select customer_portal_accept_invite($1)",[again.rows[0].token])).rejects.toThrow("invalid_invitation");
+    await expect(db.query("select customer_portal_revoke_invitation($1)",[secondId])).rejects.toThrow("customer_membership_required");
+  });
   it("keeps uploaded evidence pending and creates exactly one payment on review",async()=>{
     const id=(await order()).rows[0].id;const path=`${ids.user}/${id}/receipt.pdf`;
     await db.query("insert into storage.objects(bucket_id,name) values('customer-payment-evidence',$1)",[path]);
@@ -116,6 +145,16 @@ describe("customer portal SQL transactions",()=>{
     await expect(db.query("select customer_portal_review_queue()")).rejects.toThrow("finance_access_required");
     await db.exec(`insert into user_profiles(id,role) values('${ids.user}','Accounting')`);
     expect((await db.query<{q:{evidence:unknown[]}}>("select customer_portal_review_queue() q")).rows[0].q.evidence).toEqual([]);
+  });
+  it("saves applies and archives shared order templates",async()=>{
+    const id=(await db.query<{id:string}>("select customer_portal_save_template('Weekly',$1::jsonb) id",[JSON.stringify([{product_id:ids.product,quantity:2}])])).rows[0].id;
+    const snap=await db.query<{s:{templates:Array<{id:string;name:string;items:Array<{product_id:string;quantity:number}>}>}}>("select customer_portal_snapshot() s");
+    expect(snap.rows[0].s.templates[0]).toMatchObject({id,name:"Weekly",items:[{product_id:ids.product,quantity:2}]});
+    await db.query("select customer_portal_update_template($1,'Weekly plus',$2::jsonb)",[id,JSON.stringify([{product_id:ids.product,quantity:3}])]);
+    await db.query("select customer_portal_archive_template($1)",[id]);
+    expect((await db.query<{s:{templates:unknown[]}}>("select customer_portal_snapshot() s")).rows[0].s.templates).toEqual([]);
+    await db.exec(`select set_config('test.user_id','${ids.other}',false)`);
+    await expect(db.query("select customer_portal_save_template('X',$1::jsonb)",[JSON.stringify([{product_id:ids.product,quantity:1}])])).rejects.toThrow("customer_membership_required");
   });
   it("updates and archives organization addresses without exposing them to nonmembers",async()=>{
     await db.query("select customer_portal_update_address($1,'Warehouse','Lee','91234568','Kowloon warehouse')",[ids.address]);

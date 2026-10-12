@@ -11,6 +11,8 @@ export type PortalSnapshot = {
   menus: PortalMenu[];
   addresses: Array<{ id: string; label: string; recipient: string; phone: string; address: string }>;
   members: Array<{ user_id: string; email: string; role: string; is_active: boolean }>;
+  invitations: Array<{ id: string; email: string; expires_at: string; created_at: string }>;
+  templates: Array<{ id: string; name: string; updated_at: string; items: Array<{ product_id: string; name: string; quantity: number }> }>;
   orders: Array<{ id: string; number: string; delivery_at: string; status: string | null; total: number;
     outstanding: number; brand: string; points_used: number; cancel_status: string | null;
     lines: Array<{ product_id: string; name: string; quantity: number; unit_price: number }> }>;
@@ -25,12 +27,22 @@ export const fetchPortal = () => rpc<PortalSnapshot>("customer_portal_snapshot")
 export const acceptPortalInvite = (token: string) => rpc<void>("customer_portal_accept_invite", { p_token: token });
 export const invitePortalMember = (email: string) => rpc<string>("customer_portal_invite", { p_email: email });
 export const removePortalMember = (id: string) => rpc<void>("customer_portal_remove_member", { p_user_id: id });
+export const setPortalMemberRole = (id: string, role: "admin" | "member") =>
+  rpc<void>("customer_portal_set_member_role", { p_user_id: id, p_role: role });
+export const revokePortalInvitation = (id: string) =>
+  rpc<void>("customer_portal_revoke_invitation", { p_invitation_id: id });
 export const savePortalAddress = (a: { label: string; recipient: string; phone: string; address: string }) =>
   rpc<string>("customer_portal_save_address", { p_label: a.label, p_recipient: a.recipient, p_phone: a.phone, p_address: a.address });
 export const updatePortalAddress = (id: string, a: { label: string; recipient: string; phone: string; address: string }) =>
   rpc<void>("customer_portal_update_address", { p_id: id, p_label: a.label, p_recipient: a.recipient, p_phone: a.phone, p_address: a.address });
 export const archivePortalAddress = (id: string) =>
   rpc<void>("customer_portal_archive_address", { p_id: id });
+export const savePortalTemplate = (name: string, items: Array<{ product_id: string; quantity: number }>) =>
+  rpc<string>("customer_portal_save_template", { p_name: name, p_items: items });
+export const updatePortalTemplate = (id: string, name: string, items: Array<{ product_id: string; quantity: number }>) =>
+  rpc<void>("customer_portal_update_template", { p_id: id, p_name: name, p_items: items });
+export const archivePortalTemplate = (id: string) =>
+  rpc<void>("customer_portal_archive_template", { p_id: id });
 export const submitPortalOrder = (requestId: string, menuId: string, addressId: string,
   items: Array<{ product_id: string; quantity: number }>, points: number) =>
   rpc<string>("customer_portal_submit_order", { p_request_id: requestId, p_menu_id: menuId, p_address_id: addressId, p_items: items, p_points: points });

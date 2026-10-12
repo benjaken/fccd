@@ -9,6 +9,8 @@ const mocks=vi.hoisted(()=>({
   saveAddress:vi.fn(async()=>"new-address"),
   updateAddress:vi.fn(async()=>undefined),
   archiveAddress:vi.fn(async()=>undefined),
+  setRole:vi.fn(async()=>undefined),
+  revokeInvite:vi.fn(async()=>undefined),
 }));
 vi.mock("@/lib/supabase",()=>({supabase:{auth:{getSession:mocks.getSession,
   onAuthStateChange:()=>({data:{subscription:{unsubscribe:vi.fn()}}}),signInWithOtp:mocks.signin},rpc:mocks.submit}}));
@@ -19,11 +21,13 @@ vi.mock("@/lib/customer-portal", async importOriginal => {
     savePortalAddress: mocks.saveAddress,
     updatePortalAddress: mocks.updateAddress,
     archivePortalAddress: mocks.archiveAddress,
+    setPortalMemberRole: mocks.setRole,
+    revokePortalInvitation: mocks.revokeInvite,
   };
 });
 const menu:PortalMenu={id:"m",name:"指定餐單",brand:"HK Party Food",channel_id:"brand",delivery_date:"2026-10-14",delivery_time:"12:00",cutoff_at:"2026-10-13T07:00:00Z",shipping_fee:50,
   items:[{id:"i",product_id:"p",name:"雞扒餐",unit_price:48,available_quantity:20}]};
-const snapshot:PortalSnapshot={organization:{id:"org",name:"示例機構"},role:"member",balance:20000,menus:[menu],addresses:[{id:"a",label:"辦公室",recipient:"陳先生",phone:"91234567",address:"九龍辦公室"}],members:[],orders:[],ledger:[]};
+const snapshot:PortalSnapshot={organization:{id:"org",name:"示例機構"},role:"member",balance:20000,menus:[menu],addresses:[{id:"a",label:"辦公室",recipient:"陳先生",phone:"91234567",address:"九龍辦公室"}],members:[],invitations:[],templates:[],orders:[],ledger:[]};
 function RouterProbe(){const location=useLocation();const navigate=useNavigate();return <><output data-testid="pathname">{location.pathname}</output><button onClick={()=>navigate(-1)}>測試返回</button></>;}
 function mount(data=snapshot,path="/customer"){return render(<MemoryRouter initialEntries={[path]}><RouterProbe/><Routes><Route path="/customer/*" element={<CustomerPortalPage load={async()=>data}/>}/></Routes></MemoryRouter>);}
 function openMenu(){fireEvent.click(screen.getByRole("button",{name:"開啟選單"}));}
@@ -33,6 +37,8 @@ beforeEach(()=>{
   mocks.saveAddress.mockClear();
   mocks.updateAddress.mockClear();
   mocks.archiveAddress.mockClear();
+  mocks.setRole.mockClear();
+  mocks.revokeInvite.mockClear();
 });
 describe("organization portal",()=>{
   it("shows the shared OTP login and sends an institution email code",async()=>{
@@ -127,5 +133,23 @@ describe("organization portal",()=>{
     await waitFor(()=>expect(mocks.updateAddress).toHaveBeenCalledWith("a",expect.objectContaining({label:"倉庫",recipient:"陳先生",phone:"91234567",address:"九龍辦公室"})));
     fireEvent.click(screen.getByRole("button",{name:"刪除地址"}));
     await waitFor(()=>expect(mocks.archiveAddress).toHaveBeenCalledWith("a"));
+  });
+  it("lets admins transfer roles and revoke pending invitations",async()=>{
+    const adminSnapshot:PortalSnapshot={
+      ...snapshot,
+      role:"admin",
+      members:[
+        {user_id:"admin",email:"admin@example.com",role:"admin",is_active:true},
+        {user_id:"member",email:"member@example.com",role:"member",is_active:true},
+      ],
+      invitations:[{id:"invite-1",email:"new@example.com",expires_at:"2099-01-01T00:00:00Z",created_at:"2026-10-12T00:00:00Z"}],
+    };
+    mount(adminSnapshot,"/customer/team");
+    await screen.findByRole("heading",{name:"團隊管理"});
+    expect(screen.getByText("new@example.com")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button",{name:"設為管理員"}));
+    await waitFor(()=>expect(mocks.setRole).toHaveBeenCalledWith("member","admin"));
+    fireEvent.click(screen.getByRole("button",{name:"取消邀請"}));
+    await waitFor(()=>expect(mocks.revokeInvite).toHaveBeenCalledWith("invite-1"));
   });
 });

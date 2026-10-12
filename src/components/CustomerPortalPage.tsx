@@ -100,6 +100,21 @@ function useCustomerPortalController(load: typeof fetchPortal, onMembershipChang
     setQuantities(previous ? Object.fromEntries(previous.lines.filter(l=>m.items.some(i=>i.product_id===l.product_id)).map(l=>[l.product_id,l.quantity])) : {});
     if(previous)setNotice(t("portal.reorderNotice"));
   }
+  function applyTemplate(template: PortalSnapshot["templates"][number], targetMenu?: PortalMenu) {
+    const selected = targetMenu || menu || data?.menus[0];
+    if (!selected) { setError(t("portal.noMenus")); return; }
+    const next = Object.fromEntries(template.items
+      .map(item => {
+        const match = selected.items.find(row => row.product_id === item.product_id);
+        if (!match) return null;
+        return [item.product_id, Math.min(item.quantity, match.available_quantity)] as const;
+      })
+      .filter((row): row is readonly [string, number] => Boolean(row) && row[1] > 0));
+    navigate(`/customer/menus/${encodeURIComponent(selected.id)}`);
+    setPoints(0); requestId.current = null; setError(""); setQuantities(next);
+    setNotice(t(template.items.some(item => !selected.items.some(row => row.product_id === item.product_id))
+      ? "portal.templatePartialNotice" : "portal.templateApplied"));
+  }
   const cart=menu&&data?portalCart(menu,quantities,points,data.balance):null;
   async function checkout() {
     if(!menu||!data||!cart?.valid||!addressId)return;
@@ -108,7 +123,7 @@ function useCustomerPortalController(load: typeof fetchPortal, onMembershipChang
       requestId.current=null;setQuantities({});setPoints(0);setPage("orders");await refresh();},t("portal.orderCreated"));
   }
 
-  return {t,params,setParams,loggedIn,authLoading,email,setEmail,data,page,menu,quantities,setQuantities,points,setPoints,addressId,setAddressId,busy,error,setError,notice,inviteLink,inviteEmail,setInviteEmail,receiptOrder,setReceiptOrder,receiptFile,setReceiptFile,receiptAmount,setReceiptAmount,evidence,setEvidence,financialDocument,setFinancialDocument,address,setAddress,requestId,inviteToken,refresh,run,chooseMenu,cart,checkout,setPage,setData,setInviteLink};
+  return {t,params,setParams,loggedIn,authLoading,email,setEmail,data,page,menu,quantities,setQuantities,points,setPoints,addressId,setAddressId,busy,error,setError,notice,inviteLink,inviteEmail,setInviteEmail,receiptOrder,setReceiptOrder,receiptFile,setReceiptFile,receiptAmount,setReceiptAmount,evidence,setEvidence,financialDocument,setFinancialDocument,address,setAddress,requestId,inviteToken,refresh,run,chooseMenu,applyTemplate,cart,checkout,setPage,setData,setInviteLink};
 }
 
 export type CustomerPortalController = ReturnType<typeof useCustomerPortalController>;
