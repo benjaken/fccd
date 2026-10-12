@@ -27,6 +27,7 @@ import {
   Mail,
   MapPinned,
   MessageCircleMore,
+  Building2,
   Package,
   PackageCheck,
   PackagePlus,
@@ -735,6 +736,12 @@ export const secondaryNav: Record<string, NavItem[]> = {
       permissionKey: "settings.customer_faq",
     },
     {
+      key: "customerPortalOps",
+      to: "/settings/customer-portal",
+      icon: Building2,
+      permissionKey: "settings.customer_portal",
+    },
+    {
       key: "dictionaries",
       to: "/settings/dictionaries",
       icon: ListFilter,
@@ -1148,6 +1155,8 @@ export const SECTION_CHILD_KEYS: Record<string, string[]> = {
     "settings.districts.edit",
     "settings.customer_faq",
     "settings.customer_faq.edit",
+    "settings.customer_portal",
+    "settings.customer_portal.edit",
     "settings.attachments",
   ],
 };

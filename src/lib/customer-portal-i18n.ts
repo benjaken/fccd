@@ -28,6 +28,19 @@ i18n.addResourceBundle("zh-HK", "translation", { portal: {
   templateName:"常用訂單名稱",templateNamePlaceholder:"例如：每週例會餐",templateSaved:"已儲存常用訂單。",templateArchived:"已刪除常用訂單。",
   templateApplied:"已套用常用訂單。",templatePartialNotice:"部分餐點已從目前餐單移除，其餘項目已帶入，請核對數量。",manageTemplates:"管理常用訂單",
 }}, true, true);
+i18n.addResourceBundle("zh-HK", "translation", { portalOps: {
+  description:"建立機構、指定首位管理員，並配置指定餐單、價格、庫存、截單及運費。",
+  loading:"載入中…",saved:"已儲存。",close:"關閉",accessDenied:"沒有客戶訂購營運權限。",operationFailed:"操作未完成，請重試。",
+  userNotFound:"找不到已驗證電郵的使用者。",membershipConflict:"此使用者已屬於其他機構。",invalidEmail:"電郵格式無效。",invalidMenu:"請核對餐單欄位及餐點。",
+  createOrg:"新增機構",editOrg:"編輯機構",orgName:"機構名稱",noOrgs:"尚未建立機構。",active:"有效",inactive:"停用",
+  admins:"管理員",members:"成員",menus:"指定餐單",status:"狀態",save:"儲存",
+  assignAdmin:"指定管理員",adminEmailPlaceholder:"已驗證的管理員電郵",adminAssigned:"已指定管理員。",
+  email:"電郵",role:"角色",createMenu:"新增餐單",editMenu:"編輯餐單",menuName:"餐單名稱",brand:"品牌",
+  chooseBrand:"選擇品牌",delivery:"送貨",deliveryDate:"送貨日期",deliveryTime:"送貨時間",cutoff:"截單時間",
+  fee:"運費",items:"餐點",product:"產品",sku:"SKU",unitPrice:"單價",stock:"可訂數量",
+  chooseProduct:"選擇產品",addItem:"加入餐點",removeItem:"移除餐點",
+  backToList:"返回機構列表",backToOrg:"返回機構",
+}}, true, true);
 i18n.addResourceBundle("en", "translation", { portal: {
   title:"Customer portal",customerMode:"Customer sign-in mode",personalCustomer:"Individual customer",organizationCustomer:"Organization customer",logout:"Sign out",loading:"Loading…",welcome:"Welcome to FCCD",loginDescription:"Sign in to your organization to order from assigned menus.",
   otpDescription:"Enter your email to sign in with a verification code.",otpCode:"8-digit verification code",otpPlaceholder:"Enter the 8-digit code from your email",otpSend:"Send verification code",otpVerify:"Verify and sign in",otpResend:"Resend code",otpChangeEmail:"Change email",otpSent:"If the email can receive a code, check your inbox and spam folder.",otpSendFailed:"Unable to send a code. Please try again later.",otpInvalid:"The code is invalid or expired. Check it or request a new code.",otpPrivacy:"Your email is used to verify your sign-in identity.",otpProfileHint:"This account signs in with email verification codes. No password is required.",personalContext:"Current identity: Individual",organizationContext:"Current identity: Organization",
@@ -47,4 +60,17 @@ i18n.addResourceBundle("en", "translation", { portal: {
   templates:"Saved orders",noTemplates:"No saved orders yet.",applyTemplate:"Apply saved order",saveTemplate:"Save as saved order",deleteTemplate:"Delete saved order",
   templateName:"Saved order name",templateNamePlaceholder:"e.g. Weekly meeting meal",templateSaved:"Saved order stored.",templateArchived:"Saved order deleted.",
   templateApplied:"Saved order applied.",templatePartialNotice:"Some items are unavailable on the current menu. Remaining items were loaded; review quantities.",manageTemplates:"Manage saved orders",
+}}, true, true);
+i18n.addResourceBundle("en", "translation", { portalOps: {
+  description:"Create organizations, assign the first admin, and configure assigned menus, prices, stock, cutoffs and delivery fees.",
+  loading:"Loading…",saved:"Saved.",close:"Close",accessDenied:"You do not have customer ordering ops access.",operationFailed:"Could not complete the action. Please retry.",
+  userNotFound:"No verified user was found for that email.",membershipConflict:"That user already belongs to another organization.",invalidEmail:"Invalid email format.",invalidMenu:"Check the menu fields and items.",
+  createOrg:"Create organization",editOrg:"Edit organization",orgName:"Organization name",noOrgs:"No organizations yet.",active:"Active",inactive:"Inactive",
+  admins:"Admins",members:"Members",menus:"Assigned menus",status:"Status",save:"Save",
+  assignAdmin:"Assign admin",adminEmailPlaceholder:"Verified admin email",adminAssigned:"Admin assigned.",
+  email:"Email",role:"Role",createMenu:"Create menu",editMenu:"Edit menu",menuName:"Menu name",brand:"Brand",
+  chooseBrand:"Choose brand",delivery:"Delivery",deliveryDate:"Delivery date",deliveryTime:"Delivery time",cutoff:"Cutoff",
+  fee:"Delivery fee",items:"Items",product:"Product",sku:"SKU",unitPrice:"Unit price",stock:"Available qty",
+  chooseProduct:"Choose product",addItem:"Add item",removeItem:"Remove item",
+  backToList:"Back to organizations",backToOrg:"Back to organization",
 }}, true, true);

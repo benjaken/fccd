@@ -162,6 +162,8 @@ import { AttachmentsListPage } from "@/components/settings/AttachmentsListPage";
 import { CompanyEmployeesPage } from "@/components/settings/CompanyEmployeesPage";
 import { DictionariesPage } from "@/components/settings/DictionariesPage";
 import { CustomerFaqPage } from "@/components/settings/CustomerFaqPage";
+import { CustomerPortalOpsPage } from "@/components/settings/CustomerPortalOpsPage";
+import "@/lib/customer-portal-i18n";
 import { DeliveryDistrictsPage } from "@/components/settings/DeliveryDistrictsPage";
 import { LoginLogsListPage } from "@/components/settings/LoginLogsListPage";
 import { NotificationSettingsPage } from "@/components/settings/NotificationSettingsPage";
@@ -1617,6 +1619,36 @@ function OperationsShell() {
                 element={
                   pageAccess.canAccess("settings.customer_faq") ? (
                     <CustomerFaqPage />
+                  ) : (
+                    <SettingsAccessDenied />
+                  )
+                }
+              />
+              <Route
+                path="/settings/customer-portal"
+                element={
+                  pageAccess.canAccess("settings.customer_portal") ? (
+                    <CustomerPortalOpsPage />
+                  ) : (
+                    <SettingsAccessDenied />
+                  )
+                }
+              />
+              <Route
+                path="/settings/customer-portal/:orgId"
+                element={
+                  pageAccess.canAccess("settings.customer_portal") ? (
+                    <CustomerPortalOpsPage />
+                  ) : (
+                    <SettingsAccessDenied />
+                  )
+                }
+              />
+              <Route
+                path="/settings/customer-portal/:orgId/menus/:menuId"
+                element={
+                  pageAccess.canAccess("settings.customer_portal") ? (
+                    <CustomerPortalOpsPage />
                   ) : (
                     <SettingsAccessDenied />
                   )
