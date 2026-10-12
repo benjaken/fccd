@@ -1,3 +1,15 @@
+[auth.email]
+# Match the confirmed customer OTP requirement. Hosted Auth must be configured separately.
+otp_length = 8
+
+[auth.email.template.magic_link]
+subject = "FCCD 登入驗證碼"
+content_path = "./supabase/templates/customer-otp.html"
+
+[auth.email.template.confirmation]
+subject = "FCCD 電郵驗證碼"
+content_path = "./supabase/templates/customer-otp.html"
+
 [functions.bubble-scan]
 verify_jwt = false
 

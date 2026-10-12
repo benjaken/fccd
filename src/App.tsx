@@ -99,6 +99,8 @@ import {
 } from "@/components/FactoryWarehousePages";
 import { DriverDeliveryPage } from "@/components/DriverDeliveryPage";
 import { CustomerSelfServicePage } from "@/components/CustomerSelfServicePage";
+import { CustomerEntryPage } from "@/components/CustomerEntryPage";
+import { CustomerPaymentReviewPage } from "@/components/CustomerPaymentReviewPage";
 import { RawMeatInventoryCalcPage } from "@/components/RawMeatInventoryCalcPage";
 import { SpiceUsagePage } from "@/components/SpiceUsagePage";
 import { SeasoningCostSettingsPage } from "@/components/SeasoningCostSettingsPage";
@@ -2626,17 +2628,6 @@ function DriverDeliveryWorkspace() {
   );
 }
 
-function CustomerWorkspace() {
-  return (
-    <ProtectedWorkspace
-      permissionKey="workspace.customer.portal"
-      fallbackPermissionKey="workspace.customer"
-    >
-      <WorkspaceStandalonePage workspaceKey="customer" icon={Users} />
-    </ProtectedWorkspace>
-  );
-}
-
 function AuthGate() {
   const { session, loading, profileLoading } = useAuth();
 
@@ -2730,12 +2721,11 @@ function App() {
       <Route path="/quote-inquiry/:formId" element={<PublicEnquiryFormPage />} />
       <Route path="/self_service_search" element={<CustomerSelfServicePage />} />
       <Route path="/self_service_search/:orderId" element={<CustomerSelfServicePage />} />
+      <Route path="/customer-payment-review" element={<CustomerPaymentReviewPage />} />
       <Route
         path="/customer/*"
         element={
-          <AuthProvider>
-            <CustomerWorkspace />
-          </AuthProvider>
+          <CustomerEntryPage />
         }
       />
       <Route
