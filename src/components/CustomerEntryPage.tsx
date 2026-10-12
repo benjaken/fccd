@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useLocation, useSearchParams } from "react-router-dom";
+import { useLocation, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { CustomerPortalPage } from "@/components/CustomerPortalPage";
 import { CustomerSelfServicePage } from "@/components/CustomerSelfServicePage";
@@ -7,8 +7,6 @@ import { CustomerOtpLogin } from "@/components/customer-portal/CustomerOtpLogin"
 import { supabase } from "@/lib/supabase";
 import { fetchPersonalOtpSession, logoutPersonalOtpSession } from "@/lib/customer-otp-session";
 import { CustomerWorkspaceHeader, CustomerPortalAccessState } from "@/components/customer-portal/CustomerWorkspaceChrome";
-import { Button } from "@/components/ui/button";
-import { LogOut } from "lucide-react";
 import "@/lib/customer-portal-i18n";
 import "./customer-portal.css";
 
@@ -67,10 +65,7 @@ export function CustomerEntryPage() {
       setIdentities(null);setUserId(null);
     } catch { setIdentityError(t("portal.operationFailed")); }
     finally { setLoggingOut(false); }
-  }  const modeSelector = canSwitch ? <nav className="customer-login-modes" aria-label={t("portal.customerMode")}>
-    <Link to="/customer?mode=personal" aria-current={personal ? "page" : undefined}>{t("portal.personalCustomer")}</Link>
-    <Link to={params.has("invite") ? `/customer?${params.toString()}` : "/customer"} aria-current={!personal ? "page" : undefined}>{t("portal.organizationCustomer")}</Link>
-  </nav> : null;
+  }
   if (loading) return <main className="customer-login-shell"><p role="status">{t("portal.loading")}</p></main>;
   if (!userId) return <>
     {sessionError && <p role="alert">{t("portal.loadFailed")}</p>}
@@ -79,12 +74,12 @@ export function CustomerEntryPage() {
     }} />
   </>;
   if (!identities || identities.userId !== userId) return <main className="customer-portal">
-    <CustomerWorkspaceHeader mode="personal" actions={<Button variant="ghost" disabled={loggingOut} onClick={()=>void signOut()}><LogOut size={16}/>{t("portal.logout")}</Button>} />
+    <CustomerWorkspaceHeader mode="personal" personal loggingOut={loggingOut} onLogout={() => void signOut()} />
     <CustomerPortalAccessState error={identityError} busy={false} onRetry={()=>setIdentityVersion(value=>value+1)} />
   </main>;
   return personal ? <main className="customer-portal otp-personal-workspace">
-    <CustomerWorkspaceHeader mode="personal" contextSelector={modeSelector} actions={<Button variant="ghost" disabled={loggingOut} onClick={()=>void signOut()}><LogOut size={16}/>{t("portal.logout")}</Button>} />
+    <CustomerWorkspaceHeader mode="personal" personal canSwitch={canSwitch} loggingOut={loggingOut} onLogout={() => void signOut()} />
     {identityError&&<p role="alert">{identityError}</p>}
     <CustomerSelfServicePage key={`personal-${userId}`} routeBase="/customer/personal" loginPath="/customer?mode=personal" restore={fetchPersonalOtpSession} logout={logoutPersonalOtpSession} otpOnly />
-  </main> : <CustomerPortalPage key={`organization-${userId}`} contextSelector={modeSelector} onMembershipChanged={canSwitch?()=>setIdentityVersion(value=>value+1):undefined} />;
+  </main> : <CustomerPortalPage key={`organization-${userId}`} canSwitch={canSwitch} onMembershipChanged={canSwitch?()=>setIdentityVersion(value=>value+1):undefined} />;
 }

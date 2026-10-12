@@ -12,6 +12,7 @@ vi.mock("@/lib/customer-self-service", async importOriginal => ({ ...await impor
 const personal={token:"personal-session",expiresAt:"2099-01-01T00:00:00Z",maskedPhone:"",maskedEmail:"p***@example.com",orders:[{id:"order-1",orderNumber:"B-1247",orderDate:"2026-10-12T00:00:00Z",deliveryDate:null,grandTotal:100,currency:"HKD"}]};
 function Probe(){const location=useLocation();return <output data-testid="location">{location.pathname}{location.search}</output>;}
 function mount(path="/customer"){return render(<MemoryRouter initialEntries={[path]}><Probe/><Routes><Route path="/customer/*" element={<CustomerEntryPage/>}/></Routes></MemoryRouter>);}
+function openMenu(){fireEvent.click(screen.getByRole("button",{name:"開啟選單"}));}
 beforeEach(()=>{
   vi.clearAllMocks();mocks.listener=null;mocks.getSession.mockResolvedValue({data:{session:null}});
   mocks.send.mockResolvedValue({error:null});mocks.verify.mockResolvedValue({error:null,data:{session:{user:{id:"user"}}}});
@@ -61,6 +62,7 @@ describe("shared OTP customer entry",()=>{
     mocks.personal.mockRejectedValueOnce(new Error("unavailable"));
     mount("/customer?mode=personal");await screen.findByRole("heading",{name:"未能載入客戶資料"});
     expect(screen.getByRole("img",{name:"Food Channels Catering"})).toBeInTheDocument();
+    openMenu();
     expect(screen.getByRole("button",{name:"登出"})).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button",{name:"重試"}));await screen.findByRole("heading",{name:"訂單列表"});
   });
@@ -73,9 +75,12 @@ describe("shared OTP customer entry",()=>{
     mocks.rpc.mockImplementation(async(name:string)=>name==="customer_portal_identities"?{data:{personal:true,organization:true},error:null}:{data:null,error:{message:"network_failure"}});
     mocks.getSession.mockResolvedValue({data:{session:{user:{id:"user"}}}});mount();
     await waitFor(()=>expect(screen.getByRole("alert")).toHaveTextContent("暫時無法載入機構資料"));
+    openMenu();
     expect(screen.getAllByRole("navigation",{name:"客戶登入方式"})).toHaveLength(1);
     expect(screen.getByRole("img",{name:"Food Channels Catering"})).toHaveAttribute("src","/assets/fc-catering-logo.svg");
-    fireEvent.click(screen.getAllByRole("link",{name:"個人客戶"})[0]);await screen.findByRole("heading",{name:"訂單列表"});
-    expect(screen.queryByRole("alert")).not.toBeInTheDocument();expect(screen.queryByRole("link",{name:"團隊管理"})).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("link",{name:"個人客戶"}));await screen.findByRole("heading",{name:"訂單列表"});
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    openMenu();
+    expect(screen.queryByRole("link",{name:"團隊管理"})).not.toBeInTheDocument();
   });
 });

@@ -12,6 +12,7 @@ const menu:PortalMenu={id:"m",name:"指定餐單",brand:"HK Party Food",channel_
 const snapshot:PortalSnapshot={organization:{id:"org",name:"示例機構"},role:"member",balance:20000,menus:[menu],addresses:[{id:"a",label:"辦公室",recipient:"陳先生",phone:"91234567",address:"九龍辦公室"}],members:[],orders:[],ledger:[]};
 function RouterProbe(){const location=useLocation();const navigate=useNavigate();return <><output data-testid="pathname">{location.pathname}</output><button onClick={()=>navigate(-1)}>測試返回</button></>;}
 function mount(data=snapshot,path="/customer"){return render(<MemoryRouter initialEntries={[path]}><RouterProbe/><Routes><Route path="/customer/*" element={<CustomerPortalPage load={async()=>data}/>}/></Routes></MemoryRouter>);}
+function openMenu(){fireEvent.click(screen.getByRole("button",{name:"開啟選單"}));}
 beforeEach(()=>{mocks.getSession.mockResolvedValue({data:{session:{user:{id:"user"}}}});mocks.submit.mockReset();});
 describe("organization portal",()=>{
   it("shows the shared OTP login and sends an institution email code",async()=>{
@@ -54,7 +55,9 @@ describe("organization portal",()=>{
   });
   it("shows a loading message while organization details are pending",async()=>{
     render(<MemoryRouter><CustomerPortalPage load={()=>new Promise(()=>{})}/></MemoryRouter>);
-    await waitFor(()=>expect(screen.getByRole("button",{name:"登出"})).toBeInTheDocument());
+    await waitFor(()=>expect(screen.getByRole("button",{name:"開啟選單"})).toBeInTheDocument());
+    openMenu();
+    expect(screen.getByRole("button",{name:"登出"})).toBeInTheDocument();
     expect(screen.getByRole("status")).toHaveTextContent("正在取得你的機構資料");
     expect(screen.queryByText(/尚未取得機構訂購權限/)).not.toBeInTheDocument();
   });
@@ -65,8 +68,10 @@ describe("organization portal",()=>{
   });
   it("navigates between separate URLs and supports browser back",async()=>{
     mount();await screen.findByText("幾步就訂好。");
+    openMenu();
     fireEvent.click(screen.getByRole("link",{name:"訂單紀錄"}));await screen.findByRole("heading",{name:"訂單紀錄"});
     expect(screen.getByTestId("pathname")).toHaveTextContent("/customer/orders");
+    openMenu();
     fireEvent.click(screen.getByRole("link",{name:"獎勵積分"}));await screen.findByRole("heading",{name:"獎勵積分"});
     expect(screen.getByTestId("pathname")).toHaveTextContent("/customer/points");
     fireEvent.click(screen.getByText("測試返回"));await screen.findByRole("heading",{name:"訂單紀錄"});

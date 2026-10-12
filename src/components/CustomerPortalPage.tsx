@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
-import { Link, NavLink, Navigate, Outlet, Route, Routes, useMatch, useNavigate, useSearchParams } from "react-router-dom";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { Navigate, Outlet, Route, Routes, useMatch, useNavigate, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { ShoppingBag, Coins, Users, MapPin, ReceiptText, LogOut, Home, UserRound } from "lucide-react";
+import { ShoppingBag, Coins, Users, MapPin, ReceiptText, Home, UserRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/lib/supabase";
 import { fetchPortal, acceptPortalInvite, submitPortalOrder, portalCart, fetchPortalEvidence, type PaymentEvidence, type PortalSnapshot, type PortalMenu } from "@/lib/customer-portal";
@@ -113,18 +113,34 @@ function useCustomerPortalController(load: typeof fetchPortal, onMembershipChang
 
 export type CustomerPortalController = ReturnType<typeof useCustomerPortalController>;
 
-export function CustomerPortalPage({ load = fetchPortal, loginIntro, contextSelector, onMembershipChanged }: { load?: typeof fetchPortal; loginIntro?: ReactNode; contextSelector?: ReactNode; onMembershipChanged?: () => void }) {
+export function CustomerPortalPage({ load = fetchPortal, loginIntro, canSwitch = false, onMembershipChanged }: { load?: typeof fetchPortal; loginIntro?: ReactNode; canSwitch?: boolean; onMembershipChanged?: () => void }) {
   const portal = useCustomerPortalController(load,onMembershipChanged);
-  const {t, setParams, loggedIn, authLoading, email, setEmail, data, setQuantities, points, busy, error, notice, financialDocument, setFinancialDocument, inviteToken, refresh, run,  setPage, setData, setInviteLink} = portal;
+  const {t, setParams, loggedIn, authLoading, data, setQuantities, busy, error, notice, financialDocument, setFinancialDocument, inviteToken, refresh, run, setPage, setData, setInviteLink} = portal;
+  const navItems = useMemo(() => nav
+    .filter(([key]) => key !== "team" || data?.role === "admin")
+    .map(([key, Icon]) => ({
+      key,
+      icon: Icon,
+      label: t(`portal.${key}`),
+      end: key === "home",
+      to: key === "home" ? "/customer" : `/customer/${key}`,
+    })), [data?.role, t]);
+  async function logout() {
+    await run(async () => {
+      const revoked = await supabase.rpc("customer_personal_logout");
+      if (revoked.error) throw revoked.error;
+      const result = await supabase.auth.signOut();
+      if (result.error) throw result.error;
+      setData(null); setQuantities({}); setInviteLink(""); setPage("home");
+    });
+  }
   return <main className={`customer-portal${!loggedIn ? " portal-auth-shell" : ""}`}>
-    {loggedIn&&<CustomerWorkspaceHeader title={data?.organization.name} contextSelector={contextSelector} actions={
-      <Button variant="ghost" disabled={busy} onClick={()=>void run(async()=>{const revoked=await supabase.rpc("customer_personal_logout");if(revoked.error)throw revoked.error;const r=await supabase.auth.signOut();if(r.error)throw r.error;setData(null);setQuantities({});setInviteLink("");setPage("home");})}><LogOut size={16}/>{t("portal.logout")}</Button>} />}
+    {loggedIn&&<CustomerWorkspaceHeader title={data?.organization.name} mode="organization" canSwitch={canSwitch} personal={false} navItems={data ? navItems : []} loggingOut={busy} onLogout={() => void logout()} />}
     {loggedIn&&<>{error&&data&&<p role="alert" className="portal-error">{error}</p>}{notice&&<p role="status" className="portal-notice">{notice}</p>}</>}
     {financialDocument&&<ReceiptPreview order={financialDocument.order} documentKind={financialDocument.kind} printReceipt={printPdf} onClose={()=>setFinancialDocument(null)}/>}
     {authLoading?<p role="status">{t("portal.loading")}</p>:!loggedIn?<CustomerOtpLogin mode="organization" modeSelector={loginIntro} />:<>
       {inviteToken&&<section><h2>{t("portal.invitation")}</h2><Button disabled={busy} onClick={()=>void run(async()=>{await acceptPortalInvite(inviteToken);setParams({});await refresh();onMembershipChanged?.();},t("portal.joined"))}>{t("portal.acceptInvite")}</Button></section>}
       {!data?<CustomerPortalAccessState error={error} busy={busy} onRetry={()=>void run(refresh,undefined,"portal.loadFailed")} />:<>
-        <nav aria-label={t("portal.navigation")}>{nav.filter(([key])=>key!=="team"||data.role==="admin").map(([key,Icon])=><NavLink key={key} to={key === "home" ? "/customer" : `/customer/${key}`} end={key === "home"}><Icon size={18}/>{t("portal."+key)}</NavLink>)}</nav>
         <Routes>
           <Route element={<Outlet context={portal} />}>
             <Route index element={<CustomerHomePage />} />
