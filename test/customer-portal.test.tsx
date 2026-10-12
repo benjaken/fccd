@@ -11,6 +11,7 @@ const mocks=vi.hoisted(()=>({
   archiveAddress:vi.fn(async()=>undefined),
   setRole:vi.fn(async()=>undefined),
   revokeInvite:vi.fn(async()=>undefined),
+  setMenuScopes:vi.fn(async()=>undefined),
 }));
 vi.mock("@/lib/supabase",()=>({supabase:{auth:{getSession:mocks.getSession,
   onAuthStateChange:()=>({data:{subscription:{unsubscribe:vi.fn()}}}),signInWithOtp:mocks.signin},rpc:mocks.submit}}));
@@ -23,6 +24,7 @@ vi.mock("@/lib/customer-portal", async importOriginal => {
     archivePortalAddress: mocks.archiveAddress,
     setPortalMemberRole: mocks.setRole,
     revokePortalInvitation: mocks.revokeInvite,
+    setPortalMemberMenuScopes: mocks.setMenuScopes,
   };
 });
 const menu:PortalMenu={id:"m",name:"指定餐單",brand:"HK Party Food",channel_id:"brand",delivery_date:"2026-10-14",delivery_time:"12:00",cutoff_at:"2026-10-13T07:00:00Z",shipping_fee:50,
@@ -39,6 +41,7 @@ beforeEach(()=>{
   mocks.archiveAddress.mockClear();
   mocks.setRole.mockClear();
   mocks.revokeInvite.mockClear();
+  mocks.setMenuScopes.mockClear();
 });
 describe("organization portal",()=>{
   it("shows the shared OTP login and sends an institution email code",async()=>{
@@ -139,9 +142,10 @@ describe("organization portal",()=>{
       ...snapshot,
       role:"admin",
       members:[
-        {user_id:"admin",email:"admin@example.com",role:"admin",is_active:true},
-        {user_id:"member",email:"member@example.com",role:"member",is_active:true},
+        {user_id:"admin",email:"admin@example.com",role:"admin",is_active:true,menu_ids:[]},
+        {user_id:"member",email:"member@example.com",role:"member",is_active:true,menu_ids:[]},
       ],
+      org_menus:[{id:"m",name:"指定餐單",brand:"HK Party Food",delivery_date:"2026-10-14",is_active:true}],
       invitations:[{id:"invite-1",email:"new@example.com",expires_at:"2099-01-01T00:00:00Z",created_at:"2026-10-12T00:00:00Z"}],
     };
     mount(adminSnapshot,"/customer/team");
@@ -151,5 +155,18 @@ describe("organization portal",()=>{
     await waitFor(()=>expect(mocks.setRole).toHaveBeenCalledWith("member","admin"));
     fireEvent.click(screen.getByRole("button",{name:"取消邀請"}));
     await waitFor(()=>expect(mocks.revokeInvite).toHaveBeenCalledWith("invite-1"));
+  });
+  it("lets admins assign member menu scopes",async()=>{
+    const adminSnapshot:PortalSnapshot={
+      ...snapshot,
+      role:"admin",
+      members:[{user_id:"member",email:"member@example.com",role:"member",is_active:true,menu_ids:[]}],
+      org_menus:[{id:"m",name:"指定餐單",brand:"HK Party Food",delivery_date:"2026-10-14",is_active:true}],
+    };
+    mount(adminSnapshot,"/customer/team");
+    await screen.findByRole("heading",{name:"團隊管理"});
+    fireEvent.click(screen.getByRole("checkbox"));
+    fireEvent.click(screen.getByRole("button",{name:"儲存餐牌權限"}));
+    await waitFor(()=>expect(mocks.setMenuScopes).toHaveBeenCalledWith("member",["m"]));
   });
 });

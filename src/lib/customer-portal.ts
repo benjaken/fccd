@@ -10,7 +10,8 @@ export type PortalSnapshot = {
   organization: { id: string; name: string }; role: "admin" | "member"; balance: number;
   menus: PortalMenu[];
   addresses: Array<{ id: string; label: string; recipient: string; phone: string; address: string }>;
-  members: Array<{ user_id: string; email: string; role: string; is_active: boolean }>;
+  members: Array<{ user_id: string; email: string; role: string; is_active: boolean; menu_ids?: string[] }>;
+  org_menus?: Array<{ id: string; name: string; brand: string; delivery_date: string; is_active: boolean }>;
   invitations: Array<{ id: string; email: string; expires_at: string; created_at: string }>;
   templates: Array<{ id: string; name: string; updated_at: string; items: Array<{ product_id: string; name: string; quantity: number }> }>;
   orders: Array<{ id: string; number: string; delivery_at: string; status: string | null; total: number;
@@ -31,6 +32,8 @@ export const setPortalMemberRole = (id: string, role: "admin" | "member") =>
   rpc<void>("customer_portal_set_member_role", { p_user_id: id, p_role: role });
 export const revokePortalInvitation = (id: string) =>
   rpc<void>("customer_portal_revoke_invitation", { p_invitation_id: id });
+export const setPortalMemberMenuScopes = (userId: string, menuIds: string[]) =>
+  rpc<void>("customer_portal_set_member_menu_scopes", { p_user_id: userId, p_menu_ids: menuIds });
 export const savePortalAddress = (a: { label: string; recipient: string; phone: string; address: string }) =>
   rpc<string>("customer_portal_save_address", { p_label: a.label, p_recipient: a.recipient, p_phone: a.phone, p_address: a.address });
 export const updatePortalAddress = (id: string, a: { label: string; recipient: string; phone: string; address: string }) =>

@@ -27,6 +27,9 @@ i18n.addResourceBundle("zh-HK", "translation", { portal: {
   templates:"常用訂單",noTemplates:"尚未儲存常用訂單。",applyTemplate:"套用常用訂單",saveTemplate:"儲存為常用訂單",deleteTemplate:"刪除常用訂單",
   templateName:"常用訂單名稱",templateNamePlaceholder:"例如：每週例會餐",templateSaved:"已儲存常用訂單。",templateArchived:"已刪除常用訂單。",
   templateApplied:"已套用常用訂單。",templatePartialNotice:"部分餐點已從目前餐單移除，其餘項目已帶入，請核對數量。",manageTemplates:"管理常用訂單",
+  menuScopesHint:"勾選此成員可訂購的指定餐單；全部取消勾選即恢復可訂全部餐單。",
+  noAssignableMenus:"目前沒有可分配的指定餐單。",menuScopesAll:"目前可訂全部餐單。",menuScopesSelected:"已限制 {{count}} 張餐單。",
+  saveMenuScopes:"儲存餐牌權限",menuScopesSaved:"已更新餐牌權限。",
 }}, true, true);
 i18n.addResourceBundle("zh-HK", "translation", { portalOps: {
   description:"建立機構、指定首位管理員，並配置指定餐單、價格、庫存、截單及運費。",
@@ -60,6 +63,9 @@ i18n.addResourceBundle("en", "translation", { portal: {
   templates:"Saved orders",noTemplates:"No saved orders yet.",applyTemplate:"Apply saved order",saveTemplate:"Save as saved order",deleteTemplate:"Delete saved order",
   templateName:"Saved order name",templateNamePlaceholder:"e.g. Weekly meeting meal",templateSaved:"Saved order stored.",templateArchived:"Saved order deleted.",
   templateApplied:"Saved order applied.",templatePartialNotice:"Some items are unavailable on the current menu. Remaining items were loaded; review quantities.",manageTemplates:"Manage saved orders",
+  menuScopesHint:"Select the assigned menus this member may order. Clearing all selections restores access to every menu.",
+  noAssignableMenus:"No assignable menus yet.",menuScopesAll:"Currently allowed to order from all menus.",menuScopesSelected:"Limited to {{count}} menus.",
+  saveMenuScopes:"Save menu access",menuScopesSaved:"Menu access updated.",
 }}, true, true);
 i18n.addResourceBundle("en", "translation", { portalOps: {
   description:"Create organizations, assign the first admin, and configure assigned menus, prices, stock, cutoffs and delivery fees.",

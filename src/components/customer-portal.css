@@ -143,6 +143,12 @@
   .portal-row{gap:12px;padding:14px 0;align-items:flex-start}
 }
 
+.portal-team-member{align-items:flex-start}
+.portal-menu-scopes{display:grid;gap:8px;margin-top:12px;padding:12px;border:1px solid var(--border);border-radius:10px;background:var(--muted)}
+.portal-menu-scope-option{display:flex;align-items:flex-start;gap:8px;font-size:13px;font-weight:600}
+.portal-menu-scope-option input{margin-top:2px}
+.portal-muted{color:var(--muted-foreground);font-size:13px}
+
 .customer-portal-ops .portal-ops-actions{display:flex;gap:8px;flex-wrap:wrap}
 .customer-portal-ops .portal-ops-table-wrap{overflow:auto;margin:16px 0 28px;border:1px solid var(--border);border-radius:12px;background:var(--card)}
 .customer-portal-ops table{width:100%;border-collapse:collapse}

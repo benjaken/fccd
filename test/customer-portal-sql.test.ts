@@ -33,6 +33,7 @@ beforeEach(async()=>{
   await db.exec(readFileSync("supabase/migrations/20261012140000_customer_portal_address_edit.sql","utf8"));
   await db.exec(readFileSync("supabase/migrations/20261012150000_customer_portal_team_handover.sql","utf8"));
   await db.exec(readFileSync("supabase/migrations/20261012160000_customer_portal_order_templates.sql","utf8"));
+  await db.exec(readFileSync("supabase/migrations/20261012180000_customer_portal_member_menu_scopes.sql","utf8"));
   await db.exec(`select set_config('test.user_id','${ids.user}',false);
     insert into auth.users values('${ids.user}','admin@example.com',now()),('${ids.other}','member@example.com',now());
     insert into customer_organizations(id,name) values('${ids.org}','Org');
@@ -145,6 +146,29 @@ describe("customer portal SQL transactions",()=>{
     await expect(db.query("select customer_portal_review_queue()")).rejects.toThrow("finance_access_required");
     await db.exec(`insert into user_profiles(id,role) values('${ids.user}','Accounting')`);
     expect((await db.query<{q:{evidence:unknown[]}}>("select customer_portal_review_queue() q")).rows[0].q.evidence).toEqual([]);
+  });
+  it("limits member menus by assigned scopes and rejects off-scope orders",async()=>{
+    const invite=(await db.query<{token:string}>("select customer_portal_invite('member@example.com') token")).rows[0].token;
+    await db.exec(`select set_config('test.user_id','${ids.other}',false)`);
+    await db.query("select customer_portal_accept_invite($1)",[invite]);
+    await db.exec(`select set_config('test.user_id','${ids.user}',false)`);
+    await db.query("select customer_portal_set_member_menu_scopes($1,$2::uuid[])",[ids.other,[ids.menu]]);
+    const hidden="00000000-0000-0000-0000-0000000000aa";
+    await db.exec(`insert into customer_menu_assignments(id,organization_id,channel_id,name,delivery_date,delivery_time,cutoff_at)
+      values('${hidden}','${ids.org}','${ids.brand}','Hidden',current_date+3,'12:00',now()+interval '2 day')`);
+    await db.exec(`insert into customer_menu_items(menu_id,product_id,unit_price,available_quantity) values('${hidden}','${ids.product}',100,5)`);
+    await db.exec(`select set_config('test.user_id','${ids.other}',false)`);
+    const snap=await db.query<{s:{menus:Array<{id:string}>}}>("select customer_portal_snapshot() s");
+    expect(snap.rows[0].s.menus.map(m=>m.id)).toEqual([ids.menu]);
+    await expect(db.query(`select customer_portal_submit_order($1,$2,$3,$4::jsonb,0)`,[
+      "00000000-0000-0000-0000-0000000000bb",hidden,ids.address,JSON.stringify([{product_id:ids.product,quantity:1}]),
+    ])).rejects.toThrow("menu_unavailable");
+    await order("00000000-0000-0000-0000-0000000000cc");
+    await db.exec(`select set_config('test.user_id','${ids.user}',false)`);
+    await db.query("select customer_portal_set_member_menu_scopes($1,$2::uuid[])",[ids.other,[]]);
+    await db.exec(`select set_config('test.user_id','${ids.other}',false)`);
+    expect((await db.query<{s:{menus:Array<{id:string}>}}>("select customer_portal_snapshot() s")).rows[0].s.menus.map(m=>m.id).sort())
+      .toEqual([ids.menu,hidden].sort());
   });
   it("saves applies and archives shared order templates",async()=>{
     const id=(await db.query<{id:string}>("select customer_portal_save_template('Weekly',$1::jsonb) id",[JSON.stringify([{product_id:ids.product,quantity:2}])])).rows[0].id;
