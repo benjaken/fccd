@@ -43,7 +43,12 @@ export function CustomerEntryPage() {
     setIdentities(null); setIdentityError("");
     void Promise.resolve(supabase.rpc("customer_portal_identities")).then(({data,error}) => {
       if (!active) return;
-      if (error || !data || data.personal !== true || typeof data.organization !== "boolean") {
+      if (error) {
+        const text = [error.message, error.details, error.hint, error.code].filter(Boolean).join(" ");
+        setIdentityError(t(text.includes("email_verification_required") ? "portal.verifyEmail" : "portal.loadFailed"));
+        return;
+      }
+      if (!data || data.personal !== true || typeof data.organization !== "boolean") {
         setIdentityError(t("portal.loadFailed")); return;
       }
       setIdentities({userId,organization:data.organization});

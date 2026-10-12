@@ -26,10 +26,18 @@ import { CustomerProfilePage } from "@/components/customer-portal/CustomerProfil
 type Page = "home" | "menus" | "orders" | "receipts" | "points" | "team" | "addresses" | "profile";
 const nav: Array<[Page, typeof Home]> = [["home",Home],["menus",ShoppingBag],["orders",ReceiptText],["receipts",ReceiptText],["points",Coins],["team",Users],["addresses",MapPin],["profile",UserRound]];
 
+function portalErrorText(error: unknown) {
+  if (!error || typeof error !== "object") return "";
+  const parts = ["message", "details", "hint", "code"]
+    .map(key => key in error ? String((error as Record<string, unknown>)[key] ?? "") : "")
+    .filter(Boolean);
+  return parts.join(" ");
+}
+
 function portalErrorKey(error: unknown, fallback: string) {
-  const message = error && typeof error === "object" && "message" in error ? error.message : null;
-  if (message === "customer_membership_required") return "portal.membershipRequired";
-  if (message === "email_verification_required") return "portal.verifyEmail";
+  const text = portalErrorText(error);
+  if (text.includes("customer_membership_required")) return "portal.membershipRequired";
+  if (text.includes("email_verification_required")) return "portal.verifyEmail";
   return fallback;
 }
 
