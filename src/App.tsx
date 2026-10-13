@@ -162,7 +162,7 @@ import { AttachmentsListPage } from "@/components/settings/AttachmentsListPage";
 import { CompanyEmployeesPage } from "@/components/settings/CompanyEmployeesPage";
 import { DictionariesPage } from "@/components/settings/DictionariesPage";
 import { CustomerFaqPage } from "@/components/settings/CustomerFaqPage";
-import { CustomerPortalOpsPage } from "@/components/settings/CustomerPortalOpsPage";
+import { CustomerPortalLunchboxPage } from "@/components/settings/CustomerPortalLunchboxPage";
 import { CustomerPortalApplicationsPage } from "@/components/settings/CustomerPortalApplicationsPage";
 import { CustomerPortalRewardRulesPage } from "@/components/settings/CustomerPortalRewardRulesPage";
 import "@/lib/customer-portal-i18n";
@@ -1651,6 +1651,16 @@ function OperationsShell() {
                 element={
                   pageAccess.canAccess("settings.customer_portal.reward_rules") ? (
                     <CustomerPortalRewardRulesPage />
+                  ) : (
+                    <SettingsAccessDenied />
+                  )
+                }
+              />
+              <Route
+                path="/settings/customer-portal/lunchbox"
+                element={
+                  pageAccess.canAccess("settings.customer_portal") ? (
+                    <CustomerPortalLunchboxPage />
                   ) : (
                     <SettingsAccessDenied />
                   )

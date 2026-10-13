@@ -11,7 +11,8 @@ const base = "/customer/personal";
 export const personalNavigation: NavItem[] = [
   { key: "home", to: base, end: true, icon: Home },
   { key: "menus", to: `${base}/menus`, icon: UtensilsCrossed },
-  { key: "instant", to: `${base}/menus`, icon: ShoppingCart },
+  { key: "lunchbox", to: `${base}/lunchbox`, icon: ShoppingCart },
+  { key: "instant", to: `${base}/lunchbox`, icon: ShoppingCart },
   { key: "evidence", to: `${base}/payments`, icon: Upload },
   { key: "orders", to: `${base}/orders`, icon: ClipboardList },
   { key: "points", to: `${base}/points`, icon: Gift },

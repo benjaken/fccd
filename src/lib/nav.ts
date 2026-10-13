@@ -755,6 +755,12 @@ export const secondaryNav: Record<string, NavItem[]> = {
       permissionKey: "settings.customer_portal.reward_rules",
     },
     {
+      key: "customerPortalLunchbox",
+      to: "/settings/customer-portal/lunchbox",
+      icon: ClipboardList,
+      permissionKey: "settings.customer_portal",
+    },
+    {
       key: "dictionaries",
       to: "/settings/dictionaries",
       icon: ListFilter,

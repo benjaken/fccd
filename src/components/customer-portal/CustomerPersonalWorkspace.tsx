@@ -8,6 +8,7 @@ import { CustomerSelfServicePage } from "@/components/CustomerSelfServicePage";
 import { CustomerWorkspaceHeader, CustomerPortalAccessState } from "@/components/customer-portal/CustomerWorkspaceChrome";
 import { personalNavigation } from "@/components/customer-portal/PersonalPortalChrome";
 import { CustomerPersonalAddressesPage, CustomerPersonalEvidencePage, CustomerPersonalProfilePage } from "./CustomerPersonalSettingsPages";
+import { PersonalLunchboxPage } from "@/components/customer-portal/PersonalLunchboxPage";
 import { fetchPersonalOtpSession, logoutPersonalOtpSession } from "@/lib/customer-otp-session";
 import type { CustomerSelfServiceOrderSummary, CustomerSelfServiceSession } from "@/lib/customer-self-service";
 import { fetchPersonalSnapshot, fetchPersonalReorder, shopifyCartUrl, shopifyStoreUrl, type PersonalSnapshot } from "@/lib/customer-personal";
@@ -93,7 +94,7 @@ function PersonalHomePage() {
       <div>
         <h1>{name ? t("personal.helloName", { name }) : t("personal.hello")}</h1>
         <p>{t("personal.helloIntro")}</p>
-        <Button asChild><Link to={`${base}/menus`}>{t("personal.orderNow")}<ArrowUpRight size={16} /></Link></Button>
+        <Button asChild><Link to={`${base}/lunchbox`}>{t("personal.orderNow")}<ArrowUpRight size={16} /></Link></Button>
       </div>
       <div className="personal-hero-art" aria-hidden="true">
         <svg viewBox="0 0 320 220" role="img">
@@ -233,6 +234,7 @@ export function CustomerPersonalWorkspace({ canSwitch, loggingOut, onLogout }: {
       <Route index element={<PersonalHomePage />} />
       <Route path="personal" element={location.search.includes("addonCheckout=") ? <CustomerSelfServicePage routeBase={base} listPath={`${base}/orders`} loginPath="/customer?mode=personal" restore={fetchPersonalOtpSession} logout={logoutPersonalOtpSession} otpOnly embedded /> : <PersonalHomePage />} />
       <Route path="personal/menus" element={<PersonalMenusPage />} />
+      <Route path="personal/lunchbox" element={<PersonalLunchboxPage />} />
       <Route path="personal/orders" element={<PersonalOrdersPage />} />
       <Route path="personal/payments" element={<CustomerPersonalEvidencePage />} />
       <Route path="personal/points" element={<PersonalPointsPage />} />
