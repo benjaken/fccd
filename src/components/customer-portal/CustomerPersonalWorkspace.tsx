@@ -1,11 +1,12 @@
-import { createContext, useCallback, useContext, useEffect, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
 import { Link, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { ArrowUpRight, CalendarDays, Gift, Home, MapPin, ReceiptText, ShoppingBag, UserRound, UtensilsCrossed } from "lucide-react";
+import { ArrowUpRight, CalendarDays, ClipboardList, Gift, Link2, ShoppingCart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
 import { CustomerSelfServicePage } from "@/components/CustomerSelfServicePage";
-import { CustomerWorkspaceHeader, CustomerPortalAccessState } from "@/components/customer-portal/CustomerWorkspaceChrome";
+import { CustomerPortalAccessState } from "@/components/customer-portal/CustomerWorkspaceChrome";
+import { PersonalPortalChrome } from "@/components/customer-portal/PersonalPortalChrome";
 import { CustomerPersonalAddressesPage, CustomerPersonalEvidencePage, CustomerPersonalProfilePage } from "./CustomerPersonalSettingsPages";
 import { fetchPersonalOtpSession, logoutPersonalOtpSession } from "@/lib/customer-otp-session";
 import type { CustomerSelfServiceOrderSummary, CustomerSelfServiceSession } from "@/lib/customer-self-service";
@@ -25,15 +26,6 @@ export function usePersonalWorkspace() {
   return value;
 }
 const base = "/customer/personal";
-const navigation = [
-  { key: "home", to: base, end: true, icon: Home },
-  { key: "menus", to: `${base}/menus`, icon: UtensilsCrossed },
-  { key: "orders", to: `${base}/orders`, icon: ShoppingBag },
-  { key: "evidence", to: `${base}/payments`, icon: ReceiptText },
-  { key: "points", to: `${base}/points`, icon: Gift },
-  { key: "addresses", to: `${base}/addresses`, icon: MapPin },
-  { key: "profile", to: `${base}/profile`, icon: UserRound },
-];
 function date(value: string | null, language: string) {
   if (!value) return "";
   const parsed = new Date(value);
@@ -78,23 +70,95 @@ function PersonalOrderRow({ order }: { order: CustomerSelfServiceOrderSummary })
   </article>;
 }
 
-function PersonalHomePage() {
-  const { t } = useTranslation();
-  const { session, data } = usePersonalWorkspace();
+function upcomingOrder(session: CustomerSelfServiceSession, data: PersonalSnapshot | null) {
   const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Hong_Kong", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
-  const next = [...session.orders].filter(order => {
+  return [...session.orders].filter(order => {
     const state = data?.order_states?.[order.id]?.delivery_status;
     const delivery = order.deliveryDate ? new Date(order.deliveryDate) : null;
     const day = delivery && !Number.isNaN(delivery.getTime()) ? new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Hong_Kong", year: "numeric", month: "2-digit", day: "2-digit" }).format(delivery) : "";
     return day >= today && !state?.match(/取消|完成|已送達|cancel|complete|delivered/i);
   }).sort((a, b) => (a.deliveryDate || "").localeCompare(b.deliveryDate || ""))[0];
+}
+
+function PersonalHomePage() {
+  const { t, i18n } = useTranslation();
+  const { session, data } = usePersonalWorkspace();
+  const name = data?.profile.name?.trim();
+  const next = upcomingOrder(session, data);
+  const recent = [...session.orders].sort((a, b) => (b.orderDate || "").localeCompare(a.orderDate || "")).slice(0, 3);
+  const store = data?.stores[0];
+  const reorderTarget = next || recent[0];
   return <>
-    <section className="personal-home-intro"><h1>{t("personal.welcome")}</h1><p>{t("personal.intro")}</p><Button asChild><Link to={`${base}/menus`}>{t("personal.orderNow")}<ArrowUpRight size={16} /></Link></Button></section>
-    <section className="personal-next-order"><div className="personal-section-heading"><h2>{t("personal.nextOrder")}</h2><Link to={`${base}/orders`}>{t("personal.orders")}</Link></div>
-      {next ? <PersonalOrderRow order={next} /> : <p className="personal-empty">{t("personal.noNextOrder")}</p>}
+    <section className="personal-hero">
+      <div>
+        <h1>{name ? t("personal.helloName", { name }) : t("personal.hello")}</h1>
+        <p>{t("personal.helloIntro")}</p>
+        <Button asChild><Link to={`${base}/menus`}>{t("personal.orderNow")}<ArrowUpRight size={16} /></Link></Button>
+      </div>
+      <div className="personal-hero-art" aria-hidden="true">
+        <svg viewBox="0 0 320 220" role="img">
+          <rect width="320" height="220" rx="28" fill="#e7f3ea" />
+          <rect x="78" y="46" width="164" height="128" rx="36" fill="#f4e1c4" />
+          <ellipse cx="160" cy="118" rx="62" ry="36" fill="#f7f1e4" />
+          <circle cx="132" cy="108" r="16" fill="#d9783a" />
+          <circle cx="168" cy="96" r="14" fill="#de5b45" />
+          <circle cx="186" cy="122" r="12" fill="#6aa84f" />
+          <path d="M108 150c18 16 86 16 104 0" fill="none" stroke="#c4a574" strokeWidth="8" strokeLinecap="round" />
+        </svg>
+      </div>
     </section>
-    <section className="personal-home-bottom"><div><h2>{t("personal.balance")}</h2><p>{t("personal.pointsNotActive")}</p><Link to={`${base}/points`}>{t("personal.points")}</Link></div>
-      <div><h2>{t("personal.menus")}</h2><p>{t("personal.menusIntro")}</p><Link to={`${base}/menus`}>{t("personal.website")}<ArrowUpRight size={16} /></Link></div>
+    <section className="personal-shortcuts" aria-label={t("personal.home")}>
+      <article>
+        <span className="personal-shortcut-icon"><ClipboardList size={18} /></span>
+        <h2>{t("personal.nextStatus")}</h2>
+        {next ? <>
+          <strong className={data?.order_states?.[next.id]?.paid ? "is-paid" : "is-unpaid"}>{t(data?.order_states?.[next.id] ? (data.order_states[next.id].paid ? "personal.paid" : "personal.unpaid") : "personal.unknownStatus")}</strong>
+          <Link to={`${base}/${encodeURIComponent(next.id)}`}>{next.orderNumber}</Link>
+        </> : <p>{t("personal.noNextOrder")}</p>}
+      </article>
+      <article>
+        <span className="personal-shortcut-icon"><Gift size={18} /></span>
+        <h2>{t("personal.balance")}</h2>
+        <strong>{t("personal.pointsNotActive")}</strong>
+        <Link to={`${base}/points`}>{t("personal.points")}</Link>
+      </article>
+      <article>
+        <span className="personal-shortcut-icon"><ShoppingCart size={18} /></span>
+        <h2>{t("personal.reorder")}</h2>
+        <p>{reorderTarget ? t("personal.lastOrderOn", { date: date(reorderTarget.orderDate, i18n.language) || t("personal.unknownDate") }) : t("personal.noOrders")}</p>
+        {reorderTarget ? <PersonalReorderButton orderId={reorderTarget.id} /> : null}
+      </article>
+      <article>
+        <span className="personal-shortcut-icon"><Link2 size={18} /></span>
+        <h2>{t("personal.website")}</h2>
+        <p>{store ? store.name : t("personal.visitSiteHint")}</p>
+        {store ? <a href={shopifyStoreUrl(store.domain)}>{t("personal.viewMenu")}<ArrowUpRight size={14} /></a> : <Link to={`${base}/menus`}>{t("personal.menus")}</Link>}
+      </article>
+    </section>
+    <section className="personal-panel">
+      <div className="personal-section-heading"><h2>{t("personal.menus")}</h2><Link to={`${base}/menus`}>{t("personal.viewMore")}</Link></div>
+      {data?.stores.length ? <div className="personal-menu-scroller">{data.stores.slice(0, 4).map(item => <a key={item.id} className="personal-menu-card" href={shopifyStoreUrl(item.domain)}><span className="personal-menu-visual" aria-hidden="true">{item.name.slice(0, 1)}</span><strong>{item.name}</strong><span>{item.domain}</span><em>{t("personal.viewMenu")}<ArrowUpRight size={14} /></em></a>)}</div> : <p className="personal-empty">{t("personal.noStores")}</p>}
+    </section>
+    <section className="personal-panel">
+      <div className="personal-section-heading"><h2>{t("personal.recentOrders")}</h2><Link to={`${base}/orders`}>{t("personal.viewAll")}</Link></div>
+      {recent.length ? <div className="personal-table-wrap"><table className="personal-orders-table">
+        <thead><tr><th>{t("personal.orderNumber")}</th><th>{t("personal.orderDate")}</th><th>{t("personal.delivery")}</th><th>{t("personal.orderAmount")}</th><th>{t("personal.columnStatus")}</th><th>{t("personal.columnAction")}</th></tr></thead>
+        <tbody>{recent.map(order => {
+          const state = data?.order_states?.[order.id];
+          const paid = Boolean(state?.paid);
+          return <tr key={order.id}>
+            <td><Link to={`${base}/${encodeURIComponent(order.id)}`}>{order.orderNumber}</Link></td>
+            <td>{date(order.orderDate, i18n.language) || t("personal.unknownDate")}</td>
+            <td>{date(order.deliveryDate, i18n.language) || t("personal.unknownDate")}</td>
+            <td>{money(order.grandTotal, order.currency, i18n.language)}</td>
+            <td><span className={paid ? "is-paid" : "is-unpaid"}>{state ? t(paid ? "personal.paid" : "personal.unpaid") : t("personal.unknownStatus")}</span></td>
+            <td>{paid ? <PersonalReorderButton orderId={order.id} /> : <Link to={`${base}/payments`}>{t("personal.evidence")}</Link>}</td>
+          </tr>;
+        })}</tbody>
+      </table></div> : <p className="personal-empty">{t("personal.noOrders")}</p>}
+    </section>
+    <section className="personal-points-banner">
+      <div><Gift size={28} /><div><h2>{t("personal.balance")}</h2><p>{t("personal.pointsIntro")}</p><Link to={`${base}/points`}>{t("personal.pointsDetails")}</Link></div></div>
     </section>
   </>;
 }
@@ -156,11 +220,11 @@ export function CustomerPersonalWorkspace({ canSwitch, loggingOut, onLogout }: {
     catch { setOperationError(t("personal.operationFailed")); return false; }
     finally { setBusy(false); }
   }
-  const currentPage = navigation.find(item => item.to === location.pathname)?.key || (location.pathname.startsWith(`${base}/`) ? "orders" : "home");
-  const header = <CustomerWorkspaceHeader desktopTitle={t(`personal.${currentPage}`)} mode="personal" personal canSwitch={canSwitch} navItems={navigation.map(item => ({ ...item, label: t(`personal.${item.key}`) }))} loggingOut={loggingOut} onLogout={onLogout} />;
-  if (loading) return <main className="customer-portal personal-workspace">{header}<PageSkeleton label={t("personal.loading")} variant="dashboard" /></main>;
-  if (!session || sessionError) return <main className="customer-portal personal-workspace">{header}<CustomerPortalAccessState error={sessionError || t("personal.loadFailed")} busy={false} onRetry={() => setVersion(v => v + 1)} /></main>;
-  return <main className="customer-portal personal-workspace">{header}<div className="personal-content">
+  const accountName = data?.profile.name?.trim() || session?.maskedEmail || "";
+  const frame = (child: ReactNode) => <main className="customer-portal personal-workspace"><PersonalPortalChrome accountName={accountName} canSwitch={canSwitch} loggingOut={loggingOut} onLogout={onLogout}>{child}</PersonalPortalChrome></main>;
+  if (loading) return frame(<PageSkeleton label={t("personal.loading")} variant="dashboard" />);
+  if (!session || sessionError) return frame(<CustomerPortalAccessState error={sessionError || t("personal.loadFailed")} busy={false} onRetry={() => setVersion(v => v + 1)} />);
+  return frame(<div className="personal-content">
     {dataError && <div className="personal-data-error"><p role="alert">{dataError}</p><Button variant="outline" onClick={() => setVersion(v => v + 1)}>{t("personal.retry")}</Button></div>}
     {operationError && <p role="alert" className="portal-error">{operationError}</p>}{notice && <p role="status" className="portal-notice">{notice}</p>}
     <PersonalContext.Provider value={{ data, session, refresh, busy, run }}><Routes>
@@ -175,5 +239,5 @@ export function CustomerPersonalWorkspace({ canSwitch, loggingOut, onLogout }: {
       <Route path="personal/:orderId" element={<CustomerSelfServicePage routeBase={base} listPath={`${base}/orders`} loginPath="/customer?mode=personal" restore={fetchPersonalOtpSession} logout={logoutPersonalOtpSession} otpOnly embedded />} />
       <Route path="*" element={<Navigate to={base} replace />} />
     </Routes></PersonalContext.Provider>
-  </div></main>;
+  </div>);
 }

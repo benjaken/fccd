@@ -25,27 +25,27 @@ beforeEach(() => {
 });
 describe("personal customer pages", () => {
   it("shows the earliest upcoming order and honest reward availability", async () => {
-    mount(); await screen.findByRole("heading", { name: "下一張訂單" });
-    expect(screen.getByRole("link", { name: "FCC-1" })).toHaveAttribute("href", "/customer/personal/next");
-    expect(screen.queryByRole("link", { name: "FCC-2" })).not.toBeInTheDocument();
-    expect(screen.getByText("待付款")).toBeInTheDocument(); expect(screen.getByText("尚未開通")).toBeInTheDocument();
+    mount(); await screen.findByRole("heading", { name: "下一張單狀態" });
+    expect(screen.getAllByRole("link", { name: "FCC-1" })[0]).toHaveAttribute("href", "/customer/personal/next");
+    expect(screen.getAllByRole("link", { name: "FCC-2" }).length).toBeGreaterThan(0);
+    expect(screen.getAllByText("待付款").length).toBeGreaterThan(0); expect(screen.getByText("尚未開通")).toBeInTheDocument();
   });
   it("navigates with the existing drawer without showing team controls or phone matching", async () => {
-    mount(); await screen.findByRole("heading", { name: "下一張訂單" }); fireEvent.click(screen.getByRole("button", { name: "開啟選單" }));
-    for (const name of ["主頁", "最新餐牌", "訂單紀錄", "上載付款單據", "獎勵積分", "送貨地址", "個人資料"]) expect(screen.getAllByRole("link", { name }).length).toBeGreaterThan(0);
+    mount(); await screen.findByRole("heading", { name: "下一張單狀態" }); fireEvent.click(screen.getByRole("button", { name: "開啟選單" }));
+    for (const name of ["主頁", "最新餐牌", "即時訂購 / 加單", "訂單紀錄", "上載付款單據", "獎勵積分", "送貨地址", "個人資料"]) expect(screen.getAllByRole("link", { name }).length).toBeGreaterThan(0);
     expect(screen.queryByRole("link", { name: "團隊管理" })).not.toBeInTheDocument(); expect(screen.queryByRole("button", { name: "配對訂單" })).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole("link", { name: "個人資料" })); await screen.findByLabelText("姓名");
+    fireEvent.click(screen.getAllByRole("link", { name: "個人資料" })[0]); await screen.findByLabelText("姓名");
     expect(screen.queryByLabelText("密碼")).not.toBeInTheDocument();
   });
   it("opens configured brand menus on Shopify", async () => {
     mount("/customer/personal/menus"); await screen.findByText("Brand menu"); expect(screen.getByRole("link", { name: /Brand menu/ })).toHaveAttribute("href", "https://brand.myshopify.com");
-    expect(document.querySelector(".portal-workspace-desktop-title")).toHaveTextContent("最新餐牌");
+    expect(screen.getByRole("heading", { name: "最新餐牌" })).toBeInTheDocument();
   });
   it("prepares a cart before navigating and explains unavailable custom options", async () => {
-    mount(); fireEvent.click(await screen.findByRole("button", { name: "再訂一次" }));
+    mount(); fireEvent.click((await screen.findAllByRole("button", { name: "再訂一次" }))[0]);
     expect(await screen.findByRole("link", { name: "前往 Shopify 購物車" })).toHaveAttribute("href", "https://brand.myshopify.com/cart/123:2?storefront=true");
     fireEvent.click(screen.getByRole("button", { name: "取消" })); mocks.reorder.mockRejectedValue({ message: "reorder_options_required" });
-    fireEvent.click(screen.getByRole("button", { name: "再訂一次" })); expect(await screen.findByRole("alert")).toHaveTextContent("此訂單含套餐或特別選項");
+    fireEvent.click(screen.getAllByRole("button", { name: "再訂一次" })[0]); expect(await screen.findByRole("alert")).toHaveTextContent("此訂單含套餐或特別選項");
   });
   it("supports empty order history and direct route loading", async () => {
     mocks.session.mockResolvedValue({ token: "personal", orders: [], maskedEmail: "", maskedPhone: "" }); mount("/customer/personal/orders");
@@ -80,7 +80,7 @@ describe("personal customer pages", () => {
   });
   it("offers retry after a failed session and preserves navigation", async () => {
     mocks.session.mockRejectedValueOnce(new Error("offline")); mount(); await screen.findByRole("heading", { name: "未能載入客戶資料" });
-    fireEvent.click(screen.getByRole("button", { name: "重試" })); await screen.findByRole("heading", { name: "下一張訂單" });
+    fireEvent.click(screen.getByRole("button", { name: "重試" })); await screen.findByRole("heading", { name: "下一張單狀態" });
   });
   it("does not expose an organization balance or an enabled redemption action", async () => {
     mount("/customer/personal/points"); expect(await screen.findByRole("heading", { name: "個人積分服務尚未開通" })).toBeInTheDocument();

@@ -49,7 +49,7 @@ describe("shared OTP customer entry",()=>{
     mocks.getSession.mockResolvedValue({data:{session:{user:{id:"user"}}}});
     mocks.personal.mockResolvedValue({...personal,orders:[],needsPhone:true});
     mount("/customer?mode=personal");
-    expect(await screen.findByRole("heading",{name:"你的到會安排，一目了然。"})).toBeInTheDocument();
+    expect(await screen.findByRole("heading",{name:"你好！"})).toBeInTheDocument();
     expect(screen.queryByLabelText("訂單電話")).not.toBeInTheDocument();
     expect(screen.queryByRole("button",{name:"配對訂單"})).not.toBeInTheDocument();
     expect(mocks.savePhone).not.toHaveBeenCalled();
@@ -62,7 +62,7 @@ describe("shared OTP customer entry",()=>{
   it("hides switching for personal-only accounts even when the organization URL is requested",async()=>{
     mocks.getSession.mockResolvedValue({data:{session:{user:{id:"user"}}}});
     mocks.rpc.mockResolvedValue({data:{personal:true,organization:false},error:null});
-    mount("/customer");await screen.findByRole("heading",{name:"你的到會安排，一目了然。"});
+    mount("/customer");await screen.findByRole("heading",{name:"你好！"});
     expect(screen.queryByRole("navigation",{name:"客戶登入方式"})).not.toBeInTheDocument();
     expect(screen.getByRole("img",{name:"Food Channels Catering"})).toBeInTheDocument();
   });
@@ -73,8 +73,8 @@ describe("shared OTP customer entry",()=>{
     mount("/customer?mode=personal");await screen.findByRole("heading",{name:"未能載入客戶資料"});
     expect(screen.getByRole("img",{name:"Food Channels Catering"})).toBeInTheDocument();
     openMenu();
-    expect(screen.getByRole("button",{name:"登出"})).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button",{name:"重試"}));await screen.findByRole("heading",{name:"你的到會安排，一目了然。"});
+    expect(screen.getAllByRole("button",{name:"登出"}).length).toBeGreaterThan(0);
+    fireEvent.click(screen.getByRole("button",{name:"重試"}));await screen.findByRole("heading",{name:"你好！"});
   });
   it("keeps invitation links on the organization OTP flow",async()=>{
     mount("/customer?mode=personal&invite=invitation-token");await screen.findByLabelText("電郵");
@@ -88,7 +88,7 @@ describe("shared OTP customer entry",()=>{
     openMenu();
     expect(screen.getAllByRole("navigation",{name:"客戶登入方式"})).toHaveLength(1);
     expect(screen.getByRole("img",{name:"Food Channels Catering"})).toHaveAttribute("src","/assets/fc-catering-logo.svg");
-    fireEvent.click(screen.getByRole("link",{name:"個人客戶"}));await screen.findByRole("heading",{name:"你的到會安排，一目了然。"});
+    fireEvent.click(screen.getByRole("link",{name:"個人客戶"}));await screen.findByRole("heading",{name:"你好！"});
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
     openMenu();
     expect(screen.queryByRole("link",{name:"團隊管理"})).not.toBeInTheDocument();

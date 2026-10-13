@@ -1,8 +1,12 @@
 import i18n from "@/i18n";
 
 const zh = {
-  home: "主頁", menus: "最新餐牌", orders: "訂單紀錄", evidence: "上載付款單據", points: "獎勵積分", addresses: "送貨地址", profile: "個人資料",
-  welcome: "你的到會安排，一目了然。", intro: "查看下一次送貨、管理訂單，或到品牌官網選購。", nextOrder: "下一張訂單", noNextOrder: "暫時沒有即將送貨的訂單。",
+  home: "主頁", menus: "最新餐牌", instant: "即時訂購 / 加單", instantShort: "即時訂購", orders: "訂單紀錄", evidence: "上載付款單據", points: "獎勵積分", addresses: "送貨地址", profile: "個人資料",
+  hello: "你好！", helloName: "你好，{{name}}！", helloIntro: "新一天從美味開始，為你提供健康又美味的餐飲選擇。",
+  welcome: "你的到會安排，一目了然。", intro: "查看下一次送貨、管理訂單，或到品牌官網選購。", nextOrder: "下一張訂單", nextStatus: "下一張單狀態", noNextOrder: "暫時沒有即將送貨的訂單。",
+  lastOrderOn: "上次訂單：{{date}}", visitSiteHint: "查看更多餐牌及最新資訊", viewMenu: "查看餐牌", viewMore: "查看更多", recentOrders: "近期訂單", viewAll: "查看全部",
+  orderNumber: "訂單編號", orderDate: "訂單日期", orderAmount: "訂單金額", columnStatus: "狀態", columnAction: "操作", pointsYouHave: "你目前有", pointsDetails: "查看積分詳情",
+  alerts: "通知", noAlerts: "目前沒有新通知。", accountMenu: "帳戶",
   noOrders: "目前沒有已綁定的訂單。", orderHelp: "如找不到已下單的訂單，請聯絡客服核對帳戶歸屬。", details: "查看訂單", reorder: "再訂一次", orderNow: "立即訂購", website: "前往品牌官網",
   delivery: "送貨日期", total: "訂單總額", unknownDate: "日期待確認", paid: "已完成付款", unpaid: "待付款", unknownStatus: "查看訂單狀態",
   menusIntro: "選擇品牌，到 Shopify 官網查看最新餐牌及訂購。", noStores: "品牌餐牌入口暫未開放，請稍後再試。", shopifyCheckout: "商品價格、供應及結帳以品牌官網為準。",
@@ -17,8 +21,12 @@ const zh = {
   evidenceIntro: "選擇訂單，上載 FPS 付款截圖或入數紙，交由財務核實。", evidenceHint: "支援 JPG、PNG、PDF，每檔最多 10MB。提交不會立即將訂單標記為已付款。", chooseOrder: "選擇訂單", chooseOrderPlaceholder: "請選擇待付款訂單", amount: "付款金額（HKD）", amountPlaceholder: "例如：500.00", evidenceFile: "FPS／入數紙", submit: "提交付款單據", submitting: "提交中…", submitted: "付款單據已提交，等待財務核實。", invalidFile: "請選擇不超過 10MB 的 JPG、PNG 或 PDF，並核對付款金額。", evidenceHistory: "已提交的單據", noEvidence: "尚未提交付款單據。", noUnpaid: "目前沒有可提交付款單據的待付款訂單。", status: { pending: "待審核", accepted: "已核實", rejected: "需重新提交" },
 };
 const en = {
-  home: "Home", menus: "Latest menus", orders: "Order history", evidence: "Upload payment evidence", points: "Reward points", addresses: "Delivery addresses", profile: "Personal details",
-  welcome: "Your catering plans, at a glance.", intro: "Check your next delivery, manage orders or shop on a brand's website.", nextOrder: "Next order", noNextOrder: "No upcoming deliveries.", noOrders: "No orders are linked to this account yet.", orderHelp: "Contact customer service if a placed order is missing.", details: "View order", reorder: "Order again", orderNow: "Order now", website: "Visit brand website",
+  home: "Home", menus: "Latest menus", instant: "Order now / add items", instantShort: "Order now", orders: "Order history", evidence: "Upload payment evidence", points: "Reward points", addresses: "Delivery addresses", profile: "Personal details",
+  hello: "Hello!", helloName: "Hello, {{name}}!", helloIntro: "Start the day with a fresh menu, and choose a healthy meal that suits you.",
+  welcome: "Your catering plans, at a glance.", intro: "Check your next delivery, manage orders or shop on a brand's website.", nextOrder: "Next order", nextStatus: "Next order status", noNextOrder: "No upcoming deliveries.",
+  lastOrderOn: "Last order: {{date}}", visitSiteHint: "See more menus and the latest updates", viewMenu: "View menu", viewMore: "View more", recentOrders: "Recent orders", viewAll: "View all",
+  orderNumber: "Order number", orderDate: "Order date", orderAmount: "Order amount", columnStatus: "Status", columnAction: "Action", pointsYouHave: "You currently have", pointsDetails: "View points details",
+  alerts: "Notifications", noAlerts: "No new notifications.", accountMenu: "Account", noOrders: "No orders are linked to this account yet.", orderHelp: "Contact customer service if a placed order is missing.", details: "View order", reorder: "Order again", orderNow: "Order now", website: "Visit brand website",
   delivery: "Delivery date", total: "Order total", unknownDate: "Date to be confirmed", paid: "Payment complete", unpaid: "Awaiting payment", unknownStatus: "View order status", menusIntro: "Choose a brand to view the latest menu and order on Shopify.", noStores: "Brand menu links are not available yet. Please try again later.", shopifyCheckout: "Current prices, availability and checkout are provided by the brand website.",
   reorderIntro: "Original products and quantities will be added to a Shopify cart. Check current prices, availability and delivery details before checkout.", reorderReady: "Your products are ready for confirmation on Shopify.", confirmReorder: "Open Shopify cart", cancel: "Cancel", reorderUnavailable: "This order cannot be repeated automatically. Choose your items on the brand website.", reorderOptions: "This order includes packages or custom options. Confirm your selections on the brand website.",
   pointsUnavailable: "Personal rewards are not available yet", pointsIntro: "Once available, you can check your balance, activity and redeem rewards here.", balance: "Points balance", ledger: "Earned / used points", redeem: "Redeem points", pointsNotActive: "Not available yet", noLedger: "No personal points activity to display.",
