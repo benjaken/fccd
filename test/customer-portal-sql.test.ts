@@ -35,6 +35,7 @@ beforeEach(async()=>{
   await db.exec(readFileSync("supabase/migrations/20261012160000_customer_portal_order_templates.sql","utf8"));
   await db.exec(readFileSync("supabase/migrations/20261012180000_customer_portal_member_menu_scopes.sql","utf8"));
   await db.exec(readFileSync("supabase/migrations/20261013150000_customer_reward_hkd_per_point.sql","utf8"));
+  await db.exec(readFileSync("supabase/migrations/20261013160000_customer_portal_quotes.sql","utf8"));
   await db.exec(`select set_config('test.user_id','${ids.user}',false);
     insert into auth.users values('${ids.user}','admin@example.com',now()),('${ids.other}','member@example.com',now());
     insert into customer_organizations(id,name) values('${ids.org}','Org');
@@ -71,13 +72,19 @@ describe("customer portal SQL transactions",()=>{
     expect((await db.query<{balance:number}>(`select private.customer_reward_balance('${ids.org}') balance`)).rows[0].balance).toBe(10000);
     expect((await db.query<{n:number}>("select count(*)::int n from orders")).rows[0].n).toBe(0);
   });
-  it("requires completion and rewards a completed order once",async()=>{
+  it("requires a confirmed order and rewards a completed order once",async()=>{
     const {rows}=await order();const id=rows[0].id;
-    await expect(db.query("select customer_portal_award_completed_order($1)",[id])).rejects.toThrow("order_not_completed");
-    await db.query("update orders set delivery_status='已送達' where id=$1",[id]);
+    const created=await db.query<{document_type:string;legacy_id:string}>("select document_type,legacy_id from orders where id=$1",[id]);
+    expect(created.rows[0]).toEqual({document_type:"quote",legacy_id:`web-quote-${id}`});
+    await db.query("select customer_portal_award_completed_order($1)",[id]);
+    expect((await db.query<{n:number}>("select count(*)::int n from customer_reward_entries where kind='earn'")).rows[0].n).toBe(0);
+    await db.query("update orders set document_type='order', delivery_status='已送達' where id=$1",[id]);
     await db.query("select customer_portal_award_completed_order($1)",[id]);await db.query("select customer_portal_award_completed_order($1)",[id]);
     const q=await db.query<{points:number;n:number}>("select sum(points)::int points,count(*)::int n from customer_reward_entries where kind='earn'");
     expect(q.rows[0]).toEqual({points:4,n:1});
+    const formal="00000000-0000-0000-0000-000000000099";
+    await db.query("insert into orders(id,legacy_id,document_type,source_quote_id,channel_id) values($1,$2,'order',$3,$4)",[formal,`web-order-${formal}`,id,ids.brand]);
+    expect((await db.query<{order_id:string}>("select order_id from customer_portal_orders")).rows[0].order_id).toBe(formal);
   });
   it("does not remove the last admin and requires matching email for invitations",async()=>{
     await expect(db.query("select customer_portal_remove_member($1)",[ids.user])).rejects.toThrow("last_admin_required");

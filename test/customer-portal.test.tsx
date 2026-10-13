@@ -63,13 +63,13 @@ describe("organization portal",()=>{
     mocks.submit.mockResolvedValue({data:"order",error:null});mount();await screen.findByText("幾步就訂好。");
     fireEvent.click(screen.getByText("選擇餐單"));fireEvent.change(screen.getByLabelText("雞扒餐 數量"),{target:{value:"2"}});
     expect(screen.queryByLabelText("使用積分")).not.toBeInTheDocument();
-    fireEvent.click(screen.getByText("確認訂購"));
+    fireEvent.click(screen.getByText("提交預備訂單"));
     await waitFor(()=>expect(mocks.submit).toHaveBeenCalledWith("customer_portal_submit_order",expect.objectContaining({p_items:[{product_id:"p",quantity:2}],p_points:0,p_address_id:"a",p_request_id:expect.any(String)})));
-    await screen.findByText("訂單已建立。請按訂單應付金額完成付款。");
+    await screen.findByText("已提交預備訂單，等待 FCCD 確認。確認後才會成為正式訂單。");
   });
   it("requires a delivery address before checkout",async()=>{
     mount({...snapshot,addresses:[]});await screen.findByText("幾步就訂好。");fireEvent.click(screen.getByText("選擇餐單"));
-    fireEvent.change(screen.getByLabelText("雞扒餐 數量"),{target:{value:"1"}});expect(screen.getByText("確認訂購")).toBeDisabled();
+    fireEvent.change(screen.getByLabelText("雞扒餐 數量"),{target:{value:"1"}});expect(screen.getByText("提交預備訂單")).toBeDisabled();
   });
   it("reports access failure instead of exposing institution data",async()=>{
     render(<MemoryRouter><CustomerPortalPage load={async()=>{throw {message:"customer_membership_required",code:"42501"};}}/></MemoryRouter>);

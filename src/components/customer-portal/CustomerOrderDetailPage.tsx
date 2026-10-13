@@ -12,7 +12,7 @@ export function CustomerOrderDetailPage() {
   const repeatMenu = data.menus.find(menu => menu.brand === order.brand);
   return <section>
     <Link to="/customer/orders">{t("portal.backToOrders")}</Link>
-    <h1>{order.number}</h1><p>{order.brand} · {order.status || t("portal.confirmed")}</p>
+    <h1>{order.number}</h1><p>{order.brand} · {order.stage === "quote" ? t("portal.awaitingConfirmation") : (order.status || t("portal.confirmed"))}</p>
     <p>{new Date(order.delivery_at).toLocaleDateString("zh-HK", { timeZone: "Asia/Hong_Kong" })}</p>
     {order.lines.map((line,index) => <div className="portal-row" key={index}><span>{line.name} × {line.quantity}</span><strong>HK${(Number(line.unit_price)*line.quantity).toFixed(2)}</strong></div>)}
     <p>{t("portal.payable")}: HK${Number(order.outstanding).toFixed(2)} · {Number(order.outstanding)<=0 ? t("portal.settled") : t("portal.awaitingPayment")}</p>

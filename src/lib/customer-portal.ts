@@ -14,7 +14,7 @@ export type PortalSnapshot = {
   org_menus?: Array<{ id: string; name: string; brand: string; delivery_date: string; is_active: boolean }>;
   invitations: Array<{ id: string; email: string; expires_at: string; created_at: string }>;
   templates: Array<{ id: string; name: string; updated_at: string; items: Array<{ product_id: string; name: string; quantity: number }> }>;
-  orders: Array<{ id: string; number: string; delivery_at: string; status: string | null; total: number;
+  orders: Array<{ id: string; number: string; delivery_at: string; status: string | null; stage?: "quote" | "order"; total: number;
     outstanding: number; brand: string; points_used: number; cancel_status: string | null;
     lines: Array<{ product_id: string; name: string; quantity: number; unit_price: number }> }>;
   ledger: Array<{ id: string; points: number; kind: string; order_id: string | null; actor_id: string | null; expires_at: string | null; created_at: string }>;
