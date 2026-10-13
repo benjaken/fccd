@@ -3,9 +3,9 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { CustomerPersonalWorkspace } from "@/components/customer-portal/CustomerPersonalWorkspace";
 import type { PersonalSnapshot } from "@/lib/customer-personal";
-const mocks = vi.hoisted(() => ({ session: vi.fn(), snapshot: vi.fn(), profile: vi.fn(), address: vi.fn(), remove: vi.fn(), upload: vi.fn(), reorder: vi.fn(), logout: vi.fn() }));
+const mocks = vi.hoisted(() => ({ session: vi.fn(), snapshot: vi.fn(), profile: vi.fn(), address: vi.fn(), remove: vi.fn(), upload: vi.fn(), reorder: vi.fn(), logout: vi.fn(), points: vi.fn() }));
 vi.mock("@/lib/customer-otp-session", () => ({ fetchPersonalOtpSession: mocks.session, logoutPersonalOtpSession: mocks.logout }));
-vi.mock("@/lib/customer-personal", async importOriginal => ({ ...await importOriginal<typeof import("@/lib/customer-personal")>(), fetchPersonalSnapshot: mocks.snapshot, savePersonalProfile: mocks.profile, savePersonalAddress: mocks.address, deletePersonalAddress: mocks.remove, uploadPersonalEvidence: mocks.upload, fetchPersonalReorder: mocks.reorder }));
+vi.mock("@/lib/customer-personal", async importOriginal => ({ ...await importOriginal<typeof import("@/lib/customer-personal")>(), fetchPersonalSnapshot: mocks.snapshot, savePersonalProfile: mocks.profile, savePersonalAddress: mocks.address, deletePersonalAddress: mocks.remove, uploadPersonalEvidence: mocks.upload, fetchPersonalReorder: mocks.reorder, fetchPersonalPoints: mocks.points }));
 const orders = [
   { id: "late", orderNumber: "FCC-2", orderDate: "2098-01-01", deliveryDate: "2099-02-01", grandTotal: 300, currency: "HKD" },
   { id: "next", orderNumber: "FCC-1", orderDate: "2098-01-01", deliveryDate: "2099-01-01", grandTotal: 200, currency: "HKD" },
@@ -22,13 +22,14 @@ beforeEach(() => {
   mocks.snapshot.mockResolvedValue(structuredClone(data));
   for (const fn of [mocks.profile, mocks.address, mocks.remove, mocks.upload]) fn.mockResolvedValue(undefined);
   mocks.reorder.mockResolvedValue({ domain: "brand.myshopify.com", items: [{ variant: "123", quantity: 2 }] });
+  mocks.points.mockResolvedValue({ balance: 0, pending: 0, ledger: [] });
 });
 describe("personal customer pages", () => {
   it("shows the earliest upcoming order and honest reward availability", async () => {
     mount(); await screen.findByRole("heading", { name: "下一張單狀態" });
     expect(screen.getAllByRole("link", { name: "FCC-1" })[0]).toHaveAttribute("href", "/customer/personal/next");
     expect(screen.getAllByRole("link", { name: "FCC-2" }).length).toBeGreaterThan(0);
-    expect(screen.getAllByText("待付款").length).toBeGreaterThan(0); expect(screen.getByText("尚未開通")).toBeInTheDocument();
+    expect(screen.getAllByText("待付款").length).toBeGreaterThan(0); expect(await screen.findByText("0 分")).toBeInTheDocument();
   });
   it("navigates with the existing drawer without showing team controls or phone matching", async () => {
     mount(); await screen.findByRole("heading", { name: "下一張單狀態" }); fireEvent.click(screen.getByRole("button", { name: "開啟選單" }));
@@ -104,7 +105,8 @@ describe("personal customer pages", () => {
     fireEvent.click(screen.getByRole("button", { name: "重試" })); await screen.findByRole("heading", { name: "下一張單狀態" });
   });
   it("does not expose an organization balance or an enabled redemption action", async () => {
-    mount("/customer/personal/points"); expect(await screen.findByRole("heading", { name: "個人積分服務尚未開通" })).toBeInTheDocument();
+    mount("/customer/personal/points"); expect(await screen.findByRole("heading", { name: "獎勵積分" })).toBeInTheDocument();
+    expect(await screen.findByText("0 分")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "兌換積分" })).not.toBeInTheDocument();
   });
 });

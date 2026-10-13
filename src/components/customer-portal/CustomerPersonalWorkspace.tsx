@@ -11,7 +11,7 @@ import { CustomerPersonalAddressesPage, CustomerPersonalEvidencePage, CustomerPe
 import { PersonalLunchboxPage } from "@/components/customer-portal/PersonalLunchboxPage";
 import { fetchPersonalOtpSession, logoutPersonalOtpSession } from "@/lib/customer-otp-session";
 import type { CustomerSelfServiceOrderSummary, CustomerSelfServiceSession } from "@/lib/customer-self-service";
-import { fetchPersonalSnapshot, fetchPersonalReorder, shopifyCartUrl, shopifyStoreUrl, type PersonalSnapshot } from "@/lib/customer-personal";
+import { fetchPersonalPoints, fetchPersonalSnapshot, fetchPersonalReorder, shopifyCartUrl, shopifyStoreUrl, type PersonalPoints, type PersonalSnapshot } from "@/lib/customer-personal";
 import "@/lib/customer-personal-i18n";
 import "@/lib/customer-portal-i18n";
 import "./customer-personal.css";
@@ -89,6 +89,8 @@ function PersonalHomePage() {
   const recent = [...session.orders].sort((a, b) => (b.orderDate || "").localeCompare(a.orderDate || "")).slice(0, 3);
   const store = data?.stores[0];
   const reorderTarget = next || recent[0];
+  const [points, setPoints] = useState<PersonalPoints | null>(null);
+  useEffect(() => { void fetchPersonalPoints().then(setPoints).catch(() => setPoints({ balance: 0, pending: 0, ledger: [] })); }, []);
   return <>
     <section className="personal-hero">
       <div>
@@ -120,7 +122,7 @@ function PersonalHomePage() {
       <article>
         <span className="personal-shortcut-icon"><Gift size={18} /></span>
         <h2>{t("personal.balance")}</h2>
-        <strong>{t("personal.pointsNotActive")}</strong>
+        <strong>{points ? `${points.balance.toLocaleString()} ${t("personal.pointUnit")}` : t("personal.loading")}</strong>
         <Link to={`${base}/points`}>{t("personal.points")}</Link>
       </article>
       <article>
@@ -181,9 +183,14 @@ function PersonalOrdersPage() {
 
 function PersonalPointsPage() {
   const { t } = useTranslation();
-  return <section><h1>{t("personal.points")}</h1><div className="personal-empty"><Gift size={32} /><h2>{t("personal.pointsUnavailable")}</h2><p>{t("personal.pointsIntro")}</p></div>
-    <dl className="personal-points-facts"><div><dt>{t("personal.balance")}</dt><dd>{t("personal.pointsNotActive")}</dd></div><div><dt>{t("personal.redeem")}</dt><dd>{t("personal.pointsNotActive")}</dd></div></dl>
-    <h2>{t("personal.ledger")}</h2><p>{t("personal.noLedger")}</p>
+  const [points, setPoints] = useState<PersonalPoints | null>(null);
+  useEffect(() => { void fetchPersonalPoints().then(setPoints).catch(() => setPoints({ balance: 0, pending: 0, ledger: [] })); }, []);
+  return <section><h1>{t("personal.points")}</h1>
+    <p>{t("personal.pointsIntro")}</p>
+    <dl className="personal-points-facts"><div><dt>{t("personal.balance")}</dt><dd>{points ? `${points.balance.toLocaleString()} ${t("personal.pointUnit")}` : t("personal.loading")}</dd></div><div><dt>{t("personal.redeem")}</dt><dd>{t("personal.pointsIntro")}</dd></div></dl>
+    {points && points.pending > 0 ? <p>{t("personal.pendingPoints", { count: points.pending })}</p> : null}
+    <h2>{t("personal.ledger")}</h2>
+    {points?.ledger.length ? points.ledger.map(entry => <div className="portal-row" key={entry.id}><span>{t(`personal.ledgerKind.${entry.kind}`, { defaultValue: entry.kind })}</span><strong>{entry.points > 0 ? "+" : ""}{entry.points}</strong></div>) : <p>{t("personal.noLedger")}</p>}
   </section>;
 }
 

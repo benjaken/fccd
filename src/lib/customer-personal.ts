@@ -23,7 +23,12 @@ export const savePersonalProfile = (profile: Omit<PersonalProfile, "email">) => 
 export const savePersonalAddress = (address: Omit<PersonalAddress, "id">, id: string | null = null) =>
   rpc<string>("customer_personal_save_address", { p_id: id, p_address: address });
 export const deletePersonalAddress = (id: string) => rpc<void>("customer_personal_delete_address", { p_id: id });
-export const fetchPersonalReorder = (orderId: string) => rpc<ReorderCart>("customer_personal_reorder", { p_order_id: orderId });
+export type PersonalPoints = {
+  balance: number;
+  pending: number;
+  ledger: Array<{ id: string; points: number; kind: string; order_id: string | null; expires_at: string | null; created_at: string }>;
+};
+export const fetchPersonalPoints = () => rpc<PersonalPoints>("customer_personal_points");
 
 /** Only configured Shopify hostnames, never arbitrary URLs returned by a user. */
 export function shopifyStoreUrl(domain: string): string {
