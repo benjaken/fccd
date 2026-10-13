@@ -122,7 +122,10 @@ export function CustomerPersonalAddressesPage() {
   const [open, setOpen] = useState(false);
   if (!data) return null;
 
-  function close() { setDraft(emptyDraft); setEditing(null); setOpen(false); }
+  function close() {
+    if (busy) return;
+    setDraft(emptyDraft); setEditing(null); setOpen(false);
+  }
   function openCreate() { setEditing(null); setDraft(emptyDraft); setOpen(true); }
   function openEdit(row: PersonalAddress) {
     const parsed = splitAddressLabel(row.label);
