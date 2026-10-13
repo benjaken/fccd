@@ -5,8 +5,8 @@ import { ArrowUpRight, CalendarDays, ClipboardList, Gift, Link2, ShoppingCart } 
 import { Button } from "@/components/ui/button";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
 import { CustomerSelfServicePage } from "@/components/CustomerSelfServicePage";
-import { CustomerPortalAccessState } from "@/components/customer-portal/CustomerWorkspaceChrome";
-import { PersonalPortalChrome } from "@/components/customer-portal/PersonalPortalChrome";
+import { CustomerWorkspaceHeader, CustomerPortalAccessState } from "@/components/customer-portal/CustomerWorkspaceChrome";
+import { personalNavigation } from "@/components/customer-portal/PersonalPortalChrome";
 import { CustomerPersonalAddressesPage, CustomerPersonalEvidencePage, CustomerPersonalProfilePage } from "./CustomerPersonalSettingsPages";
 import { fetchPersonalOtpSession, logoutPersonalOtpSession } from "@/lib/customer-otp-session";
 import type { CustomerSelfServiceOrderSummary, CustomerSelfServiceSession } from "@/lib/customer-self-service";
@@ -220,8 +220,10 @@ export function CustomerPersonalWorkspace({ canSwitch, loggingOut, onLogout }: {
     catch { setOperationError(t("personal.operationFailed")); return false; }
     finally { setBusy(false); }
   }
-  const accountName = data?.profile.name?.trim() || session?.maskedEmail || "";
-  const frame = (child: ReactNode) => <main className="customer-portal personal-workspace"><PersonalPortalChrome accountName={accountName} canSwitch={canSwitch} loggingOut={loggingOut} onLogout={onLogout}>{child}</PersonalPortalChrome></main>;
+  const pageKey = personalNavigation.find(item => item.key !== "instant" && (item.end ? location.pathname === item.to : location.pathname === item.to || location.pathname.startsWith(`${item.to}/`)))?.key
+    || (location.pathname.startsWith(`${base}/`) ? "orders" : "home");
+  const header = <CustomerWorkspaceHeader desktopTitle={t(`personal.${pageKey}`)} mode="personal" personal canSwitch={canSwitch} navItems={personalNavigation.map(item => ({ ...item, label: t(`personal.${item.key}`) }))} loggingOut={loggingOut} onLogout={onLogout} />;
+  const frame = (child: ReactNode) => <main className="customer-portal personal-workspace">{header}{child}</main>;
   if (loading) return frame(<PageSkeleton label={t("personal.loading")} variant="dashboard" />);
   if (!session || sessionError) return frame(<CustomerPortalAccessState error={sessionError || t("personal.loadFailed")} busy={false} onRetry={() => setVersion(v => v + 1)} />);
   return frame(<div className="personal-content">

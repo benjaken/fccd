@@ -7,7 +7,6 @@ import { supabase } from "@/lib/supabase";
 import { CustomerPersonalWorkspace } from "@/components/customer-portal/CustomerPersonalWorkspace";
 import { CustomerOrganizationApplicationPage } from "@/components/customer-portal/CustomerOrganizationApplicationPage";
 import { CustomerWorkspaceHeader, CustomerPortalAccessState } from "@/components/customer-portal/CustomerWorkspaceChrome";
-import { PersonalPortalChrome } from "@/components/customer-portal/PersonalPortalChrome";
 import "@/lib/customer-portal-i18n";
 import "@/lib/customer-personal-i18n";
 import "./customer-portal.css";
@@ -77,9 +76,10 @@ export function CustomerEntryPage() {
       void supabase.auth.getSession().then(({ data }) => { setUserId(data.session?.user.id ?? null); });
     }} />
   </>;
-  if (!identities || identities.userId !== userId) return personal
-    ? <main className="customer-portal personal-workspace"><PersonalPortalChrome loggingOut={loggingOut} onLogout={() => void signOut()}><CustomerPortalAccessState error={identityError} busy={false} onRetry={()=>setIdentityVersion(value=>value+1)} /></PersonalPortalChrome></main>
-    : <main className="customer-portal"><CustomerWorkspaceHeader mode="organization" personal={false} loggingOut={loggingOut} onLogout={() => void signOut()} /><CustomerPortalAccessState error={identityError} busy={false} onRetry={()=>setIdentityVersion(value=>value+1)} /></main>;
+  if (!identities || identities.userId !== userId) return <main className={`customer-portal${personal ? " personal-workspace" : ""}`}>
+    <CustomerWorkspaceHeader desktopTitle={personal ? t("personal.home") : undefined} mode={personal ? "personal" : "organization"} personal={personal} loggingOut={loggingOut} onLogout={() => void signOut()} />
+    <CustomerPortalAccessState error={identityError} busy={false} onRetry={()=>setIdentityVersion(value=>value+1)} />
+  </main>;
   if (applying) {
     if (identities.organization) return <Navigate to="/customer" replace />;
     return <CustomerOrganizationApplicationPage loggingOut={loggingOut} onLogout={() => void signOut()} />;

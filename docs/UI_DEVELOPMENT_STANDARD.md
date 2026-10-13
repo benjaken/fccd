@@ -8,7 +8,7 @@ layout, theme, status colors, and preview sign-in.
 
 ## 0. Product name
 
-個人客戶 `/customer/personal` 使用主頁、最新餐牌、即時訂購、付款單據、訂單、積分、地址、個人資料的路由選單。主頁優先呈現下一張訂單、再訂購及品牌餐牌；資料頁不提供密碼，聯絡電話不觸發訂單配對。PC 使用深綠色左側導覽及右側內容；手機使用既有 Food Channels Logo 頂欄、底部五項導覽及抽屜選單。載入採用 `PageSkeleton`，未接通 Shopify 地址及個人積分顯示明確未開通狀態。Logo 沿用 `/assets/fc-catering-logo.svg`，不另做標誌。
+個人客戶 `/customer/personal` 使用主頁、最新餐牌、即時訂購、付款單據、訂單、積分、地址、個人資料的路由選單。主頁優先呈現下一張訂單、再訂購及品牌餐牌；資料頁不提供密碼，聯絡電話不觸發訂單配對。PC 使用最高 820px 的置中 shell，768px 起啟用，頂部為綠色標題列與置中頁名；手機維持既有 Logo 頁首與抽屜選單。載入採用 `PageSkeleton`，未接通 Shopify 地址及個人積分顯示明確未開通狀態。Logo 沿用 `/assets/fc-catering-logo.svg`，不另做標誌。
 
 客戶公開登入頁使用同一個 480px 內容區：Logo 與兩行標題並排於頂部，其下是個人／機構切換、登入說明及獨立白色表單卡片。兩種身份均使用電郵及 8 位 OTP；訊息顯示於表單內。舊電話／電郵查單只保留在相容入口，內部員工登入不變。
 
@@ -33,7 +33,7 @@ this file in the same change set.
 Main content must use the full available width inside the shell. Do **not**
 reintroduce a centered `max-width` (for example `1600px`) on page shells.
 
-User-approved exception (2026-10-13): the personal customer Portal uses a full-width app shell. Desktop (960px and above) has a dark green left navigation column and a light content area. Mobile keeps the existing Food Channels logo in the top bar, a five-item bottom navigation, and a drawer for the rest of the menu. This exception applies only to `.personal-workspace`; organization and operational pages retain the full-width rule.
+User-approved exception (2026-10-13): the personal customer Portal uses the original desktop shell from 768px: a centered column up to 820px, a 76px green title bar with the menu on the left and the current page title centered. Mobile keeps the existing logo header and drawer. This exception applies only to `.personal-workspace`; organization and operational pages retain the full-width rule.
 
 | Shell | Rule |
 |---|---|
