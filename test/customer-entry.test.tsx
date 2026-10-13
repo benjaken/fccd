@@ -2,12 +2,12 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { CustomerEntryPage } from "@/components/CustomerEntryPage";
-const mocks = vi.hoisted(() => ({ send: vi.fn(), verify: vi.fn(), personal: vi.fn(), logout: vi.fn(), getSession: vi.fn(), detail: vi.fn(), rpc: vi.fn(), listener: null as null | ((event:string,session:unknown)=>void) }));
+const mocks = vi.hoisted(() => ({ send: vi.fn(), verify: vi.fn(), personal: vi.fn(), logout: vi.fn(), savePhone: vi.fn(), getSession: vi.fn(), detail: vi.fn(), rpc: vi.fn(), listener: null as null | ((event:string,session:unknown)=>void) }));
 vi.mock("@/lib/supabase", () => ({ supabase: { auth: {
   getSession: mocks.getSession, signInWithOtp: mocks.send, verifyOtp: mocks.verify,
   onAuthStateChange: (listener:typeof mocks.listener) => {mocks.listener=listener;return {data:{subscription:{unsubscribe:vi.fn()}}};},
 }, rpc:mocks.rpc } }));
-vi.mock("@/lib/customer-otp-session", () => ({ fetchPersonalOtpSession:mocks.personal,logoutPersonalOtpSession:mocks.logout }));
+vi.mock("@/lib/customer-otp-session", () => ({ fetchPersonalOtpSession:mocks.personal,logoutPersonalOtpSession:mocks.logout,savePersonalPhone:mocks.savePhone }));
 vi.mock("@/lib/customer-personal", async importOriginal => ({ ...await importOriginal<typeof import("@/lib/customer-personal")>(), fetchPersonalSnapshot:async()=>({profile:{name:"",phone:"",email:"person@example.com",notify_email:true,notify_whatsapp:false},addresses:[],stores:[],evidence:[],order_states:{}}) }));
 vi.mock("@/lib/customer-self-service", async importOriginal => ({ ...await importOriginal<typeof import("@/lib/customer-self-service")>(), fetchCustomerSelfServiceOrder:mocks.detail }));
 const personal={token:"personal-session",expiresAt:"2099-01-01T00:00:00Z",maskedPhone:"",maskedEmail:"p***@example.com",orders:[{id:"order-1",orderNumber:"B-1247",orderDate:"2026-10-12T00:00:00Z",deliveryDate:null,grandTotal:100,currency:"HKD"}]};
@@ -44,6 +44,15 @@ describe("shared OTP customer entry",()=>{
     mocks.getSession.mockResolvedValue({data:{session:{user:{id:"user"}}}});mocks.detail.mockImplementation(()=>new Promise(()=>{}));
     mount("/customer/personal/order-1");await waitFor(()=>expect(mocks.detail).toHaveBeenCalledWith("personal-session","order-1"));
     expect(mocks.personal).toHaveBeenCalled();expect(screen.getByTestId("location")).toHaveTextContent("/customer/personal/order-1");
+  });
+  it("opens the new personal workspace without asking to match a phone again",async()=>{
+    mocks.getSession.mockResolvedValue({data:{session:{user:{id:"user"}}}});
+    mocks.personal.mockResolvedValue({...personal,orders:[],needsPhone:true});
+    mount("/customer?mode=personal");
+    expect(await screen.findByRole("heading",{name:"你的到會安排，一目了然。"})).toBeInTheDocument();
+    expect(screen.queryByLabelText("訂單電話")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button",{name:"配對訂單"})).not.toBeInTheDocument();
+    expect(mocks.savePhone).not.toHaveBeenCalled();
   });
   it("allows new personal users to sign in without an existing order",async()=>{
     mocks.getSession.mockResolvedValue({data:{session:{user:{id:"user"}}}});mocks.personal.mockResolvedValue({...personal,orders:[]});

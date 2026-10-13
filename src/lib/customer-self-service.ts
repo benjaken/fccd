@@ -16,6 +16,7 @@ export type CustomerSelfServiceSession = {
   expiresAt: string;
   maskedPhone: string;
   maskedEmail: string;
+  needsPhone?: boolean;
   orders: CustomerSelfServiceOrderSummary[];
 };
 
