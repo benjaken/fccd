@@ -34,8 +34,10 @@ describe("personal customer pages", () => {
     mount(); await screen.findByRole("heading", { name: "下一張單狀態" }); fireEvent.click(screen.getByRole("button", { name: "開啟選單" }));
     for (const name of ["主頁", "最新餐牌", "即時訂購 / 加單", "訂單紀錄", "上載付款單據", "獎勵積分", "送貨地址", "個人資料"]) expect(screen.getAllByRole("link", { name }).length).toBeGreaterThan(0);
     expect(screen.queryByRole("link", { name: "團隊管理" })).not.toBeInTheDocument(); expect(screen.queryByRole("button", { name: "配對訂單" })).not.toBeInTheDocument();
-    fireEvent.click(screen.getAllByRole("link", { name: "個人資料" })[0]); await screen.findByLabelText("姓名");
+    fireEvent.click(screen.getAllByRole("link", { name: "個人資料" })[0]); await screen.findByRole("heading", { name: "個人資料" });
+    expect(screen.getByRole("button", { name: "編輯" })).toBeInTheDocument();
     expect(screen.queryByLabelText("密碼")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("姓名")).not.toBeInTheDocument();
   });
   it("opens configured brand menus on Shopify", async () => {
     mount("/customer/personal/menus"); await screen.findByText("Brand menu"); expect(screen.getByRole("link", { name: /Brand menu/ })).toHaveAttribute("href", "https://brand.myshopify.com");
@@ -52,17 +54,35 @@ describe("personal customer pages", () => {
     expect(await screen.findByText("目前沒有已綁定的訂單。")).toBeInTheDocument(); expect(screen.getByRole("link", { name: "立即訂購" })).toBeInTheDocument();
   });
   it("saves contact details and independent notification preferences without a password", async () => {
-    mount("/customer/personal/profile"); fireEvent.change(await screen.findByLabelText("姓名"), { target: { value: "New name" } });
-    fireEvent.click(screen.getByLabelText("接收 WhatsApp 通知")); fireEvent.click(screen.getByRole("button", { name: "儲存" }));
+    mount("/customer/personal/profile"); fireEvent.click(await screen.findByRole("button", { name: "編輯" }));
+    expect(screen.getByLabelText("登入電郵")).toHaveAttribute("readonly");
+    fireEvent.change(screen.getByLabelText("姓名"), { target: { value: "New name" } });
+    fireEvent.click(screen.getByLabelText("接收 WhatsApp 通知")); fireEvent.click(screen.getByRole("button", { name: "確定" }));
     await waitFor(() => expect(mocks.profile).toHaveBeenCalledWith(expect.objectContaining({ name: "New name", notify_whatsapp: true, notify_email: true })));
-    expect(await screen.findByRole("status")).toHaveTextContent("已儲存。"); expect(screen.getByLabelText("登入電郵")).toHaveAttribute("readonly");
+    expect(await screen.findByRole("status")).toHaveTextContent("已儲存。"); expect(screen.queryByLabelText("姓名")).not.toBeInTheDocument();
   });
-  it("adds and edits addresses, and makes Shopify sync status explicit", async () => {
+  it("adds and edits addresses from a side panel, and makes Shopify sync status explicit", async () => {
     mount("/customer/personal/addresses"); await screen.findByText("尚未儲存送貨地址。"); expect(screen.getByText(/Shopify 地址同步尚未接通/)).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "新增送貨地址" })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "新增地址" }));
-    for (const [label, value] of [["地址名稱", "Home"], ["收貨人", "Person"], ["聯絡電話", "91234567"], ["送貨地址", "Hong Kong"]]) fireEvent.change(screen.getByLabelText(label), { target: { value } });
-    fireEvent.click(screen.getByLabelText("預設地址")); fireEvent.click(screen.getByRole("button", { name: "儲存" }));
-    await waitFor(() => expect(mocks.address).toHaveBeenCalledWith({ label: "Home", recipient: "Person", phone: "91234567", address: "Hong Kong", is_default: true }, null));
+    expect(screen.getByRole("heading", { name: "新增送貨地址" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("radio", { name: "公司" }));
+    for (const [label, value] of [[/聯絡人姓名/, "Person"], [/聯絡電話/, "91234567"], [/公司名稱/, "Home"], [/詳細送貨地址/, "Hong Kong"]]) fireEvent.change(screen.getByLabelText(label), { target: { value } });
+    fireEvent.click(screen.getByLabelText("預設地址")); fireEvent.click(screen.getByRole("button", { name: "儲存地址" }));
+    await waitFor(() => expect(mocks.address).toHaveBeenCalledWith({ label: "[company] Home", recipient: "Person", phone: "91234567", address: "Hong Kong", is_default: true }, null));
+    expect(screen.queryByRole("heading", { name: "新增送貨地址" })).not.toBeInTheDocument();
+  });
+  it("opens a saved address in the edit side panel", async () => {
+    mocks.snapshot.mockResolvedValue({ ...structuredClone(data), addresses: [{ id: "a1", label: "[company] 興裕", recipient: "陳小明", phone: "91234567", address: "觀塘", is_default: true }] });
+    mount("/customer/personal/addresses");
+    expect(await screen.findByText("陳小明")).toBeInTheDocument();
+    expect(screen.getByText("公司")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "編輯" }));
+    expect(screen.getByRole("heading", { name: "編輯送貨地址" })).toBeInTheDocument();
+    expect(screen.getByLabelText(/公司名稱/)).toHaveValue("興裕");
+    fireEvent.change(screen.getByLabelText(/公司名稱/), { target: { value: "興裕企業" } });
+    fireEvent.click(screen.getByRole("button", { name: "儲存地址" }));
+    await waitFor(() => expect(mocks.address).toHaveBeenCalledWith(expect.objectContaining({ label: "[company] 興裕企業", is_default: true }), "a1"));
   });
   it("validates evidence files and submits only an unpaid linked order", async () => {
     mount("/customer/personal/payments"); await screen.findByLabelText("選擇訂單"); expect(screen.queryByRole("option", { name: "FCC-2" })).not.toBeInTheDocument();
@@ -75,7 +95,8 @@ describe("personal customer pages", () => {
   });
   it("keeps entered profile data when saving fails", async () => {
     mocks.profile.mockRejectedValue(new Error("network")); mount("/customer/personal/profile");
-    fireEvent.change(await screen.findByLabelText("姓名"), { target: { value: "Keep me" } }); fireEvent.click(screen.getByRole("button", { name: "儲存" }));
+    fireEvent.click(await screen.findByRole("button", { name: "編輯" }));
+    fireEvent.change(screen.getByLabelText("姓名"), { target: { value: "Keep me" } }); fireEvent.click(screen.getByRole("button", { name: "確定" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("操作未完成"); expect(screen.getByLabelText("姓名")).toHaveValue("Keep me");
   });
   it("offers retry after a failed session and preserves navigation", async () => {

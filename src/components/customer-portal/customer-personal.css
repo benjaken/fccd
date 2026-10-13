@@ -83,7 +83,50 @@
 .personal-empty{padding:20px 0;color:var(--personal-muted);line-height:1.7}
 .personal-store-list{margin:20px 0}.personal-store-link{display:flex;align-items:center;justify-content:space-between;gap:24px;padding:20px 0;border-bottom:1px solid var(--border);text-decoration:none}
 .personal-store-link>div{display:grid;gap:8px}.personal-store-link strong{font-size:22px;color:var(--personal-ink)}.personal-store-link span{display:flex;align-items:center;gap:8px;color:var(--personal-muted)}
-.personal-address-row{padding:24px 0;border-bottom:1px solid var(--border);display:flex;align-items:start;justify-content:space-between;gap:24px;flex-wrap:wrap}
+.personal-addresses{display:grid;gap:14px}
+.personal-address-hero{display:grid;gap:12px;padding:22px;border-radius:18px;background:linear-gradient(105deg,#e7f6ee 0%,#f4fbf7 55%,#e5f3ea 100%)}
+.personal-address-brand{margin:0 0 8px;color:#1f7a45;font-size:12px;font-weight:750;letter-spacing:.14em}
+.personal-addresses .personal-address-hero h1{margin:0 0 8px;color:#163028;font-size:clamp(32px,4vw,44px);line-height:1.15;letter-spacing:-.03em}
+.personal-addresses .personal-address-hero p,.personal-address-note{margin:0;max-width:42ch;color:#3e5c50;line-height:1.6}
+.personal-address-art{display:block;width:min(100%,280px);height:auto;justify-self:end}
+.personal-address-tip{display:flex;gap:12px;align-items:flex-start;padding:14px 16px;border-radius:14px;background:#fff;box-shadow:0 8px 24px rgba(18,56,47,.05)}
+.personal-address-tip-icon{display:grid;place-items:center;flex:0 0 auto;width:36px;height:36px;border-radius:10px;background:#e8f5ee;color:#1f7a45}
+.personal-address-tip strong{color:#163028}
+.personal-address-tip p{margin:4px 0 0;color:#5d6f68;line-height:1.5}
+.personal-addresses .personal-integration-note{margin:0}
+button.ui-button.personal-address-create{justify-self:start;min-height:44px;border-radius:10px;background:#1f7a45;color:#fff}
+button.ui-button.personal-address-create:hover{background:#18663a}
+.personal-address-list{display:grid;gap:12px}
+.personal-address-card{display:grid;gap:12px;padding:16px;border:1px solid #e3ebe6;border-radius:16px;background:#fff;box-shadow:0 8px 20px rgba(18,56,47,.04)}
+.personal-address-card header{display:flex;gap:12px;align-items:flex-start}
+.personal-address-icon{display:grid;place-items:center;flex:0 0 auto;width:40px;height:40px;border-radius:12px;background:#e8f5ee;color:#1f7a45}
+.personal-address-title{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.personal-address-title strong{color:#163028;font-size:16px}
+.personal-address-title span{color:#5d6f68}
+.personal-address-title em{padding:2px 8px;border-radius:999px;background:#e7f6ec;color:#1d7a45;font-size:12px;font-style:normal;font-weight:700}
+.personal-address-card header p{margin:4px 0 0;color:#163028;font-weight:650}
+.personal-address-line{display:flex;gap:8px;align-items:flex-start;margin:0;color:#3e5c50;line-height:1.5;white-space:pre-wrap}
+.personal-address-line svg{flex:0 0 auto;margin-top:2px;color:#1f7a45}
+.personal-address-actions{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px}
+.personal-address-default-set,.personal-address-make-default{display:inline-flex;align-items:center;gap:6px;min-height:40px;padding:0 12px;border-radius:10px;color:#1f7a45;font-weight:700}
+.personal-address-default-set{background:#f3f6f4}
+button.ui-button.personal-address-make-default{border-color:#b7e0c8;color:#1f7a45}
+.personal-address-form{display:grid;gap:14px}
+.personal-address-form label,.personal-address-form legend{color:#163028;font-size:14px;font-weight:700}
+.personal-address-form label{display:grid;gap:6px}
+.personal-address-form input,.personal-address-form textarea{width:100%;min-height:44px;padding:10px 12px;border:1px solid #d5e2db;border-radius:10px;background:#fff;color:#163028;font:inherit;caret-color:#1f7a45}
+.personal-address-form textarea{min-height:96px;resize:vertical}
+.personal-address-form input:focus-visible,.personal-address-form textarea:focus-visible,.personal-address-kinds button:focus-visible{outline:2px solid #1f7a45;outline-offset:2px}
+.personal-address-form fieldset{margin:0;padding:0;border:0}
+.personal-address-kinds{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:8px}
+.personal-address-kinds button{min-height:40px;border:1px solid #d5e2db;border-radius:10px;background:#fff;color:#163028;font:inherit;font-weight:650;cursor:pointer}
+.personal-address-kinds button.is-selected{border-color:#1f7a45;background:#1f7a45;color:#fff}
+.personal-address-default{grid-template-columns:20px 1fr;align-items:center;min-height:44px}
+.personal-address-form input[type=checkbox]{width:20px;height:20px;min-height:20px;padding:0;accent-color:#1f7a45}
+.personal-address-panel .side-panel-footer{justify-content:space-between}
+button.ui-button.personal-address-save{background:#1f7a45;color:#fff}
+button.ui-button.personal-address-save:hover{background:#18663a}
+.personal-address-panel ::selection{background:#cfe8d8;color:#163028}
 .personal-default{margin-left:12px;font-size:13px}
 .personal-workspace .personal-integration-note,.personal-data-error{background:#fff;padding:16px;border-radius:12px;line-height:1.7}
 .personal-data-error{display:flex;align-items:center;justify-content:space-between;gap:16px}
@@ -101,7 +144,7 @@
   .personal-app::before{content:"";grid-column:1;grid-row:1 / -1;background:var(--personal-sidebar)}
   .personal-topbar{display:contents}
   .personal-menu-trigger{display:none}
-  .personal-brand{grid-column:1;grid-row:1;z-index:1;align-self:center;margin:16px 16px 8px;padding:8px 10px;border-radius:14px;background:#fff}
+  .personal-brand{grid-column:1;grid-row:1;z-index:1;align-self:center;margin:16px 16px 8px;padding:0;background:transparent}
   .personal-top-actions{grid-column:2;grid-row:1;z-index:1;align-self:center;justify-self:end;margin:12px 28px 0 0}
   .personal-side-nav{display:flex;flex-direction:column;grid-column:1;grid-row:2;z-index:1;gap:4px;padding:8px 12px 16px;background:transparent;color:#e7f2ec}
   .personal-side-nav .personal-nav-link.is-active{background:#1f7a45;color:#fff}
@@ -114,8 +157,49 @@
   .personal-hero{grid-template-columns:minmax(0,1.1fr) minmax(220px,.9fr);align-items:center;padding:28px 28px 28px 32px}
   .personal-menu-scroller{grid-auto-flow:unset;grid-template-columns:repeat(4,minmax(0,1fr));overflow:visible}
 }
+.personal-profile{display:grid;gap:20px}
+.personal-profile-banner{display:grid;gap:16px;padding:24px;border-radius:20px;background:#e7f3ea}
+.personal-profile-banner h1{margin:0 0 8px;color:var(--personal-ink);font-size:clamp(32px,4vw,44px);line-height:1.15;letter-spacing:-.03em;text-wrap:balance}
+.personal-profile-banner p{margin:0;max-width:38rem;color:#2c4a40;font-size:16px;line-height:1.6}
+.personal-profile-body{display:grid;gap:28px;padding:4px 4px 8px}
+.personal-profile-identity{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.personal-profile-avatar{display:grid;place-items:center;width:72px;height:72px;border-radius:50%;background:#e5f3ea;color:var(--personal-green);font-size:28px;font-weight:750}
+.personal-profile-identity h2{margin:0 0 6px;color:var(--personal-ink);font-size:28px;letter-spacing:-.03em}
+.personal-profile-identity p{display:flex;align-items:center;gap:8px;margin:2px 0;color:var(--personal-muted)}
+.personal-profile-identity>button{margin-left:auto}
+.personal-profile-section h2{display:flex;align-items:center;gap:8px;margin:0 0 6px;color:var(--personal-ink);font-size:18px}
+.personal-profile-section h2 svg{color:var(--personal-green)}
+.personal-profile-section>p{margin:0 0 16px;max-width:62ch;color:var(--personal-muted);line-height:1.6}
+.personal-profile-facts{display:grid;gap:16px 24px;margin:0}
+.personal-profile-facts div{display:grid;gap:4px}
+.personal-profile-facts dt{color:var(--personal-muted);font-size:13px;font-weight:650}
+.personal-profile-facts dd{margin:0;font-size:16px;font-weight:650;overflow-wrap:anywhere}
+.personal-profile-prefs{display:grid;gap:0;margin:0;padding:0;list-style:none}
+.personal-profile-prefs li{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:48px;border-bottom:1px solid #e6eeea}
+.personal-pref-on,.personal-pref-off{font-size:13px;font-weight:750}
+.personal-pref-on{color:#1d7a45}
+.personal-pref-off{color:#3e524b}
+.personal-profile-form{display:grid;gap:16px}
+.personal-profile-form label,.personal-profile-panel .personal-notifications label{display:grid;gap:6px;color:#163028;font-weight:650}
+.personal-profile-panel .personal-notifications label{grid-template-columns:20px 1fr;align-items:center;min-height:44px}
+.personal-profile-form input:not([type=checkbox]){min-height:44px;padding:0 12px;border:1px solid #d5e3db;border-radius:10px;background:#fff;color:#163028;font:inherit;caret-color:#1f7a45}
+.personal-profile-form input[readonly]{background:#f3f6f4}
+.personal-profile-form input:focus-visible,.personal-profile-panel button:focus-visible{outline:2px solid #1f7a45;outline-offset:2px}
+.personal-profile-panel input[type=checkbox]{width:20px;height:20px;accent-color:#1f7a45}
+.personal-profile-panel .personal-notifications{margin:4px 0 0;padding:0;border:0}
+.personal-profile-panel .personal-notifications legend{margin-bottom:8px;color:#163028;font-weight:750}
+.personal-profile-panel .personal-notifications p{margin:8px 0 0;color:#3e524b;line-height:1.5}
+.personal-profile-panel ::selection{background:#cfe8d8;color:#163028}
+@media(min-width:800px){
+  .personal-profile-banner{grid-template-columns:minmax(0,1.2fr) minmax(180px,.7fr);align-items:center;padding:28px 32px}
+  .personal-profile-facts{grid-template-columns:1fr 1fr}
+  .personal-address-hero{grid-template-columns:minmax(0,1.2fr) minmax(180px,.8fr);align-items:center;padding:28px 32px}
+}
 @media(max-width:640px){
+  .personal-profile-identity>button{margin-left:0}
   .personal-account-name{display:none}
-  .personal-order-row,.personal-address-row,.personal-data-error{align-items:flex-start;flex-direction:column}
+  .personal-order-row,.personal-data-error{align-items:flex-start;flex-direction:column}
+  .personal-address-hero{padding:18px}
+  .personal-address-art{justify-self:start;width:min(100%,220px)}
   .personal-points-facts{flex-wrap:wrap;gap:24px}
 }
