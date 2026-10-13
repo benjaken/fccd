@@ -188,6 +188,7 @@ function PersonalPointsPage() {
   return <section><h1>{t("personal.points")}</h1>
     <p>{t("personal.pointsIntro")}</p>
     <dl className="personal-points-facts"><div><dt>{t("personal.balance")}</dt><dd>{points ? `${points.balance.toLocaleString()} ${t("personal.pointUnit")}` : t("personal.loading")}</dd></div><div><dt>{t("personal.redeem")}</dt><dd>{t("personal.pointsIntro")}</dd></div></dl>
+    {points && Number(points.incoming) > 0 ? <p>{t("personal.incomingPoints", { count: points.incoming, date: points.incoming_at ? new Intl.DateTimeFormat("zh-HK", { timeZone: "Asia/Hong_Kong", month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" }).format(new Date(points.incoming_at)) : "" })}</p> : null}
     {points && points.pending > 0 ? <p>{t("personal.pendingPoints", { count: points.pending })}</p> : null}
     <h2>{t("personal.ledger")}</h2>
     {points?.ledger.length ? points.ledger.map(entry => <div className="portal-row" key={entry.id}><span>{t(`personal.ledgerKind.${entry.kind}`, { defaultValue: entry.kind })}</span><strong>{entry.points > 0 ? "+" : ""}{entry.points}</strong></div>) : <p>{t("personal.noLedger")}</p>}

@@ -56,7 +56,7 @@ describe("organization portal",()=>{
     await waitFor(()=>expect(mocks.signin).toHaveBeenCalledWith({email:"member@example.com",options:{shouldCreateUser:true}}));
   });
   it("shows assigned menus, the earn rule and no pricing tier",async()=>{
-    mount();await screen.findByText("幾步就訂好。");expect(screen.getByText("每消費 HK$25 餐費得 1 分，訂單完成後入帳。運費不計分，積分不可抵付金額。")).toBeInTheDocument();
+    mount();await screen.findByText("幾步就訂好。");expect(screen.getByText("每消費 HK$25 餐費得 1 分，訂單完成後 1 個工作日內入帳。運費不計分。積分只可兌換實物或現金券，不可抵付金額。")).toBeInTheDocument();
     expect(screen.queryByText(/ABC|tariff|Normal/)).not.toBeInTheDocument();expect(screen.queryByText("團隊管理")).not.toBeInTheDocument();
   });
   it("submits product IDs and quantities without redeeming points",async()=>{

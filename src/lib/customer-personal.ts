@@ -26,7 +26,9 @@ export const deletePersonalAddress = (id: string) => rpc<void>("customer_persona
 export type PersonalPoints = {
   balance: number;
   pending: number;
-  ledger: Array<{ id: string; points: number; kind: string; order_id: string | null; expires_at: string | null; created_at: string }>;
+  incoming?: number;
+  incoming_at?: string | null;
+  ledger: Array<{ id: string; points: number; kind: string; order_id: string | null; expires_at: string | null; available_at?: string | null; created_at: string }>;
 };
 export const fetchPersonalPoints = () => rpc<PersonalPoints>("customer_personal_points");
 
