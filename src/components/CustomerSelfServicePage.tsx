@@ -49,6 +49,7 @@ import {
   type CustomerSelfServiceOrderSummary,
   type CustomerSelfServiceSession,
 } from "@/lib/customer-self-service";
+import { savePersonalPhone } from "@/lib/customer-otp-session";
 import { printPdf } from "@/lib/print-pdf";
 import {
   FOOD_CHANNEL_CATERING_LOGO_PATH,
@@ -280,16 +281,37 @@ function PortalHeader({ session, onLogout, detail }: { session: CustomerSelfServ
   );
 }
 
-function OrdersView({ session, onSelect, onLogout }: { session: CustomerSelfServiceSession; onSelect: (order: CustomerSelfServiceOrderSummary) => void; onLogout: () => void }) {
+function OrdersView({ session, onSelect, onLogout, onSavePhone }: { session: CustomerSelfServiceSession; onSelect: (order: CustomerSelfServiceOrderSummary) => void; onLogout: () => void; onSavePhone?: (phone: string) => Promise<void> }) {
+  const { t } = useTranslation();
+  const [phone, setPhone] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  async function submitPhone(event: FormEvent) {
+    event.preventDefault();
+    if (!onSavePhone || busy) return;
+    setBusy(true); setError("");
+    try { await onSavePhone(phone); }
+    catch (saveError) {
+      const message = saveError instanceof Error ? saveError.message : String((saveError as { message?: unknown } | null)?.message || "");
+      setError(t(message.toLowerCase().includes("invalid_phone") ? "portal.contactPhoneInvalid" : "portal.operationFailed"));
+    } finally { setBusy(false); }
+  }
   return (
     <main className="self-service-shell">
       <PortalHeader session={session} onLogout={onLogout} />
       <section className="self-service-list-intro">
         <span>你的訂單</span>
         <h1>訂單列表</h1>
-        <p>共找到 {session.orders.length} 張訂單，點擊訂單可查看內容及送貨安排。</p>
+        {session.needsPhone && onSavePhone ? <p>{t("portal.contactPhoneHint")}</p> : <p>共找到 {session.orders.length} 張訂單，點擊訂單可查看內容及送貨安排。</p>}
       </section>
-      <section className="self-service-order-list" aria-label={`訂單列表，共 ${session.orders.length} 張`}>
+      {session.needsPhone && onSavePhone ? <form className="self-service-login-card" onSubmit={submitPhone}>
+        <label htmlFor="personal-order-phone"><span><Phone />{t("portal.contactPhone")}</span>
+          <input id="personal-order-phone" inputMode="tel" autoComplete="tel" value={phone} onChange={(event) => setPhone(event.target.value)} placeholder={t("customerSelfService.phonePlaceholder")} autoFocus />
+        </label>
+        {error ? <p className="self-service-error" role="alert">{error}</p> : null}
+        <Button type="submit" disabled={busy || !phone.trim()}>{busy ? t("portal.loading") : t("portal.contactPhoneSave")}</Button>
+      </form> : null}
+      {session.needsPhone && !session.orders.length ? null : <section className="self-service-order-list" aria-label={`訂單列表，共 ${session.orders.length} 張`}>
         <div className="self-service-order-list-head"><span>訂單／日期</span><span>送貨日期</span><span>總額</span><span /></div>
         {session.orders.map((order) => (
           <button type="button" key={order.id} onClick={() => onSelect(order)}>
@@ -299,7 +321,7 @@ function OrdersView({ session, onSelect, onLogout }: { session: CustomerSelfServ
             <ChevronRight />
           </button>
         ))}
-      </section>
+      </section>}
     </main>
   );
 }
@@ -710,5 +732,5 @@ export function CustomerSelfServicePage({
   if (detailError) return <main className="self-service-loading"><p role="alert">{detailError}</p><Button onClick={() => { setDetailError(""); navigate(routeBase); }}>返回訂單列表</Button></main>;
   if (loading) return <main className="self-service-loading"><LoaderCircle className="self-service-spin" /><span>正在載入訂單…</span></main>;
   if (detail) return <DetailView session={session} order={detail} onBack={() => navigate(routeBase)} onLogout={() => void leave()} printReceipt={printReceipt} loadAddonOptions={demoMode ? loadDemoAddonOptions : loadAddonOptions} paymentNotice={paymentNotice} />;
-  return <OrdersView session={session} onSelect={(order) => void selectOrder(order)} onLogout={() => void leave()} />;
+  return <OrdersView session={session} onSelect={(order) => void selectOrder(order)} onLogout={() => void leave()} onSavePhone={otpOnly ? async (phone) => { setSession(await savePersonalPhone(phone)); } : undefined} />;
 }
