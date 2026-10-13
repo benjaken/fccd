@@ -10,7 +10,7 @@ export function CustomerMenusPage() {
   const portal = useOutletContext<CustomerPortalController>();
   const { menuId } = useParams();
   const {
-    t, menu, quantities, setQuantities, points, setPoints, addressId, setAddressId,
+    t, menu, quantities, setQuantities, addressId, setAddressId,
     busy, requestId, chooseMenu, applyTemplate, cart, checkout, setPage, refresh, run,
   } = portal;
   const data = portal.data;
@@ -100,10 +100,6 @@ export function CustomerMenusPage() {
             {!data.addresses.length && (
               <Button variant="outline" onClick={() => setPage("addresses")}>{t("portal.addAddress")}</Button>
             )}
-            <label>
-              {t("portal.usePoints")}
-              <input type="number" min={0} step={10} value={points} onChange={e => { requestId.current = null; setPoints(Number(e.target.value)); }} />
-            </label>
             <p>{t("portal.pointsHint")}</p>
             <p>{t("portal.shipping")}: {money(Math.round(Number(menu.shipping_fee) * 100))}</p>
             <strong>{t("portal.payable")}: {money(cart?.payableCents || 0)}</strong>

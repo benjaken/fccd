@@ -29,6 +29,7 @@ beforeEach(async () => {
   await db.exec(`alter table orders add column source_system text;alter table orders add column delivery_time text;`);
   await db.exec(readFileSync("supabase/migrations/20261012090000_customer_organization_portal.sql", "utf8"));
   await db.exec(readFileSync("supabase/migrations/20261012190000_customer_portal_reward_rules_ops.sql", "utf8"));
+  await db.exec(readFileSync("supabase/migrations/20261013150000_customer_reward_hkd_per_point.sql", "utf8"));
   await db.exec(`select set_config('test.user_id','${ids.user}',false);
     select set_config('test.has_access','1',false);
     insert into auth.users values('${ids.user}','admin@example.com',now());`);
@@ -38,11 +39,11 @@ afterEach(async () => { await db.close(); });
 
 describe("customer portal reward rules ops SQL", () => {
   it("lists seed rule and creates a new version", async () => {
-    const listed = await db.query<{ d: Array<{ points_per_hkd: number; is_active: boolean }> }>(
+    const listed = await db.query<{ d: Array<{ hkd_per_point: number; is_active: boolean }> }>(
       "select customer_portal_ops_list_reward_rules() d",
     );
     expect(listed.rows[0].d.length).toBeGreaterThanOrEqual(1);
-    expect(listed.rows[0].d.some(row => row.is_active && Number(row.points_per_hkd) === 100)).toBe(true);
+    expect(listed.rows[0].d.some(row => row.is_active && Number(row.hkd_per_point) === 25)).toBe(true);
 
     const at = "2099-01-01T00:00:00+08:00";
     const id = (await db.query<{ id: string }>(
@@ -51,12 +52,12 @@ describe("customer portal reward rules ops SQL", () => {
     )).rows[0].id;
     expect(id).toBeTruthy();
 
-    const again = await db.query<{ d: Array<{ id: string; points_per_hkd: number; is_active: boolean }> }>(
+    const again = await db.query<{ d: Array<{ id: string; hkd_per_point: number; is_active: boolean }> }>(
       "select customer_portal_ops_list_reward_rules() d",
     );
     const created = again.rows[0].d.find(row => row.id === id);
     expect(created).toEqual(expect.objectContaining({
-      points_per_hkd: 50,
+      hkd_per_point: 50,
       is_active: false,
     }));
   });
@@ -85,16 +86,16 @@ describe("customer portal reward rules ops SQL", () => {
     await db.query("select customer_portal_ops_create_reward_rule(0,$1::timestamptz)", [future]);
 
     const activeNow = await db.query<{ rate: number }>(`
-      select points_per_hkd::float rate from customer_reward_rules
+      select hkd_per_point::float rate from customer_reward_rules
       where effective_at <= now() order by effective_at desc limit 1`);
-    expect(activeNow.rows[0].rate).toBe(100);
+    expect(activeNow.rows[0].rate).toBe(25);
 
     await db.exec(`update customer_reward_rules set effective_at = now() - interval '2 days'
-      where points_per_hkd = 100;
+      where hkd_per_point = 25;
       update customer_reward_rules set effective_at = now() - interval '1 minute'
-      where points_per_hkd = 0`);
+      where hkd_per_point = 0`);
     const activeLater = await db.query<{ rate: number }>(`
-      select points_per_hkd::float rate from customer_reward_rules
+      select hkd_per_point::float rate from customer_reward_rules
       where effective_at <= now() order by effective_at desc limit 1`);
     expect(activeLater.rows[0].rate).toBe(0);
   });

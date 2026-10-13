@@ -57,7 +57,7 @@ function useCustomerPortalController(load: typeof fetchPortal, onMembershipChang
     navigate(next === "home" ? "/customer" : `/customer/${next}`);
     setError("");
   }
-  const [quantities, setQuantities] = useState<Record<string,number>>({}); const [points, setPoints] = useState(0);
+  const [quantities, setQuantities] = useState<Record<string,number>>({});
   const [addressId, setAddressId] = useState(""); const [busy, setBusy] = useState(false);
   const [error, setError] = useState(""); const [notice, setNotice] = useState("");
   const [inviteLink, setInviteLink] = useState(""); const [inviteEmail, setInviteEmail] = useState("");
@@ -96,7 +96,7 @@ function useCustomerPortalController(load: typeof fetchPortal, onMembershipChang
     try {await action();if(success)setNotice(success);} catch (error) {setError(t(portalErrorKey(error,failureKey)));} finally {setBusy(false);}
   }
   function chooseMenu(m: PortalMenu, previous?: PortalSnapshot["orders"][number]) {
-    navigate(`/customer/menus/${encodeURIComponent(m.id)}`);setPoints(0);requestId.current=null;setError("");
+    navigate(`/customer/menus/${encodeURIComponent(m.id)}`);requestId.current=null;setError("");
     setQuantities(previous ? Object.fromEntries(previous.lines.filter(l=>m.items.some(i=>i.product_id===l.product_id)).map(l=>[l.product_id,l.quantity])) : {});
     if(previous)setNotice(t("portal.reorderNotice"));
   }
@@ -111,19 +111,19 @@ function useCustomerPortalController(load: typeof fetchPortal, onMembershipChang
       })
       .filter((row): row is readonly [string, number] => row !== null && row[1] > 0));
     navigate(`/customer/menus/${encodeURIComponent(selected.id)}`);
-    setPoints(0); requestId.current = null; setError(""); setQuantities(next);
+    requestId.current = null; setError(""); setQuantities(next);
     setNotice(t(template.items.some(item => !selected.items.some(row => row.product_id === item.product_id))
       ? "portal.templatePartialNotice" : "portal.templateApplied"));
   }
-  const cart=menu&&data?portalCart(menu,quantities,points,data.balance):null;
+  const cart=menu?portalCart(menu,quantities):null;
   async function checkout() {
     if(!menu||!data||!cart?.valid||!addressId)return;
     requestId.current??=crypto.randomUUID();
-    await run(async()=>{await submitPortalOrder(requestId.current!,menu.id,addressId,cart.items,points);
-      requestId.current=null;setQuantities({});setPoints(0);setPage("orders");await refresh();},t("portal.orderCreated"));
+    await run(async()=>{await submitPortalOrder(requestId.current!,menu.id,addressId,cart.items);
+      requestId.current=null;setQuantities({});setPage("orders");await refresh();},t("portal.orderCreated"));
   }
 
-  return {t,params,setParams,loggedIn,authLoading,email,setEmail,data,page,menu,quantities,setQuantities,points,setPoints,addressId,setAddressId,busy,error,setError,notice,inviteLink,inviteEmail,setInviteEmail,receiptOrder,setReceiptOrder,receiptFile,setReceiptFile,receiptAmount,setReceiptAmount,evidence,setEvidence,financialDocument,setFinancialDocument,address,setAddress,requestId,inviteToken,refresh,run,chooseMenu,applyTemplate,cart,checkout,setPage,setData,setInviteLink};
+  return {t,params,setParams,loggedIn,authLoading,email,setEmail,data,page,menu,quantities,setQuantities,addressId,setAddressId,busy,error,setError,notice,inviteLink,inviteEmail,setInviteEmail,receiptOrder,setReceiptOrder,receiptFile,setReceiptFile,receiptAmount,setReceiptAmount,evidence,setEvidence,financialDocument,setFinancialDocument,address,setAddress,requestId,inviteToken,refresh,run,chooseMenu,applyTemplate,cart,checkout,setPage,setData,setInviteLink};
 }
 
 export type CustomerPortalController = ReturnType<typeof useCustomerPortalController>;

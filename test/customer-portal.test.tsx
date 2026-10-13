@@ -55,15 +55,16 @@ describe("organization portal",()=>{
     fireEvent.click(screen.getByRole("button",{name:"發送驗證碼"}));
     await waitFor(()=>expect(mocks.signin).toHaveBeenCalledWith({email:"member@example.com",options:{shouldCreateUser:true}}));
   });
-  it("shows assigned menus, shared redemption value and no pricing tier",async()=>{
-    mount();await screen.findByText("幾步就訂好。");expect(screen.getByText("可抵 HK$20.00 餐費")).toBeInTheDocument();
+  it("shows assigned menus, the earn rule and no pricing tier",async()=>{
+    mount();await screen.findByText("幾步就訂好。");expect(screen.getByText("每消費 HK$25 餐費得 1 分，訂單完成後入帳。運費不計分，積分不可抵付金額。")).toBeInTheDocument();
     expect(screen.queryByText(/ABC|tariff|Normal/)).not.toBeInTheDocument();expect(screen.queryByText("團隊管理")).not.toBeInTheDocument();
   });
-  it("submits only product IDs, quantities and points using an idempotency key",async()=>{
+  it("submits product IDs and quantities without redeeming points",async()=>{
     mocks.submit.mockResolvedValue({data:"order",error:null});mount();await screen.findByText("幾步就訂好。");
     fireEvent.click(screen.getByText("選擇餐單"));fireEvent.change(screen.getByLabelText("雞扒餐 數量"),{target:{value:"2"}});
-    fireEvent.change(screen.getByLabelText("使用積分"),{target:{value:"10000"}});fireEvent.click(screen.getByText("確認訂購"));
-    await waitFor(()=>expect(mocks.submit).toHaveBeenCalledWith("customer_portal_submit_order",expect.objectContaining({p_items:[{product_id:"p",quantity:2}],p_points:10000,p_address_id:"a",p_request_id:expect.any(String)})));
+    expect(screen.queryByLabelText("使用積分")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByText("確認訂購"));
+    await waitFor(()=>expect(mocks.submit).toHaveBeenCalledWith("customer_portal_submit_order",expect.objectContaining({p_items:[{product_id:"p",quantity:2}],p_points:0,p_address_id:"a",p_request_id:expect.any(String)})));
     await screen.findByText("訂單已建立。請按訂單應付金額完成付款。");
   });
   it("requires a delivery address before checkout",async()=>{
@@ -90,10 +91,9 @@ describe("organization portal",()=>{
     expect(screen.getByRole("status")).toHaveTextContent("正在取得你的機構資料");
     expect(screen.queryByText(/尚未取得機構訂購權限/)).not.toBeInTheDocument();
   });
-  it("rejects fractional quantities, overstock and invalid redemptions",()=>{
-    expect(portalCart(menu,{p:2},10000,20000)).toMatchObject({valid:true,foodCents:9600,payableCents:13600});
-    for(const points of [15,-10,20010,100000])expect(portalCart(menu,{p:1},points,20000).valid).toBe(false);
-    for(const quantity of [0,1.5,21])expect(portalCart(menu,{p:quantity},0,0).valid).toBe(false);
+  it("rejects fractional quantities and overstock without reducing the amount due",()=>{
+    expect(portalCart(menu,{p:2})).toMatchObject({valid:true,foodCents:9600,payableCents:14600});
+    for(const quantity of [0,1.5,21])expect(portalCart(menu,{p:quantity}).valid).toBe(false);
   });
   it("navigates between separate URLs and supports browser back",async()=>{
     mount();await screen.findByText("幾步就訂好。");

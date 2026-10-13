@@ -34,6 +34,7 @@ beforeEach(async()=>{
   await db.exec(readFileSync("supabase/migrations/20261012150000_customer_portal_team_handover.sql","utf8"));
   await db.exec(readFileSync("supabase/migrations/20261012160000_customer_portal_order_templates.sql","utf8"));
   await db.exec(readFileSync("supabase/migrations/20261012180000_customer_portal_member_menu_scopes.sql","utf8"));
+  await db.exec(readFileSync("supabase/migrations/20261013150000_customer_reward_hkd_per_point.sql","utf8"));
   await db.exec(`select set_config('test.user_id','${ids.user}',false);
     insert into auth.users values('${ids.user}','admin@example.com',now()),('${ids.other}','member@example.com',now());
     insert into customer_organizations(id,name) values('${ids.org}','Org');
@@ -63,17 +64,12 @@ describe("customer portal SQL transactions",()=>{
     await db.exec("update customer_menu_items set available_quantity=0");await expect(order()).rejects.toThrow("cart_unavailable");
     await db.exec("update customer_menu_assignments set cutoff_at=now()-interval '1 minute'");await expect(order()).rejects.toThrow("menu_unavailable");
   });
-  it("deducts shared points atomically and prevents a second overspend",async()=>{
+  it("rejects using points to reduce the amount due",async()=>{
     await db.exec(`insert into customer_reward_entries(organization_id,points,remaining_points,kind,event_key,expires_at)
       values('${ids.org}',10000,10000,'earn','seed',now()+interval '1 year')`);
-    await order(ids.request,10000);expect((await db.query<{balance:number}>(`select private.customer_reward_balance('${ids.org}') balance`)).rows[0].balance).toBe(0);
-    await expect(order("00000000-0000-0000-0000-000000000009",10)).rejects.toThrow("insufficient_points");
-    expect((await db.query<{n:number}>("select count(*)::int n from orders")).rows[0].n).toBe(1);
-  });
-  it("expires unused lots and excludes them from redemption",async()=>{
-    await db.exec(`insert into customer_reward_entries(organization_id,points,remaining_points,kind,event_key,expires_at)
-      values('${ids.org}',10000,10000,'earn','old',now()-interval '1 day')`);
-    await expect(order(ids.request,10)).rejects.toThrow("insufficient_points");
+    await expect(order(ids.request,10000)).rejects.toThrow("points_not_redeemable");
+    expect((await db.query<{balance:number}>(`select private.customer_reward_balance('${ids.org}') balance`)).rows[0].balance).toBe(10000);
+    expect((await db.query<{n:number}>("select count(*)::int n from orders")).rows[0].n).toBe(0);
   });
   it("requires completion and rewards a completed order once",async()=>{
     const {rows}=await order();const id=rows[0].id;
@@ -81,7 +77,7 @@ describe("customer portal SQL transactions",()=>{
     await db.query("update orders set delivery_status='已送達' where id=$1",[id]);
     await db.query("select customer_portal_award_completed_order($1)",[id]);await db.query("select customer_portal_award_completed_order($1)",[id]);
     const q=await db.query<{points:number;n:number}>("select sum(points)::int points,count(*)::int n from customer_reward_entries where kind='earn'");
-    expect(q.rows[0]).toEqual({points:10000,n:1});
+    expect(q.rows[0]).toEqual({points:4,n:1});
   });
   it("does not remove the last admin and requires matching email for invitations",async()=>{
     await expect(db.query("select customer_portal_remove_member($1)",[ids.user])).rejects.toThrow("last_admin_required");

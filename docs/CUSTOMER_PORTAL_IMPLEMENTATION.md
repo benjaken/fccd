@@ -1,5 +1,7 @@
 # Customer organization portal — initial implementation
 
+> 2026-10-13 起，需求基線改為 `docs/CUSTOMER_PORTAL_PRD_v2.0.md`。積分不可抵餐費；賺分預設每 HK$25 餐費 1 分，後台可發新版本。下文關於密碼登入、每 HK$1 賺 100 分、結帳抵扣的描述只反映當時實作，不再作為方向。
+
 ## Personal customer workspace (2026-10-13)
 
 `CustomerPersonalWorkspace` replaces the personal list-only entry with home, brand menus, order history, payment evidence, rewards availability, addresses and profile routes under `/customer/personal`. Existing `/customer/personal/:orderId` links remain valid. Details retain the original receipt and PayPal add-on workflow, use the shared header and return to `/customer/personal/orders`. No password or additional phone matching is offered. Contact phone edits never change trusted order ownership.

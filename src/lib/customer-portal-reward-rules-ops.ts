@@ -2,7 +2,7 @@ import { supabase } from "@/lib/supabase";
 
 export type RewardRuleVersion = {
   id: string;
-  points_per_hkd: number;
+  hkd_per_point: number;
   effective_at: string;
   created_at: string;
   created_by: string | null;
@@ -18,8 +18,8 @@ async function rpc<T>(name: string, args?: Record<string, unknown>): Promise<T> 
 export const listRewardRules = () =>
   rpc<RewardRuleVersion[]>("customer_portal_ops_list_reward_rules");
 
-export const createRewardRule = (pointsPerHkd: number, effectiveAt: string) =>
+export const createRewardRule = (hkdPerPoint: number, effectiveAt: string) =>
   rpc<string>("customer_portal_ops_create_reward_rule", {
-    p_points_per_hkd: pointsPerHkd,
+    p_hkd_per_point: hkdPerPoint,
     p_effective_at: effectiveAt,
   });

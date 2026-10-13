@@ -47,8 +47,8 @@ export const updatePortalTemplate = (id: string, name: string, items: Array<{ pr
 export const archivePortalTemplate = (id: string) =>
   rpc<void>("customer_portal_archive_template", { p_id: id });
 export const submitPortalOrder = (requestId: string, menuId: string, addressId: string,
-  items: Array<{ product_id: string; quantity: number }>, points: number) =>
-  rpc<string>("customer_portal_submit_order", { p_request_id: requestId, p_menu_id: menuId, p_address_id: addressId, p_items: items, p_points: points });
+  items: Array<{ product_id: string; quantity: number }>) =>
+  rpc<string>("customer_portal_submit_order", { p_request_id: requestId, p_menu_id: menuId, p_address_id: addressId, p_items: items, p_points: 0 });
 export const requestPortalCancellation = (orderId: string, reason: string) =>
   rpc<void>("customer_portal_request_cancel", { p_order_id: orderId, p_reason: reason });
 export type PaymentEvidence = {id:string; order_id:string; amount:number; status:string; review_reason:string|null; created_at:string};
@@ -68,12 +68,11 @@ export async function uploadPortalEvidence(orderId:string, file:File, amount:num
 }
 
 // Money calculations in the UI use cents. Final authority is always the RPC.
-export function portalCart(menu: PortalMenu, quantities: Record<string, number>, points: number, balance: number) {
+export function portalCart(menu: PortalMenu, quantities: Record<string, number>) {
   const items = menu.items.filter(i => (quantities[i.product_id] || 0) > 0);
   const cents = items.reduce((sum, i) => sum + Math.round(Number(i.unit_price) * 100) * quantities[i.product_id], 0);
   const valid = items.length > 0 && items.every(i => Number.isSafeInteger(quantities[i.product_id]) &&
-    quantities[i.product_id] <= i.available_quantity) && Number.isSafeInteger(points) && points >= 0 && points % 10 === 0 &&
-    points <= Math.max(0, balance) && points / 10 <= cents;
-  return { valid, foodCents: cents, payableCents: cents + Math.round(Number(menu.shipping_fee) * 100) - points / 10,
+    quantities[i.product_id] <= i.available_quantity);
+  return { valid, foodCents: cents, payableCents: cents + Math.round(Number(menu.shipping_fee) * 100),
     items: items.map(i => ({ product_id: i.product_id, quantity: quantities[i.product_id] })) };
 }

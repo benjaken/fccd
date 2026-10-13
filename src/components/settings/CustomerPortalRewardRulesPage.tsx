@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Plus } from "lucide-react";
 import { useCurrentPageAccess } from "@/auth/use-page-access";
 import { Button } from "@/components/ui/button";
+import { ListTable } from "@/components/ui/list-table";
 import { SidePanel } from "@/components/ui/side-panel";
 import "@/components/customer-portal.css";
 import {
@@ -45,7 +46,7 @@ export function CustomerPortalRewardRulesPage() {
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
   const [panelOpen, setPanelOpen] = useState(false);
-  const [pointsPerHkd, setPointsPerHkd] = useState("100");
+  const [hkdPerPoint, setHkdPerPoint] = useState("25");
   const [effectiveAt, setEffectiveAt] = useState(() => toLocalInput(new Date()));
 
   const load = useCallback(async () => {
@@ -81,7 +82,7 @@ export function CustomerPortalRewardRulesPage() {
 
   async function submit(event: FormEvent) {
     event.preventDefault();
-    const rate = Number(pointsPerHkd);
+    const rate = Number(hkdPerPoint);
     const iso = fromLocalInput(effectiveAt);
     if (!iso || !Number.isFinite(rate) || rate < 0 || rate > 100000) {
       setError(t("portalRewardRules.invalidRewardRule"));
@@ -105,7 +106,7 @@ export function CustomerPortalRewardRulesPage() {
         {canEdit ? (
           <Button
             onClick={() => {
-              setPointsPerHkd(active ? String(active.points_per_hkd) : "100");
+              setHkdPerPoint(active ? String(active.hkd_per_point) : "25");
               setEffectiveAt(toLocalInput(new Date()));
               setPanelOpen(true);
             }}
@@ -121,47 +122,40 @@ export function CustomerPortalRewardRulesPage() {
       {active ? (
         <p role="status">
           {t("portalRewardRules.currentActive", {
-            rate: Number(active.points_per_hkd),
+            rate: Number(active.hkd_per_point),
             at: formatWhen(active.effective_at),
           })}
         </p>
       ) : null}
-      <p>{t("portalRewardRules.redemptionFixed")}</p>
-
-      {loading ? (
-        <p role="status">{t("portalRewardRules.loading")}</p>
-      ) : rules.length === 0 ? (
-        <p>{t("portalRewardRules.noRules")}</p>
-      ) : (
-        <div className="portal-ops-table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>{t("portalRewardRules.pointsPerHkd")}</th>
-                <th>{t("portalRewardRules.effectiveAt")}</th>
-                <th>{t("portalRewardRules.createdAt")}</th>
-                <th>{t("portalRewardRules.status")}</th>
+        <ListTable
+          className="panel"
+          loading={loading}
+          loadingLabel={t("portalRewardRules.loading")}
+          skeletonColumns={4}
+          onRefresh={load}
+          header={<tr>
+              <th>{t("portalRewardRules.hkdPerPoint")}</th>
+              <th>{t("portalRewardRules.effectiveAt")}</th>
+              <th>{t("portalRewardRules.createdAt")}</th>
+              <th>{t("portalRewardRules.status")}</th>
+            </tr>}
+        >
+            {!rules.length ? <tr><td colSpan={4}>{error ? <Button variant="outline" onClick={() => void load()}>{t("portal.retry")}</Button> : t("portalRewardRules.noRules")}</td></tr> : null}
+            {rules.map(rule => (
+              <tr key={rule.id}>
+                <td>{Number(rule.hkd_per_point)}</td>
+                <td>{formatWhen(rule.effective_at)}</td>
+                <td>{formatWhen(rule.created_at)}</td>
+                <td>
+                  {rule.is_active
+                    ? t("portalRewardRules.active")
+                    : new Date(rule.effective_at).getTime() > Date.now()
+                      ? t("portalRewardRules.scheduled")
+                      : t("portalRewardRules.superseded")}
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              {rules.map(rule => (
-                <tr key={rule.id}>
-                  <td>{Number(rule.points_per_hkd)}</td>
-                  <td>{formatWhen(rule.effective_at)}</td>
-                  <td>{formatWhen(rule.created_at)}</td>
-                  <td>
-                    {rule.is_active
-                      ? t("portalRewardRules.active")
-                      : new Date(rule.effective_at).getTime() > Date.now()
-                        ? t("portalRewardRules.scheduled")
-                        : t("portalRewardRules.superseded")}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+            ))}
+        </ListTable>
 
       <SidePanel
         open={panelOpen}
@@ -171,17 +165,17 @@ export function CustomerPortalRewardRulesPage() {
       >
         <form className="portal-ops-form" onSubmit={submit}>
           <label>
-            {t("portalRewardRules.pointsPerHkd")}
+            {t("portalRewardRules.hkdPerPoint")}
             <input
               type="number"
               min={0}
               max={100000}
               step="0.0001"
-              value={pointsPerHkd}
-              onChange={event => setPointsPerHkd(event.target.value)}
+              value={hkdPerPoint}
+              onChange={event => setHkdPerPoint(event.target.value)}
               required
             />
-            <small>{t("portalRewardRules.pointsPerHkdHint")}</small>
+            <small>{t("portalRewardRules.hkdPerPointHint")}</small>
           </label>
           <label>
             {t("portalRewardRules.effectiveAt")}
