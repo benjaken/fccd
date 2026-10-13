@@ -144,6 +144,8 @@ Active 導航（側欄、工作區 soft link、migration tab）必須是**淡綠
 
 同一工具列內尺寸必須一致。
 
+個人客戶工作區沿用 `CustomerWorkspaceHeader` 的手機選單及全寬 shell。`CustomerPersonalWorkspace` 提供共用的訂單摘要列和再訂購確認控制；各頁以同一 controller 取得已驗證的個人 session、資料及提交狀態。個人主頁先呈現下一張訂單，餐牌及新訂購連至配置的 Shopify 店舖。未開通積分與未連接地址同步使用明確文字狀態，不顯示示範餘額或無效操作。
+
 ### 2.6 動效 Motion
 
 借 shadcn 克制過渡 + PRD 要求：

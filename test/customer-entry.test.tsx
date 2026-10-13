@@ -8,6 +8,7 @@ vi.mock("@/lib/supabase", () => ({ supabase: { auth: {
   onAuthStateChange: (listener:typeof mocks.listener) => {mocks.listener=listener;return {data:{subscription:{unsubscribe:vi.fn()}}};},
 }, rpc:mocks.rpc } }));
 vi.mock("@/lib/customer-otp-session", () => ({ fetchPersonalOtpSession:mocks.personal,logoutPersonalOtpSession:mocks.logout }));
+vi.mock("@/lib/customer-personal", async importOriginal => ({ ...await importOriginal<typeof import("@/lib/customer-personal")>(), fetchPersonalSnapshot:async()=>({profile:{name:"",phone:"",email:"person@example.com",notify_email:true,notify_whatsapp:false},addresses:[],stores:[],evidence:[],order_states:{}}) }));
 vi.mock("@/lib/customer-self-service", async importOriginal => ({ ...await importOriginal<typeof import("@/lib/customer-self-service")>(), fetchCustomerSelfServiceOrder:mocks.detail }));
 const personal={token:"personal-session",expiresAt:"2099-01-01T00:00:00Z",maskedPhone:"",maskedEmail:"p***@example.com",orders:[{id:"order-1",orderNumber:"B-1247",orderDate:"2026-10-12T00:00:00Z",deliveryDate:null,grandTotal:100,currency:"HKD"}]};
 function Probe(){const location=useLocation();return <output data-testid="location">{location.pathname}{location.search}</output>;}
@@ -46,13 +47,13 @@ describe("shared OTP customer entry",()=>{
   });
   it("allows new personal users to sign in without an existing order",async()=>{
     mocks.getSession.mockResolvedValue({data:{session:{user:{id:"user"}}}});mocks.personal.mockResolvedValue({...personal,orders:[]});
-    mount("/customer?mode=personal");expect(await screen.findByRole("heading",{name:"訂單列表"})).toBeInTheDocument();
-    expect(screen.getByText(/共找到 0 張訂單/)).toBeInTheDocument();expect(mocks.rpc).toHaveBeenCalledWith("customer_portal_identities");
+    mount("/customer/personal/orders");expect(await screen.findByRole("heading",{name:"訂單紀錄"})).toBeInTheDocument();
+    expect(screen.getByText("目前沒有已綁定的訂單。")).toBeInTheDocument();expect(mocks.rpc).toHaveBeenCalledWith("customer_portal_identities");
   });
   it("hides switching for personal-only accounts even when the organization URL is requested",async()=>{
     mocks.getSession.mockResolvedValue({data:{session:{user:{id:"user"}}}});
     mocks.rpc.mockResolvedValue({data:{personal:true,organization:false},error:null});
-    mount("/customer");await screen.findByRole("heading",{name:"訂單列表"});
+    mount("/customer");await screen.findByRole("heading",{name:"你的到會安排，一目了然。"});
     expect(screen.queryByRole("navigation",{name:"客戶登入方式"})).not.toBeInTheDocument();
     expect(screen.getByRole("img",{name:"Food Channels Catering"})).toBeInTheDocument();
   });
@@ -64,7 +65,7 @@ describe("shared OTP customer entry",()=>{
     expect(screen.getByRole("img",{name:"Food Channels Catering"})).toBeInTheDocument();
     openMenu();
     expect(screen.getByRole("button",{name:"登出"})).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button",{name:"重試"}));await screen.findByRole("heading",{name:"訂單列表"});
+    fireEvent.click(screen.getByRole("button",{name:"重試"}));await screen.findByRole("heading",{name:"你的到會安排，一目了然。"});
   });
   it("keeps invitation links on the organization OTP flow",async()=>{
     mount("/customer?mode=personal&invite=invitation-token");await screen.findByLabelText("電郵");
@@ -78,7 +79,7 @@ describe("shared OTP customer entry",()=>{
     openMenu();
     expect(screen.getAllByRole("navigation",{name:"客戶登入方式"})).toHaveLength(1);
     expect(screen.getByRole("img",{name:"Food Channels Catering"})).toHaveAttribute("src","/assets/fc-catering-logo.svg");
-    fireEvent.click(screen.getByRole("link",{name:"個人客戶"}));await screen.findByRole("heading",{name:"訂單列表"});
+    fireEvent.click(screen.getByRole("link",{name:"個人客戶"}));await screen.findByRole("heading",{name:"你的到會安排，一目了然。"});
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
     openMenu();
     expect(screen.queryByRole("link",{name:"團隊管理"})).not.toBeInTheDocument();

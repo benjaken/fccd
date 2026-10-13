@@ -1,0 +1,27 @@
+.personal-workspace .personal-content{width:100%;padding:24px 0 48px}
+.personal-workspace .driver-drawer .customer-portal-drawer-mode-label{color:inherit;opacity:.85}
+.personal-workspace .personal-home-intro{padding:8px 0 32px;max-width:720px}
+.personal-workspace .personal-home-intro h1{font-size:clamp(28px,4vw,42px);line-height:1.25;letter-spacing:-.025em;text-wrap:balance;margin:0 0 16px}
+.personal-workspace .personal-home-intro p{font-size:17px;line-height:1.7;margin-bottom:24px}
+.personal-section-heading{display:flex;align-items:center;justify-content:space-between;gap:16px}
+.personal-order-row{display:flex;align-items:center;gap:24px;padding:24px 0;border-bottom:1px solid var(--border);flex-wrap:wrap}
+.personal-order-info{flex:1;min-width:200px}.personal-order-number{font-weight:700;font-size:20px;color:var(--foreground)}
+.personal-order-info p{display:flex;align-items:center;gap:8px}.personal-order-row>strong{font-size:20px;font-variant-numeric:tabular-nums}
+.personal-order-status{display:flex;flex-wrap:wrap;gap:8px;font-size:13px}.personal-order-status span,.personal-default{padding:4px 8px;background:var(--secondary);border-radius:6px;color:var(--secondary-foreground)}
+.personal-home-bottom{display:grid;grid-template-columns:1fr 1fr;gap:40px;padding-top:16px}.personal-home-bottom>div{padding-top:16px;border-top:1px solid var(--border)}
+.personal-workspace a:not(.bg-primary):not(.personal-order-number):not(.personal-store-link):not(.portal-brand-link):not(.driver-nav-primary){text-underline-offset:4px}
+.personal-home-bottom a{display:inline-flex;align-items:center;gap:8px;margin-top:12px;color:var(--primary)}
+.personal-empty{padding:28px 0;color:var(--muted-foreground);line-height:1.7}.personal-workspace .personal-empty h2{color:var(--foreground)}
+.personal-store-list{margin:28px 0}.personal-store-link{display:flex;align-items:center;justify-content:space-between;gap:24px;padding:24px 0;border-bottom:1px solid var(--border);text-decoration:none}
+.personal-store-link>div{display:grid;gap:8px}.personal-store-link strong{font-size:22px}.personal-store-link span{display:flex;align-items:center;gap:8px;color:var(--muted-foreground);overflow-wrap:anywhere}
+.personal-store-link:hover strong{color:var(--primary)}.personal-store-link:focus-visible{outline:2px solid var(--ring);outline-offset:4px;border-radius:8px}
+.personal-reorder{max-width:420px}.personal-reorder-confirm{padding:16px;background:var(--muted);border-radius:12px}.personal-reorder-confirm p{line-height:1.6;margin:0 0 12px}
+.personal-address-row{padding:24px 0;border-bottom:1px solid var(--border);display:flex;align-items:start;justify-content:space-between;gap:24px;flex-wrap:wrap}.personal-address-row>div:first-child{flex:1;min-width:220px}.personal-address-row p{overflow-wrap:anywhere}
+.personal-default{margin-left:12px;font-size:13px}.personal-workspace .personal-integration-note{background:var(--muted);padding:16px;border-radius:12px;line-height:1.7}
+.personal-form-wide{grid-column:1/-1}.personal-workspace .personal-checkbox,.personal-workspace .personal-notifications label{display:flex;flex-direction:row;align-items:center;gap:12px;min-height:44px}
+.personal-workspace input[type=checkbox]{width:20px;height:20px;accent-color:var(--primary);flex-shrink:0}
+.personal-notifications{border:0;padding:0;margin:12px 0}.personal-notifications legend{font-weight:700;font-size:20px;margin-bottom:12px}
+.personal-workspace input:focus-visible,.personal-workspace select:focus-visible{outline:2px solid var(--ring);outline-offset:2px}
+.personal-workspace input[readonly]{background:var(--muted)}.personal-points-facts{display:flex;gap:48px;padding:24px 0;border-block:1px solid var(--border)}.personal-points-facts dt{font-weight:600}.personal-points-facts dd{margin:8px 0;color:var(--muted-foreground)}
+.personal-data-error{display:flex;align-items:center;justify-content:space-between;gap:16px;background:var(--muted);padding:16px;border-radius:12px}
+@media(max-width:640px){.personal-workspace .personal-content{padding-top:12px}.personal-home-bottom{grid-template-columns:1fr;gap:24px}.personal-order-row{gap:16px}.personal-order-row>.portal-actions{width:100%}.personal-store-link{align-items:start;gap:16px;flex-direction:column}.personal-store-link strong{font-size:20px}.personal-points-facts{gap:24px;flex-wrap:wrap}.personal-address-row>.portal-actions{width:100%}.personal-data-error{align-items:start;flex-direction:column}}

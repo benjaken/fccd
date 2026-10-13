@@ -2,10 +2,9 @@ import { useEffect, useState } from "react";
 import { Navigate, useLocation, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { CustomerPortalPage } from "@/components/CustomerPortalPage";
-import { CustomerSelfServicePage } from "@/components/CustomerSelfServicePage";
 import { CustomerOtpLogin } from "@/components/customer-portal/CustomerOtpLogin";
 import { supabase } from "@/lib/supabase";
-import { fetchPersonalOtpSession, logoutPersonalOtpSession } from "@/lib/customer-otp-session";
+import { CustomerPersonalWorkspace } from "@/components/customer-portal/CustomerPersonalWorkspace";
 import { CustomerOrganizationApplicationPage } from "@/components/customer-portal/CustomerOrganizationApplicationPage";
 import { CustomerWorkspaceHeader, CustomerPortalAccessState } from "@/components/customer-portal/CustomerWorkspaceChrome";
 import "@/lib/customer-portal-i18n";
@@ -83,9 +82,5 @@ export function CustomerEntryPage() {
     if (identities.organization) return <Navigate to="/customer" replace />;
     return <CustomerOrganizationApplicationPage loggingOut={loggingOut} onLogout={() => void signOut()} />;
   }
-  return personal ? <main className="customer-portal otp-personal-workspace">
-    <CustomerWorkspaceHeader mode="personal" personal canSwitch={canSwitch} loggingOut={loggingOut} onLogout={() => void signOut()} />
-    {identityError&&<p role="alert">{identityError}</p>}
-    <CustomerSelfServicePage key={`personal-${userId}`} routeBase="/customer/personal" loginPath="/customer?mode=personal" restore={fetchPersonalOtpSession} logout={logoutPersonalOtpSession} otpOnly />
-  </main> : <CustomerPortalPage key={`organization-${userId}`} canSwitch={canSwitch} onMembershipChanged={canSwitch?()=>setIdentityVersion(value=>value+1):undefined} />;
+  return personal ? <CustomerPersonalWorkspace key={`personal-${userId}`} canSwitch={Boolean(canSwitch)} loggingOut={loggingOut} onLogout={() => void signOut()} /> : <CustomerPortalPage key={`organization-${userId}`} canSwitch={canSwitch} onMembershipChanged={canSwitch?()=>setIdentityVersion(value=>value+1):undefined} />;
 }

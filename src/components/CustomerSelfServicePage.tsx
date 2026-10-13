@@ -280,10 +280,11 @@ function PortalHeader({ session, onLogout, detail }: { session: CustomerSelfServ
   );
 }
 
-function OrdersView({ session, onSelect, onLogout }: { session: CustomerSelfServiceSession; onSelect: (order: CustomerSelfServiceOrderSummary) => void; onLogout: () => void }) {
+function OrdersView({ session, onSelect, onLogout, embedded = false }: { session: CustomerSelfServiceSession; onSelect: (order: CustomerSelfServiceOrderSummary) => void; onLogout: () => void; embedded?: boolean }) {
+  const Container = embedded ? "div" : "main";
   return (
-    <main className="self-service-shell">
-      <PortalHeader session={session} onLogout={onLogout} />
+    <Container className="self-service-shell">
+      {!embedded && <PortalHeader session={session} onLogout={onLogout} />}
       <section className="self-service-list-intro">
         <span>你的訂單</span>
         <h1>訂單列表</h1>
@@ -300,7 +301,7 @@ function OrdersView({ session, onSelect, onLogout }: { session: CustomerSelfServ
           </button>
         ))}
       </section>
-    </main>
+    </Container>
   );
 }
 
@@ -538,7 +539,8 @@ function AddonPanel({
   </SidePanel>;
 }
 
-function DetailView({ session, order, onBack, onLogout, printReceipt, loadAddonOptions, paymentNotice }: { session: CustomerSelfServiceSession; order: CustomerSelfServiceOrderDetail; onBack: () => void; onLogout: () => void; printReceipt: PrintReceiptFn; loadAddonOptions: AddonOptionsFn; paymentNotice?: string }) {
+function DetailView({ session, order, onBack, onLogout, printReceipt, loadAddonOptions, paymentNotice, embedded = false }: { session: CustomerSelfServiceSession; order: CustomerSelfServiceOrderDetail; onBack: () => void; onLogout: () => void; printReceipt: PrintReceiptFn; loadAddonOptions: AddonOptionsFn; paymentNotice?: string; embedded?: boolean }) {
+  const Container = embedded ? "div" : "main";
   const [receiptOpen, setReceiptOpen] = useState(false);
   const [addonOpen, setAddonOpen] = useState(false);
   const [addonOptions, setAddonOptions] = useState<CustomerSelfServiceAddonOptions | null>(null);
@@ -553,8 +555,8 @@ function DetailView({ session, order, onBack, onLogout, printReceipt, loadAddonO
     return () => { active = false; };
   }, [loadAddonOptions, order.id, session.token]);
   return (
-    <main className="self-service-shell self-service-detail-shell">
-      <PortalHeader session={session} onLogout={onLogout} detail={order} />
+    <Container className="self-service-shell self-service-detail-shell">
+      {!embedded && <PortalHeader session={session} onLogout={onLogout} detail={order} />}
       <button type="button" className="self-service-back" onClick={onBack}><ArrowLeft />返回訂單列表</button>
       <section className="self-service-detail-title">
         <div><span>訂單</span><h1>{order.orderNumber}</h1></div>
@@ -596,7 +598,7 @@ function DetailView({ session, order, onBack, onLogout, printReceipt, loadAddonO
       </section>
       {receiptOpen ? <ReceiptPreview order={order} printReceipt={printReceipt} onClose={() => setReceiptOpen(false)} /> : null}
       {addonOpen && addonOptions ? <AddonPanel open session={session} order={order} options={addonOptions} onClose={() => setAddonOpen(false)} /> : null}
-    </main>
+    </Container>
   );
 }
 
@@ -611,7 +613,9 @@ export function CustomerSelfServicePage({
   loginPath = routeBase,
   loginIntro,
   otpOnly = false,
-}: { login?: LoginFn; restore?: RestoreFn; loadDetail?: DetailFn; loadAddonOptions?: AddonOptionsFn; logout?: LogoutFn; printReceipt?: PrintReceiptFn; routeBase?: string; loginPath?: string; loginIntro?: ReactNode; otpOnly?: boolean }) {
+  embedded = false,
+  listPath = routeBase,
+}: { login?: LoginFn; restore?: RestoreFn; loadDetail?: DetailFn; loadAddonOptions?: AddonOptionsFn; logout?: LogoutFn; printReceipt?: PrintReceiptFn; routeBase?: string; loginPath?: string; loginIntro?: ReactNode; otpOnly?: boolean; embedded?: boolean; listPath?: string }) {
   const navigate = useNavigate();
   const params = useParams<{ orderId?: string }>();
   const detailMatch = useMatch(`${routeBase}/:orderId`);
@@ -707,8 +711,8 @@ export function CustomerSelfServicePage({
   if (loading && !session) return <main className="self-service-loading"><LoaderCircle className="self-service-spin" /><span>正在載入客戶自助服務…</span></main>;
   if (!session && otpOnly) return <CustomerPortalAccessState error={detailError || "暫時無法載入訂單，請重新查詢。"} busy={loading} onRetry={() => {setLoading(true);setDetailError("");void restore().then(setSession).catch(()=>setDetailError("暫時無法載入訂單，請重新查詢。")).finally(()=>setLoading(false));}} />;
   if (!session) return <LoginView login={login} onLogin={setSession} loginIntro={loginIntro} />;
-  if (detailError) return <main className="self-service-loading"><p role="alert">{detailError}</p><Button onClick={() => { setDetailError(""); navigate(routeBase); }}>返回訂單列表</Button></main>;
+  if (detailError) return <main className="self-service-loading"><p role="alert">{detailError}</p><Button onClick={() => { setDetailError(""); navigate(listPath); }}>返回訂單列表</Button></main>;
   if (loading) return <main className="self-service-loading"><LoaderCircle className="self-service-spin" /><span>正在載入訂單…</span></main>;
-  if (detail) return <DetailView session={session} order={detail} onBack={() => navigate(routeBase)} onLogout={() => void leave()} printReceipt={printReceipt} loadAddonOptions={demoMode ? loadDemoAddonOptions : loadAddonOptions} paymentNotice={paymentNotice} />;
-  return <OrdersView session={session} onSelect={(order) => void selectOrder(order)} onLogout={() => void leave()} />;
+  if (detail) return <DetailView session={session} order={detail} onBack={() => navigate(listPath)} onLogout={() => void leave()} printReceipt={printReceipt} loadAddonOptions={demoMode ? loadDemoAddonOptions : loadAddonOptions} paymentNotice={paymentNotice} embedded={embedded} />;
+  return <OrdersView session={session} onSelect={(order) => void selectOrder(order)} onLogout={() => void leave()} embedded={embedded} />;
 }

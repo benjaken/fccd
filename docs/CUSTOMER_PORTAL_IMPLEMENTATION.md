@@ -1,5 +1,21 @@
 # Customer organization portal — initial implementation
 
+## Personal customer workspace (2026-10-13)
+
+`CustomerPersonalWorkspace` replaces the personal list-only entry with home, brand menus, order history, payment evidence, rewards availability, addresses and profile routes under `/customer/personal`. Existing `/customer/personal/:orderId` links remain valid. Details retain the original receipt and PayPal add-on workflow, use the shared header and return to `/customer/personal/orders`. No password or additional phone matching is offered. Contact phone edits never change trusted order ownership.
+
+Apply `20261013130000_customer_personal_workspace.sql` after the existing customer portal migrations. This creates personal profile/address storage and RPCs, reuses the private payment-evidence bucket and finance review action, and exposes active Shopify store links and guarded repeat-cart data. Personal data is scoped to the verified Auth user; order actions use trusted personal links or the existing, Auth-user-scoped parent-order guard. Previously established capabilities continue to work without asking customers to match their phone again. Profile phone edits are separate from order identity. Organization data/rewards remain separate.
+
+Repeat ordering supports only integer quantities of uniquely mapped, approved, active, simple Shopify variants. Package lines, remarks/custom options, missing or ambiguous mappings and inactive stores/products fail explicitly; nothing is silently omitted. Variant IDs are returned as strings to preserve bigint precision. The customer reviews the prepared cart before visiting Shopify; current Shopify prices and availability remain authoritative. Cart-link creation does not create an order or modify the existing order. Shopify customer SSO and address synchronization are not connected. Addresses saved here currently remain local, and changing them does not change an existing delivery.
+
+Profile notification preferences are stored, not a claim that all existing notification workflows honor them. Personal points issuance, balances and redemption remain unimplemented pending individual reward rules; the page reports unavailable rather than showing zero or an organization balance. Historical Shopify ownership reconciliation and configurable-package option replay remain separate work.
+
+Payment evidence supports JPG/PNG/PDF up to 10MB, a positive two-decimal HKD amount no greater than the order's outstanding balance, a linked order and an existing private uploaded object. Exact submission retries deduplicate by path. Upload does not mark payment complete. Personal evidence appears in the existing finance review queue; organization membership is not required for personal uploads. The organization Storage predicate now returns false for personal-only users so its permissive policy cannot abort a valid personal upload.
+
+Evidence submission atomically queues separate emails to opted-in Super Admin/Admin/Accounting profiles. Deploy `customer-evidence-email`, set `CUSTOMER_EVIDENCE_EMAIL_CRON_SECRET`, `RESEND_API_KEY`, service credentials and `CUSTOMER_EVIDENCE_EMAIL_ENABLED=true`, and schedule POST calls with the cron-secret header to dispatch. The worker honors the existing notification recipient policy and development redirect, claims with locking, retries up to five times and supplies a stable Resend idempotency key. It is disabled by default, and this change does not deploy it, schedule it or send any live email. Verify recipients, retry monitoring and provider idempotency retention before enabling; failures remain in the queue for operator attention.
+
+Validation includes personal-account isolation, default-address transitions, actual Storage RLS evaluation with personal-only identities, evidence authorization/deduplication and repeat-cart bigint/options checks in PGlite, plus route/form/error/empty UI coverage. Local desktop and mobile captures use explicitly labeled synthetic data and production CSS; they do not validate hosted Auth, Shopify or payment providers.
+
 Baseline: develop `62bb43d3e651d8564a55766d34db53be12474e84`.
 Requirement source: FCCD PRD v1.4, including the final payment clarification.
 
