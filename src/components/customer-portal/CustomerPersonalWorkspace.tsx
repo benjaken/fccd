@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
-import { Link, Navigate, Route, Routes, useLocation } from "react-router-dom";
+import { Link, Navigate, Route, Routes, useLocation, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { ArrowUpRight, CalendarDays, ClipboardList, Gift, Link2, ShoppingCart } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,7 @@ import { CustomerWorkspaceHeader, CustomerPortalAccessState } from "@/components
 import { personalNavigation } from "@/components/customer-portal/PersonalPortalChrome";
 import { CustomerPersonalAddressesPage, CustomerPersonalEvidencePage, CustomerPersonalProfilePage } from "./CustomerPersonalSettingsPages";
 import { PersonalLunchboxPage } from "@/components/customer-portal/PersonalLunchboxPage";
+import { AccountOrderFeedback } from "@/components/customer-portal/OrderFeedbackPage";
 import { fetchPersonalOtpSession, logoutPersonalOtpSession } from "@/lib/customer-otp-session";
 import type { CustomerSelfServiceOrderSummary, CustomerSelfServiceSession } from "@/lib/customer-self-service";
 import { fetchPersonalPoints, fetchPersonalSnapshot, fetchPersonalReorder, shopifyCartUrl, shopifyStoreUrl, type PersonalPoints, type PersonalSnapshot } from "@/lib/customer-personal";
@@ -67,7 +68,7 @@ function PersonalOrderRow({ order }: { order: CustomerSelfServiceOrderSummary })
       <div className="personal-order-status"><span>{state ? t(state.paid ? "personal.paid" : "personal.unpaid") : t("personal.unknownStatus")}</span>{state?.delivery_status && <span>{state.delivery_status}</span>}</div>
     </div>
     <strong>{money(order.grandTotal, order.currency, i18n.language)}</strong>
-    <div className="portal-actions"><Button variant="outline" asChild><Link to={`${base}/${encodeURIComponent(order.id)}`}>{t("personal.details")}</Link></Button><PersonalReorderButton orderId={order.id} /></div>
+    <div className="portal-actions"><Button variant="outline" asChild><Link to={`${base}/${encodeURIComponent(order.id)}`}>{t("personal.details")}</Link></Button><Button variant="outline" asChild><Link to={`${base}/feedback/${encodeURIComponent(order.id)}`}>{t("portalFeedback.title")}</Link></Button><PersonalReorderButton orderId={order.id} /></div>
   </article>;
 }
 
@@ -181,6 +182,11 @@ function PersonalOrdersPage() {
   return <section><h1>{t("personal.orders")}</h1>{session.orders.length ? session.orders.map(order => <PersonalOrderRow key={order.id} order={order} />) : <div className="personal-empty"><p>{t("personal.noOrders")}</p><p>{t("personal.orderHelp")}</p><Button asChild><Link to={`${base}/menus`}>{t("personal.orderNow")}</Link></Button></div>}</section>;
 }
 
+function PersonalOrderFeedbackPage() {
+  const { orderId = "" } = useParams();
+  return <AccountOrderFeedback orderId={orderId} />;
+}
+
 function PersonalPointsPage() {
   const { t } = useTranslation();
   const [points, setPoints] = useState<PersonalPoints | null>(null);
@@ -248,6 +254,7 @@ export function CustomerPersonalWorkspace({ canSwitch, loggingOut, onLogout }: {
       <Route path="personal/points" element={<PersonalPointsPage />} />
       <Route path="personal/addresses" element={<CustomerPersonalAddressesPage />} />
       <Route path="personal/profile" element={<CustomerPersonalProfilePage />} />
+      <Route path="personal/feedback/:orderId" element={<PersonalOrderFeedbackPage />} />
       <Route path="personal/:orderId" element={<CustomerSelfServicePage routeBase={base} listPath={`${base}/orders`} loginPath="/customer?mode=personal" restore={fetchPersonalOtpSession} logout={logoutPersonalOtpSession} otpOnly embedded />} />
       <Route path="*" element={<Navigate to={base} replace />} />
     </Routes></PersonalContext.Provider>

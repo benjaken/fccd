@@ -20,6 +20,13 @@ beforeEach(()=>{
   mocks.personal.mockResolvedValue(personal);mocks.rpc.mockImplementation(async(name:string)=>name==="customer_portal_identities"?{data:{personal:true,organization:true},error:null}:{data:null,error:{message:"customer_membership_required"}});
 });
 describe("shared OTP customer entry",()=>{
+  it("opens a completed-order feedback link without asking for a sign-in code", async () => {
+    mocks.rpc.mockResolvedValueOnce({ data: { order_number: "FCCD-9", delivery_at: "2026-10-14T04:00:00Z", comment: null, submitted: false }, error: null });
+    mount(`/customer/feedback/${"ab".repeat(32)}`);
+    expect(await screen.findByRole("heading", { name: "訂單意見" })).toBeInTheDocument();
+    expect(screen.getByText(/FCCD-9/)).toBeInTheDocument();
+    expect(screen.queryByLabelText("電郵")).not.toBeInTheDocument();
+  });
   it.each(["/customer","/customer?mode=personal"])("uses email OTP without a password or phone at %s",async path=>{
     mount(path);expect(await screen.findByLabelText("電郵")).toBeInTheDocument();
     expect(screen.queryByRole("navigation",{name:"客戶登入方式"})).not.toBeInTheDocument();

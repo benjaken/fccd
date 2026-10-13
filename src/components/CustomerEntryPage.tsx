@@ -6,6 +6,7 @@ import { CustomerOtpLogin } from "@/components/customer-portal/CustomerOtpLogin"
 import { supabase } from "@/lib/supabase";
 import { CustomerPersonalWorkspace } from "@/components/customer-portal/CustomerPersonalWorkspace";
 import { CustomerOrganizationApplicationPage } from "@/components/customer-portal/CustomerOrganizationApplicationPage";
+import { OrderFeedbackPage } from "@/components/customer-portal/OrderFeedbackPage";
 import { CustomerWorkspaceHeader, CustomerPortalAccessState } from "@/components/customer-portal/CustomerWorkspaceChrome";
 import "@/lib/customer-portal-i18n";
 import "@/lib/customer-personal-i18n";
@@ -69,6 +70,8 @@ export function CustomerEntryPage() {
     } catch { setIdentityError(t("portal.operationFailed")); }
     finally { setLoggingOut(false); }
   }
+  const feedbackToken = location.pathname.match(/^\/customer\/feedback\/([^/]+)$/)?.[1];
+  if (feedbackToken) return <OrderFeedbackPage token={decodeURIComponent(feedbackToken)} />;
   if (loading) return <main className="customer-login-shell"><p role="status">{t("portal.loading")}</p></main>;
   if (!userId) return <>
     {sessionError && <p role="alert">{t("portal.loadFailed")}</p>}

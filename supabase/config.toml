@@ -93,6 +93,9 @@ verify_jwt = false
 [functions.customer-evidence-email]
 verify_jwt = false
 
+[functions.customer-order-feedback-email]
+verify_jwt = false
+
 [functions.send-enquiry-notifications]
 verify_jwt = false
 

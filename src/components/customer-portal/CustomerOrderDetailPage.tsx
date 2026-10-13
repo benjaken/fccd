@@ -1,6 +1,7 @@
 import { Link, Navigate, useOutletContext, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { requestPortalCancellation } from "@/lib/customer-portal";
+import { AccountOrderFeedback } from "@/components/customer-portal/OrderFeedbackPage";
 import type { CustomerPortalController } from "@/components/CustomerPortalPage";
 
 export function CustomerOrderDetailPage() {
@@ -16,6 +17,7 @@ export function CustomerOrderDetailPage() {
     <p>{new Date(order.delivery_at).toLocaleDateString("zh-HK", { timeZone: "Asia/Hong_Kong" })}</p>
     {order.lines.map((line,index) => <div className="portal-row" key={index}><span>{line.name} × {line.quantity}</span><strong>HK${(Number(line.unit_price)*line.quantity).toFixed(2)}</strong></div>)}
     <p>{t("portal.payable")}: HK${Number(order.outstanding).toFixed(2)} · {Number(order.outstanding)<=0 ? t("portal.settled") : t("portal.awaitingPayment")}</p>
+    <AccountOrderFeedback orderId={order.id} />
     <div className="portal-actions">
       <Button variant="outline" disabled={!repeatMenu} onClick={() => {if(repeatMenu) chooseMenu(repeatMenu,order);}}>{t("portal.reorder")}</Button>
       <Button variant="outline" asChild><Link to="/customer/receipts">{t("portal.receipts")}</Link></Button>

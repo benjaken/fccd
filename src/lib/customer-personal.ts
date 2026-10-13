@@ -30,7 +30,11 @@ export type PersonalPoints = {
   incoming_at?: string | null;
   ledger: Array<{ id: string; points: number; kind: string; order_id: string | null; expires_at: string | null; available_at?: string | null; created_at: string }>;
 };
-export const fetchPersonalPoints = () => rpc<PersonalPoints>("customer_personal_points");
+export async function fetchPersonalPoints(): Promise<PersonalPoints> {
+  const data = await rpc<PersonalPoints>("customer_personal_points");
+  if (!data || typeof data.balance !== "number" || !Array.isArray(data.ledger)) throw new Error("personal_points_unavailable");
+  return data;
+}
 
 /** Only configured Shopify hostnames, never arbitrary URLs returned by a user. */
 export function shopifyStoreUrl(domain: string): string {
