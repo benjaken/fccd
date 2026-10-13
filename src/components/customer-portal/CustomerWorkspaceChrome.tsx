@@ -59,6 +59,11 @@ function CustomerPortalDrawer({
         ) : (
           <p className="customer-portal-drawer-mode-label">{t(mode === "personal" ? "portal.personalCustomer" : "portal.organizationCustomer")}</p>
         )}
+        {personal && !canSwitch ? (
+          <nav aria-label={t("portalApply.title")}>
+            <Link to="/customer/apply" onClick={onClose}>{t("portalApply.title")}</Link>
+          </nav>
+        ) : null}
         {navItems.length > 0 ? (
           <nav>
             {navItems.map(item => {

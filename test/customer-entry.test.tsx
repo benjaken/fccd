@@ -83,4 +83,15 @@ describe("shared OTP customer entry",()=>{
     openMenu();
     expect(screen.queryByRole("link",{name:"團隊管理"})).not.toBeInTheDocument();
   });
+  it("opens a company application for a verified user who has no organization", async () => {
+    mocks.getSession.mockResolvedValue({ data: { session: { user: { id: "user" } } } });
+    mocks.rpc.mockImplementation(async (name: string) => name === "customer_portal_identities"
+      ? { data: { personal: true, organization: false }, error: null }
+      : name === "customer_org_application_current"
+        ? { data: null, error: null }
+        : { data: null, error: { message: "customer_membership_required" } });
+    mount("/customer/apply");
+    expect(await screen.findByRole("heading", { name: "申請公司帳戶" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "訂單列表" })).not.toBeInTheDocument();
+  });
 });

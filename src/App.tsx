@@ -163,6 +163,7 @@ import { CompanyEmployeesPage } from "@/components/settings/CompanyEmployeesPage
 import { DictionariesPage } from "@/components/settings/DictionariesPage";
 import { CustomerFaqPage } from "@/components/settings/CustomerFaqPage";
 import { CustomerPortalOpsPage } from "@/components/settings/CustomerPortalOpsPage";
+import { CustomerPortalApplicationsPage } from "@/components/settings/CustomerPortalApplicationsPage";
 import { CustomerPortalRewardRulesPage } from "@/components/settings/CustomerPortalRewardRulesPage";
 import "@/lib/customer-portal-i18n";
 import { DeliveryDistrictsPage } from "@/components/settings/DeliveryDistrictsPage";
@@ -1630,6 +1631,16 @@ function OperationsShell() {
                 element={
                   pageAccess.canAccess("settings.customer_portal") ? (
                     <CustomerPortalOpsPage />
+                  ) : (
+                    <SettingsAccessDenied />
+                  )
+                }
+              />
+              <Route
+                path="/settings/customer-portal/applications"
+                element={
+                  pageAccess.canAccess("settings.customer_portal") ? (
+                    <CustomerPortalApplicationsPage />
                   ) : (
                     <SettingsAccessDenied />
                   )

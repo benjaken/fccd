@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
-import { useLocation, useSearchParams } from "react-router-dom";
+import { Navigate, useLocation, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { CustomerPortalPage } from "@/components/CustomerPortalPage";
 import { CustomerSelfServicePage } from "@/components/CustomerSelfServicePage";
 import { CustomerOtpLogin } from "@/components/customer-portal/CustomerOtpLogin";
 import { supabase } from "@/lib/supabase";
 import { fetchPersonalOtpSession, logoutPersonalOtpSession } from "@/lib/customer-otp-session";
+import { CustomerOrganizationApplicationPage } from "@/components/customer-portal/CustomerOrganizationApplicationPage";
 import { CustomerWorkspaceHeader, CustomerPortalAccessState } from "@/components/customer-portal/CustomerWorkspaceChrome";
 import "@/lib/customer-portal-i18n";
 import "./customer-portal.css";
@@ -17,7 +18,8 @@ export function CustomerEntryPage() {
   const [userId, setUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [sessionError, setSessionError] = useState(false);
-  const requestedPersonal = !params.has("invite") && (
+  const applying = location.pathname === "/customer/apply" || location.pathname.startsWith("/customer/apply/");
+  const requestedPersonal = !applying && !params.has("invite") && (
     location.pathname === "/customer/personal" || location.pathname.startsWith("/customer/personal/") || params.get("mode") === "personal"
   );
   useEffect(() => {
@@ -54,7 +56,7 @@ export function CustomerEntryPage() {
     return () => { active = false; };
   }, [userId,identityVersion,requestedPersonal,t]);
   const canSwitch = identities?.userId === userId && identities.organization;
-  const personal = requestedPersonal || (!canSwitch && !params.has("invite"));
+  const personal = !applying && (requestedPersonal || (!canSwitch && !params.has("invite")));
   async function signOut() {
     setLoggingOut(true);
     try {
@@ -77,6 +79,10 @@ export function CustomerEntryPage() {
     <CustomerWorkspaceHeader mode="personal" personal loggingOut={loggingOut} onLogout={() => void signOut()} />
     <CustomerPortalAccessState error={identityError} busy={false} onRetry={()=>setIdentityVersion(value=>value+1)} />
   </main>;
+  if (applying) {
+    if (identities.organization) return <Navigate to="/customer" replace />;
+    return <CustomerOrganizationApplicationPage loggingOut={loggingOut} onLogout={() => void signOut()} />;
+  }
   return personal ? <main className="customer-portal otp-personal-workspace">
     <CustomerWorkspaceHeader mode="personal" personal canSwitch={canSwitch} loggingOut={loggingOut} onLogout={() => void signOut()} />
     {identityError&&<p role="alert">{identityError}</p>}
