@@ -5,18 +5,18 @@ import { Bell, ClipboardList, Gift, Home, LogOut, MapPin, Menu, ShoppingCart, Up
 import { FOOD_CHANNEL_CATERING_LOGO_PATH } from "@/lib/brand-logo";
 
 type IconComponent = ComponentType<SVGProps<SVGSVGElement> & { size?: number | string }>;
-type NavItem = { key: string; to: string; end?: boolean; icon: IconComponent; tab?: boolean };
+type NavItem = { key: string; to: string; end?: boolean; icon: IconComponent };
 
 const base = "/customer/personal";
 export const personalNavigation: NavItem[] = [
-  { key: "home", to: base, end: true, icon: Home, tab: true },
-  { key: "menus", to: `${base}/menus`, icon: UtensilsCrossed, tab: true },
-  { key: "instant", to: `${base}/menus`, icon: ShoppingCart, tab: true },
+  { key: "home", to: base, end: true, icon: Home },
+  { key: "menus", to: `${base}/menus`, icon: UtensilsCrossed },
+  { key: "instant", to: `${base}/menus`, icon: ShoppingCart },
   { key: "evidence", to: `${base}/payments`, icon: Upload },
-  { key: "orders", to: `${base}/orders`, icon: ClipboardList, tab: true },
+  { key: "orders", to: `${base}/orders`, icon: ClipboardList },
   { key: "points", to: `${base}/points`, icon: Gift },
   { key: "addresses", to: `${base}/addresses`, icon: MapPin },
-  { key: "profile", to: `${base}/profile`, icon: UserRound, tab: true },
+  { key: "profile", to: `${base}/profile`, icon: UserRound },
 ];
 
 function NavItems({ onNavigate }: { onNavigate?: () => void }) {
@@ -78,13 +78,6 @@ export function PersonalPortalChrome({
       <button type="button" disabled={loggingOut} onClick={onLogout}><LogOut size={18} />{t("portal.logout")}</button>
     </div>
     <div className="personal-main">{children}</div>
-    <nav className="personal-tabbar" aria-label={t("portal.navigation")}>
-      {personalNavigation.filter(item => item.tab).map(item => {
-        const Icon = item.icon;
-        if (item.key === "instant") return <Link key={item.key} to={item.to}><Icon size={18} /><span>{t("personal.instantShort")}</span></Link>;
-        return <NavLink key={item.key} to={item.to} end={item.end} className={({ isActive }) => isActive ? "is-active" : undefined}><Icon size={18} /><span>{t(`personal.${item.key}`)}</span></NavLink>;
-      })}
-    </nav>
     <div className={`personal-drawer${menuOpen ? " is-open" : ""}`} aria-hidden={!menuOpen}>
       <button type="button" className="personal-drawer-scrim" aria-label={t("portal.closeMenu")} onClick={() => setMenuOpen(false)} />
       <aside aria-label={t("portal.navigation")}>

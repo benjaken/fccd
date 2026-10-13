@@ -14,7 +14,7 @@
 .personal-menu-trigger,.personal-icon-button,.personal-drawer aside>button,.personal-side-foot button,.personal-drawer header button{
   display:inline-flex;align-items:center;justify-content:center;gap:8px;min-width:44px;min-height:44px;border:0;border-radius:12px;background:transparent;color:var(--personal-ink);font:inherit;cursor:pointer
 }
-.personal-menu-trigger:focus-visible,.personal-icon-button:focus-visible,.personal-account:focus-visible,.personal-nav-link:focus-visible,.personal-tabbar a:focus-visible,.personal-brand:focus-visible,.personal-side-foot button:focus-visible{
+.personal-menu-trigger:focus-visible,.personal-icon-button:focus-visible,.personal-account:focus-visible,.personal-nav-link:focus-visible,.personal-brand:focus-visible,.personal-side-foot button:focus-visible{
   outline:2px solid var(--personal-green);outline-offset:2px
 }
 .personal-brand{display:flex;align-items:center;min-width:0}
@@ -27,10 +27,7 @@
 .personal-account-name{max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:650}
 .personal-side-nav,.personal-side-foot{display:none}
 .personal-main{flex:1;min-width:0}
-.personal-content{padding:16px 16px 96px}
-.personal-tabbar{position:sticky;bottom:0;display:grid;grid-template-columns:repeat(5,1fr);gap:2px;padding:6px 8px calc(6px + env(safe-area-inset-bottom));background:#fff;border-top:1px solid #e3ebe6}
-.personal-tabbar a{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:48px;color:var(--personal-muted);font-size:11px;font-weight:650;text-decoration:none;text-align:center}
-.personal-tabbar a.is-active{color:var(--personal-green)}
+.personal-content{padding:16px 16px 24px}
 .personal-drawer{position:fixed;inset:0;z-index:40;visibility:hidden}
 .personal-drawer.is-open{visibility:visible}
 .personal-drawer-scrim{position:absolute;inset:0;border:0;background:rgba(12,32,26,.45)}
@@ -152,7 +149,6 @@ button.ui-button.personal-address-save:hover{background:#18663a}
   .personal-side-foot button{width:100%;justify-content:flex-start;color:#e7f2ec}
   .personal-main{grid-column:2;grid-row:2 / span 2}
   .personal-content{padding:8px 28px 48px}
-  .personal-tabbar{display:none}
   .personal-shortcuts{grid-template-columns:repeat(4,minmax(0,1fr))}
   .personal-hero{grid-template-columns:minmax(0,1.1fr) minmax(220px,.9fr);align-items:center;padding:28px 28px 28px 32px}
   .personal-menu-scroller{grid-auto-flow:unset;grid-template-columns:repeat(4,minmax(0,1fr));overflow:visible}
