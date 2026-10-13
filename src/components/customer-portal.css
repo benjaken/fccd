@@ -62,6 +62,7 @@
 .portal-brand-link{display:flex;align-items:center;flex-shrink:0}
 .portal-brand-link img{display:block;width:160px;height:56px;object-fit:contain}
 .portal-workspace-title{display:grid;gap:4px;min-width:0;flex:1}
+.portal-workspace-title>.portal-workspace-desktop-title{display:none}
 .portal-workspace-title>strong{
   font-size:clamp(18px,2.4vw,24px);
   line-height:1.3;

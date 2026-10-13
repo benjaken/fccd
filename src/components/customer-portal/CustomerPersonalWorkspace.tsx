@@ -156,7 +156,8 @@ export function CustomerPersonalWorkspace({ canSwitch, loggingOut, onLogout }: {
     catch { setOperationError(t("personal.operationFailed")); return false; }
     finally { setBusy(false); }
   }
-  const header = <CustomerWorkspaceHeader mode="personal" personal canSwitch={canSwitch} navItems={navigation.map(item => ({ ...item, label: t(`personal.${item.key}`) }))} loggingOut={loggingOut} onLogout={onLogout} />;
+  const currentPage = navigation.find(item => item.to === location.pathname)?.key || (location.pathname.startsWith(`${base}/`) ? "orders" : "home");
+  const header = <CustomerWorkspaceHeader desktopTitle={t(`personal.${currentPage}`)} mode="personal" personal canSwitch={canSwitch} navItems={navigation.map(item => ({ ...item, label: t(`personal.${item.key}`) }))} loggingOut={loggingOut} onLogout={onLogout} />;
   if (loading) return <main className="customer-portal personal-workspace">{header}<PageSkeleton label={t("personal.loading")} variant="dashboard" /></main>;
   if (!session || sessionError) return <main className="customer-portal personal-workspace">{header}<CustomerPortalAccessState error={sessionError || t("personal.loadFailed")} busy={false} onRetry={() => setVersion(v => v + 1)} /></main>;
   return <main className="customer-portal personal-workspace">{header}<div className="personal-content">

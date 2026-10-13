@@ -144,7 +144,9 @@ Active 導航（側欄、工作區 soft link、migration tab）必須是**淡綠
 
 同一工具列內尺寸必須一致。
 
-個人客戶工作區沿用 `CustomerWorkspaceHeader` 的手機選單及全寬 shell。`CustomerPersonalWorkspace` 提供共用的訂單摘要列和再訂購確認控制；各頁以同一 controller 取得已驗證的個人 session、資料及提交狀態。個人主頁先呈現下一張訂單，餐牌及新訂購連至配置的 Shopify 店舖。未開通積分與未連接地址同步使用明確文字狀態，不顯示示範餘額或無效操作。
+個人客戶工作區沿用 `CustomerWorkspaceHeader` 的手機選單；PC 使用下述置中 shell。`CustomerPersonalWorkspace` 提供共用的訂單摘要列和再訂購確認控制；各頁以同一 controller 取得已驗證的個人 session、資料及提交狀態。個人主頁先呈現下一張訂單，餐牌及新訂購連至配置的 Shopify 店舖。未開通積分與未連接地址同步使用明確文字狀態，不顯示示範餘額或無效操作。
+
+個人 Portal 的 PC 版按用戶提供的司機頁面參考，改用最高 820px 的置中 shell，768px 起啟用；內容仍填滿 shell。頂部 76px 綠色標題列使用 `--personal-header-bg: #116b59`／`--personal-header-fg: #fff`，內容底色為 `--personal-surface: #f3f6f4`，沿用司機頁的配色；左側選單、當頁標題置中，內文 16px 邊距，表單及主頁區塊上下排列。`CustomerWorkspaceHeader.desktopTitle` 提供此頁首標題；其他工作區及手機 Logo 頁首保持原有樣式。
 
 ### 2.6 動效 Motion
 

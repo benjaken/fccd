@@ -96,6 +96,7 @@ function CustomerPortalDrawer({
 
 export function CustomerWorkspaceHeader({
   title,
+  desktopTitle,
   mode = "organization",
   navItems = [],
   canSwitch = false,
@@ -104,6 +105,7 @@ export function CustomerWorkspaceHeader({
   onLogout,
 }: {
   title?: string;
+  desktopTitle?: string;
   mode?: "personal" | "organization";
   navItems?: CustomerPortalNavItem[];
   canSwitch?: boolean;
@@ -126,6 +128,7 @@ export function CustomerWorkspaceHeader({
           </Link>
           <div className="portal-workspace-title">
             <strong>{heading}</strong>
+            {desktopTitle && <strong className="portal-workspace-desktop-title">{desktopTitle}</strong>}
           </div>
         </div>
       </header>

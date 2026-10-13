@@ -39,6 +39,7 @@ describe("personal customer pages", () => {
   });
   it("opens configured brand menus on Shopify", async () => {
     mount("/customer/personal/menus"); await screen.findByText("Brand menu"); expect(screen.getByRole("link", { name: /Brand menu/ })).toHaveAttribute("href", "https://brand.myshopify.com");
+    expect(document.querySelector(".portal-workspace-desktop-title")).toHaveTextContent("最新餐牌");
   });
   it("prepares a cart before navigating and explains unavailable custom options", async () => {
     mount(); fireEvent.click(await screen.findByRole("button", { name: "再訂一次" }));

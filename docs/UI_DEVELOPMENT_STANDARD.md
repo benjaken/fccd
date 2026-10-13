@@ -8,7 +8,7 @@ layout, theme, status colors, and preview sign-in.
 
 ## 0. Product name
 
-個人客戶 `/customer/personal` 使用主頁、餐牌、訂單、付款單據、積分、地址、個人資料的路由選單。主頁優先呈現下一張訂單及再訂購；資料頁不提供密碼，聯絡電話不觸發訂單配對。頁面沿用全寬 shell；載入採用 `PageSkeleton`，未接通 Shopify 地址及個人積分顯示明確未開通狀態。
+個人客戶 `/customer/personal` 使用主頁、餐牌、訂單、付款單據、積分、地址、個人資料的路由選單。主頁優先呈現下一張訂單及再訂購；資料頁不提供密碼，聯絡電話不觸發訂單配對。PC 使用下述 820px 置中 shell，手機維持既有版面；載入採用 `PageSkeleton`，未接通 Shopify 地址及個人積分顯示明確未開通狀態。
 
 客戶公開登入頁使用同一個 480px 內容區：Logo 與兩行標題並排於頂部，其下是個人／機構切換、登入說明及獨立白色表單卡片。兩種身份均使用電郵及 8 位 OTP；訊息顯示於表單內。舊電話／電郵查單只保留在相容入口，內部員工登入不變。
 
@@ -32,6 +32,8 @@ this file in the same change set.
 
 Main content must use the full available width inside the shell. Do **not**
 reintroduce a centered `max-width` (for example `1600px`) on page shells.
+
+User-approved exception (2026-10-13): the personal customer Portal uses the driver-portal reference on desktop (768px and above): a centered shell up to 820px wide, 76px green title bar with left menu and centered current-page title, and 16px content gutters. Forms and home sections stack vertically. Mobile retains the existing shared logo header and responsive layout. This exception applies only to `.personal-workspace`; organization and operational pages retain the full-width rule.
 
 | Shell | Rule |
 |---|---|
