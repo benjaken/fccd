@@ -8,7 +8,19 @@ import { CustomerPersonalWorkspace } from "@/components/customer-portal/Customer
 import { CustomerOrganizationApplicationPage } from "@/components/customer-portal/CustomerOrganizationApplicationPage";
 import { CustomerWorkspaceHeader, CustomerPortalAccessState } from "@/components/customer-portal/CustomerWorkspaceChrome";
 import "@/lib/customer-portal-i18n";
+import "@/lib/customer-personal-i18n";
 import "./customer-portal.css";
+import "./customer-portal/customer-personal.css";
+
+function personalDesktopTitle(pathname: string) {
+  if (pathname.startsWith("/customer/personal/menus")) return "personal.menus";
+  if (pathname.startsWith("/customer/personal/payments")) return "personal.evidence";
+  if (pathname.startsWith("/customer/personal/points")) return "personal.points";
+  if (pathname.startsWith("/customer/personal/addresses")) return "personal.addresses";
+  if (pathname.startsWith("/customer/personal/profile")) return "personal.profile";
+  if (pathname.startsWith("/customer/personal/orders") || /^\/customer\/personal\/[^/]+$/.test(pathname)) return "personal.orders";
+  return "personal.home";
+}
 
 export function CustomerEntryPage() {
   const { t } = useTranslation();
@@ -74,8 +86,8 @@ export function CustomerEntryPage() {
       void supabase.auth.getSession().then(({ data }) => { setUserId(data.session?.user.id ?? null); });
     }} />
   </>;
-  if (!identities || identities.userId !== userId) return <main className="customer-portal">
-    <CustomerWorkspaceHeader mode="personal" personal loggingOut={loggingOut} onLogout={() => void signOut()} />
+  if (!identities || identities.userId !== userId) return <main className={`customer-portal${personal ? " personal-workspace" : ""}`}>
+    <CustomerWorkspaceHeader desktopTitle={personal ? t(personalDesktopTitle(location.pathname)) : undefined} mode={personal ? "personal" : "organization"} personal={personal} loggingOut={loggingOut} onLogout={() => void signOut()} />
     <CustomerPortalAccessState error={identityError} busy={false} onRetry={()=>setIdentityVersion(value=>value+1)} />
   </main>;
   if (applying) {

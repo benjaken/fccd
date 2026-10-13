@@ -11,6 +11,7 @@
   .personal-workspace .portal-workspace-title{text-align:center}
   .personal-workspace .portal-workspace-title>.portal-workspace-desktop-title{display:block;font-size:18px;font-weight:600;letter-spacing:0}
   .personal-workspace .personal-content{padding:18px 16px 48px}
+  .customer-portal.personal-workspace .portal-access-state{width:auto;margin:0;padding:32px 16px 48px;border:0;border-radius:0;background:transparent;justify-items:start;text-align:left}
   .personal-workspace .personal-home-intro{max-width:none;padding:8px 0 24px}
   .customer-portal.personal-workspace .personal-home-intro h1{font-size:28px}
   .personal-workspace .personal-home-bottom{grid-template-columns:1fr;gap:24px}
