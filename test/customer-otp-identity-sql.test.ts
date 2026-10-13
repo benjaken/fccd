@@ -16,6 +16,7 @@ beforeEach(async()=>{
   await db.exec(legacy.slice(0,legacy.indexOf("create or replace function public.customer_self_service_login")).replace("create extension if not exists pgcrypto;",""));
   await db.exec(readFileSync("supabase/migrations/20261012110000_customer_otp_identity.sql","utf8"));
   await db.exec(readFileSync("supabase/migrations/20261013110000_customer_personal_contact_match.sql","utf8"));
+  await db.exec(readFileSync("supabase/migrations/20261013140000_customer_personal_email_match.sql","utf8"));
   await db.exec("create table customer_organizations(id uuid primary key,name text,is_active boolean);create table customer_memberships(user_id uuid,organization_id uuid,is_active boolean)");
   await db.exec(readFileSync("supabase/migrations/20261012120000_customer_portal_identities.sql","utf8"));
   await db.exec(`insert into auth.users values('${user}','person@example.com',now()),('${other}','other@example.com',now());
@@ -33,25 +34,28 @@ describe("verified personal OTP identity",()=>{
     expect(await identities()).toMatchObject({organization:true});
     await db.exec("update customer_memberships set is_active=false");expect(await identities()).toMatchObject({organization:false});
   });
-  it("allows verified new users with zero orders and does not infer ownership from email alone",async()=>{
-    const empty=await session();
-    expect(empty.orders).toEqual([]);
-    expect(empty.needsPhone).toBe(true);
+  it("allows verified new users with zero orders when the email does not match",async()=>{
+    await db.exec("update orders set email_snapshot='someone-else@example.com'");
+    expect((await session()).orders).toEqual([]);
     await db.exec(`select set_config('test.user_id','${other}',false)`);expect((await session()).orders).toEqual([]);
   });
-  it("lists historical orders only when the verified email and saved phone both match",async()=>{
-    await db.exec("select customer_personal_set_phone('5163 4127')");
+  it("lists historical orders from the verified email without a phone",async()=>{
     const matched=await session();
     expect(matched.needsPhone).toBe(false);
     expect(matched.orders.map(o=>o.id)).toEqual([order]);
     const guard=await db.query<{allowed:boolean}>(`select private.self_service_order_matches(o,s.phone_hash,s.email_hash) allowed
       from orders o cross join private.customer_self_service_sessions s where s.token=$1`,[matched.token]);
     expect(guard.rows[0].allowed).toBe(true);
-    await db.exec("select customer_personal_set_phone('99998888')");
+    await db.exec(`select set_config('test.user_id','${other}',false)`);
     expect((await session()).orders).toEqual([]);
-    await db.exec(`select set_config('test.user_id','${other}',false);select customer_personal_set_phone('51634127')`);
+  });
+  it("does not bind company inboxes even when the address matches",async()=>{
+    await db.exec(`update auth.users set email='sales@foodchannels-catering.com' where id='${user}';
+      update orders set email_snapshot='sales@foodchannels-catering.com' where id='${order}'`);
     expect((await session()).orders).toEqual([]);
-    await expect(db.exec("select customer_personal_set_phone('123')")).rejects.toThrow("invalid_phone");
+    await db.exec(`update auth.users set email='foodchannels.plan@gmail.com' where id='${user}';
+      update orders set email_snapshot='foodchannels.plan@gmail.com' where id='${order}'`);
+    expect((await session()).orders).toEqual([]);
   });
   it("returns only trusted links and scopes the existing detail/add-on guard to those links",async()=>{
     await db.exec(`insert into private.customer_personal_order_links(order_id,user_id,linked_by,reason) values('${order}','${user}','${user}','Verified reconciliation')`);
@@ -62,6 +66,9 @@ describe("verified personal OTP identity",()=>{
     const denied=await db.query<{allowed:boolean}>(`select private.self_service_order_matches(o,s.phone_hash,s.email_hash) allowed
       from orders o cross join private.customer_self_service_sessions s where s.token=$1`,[otherSession.token]);expect(denied.rows[0].allowed).toBe(false);
     await db.exec(`delete from private.customer_personal_order_links where order_id='${order}'`);
+    expect((await db.query<{allowed:boolean}>(`select private.self_service_order_matches(o,s.phone_hash,s.email_hash) allowed
+      from orders o cross join private.customer_self_service_sessions s where s.token=$1`,[own.token])).rows[0].allowed).toBe(true);
+    await db.exec("update orders set email_snapshot='someone-else@example.com'");
     expect((await db.query<{allowed:boolean}>(`select private.self_service_order_matches(o,s.phone_hash,s.email_hash) allowed
       from orders o cross join private.customer_self_service_sessions s where s.token=$1`,[own.token])).rows[0].allowed).toBe(false);
   });

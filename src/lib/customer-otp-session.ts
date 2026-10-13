@@ -1,7 +1,7 @@
 import { supabase } from "@/lib/supabase";
 import { logoutCustomerSelfService, type CustomerSelfServiceSession } from "@/lib/customer-self-service";
 
-/** Orders enter this session from an operator link, or from the verified email plus saved order phone. */
+/** Orders enter this session from an operator link, or from the verified customer email. Internal inboxes are excluded. */
 export async function fetchPersonalOtpSession(): Promise<CustomerSelfServiceSession> {
   const { data, error } = await supabase.rpc("customer_personal_session");
   if (error) throw error;
