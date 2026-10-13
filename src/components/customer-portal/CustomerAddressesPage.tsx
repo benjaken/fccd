@@ -13,7 +13,7 @@ export function CustomerAddressesPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   if (!data) return null;
 
-  function startEdit(row: (typeof data.addresses)[number]) {
+  function startEdit(row: NonNullable<typeof data>["addresses"][number]) {
     setEditingId(row.id);
     setAddress({ label: row.label, recipient: row.recipient, phone: row.phone, address: row.address });
   }

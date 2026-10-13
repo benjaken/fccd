@@ -109,7 +109,7 @@ function useCustomerPortalController(load: typeof fetchPortal, onMembershipChang
         if (!match) return null;
         return [item.product_id, Math.min(item.quantity, match.available_quantity)] as const;
       })
-      .filter((row): row is readonly [string, number] => Boolean(row) && row[1] > 0));
+      .filter((row): row is readonly [string, number] => row !== null && row[1] > 0));
     navigate(`/customer/menus/${encodeURIComponent(selected.id)}`);
     setPoints(0); requestId.current = null; setError(""); setQuantities(next);
     setNotice(t(template.items.some(item => !selected.items.some(row => row.product_id === item.product_id))

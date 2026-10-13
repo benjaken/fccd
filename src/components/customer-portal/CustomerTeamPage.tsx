@@ -20,7 +20,7 @@ export function CustomerTeamPage() {
   const invitations = data.invitations ?? [];
   const orgMenus = data.org_menus ?? [];
 
-  function menuIdsFor(member: (typeof data.members)[number]) {
+  function menuIdsFor(member: NonNullable<typeof data>["members"][number]) {
     return scopeDrafts[member.user_id] ?? member.menu_ids ?? [];
   }
 
