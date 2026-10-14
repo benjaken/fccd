@@ -188,8 +188,9 @@ export function CustomerPortalApplicationsPage() {
           : t("portalApplications.policyUnpublished")}
         {" "}{t("portalApplications.reminderNotSent")}
       </p>
+      <article className="panel ingredients-panel">
         <ListTable
-          className="panel"
+          className="ingredients-table-wrap"
           loading={loading}
           loadingLabel={t("portalApplications.loading")}
           skeletonColumns={5}
@@ -213,14 +214,15 @@ export function CustomerPortalApplicationsPage() {
               </tr>
             ))}
         </ListTable>
-      <TablePagination
-        summary={t("orders.pagination", { from: total ? (page - 1) * 15 + 1 : 0, to: Math.min(page * 15, total), total })}
-        page={page} totalPages={Math.max(1, Math.ceil(total / 15))} loading={loading}
-        onPrevious={() => setPage(current => Math.max(1, current - 1))}
-        onNext={() => setPage(current => Math.min(Math.max(1, Math.ceil(total / 15)), current + 1))}
-        onPageChange={setPage} previousLabel={t("orders.previous")} nextLabel={t("orders.next")}
-        pageLabel={t("orders.pageOf")} jumpLabel={t("orders.jumpToPage")}
-      />
+        <TablePagination
+          summary={t("orders.pagination", { from: total ? (page - 1) * 15 + 1 : 0, to: Math.min(page * 15, total), total })}
+          page={page} totalPages={Math.max(1, Math.ceil(total / 15))} loading={loading}
+          onPrevious={() => setPage(current => Math.max(1, current - 1))}
+          onNext={() => setPage(current => Math.min(Math.max(1, Math.ceil(total / 15)), current + 1))}
+          onPageChange={setPage} previousLabel={t("orders.previous")} nextLabel={t("orders.next")}
+          pageLabel={t("orders.pageOf")} jumpLabel={t("orders.jumpToPage")}
+        />
+      </article>
       <SidePanel open={policyOpen} title={t("portalApplications.policyTitle")} onClose={() => setPolicyOpen(false)} closeLabel={t("portalApplications.close")}>
         <form className="portal-ops-form" onSubmit={event => void publishPolicy(event)}>
           <label>

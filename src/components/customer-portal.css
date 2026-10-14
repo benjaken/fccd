@@ -165,9 +165,14 @@
   flex: 0 0 auto;
   margin: 0;
 }
-.customer-portal-ops > .operational-table-wrap {
+.customer-portal-ops > .operational-table-wrap,
+.customer-portal-ops > .ingredients-panel {
   flex: 1 1 auto;
   min-height: 180px;
+}
+.customer-portal-ops > .ingredients-panel > .operational-list-pagination {
+  position: static;
+  flex: 0 0 auto;
 }
 .customer-portal-ops .linkish{border:0;background:transparent;color:var(--primary);font:inherit;font-weight:700;cursor:pointer;padding:0}
 .portal-ops-form,.customer-portal-ops .portal-ops-inline-form{display:grid;gap:14px}
