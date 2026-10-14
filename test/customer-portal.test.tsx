@@ -5,7 +5,7 @@ import { CustomerPortalPage } from "@/components/CustomerPortalPage";
 import { portalCart, type PortalMenu, type PortalSnapshot } from "@/lib/customer-portal";
 
 const mocks=vi.hoisted(()=>({
-  submit:vi.fn(), getSession:vi.fn(), signin:vi.fn(),
+  submit:vi.fn(), getSession:vi.fn(), signin:vi.fn(), header:vi.fn(),
   saveAddress:vi.fn(async()=>"new-address"),
   updateAddress:vi.fn(async()=>undefined),
   archiveAddress:vi.fn(async()=>undefined),
@@ -15,7 +15,10 @@ const mocks=vi.hoisted(()=>({
 }));
 vi.mock("@/lib/customer-reward-catalog", () => ({ listRewardCatalog: async () => [], redeemOrganizationCatalog: async () => ({ id: "reward", balance: 0 }) }));
 vi.mock("@/lib/supabase",()=>({supabase:{auth:{getSession:mocks.getSession,
-  onAuthStateChange:()=>({data:{subscription:{unsubscribe:vi.fn()}}}),signInWithOtp:mocks.signin},rpc:mocks.submit}}));
+  onAuthStateChange:()=>({data:{subscription:{unsubscribe:vi.fn()}}}),signInWithOtp:mocks.signin},rpc:(...args: unknown[])=>{
+    const request=Promise.resolve(mocks.submit(...args));
+    return Object.assign(request,{setHeader:(...header:unknown[])=>{mocks.header(...header);return request;}});
+  }}}));
 vi.mock("@/lib/customer-portal", async importOriginal => {
   const actual = await importOriginal<typeof import("@/lib/customer-portal")>();
   return {
@@ -37,6 +40,7 @@ function openMenu(){fireEvent.click(screen.getByRole("button",{name:"開啟選�
 beforeEach(()=>{
   mocks.getSession.mockResolvedValue({data:{session:{user:{id:"user"}}}});
   mocks.submit.mockReset();
+  mocks.header.mockClear();
   mocks.saveAddress.mockClear();
   mocks.updateAddress.mockClear();
   mocks.archiveAddress.mockClear();
@@ -66,6 +70,7 @@ describe("organization portal",()=>{
     expect(screen.queryByLabelText("使用積分")).not.toBeInTheDocument();
     fireEvent.click(screen.getByText("提交預備訂單"));
     await waitFor(()=>expect(mocks.submit).toHaveBeenCalledWith("customer_portal_submit_order",expect.objectContaining({p_items:[{product_id:"p",quantity:2}],p_points:0,p_address_id:"a",p_request_id:expect.any(String)})));
+    expect(mocks.header).toHaveBeenCalledWith("x-customer-organization","org");
     await screen.findByText("已提交預備訂單，等待 FCCD 確認。確認後才會成為正式訂單。");
   });
   it("requires a delivery address before checkout",async()=>{
@@ -134,9 +139,9 @@ describe("organization portal",()=>{
     expect(screen.getByRole("heading",{name:"編輯地址"})).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText("地址名稱"),{target:{value:"倉庫"}});
     fireEvent.click(screen.getByRole("button",{name:"儲存"}));
-    await waitFor(()=>expect(mocks.updateAddress).toHaveBeenCalledWith("a",expect.objectContaining({label:"倉庫",recipient:"陳先生",phone:"91234567",address:"九龍辦公室"})));
+    await waitFor(()=>expect(mocks.updateAddress).toHaveBeenCalledWith("a",expect.objectContaining({label:"倉庫",recipient:"陳先生",phone:"91234567",address:"九龍辦公室"}), "org"));
     fireEvent.click(screen.getByRole("button",{name:"刪除地址"}));
-    await waitFor(()=>expect(mocks.archiveAddress).toHaveBeenCalledWith("a"));
+    await waitFor(()=>expect(mocks.archiveAddress).toHaveBeenCalledWith("a", "org"));
   });
   it("lets admins transfer roles and revoke pending invitations",async()=>{
     const adminSnapshot:PortalSnapshot={
@@ -153,9 +158,9 @@ describe("organization portal",()=>{
     await screen.findByRole("heading",{name:"團隊管理"});
     expect(screen.getByText("new@example.com")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button",{name:"設為管理員"}));
-    await waitFor(()=>expect(mocks.setRole).toHaveBeenCalledWith("member","admin"));
+    await waitFor(()=>expect(mocks.setRole).toHaveBeenCalledWith("member","admin", "org"));
     fireEvent.click(screen.getByRole("button",{name:"取消邀請"}));
-    await waitFor(()=>expect(mocks.revokeInvite).toHaveBeenCalledWith("invite-1"));
+    await waitFor(()=>expect(mocks.revokeInvite).toHaveBeenCalledWith("invite-1", "org"));
   });
   it("lets admins assign member menu scopes",async()=>{
     const adminSnapshot:PortalSnapshot={
@@ -168,7 +173,7 @@ describe("organization portal",()=>{
     await screen.findByRole("heading",{name:"團隊管理"});
     fireEvent.click(screen.getByRole("checkbox", { name: "HK Party Food · 指定餐單 · 2026-10-14" }));
     fireEvent.click(screen.getByRole("button",{name:"儲存餐牌權限"}));
-    await waitFor(()=>expect(mocks.setMenuScopes).toHaveBeenCalledWith("member",["m"]));
+    await waitFor(()=>expect(mocks.setMenuScopes).toHaveBeenCalledWith("member",["m"], "org"));
   });
   it("lets an admin turn off a member permission", async () => {
     mocks.submit.mockResolvedValue({ data: { ordering: false, orders: true, delivery: true, points: true, redeem: true, members: false, export: false, menus: false, settings: false }, error: null });
@@ -176,11 +181,20 @@ describe("organization portal",()=>{
     fireEvent.click(await screen.findByRole("checkbox", { name: "訂餐管理" }));
     await waitFor(() => expect(mocks.submit).toHaveBeenCalledWith("customer_portal_set_member_permission", { p_permission: "ordering", p_allowed: false }));
   });
+  it("lets a member with only menu management assign menus",async()=>{
+    mount({...snapshot,permissions:{members:false,menus:true},
+      members:[{user_id:"member",email:"member@example.com",role:"member",is_active:true,menu_ids:[]}],
+      org_menus:[{id:"m",name:"指定餐單",brand:"HK Party Food",delivery_date:"2026-10-14",is_active:true}]},"/customer/team");
+    fireEvent.click(await screen.findByRole("checkbox",{name:"HK Party Food · 指定餐單 · 2026-10-14"}));
+    fireEvent.click(screen.getByRole("button",{name:"儲存餐牌權限"}));
+    await waitFor(()=>expect(mocks.setMenuScopes).toHaveBeenCalledWith("member",["m"],"org"));
+    expect(screen.getByRole("button",{name:"停用成員"})).toBeDisabled();
+  });
   it("shows the selected company registration without a document path", async () => {
     mocks.submit.mockResolvedValue({ data: { name: "示例機構", brNumber: "12345678", brExpiresOn: "2027-01-01", settlementCycle: "monthly", contacts: [{ name: "陳先生", phone: "91234567", title: "經理", primary: true }] }, error: null });
     mount(snapshot, "/customer/company");
     expect(await screen.findByRole("heading", { name: "公司資料" })).toBeInTheDocument();
-    expect(screen.getByText(/12345678/)).toBeInTheDocument();
+    expect(await screen.findByText(/12345678/)).toBeInTheDocument();
     expect(screen.getByText("陳先生")).toBeInTheDocument();
     expect(screen.queryByText(/object_path/)).not.toBeInTheDocument();
   });

@@ -3,7 +3,9 @@ import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useCurrentPageAccess } from "@/auth/use-page-access";
 import { Button } from "@/components/ui/button";
-import { fulfillRewardRedemption, listRewardCatalogOps, listRewardRedemptions, upsertRewardCatalogItem, type RewardCatalogOpsItem, type RewardRedemption } from "@/lib/customer-reward-catalog";
+import { ListTable } from "@/components/ui/list-table";
+import { TablePagination } from "@/components/ui/table-pagination";
+import { fulfillRewardRedemption, listRewardCatalogOps, fetchRewardRedemptionPage, upsertRewardCatalogItem, type RewardCatalogOpsItem, type RewardRedemption } from "@/lib/customer-reward-catalog";
 import { linkShopifyCustomer } from "@/lib/shopify-customer-bridge";
 import { supabase } from "@/lib/supabase";
 import "@/lib/customer-portal-i18n";
@@ -22,6 +24,9 @@ export function CustomerPortalRewardCatalogPage() {
   const canEdit = useCurrentPageAccess().canAccess("settings.customer_portal.edit");
   const [items, setItems] = useState<RewardCatalogOpsItem[]>([]);
   const [redemptions, setRedemptions] = useState<RewardRedemption[]>([]);
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [name, setName] = useState("");
@@ -41,10 +46,14 @@ export function CustomerPortalRewardCatalogPage() {
   const [linkStoreId, setLinkStoreId] = useState("");
 
   const load = useCallback(async () => {
-    const [catalog, claims] = await Promise.all([listRewardCatalogOps(), listRewardRedemptions()]);
+    setLoading(true);
+    setError("");
+    try {
+    const [catalog, claims] = await Promise.all([listRewardCatalogOps(), fetchRewardRedemptionPage(page)]);
     setItems(catalog ?? []);
-    setRedemptions(claims ?? []);
-  }, []);
+    setRedemptions(claims.rows); setTotal(claims.total); setPage(claims.page);
+    } finally { setLoading(false); }
+  }, [page]);
   useEffect(() => { void load().catch(reason => setError(t(failure(reason)))); }, [load, t]);
   useEffect(() => {
     void supabase.from("shopify_stores").select("id,shop_domain").eq("is_active", true).order("shop_domain")
@@ -126,6 +135,14 @@ export function CustomerPortalRewardCatalogPage() {
     <h2>{t("portalRewardCatalog.items")}</h2>
     {items.length ? items.map(item => <div className="portal-row" key={item.id}><div><strong>{item.name}</strong><p>{t(item.kind === "voucher" ? "portalRewardCatalog.voucher" : "portalRewardCatalog.gift")} · {item.points_cost} · {t("portalRewardCatalog.stock")} {item.stock}{item.voucher_amount_hkd ? ` · HK$${Number(item.voucher_amount_hkd).toFixed(0)}` : ""}{item.is_active ? "" : ` · ${t("portalRewardCatalog.inactive")}`}</p></div>{canEdit ? <Button type="button" variant="outline" onClick={() => { setEditing(item.id); setName(item.name); setKind(item.kind); setPoints(String(item.points_cost)); setStock(String(item.stock)); setDescription(item.description); setActive(item.is_active); setAmount(item.voucher_amount_hkd ? String(item.voucher_amount_hkd) : ""); setStoreId(item.shopify_store_id ?? ""); setValidDays(String(item.voucher_valid_days ?? 365)); }}>{t("portalRewardCatalog.edit")}</Button> : null}</div>) : <p>{t("portalRewardCatalog.empty")}</p>}
     <h2>{t("portalRewardCatalog.redemptions")}</h2>
-    {redemptions.length ? redemptions.map(row => <div className="portal-row" key={row.id}><div><strong>{row.account}</strong><p>{row.name} · {row.points} · {t(row.status === "fulfilled" ? "portalRewardCatalog.fulfilled" : "portalRewardCatalog.pending")}{row.voucher_status ? ` · ${t(`portalVoucher.${row.voucher_status}`)}` : ""}{row.voucher_last4 ? ` · ${row.voucher_last4}` : ""}</p></div>{canEdit && row.status === "pending" ? <Button type="button" variant="outline" onClick={() => void fulfillRewardRedemption(row.id).then(() => load()).catch(reason => setError(t(failure(reason))))}>{t("portalRewardCatalog.fulfill")}</Button> : null}</div>) : <p>{t("portalRewardCatalog.noRedemptions")}</p>}
+    <ListTable loading={loading} loadingLabel={t("portalCatalog.loading")} skeletonColumns={3} onRefresh={() => load().catch(reason => setError(t(failure(reason))))}
+      header={<tr><th>{t("portalVoucher.ownerId")}</th><th>{t("portalRewardCatalog.items")}</th><th>{t("orders.columns.actions")}</th></tr>}>
+      {redemptions.map(row => <tr key={row.id}><td>{row.account}</td><td>{row.name} · {row.points} · {t(row.status === "fulfilled" ? "portalRewardCatalog.fulfilled" : "portalRewardCatalog.pending")}{row.voucher_status ? ` · ${t(`portalVoucher.${row.voucher_status}`)}` : ""}{row.voucher_last4 ? ` · ${row.voucher_last4}` : ""}</td><td className="table-actions-cell">{canEdit && row.status === "pending" ? <Button type="button" variant="outline" onClick={() => void fulfillRewardRedemption(row.id).then(() => load()).catch(reason => setError(t(failure(reason))))}>{t("portalRewardCatalog.fulfill")}</Button> : null}</td></tr>)}
+      {!redemptions.length ? <tr><td colSpan={3}>{error ? <Button onClick={() => void load().catch(reason => setError(t(failure(reason))))}>{t("portal.retry")}</Button> : t("portalRewardCatalog.noRedemptions")}</td></tr> : null}
+    </ListTable>
+    <TablePagination summary={t("orders.pagination", {from: total ? (page-1)*15+1 : 0, to:Math.min(page*15,total),total})}
+      page={page} totalPages={Math.max(1,Math.ceil(total/15))} loading={loading}
+      onPrevious={() => setPage(current=>Math.max(1,current-1))} onNext={() => setPage(current=>Math.min(Math.max(1,Math.ceil(total/15)),current+1))}
+      onPageChange={setPage} previousLabel={t("orders.previous")} nextLabel={t("orders.next")} pageLabel={t("orders.pageOf")} jumpLabel={t("orders.jumpToPage")} />
   </section>;
 }

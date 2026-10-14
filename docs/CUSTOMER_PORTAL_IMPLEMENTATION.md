@@ -6,6 +6,23 @@
 
 ### Review fixes (2026-10-14)
 
+The next review adds `20261014180000_customer_portal_review_permissions.sql`,
+`20261014181000_customer_reward_redemption_pages.sql`,
+`20261014182000_shopify_voucher_worker_recovery.sql`, and
+`20261014183000_customer_receipt_workspace_scope.sql`. Portal RPCs carry the
+displayed organization in `x-customer-organization`; membership is checked for
+that request without changing another tab's selection. Bootstrap requests
+without a header retain the existing selection behavior. Delegated member/menu
+permissions now return the required management data. Invoice/receipt download
+requires both order-view and export permission.
+
+Redemption operations use 15-row server pages, with pending fulfillment first.
+Voucher workers can reclaim abandoned issuing jobs after ten minutes while
+retaining their discount code; five exhausted attempts require operator review.
+Shopify address pushes preserve the full address across two fields when it fits.
+Addresses that cannot round-trip within the supported field lengths fail before
+the remote mutation, leaving the local address intact.
+
 Apply `20261014130000_customer_personal_order_isolation.sql`,
 `20261014131000_customer_br_versions_and_application_pages.sql`, then
 `20261014132000_customer_email_matched_order_feedback.sql` after the preceding

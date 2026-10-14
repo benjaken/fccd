@@ -42,7 +42,7 @@ function portalErrorKey(error: unknown, fallback: string) {
   return fallback;
 }
 
-function useCustomerPortalController(load: typeof fetchPortal, onMembershipChanged?: () => void) {
+function useCustomerPortalController(load: typeof fetchPortal, onMembershipChanged?: () => void, organizationId?: string | null) {
   const { t } = useTranslation();
   const [params, setParams] = useSearchParams();
   const [loggedIn, setLoggedIn] = useState(false);
@@ -85,11 +85,11 @@ function useCustomerPortalController(load: typeof fetchPortal, onMembershipChang
     if (!loggedIn) return;
     let active=true;
     setError("");
-    void load().then(value=>{if(active){setData(value);setAddressId(value.addresses[0]?.id||"");}})
+    void load(organizationId ?? undefined).then(value=>{if(active){setData(value);setAddressId(value.addresses[0]?.id||"");}})
       .catch(error=>{if(active){setError(t(portalErrorKey(error,"portal.loadFailed")));if(portalErrorKey(error,"")==="portal.membershipRequired")onMembershipChanged?.();}});
     return ()=>{active=false;};
-  }, [loggedIn,load,t]);
-  useEffect(()=>{if(page!=="receipts"||!loggedIn)return;let active=true;
+  }, [loggedIn,load,t,organizationId]);
+  useEffect(()=>{if(page!=="receipts"||!loggedIn||!data)return;let active=true;
     void fetchPortalEvidence(data?.organization.id).then(rows=>{if(active)setEvidence(rows);}).catch(()=>{if(active)setError(t("portal.operationFailed"));});
     return()=>{active=false;};},[page,loggedIn,t,data?.organization.id]);
   async function run(action: () => Promise<unknown>, success?: string, failureKey = "portal.operationFailed") {
@@ -143,7 +143,7 @@ function PortalTeamGate({ children }: { children: ReactNode }) {
 }
 
 export function CustomerPortalPage({ load = fetchPortal, loginIntro, canSwitch = false, organizations = [], activeOrganizationId, onSelectOrganization, onMembershipChanged }: { load?: typeof fetchPortal; loginIntro?: ReactNode; canSwitch?: boolean; organizations?: Array<{ id: string; name: string }>; activeOrganizationId?: string; onSelectOrganization?: (organizationId: string) => void; onMembershipChanged?: () => void }) {
-  const portal = useCustomerPortalController(load,onMembershipChanged);
+  const portal = useCustomerPortalController(load,onMembershipChanged,activeOrganizationId);
   const {t, setParams, loggedIn, authLoading, data, setQuantities, busy, error, notice, financialDocument, setFinancialDocument, inviteToken, refresh, run, setPage, setData, setInviteLink} = portal;
   const permissions = portalPermissions(data);
   const navItems = useMemo(() => nav

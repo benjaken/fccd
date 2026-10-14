@@ -8,10 +8,24 @@ import {
   planAddressReconciliation,
   shopifyCustomerGid,
   voucherCodeFromBytes,
+  toMailingAddress,
   type SyncLink,
   type SyncLocalAddress,
   type SyncRemoteAddress,
 } from "../supabase/functions/shopify-customer-bridge/logic.ts";
+
+it("preserves a long address across a push/read round trip",()=>{
+  const source=local({address:"Building " + "A".repeat(240) + " Room " + "B".repeat(50)});
+  const sent=toMailingAddress(source);
+  const remote=parseCustomerAddresses({customer:{addressesV2:{nodes:[{id:"remote",firstName:sent.firstName,address1:sent.address1,address2:sent.address2,phone:sent.phone}]}}})[0];
+  expect(addressFingerprint(remote)).toBe(addressFingerprint({...source,isDefault:false}));
+  expect(planAddressReconciliation({local:[{...source,isDefault:false}],remote:[remote],links:[{localId:source.id,remoteId:remote.id,syncedHash:addressFingerprint(remote),status:"synced"}]})).toEqual([]);
+});
+it("rejects addresses that cannot fit without dropping their suffix",()=>{
+  const address="A".repeat(300);
+  expect(()=>toMailingAddress({recipient:"Person",phone:"91234567",address})).toThrow("address_requires_manual_sync");
+  expect(address).toHaveLength(300);
+});
 
 const local = (patch: Partial<SyncLocalAddress> = {}): SyncLocalAddress => ({
   id: "local-1", recipient: "Ada", phone: "+852 9000 0000", address: "1 Queen Road", isDefault: true, archived: false, ...patch,

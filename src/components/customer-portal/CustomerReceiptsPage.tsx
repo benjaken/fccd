@@ -1,6 +1,6 @@
 import { useOutletContext } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { fetchPortalEvidence, uploadPortalEvidence, fetchPortalDocument } from "@/lib/customer-portal";
+import { fetchPortalEvidence, uploadPortalEvidence, fetchPortalDocument, portalPermissions } from "@/lib/customer-portal";
 import type { CustomerPortalController } from "@/components/CustomerPortalPage";
 const money = (cents: number) => new Intl.NumberFormat("zh-HK", { style: "currency", currency: "HKD" }).format(cents / 100);
 
@@ -15,6 +15,6 @@ export function CustomerReceiptsPage() {
           <label>{t("portal.receiptFile")}<input required type="file" accept="image/jpeg,image/png,application/pdf" onChange={e=>setReceiptFile(e.target.files?.[0]||null)}/></label><Button disabled={busy||!receiptFile||!receiptOrder}>{t("portal.submitEvidence")}</Button></form>
           {evidence.map(e=><div className="portal-row" key={e.id}><span>{data.orders.find(o=>o.id===e.order_id)?.number} · {money(Math.round(Number(e.amount)*100))}</span><div><strong>{t("portal.evidenceStatus."+e.status)}</strong>{e.review_reason&&<p>{e.review_reason}</p>}</div></div>)}
           <h2>{t("portal.financialDocuments")}</h2><p>{t("portal.documentsHint")}</p>
-          {data.orders.map(o=><div className="portal-row" key={o.id}><strong>{o.number}</strong><div className="portal-actions">{(["receipt","invoice"] as const).map(kind=><Button key={kind} variant="outline" disabled={busy||Number(o.outstanding)>0||["已取消","己取消","取消"].includes(o.status||"")} onClick={()=>void run(async()=>{setFinancialDocument({order:await fetchPortalDocument(o.id,kind,data.organization.id),kind});})}>{t("portal.download."+kind)}</Button>)}</div></div>)}
+          {data.orders.map(o=><div className="portal-row" key={o.id}><strong>{o.number}</strong><div className="portal-actions">{(["receipt","invoice"] as const).map(kind=><Button key={kind} variant="outline" disabled={busy||!portalPermissions(data).export||Number(o.outstanding)>0||["已取消","己取消","取消"].includes(o.status||"")} onClick={()=>void run(async()=>{setFinancialDocument({order:await fetchPortalDocument(o.id,kind,data.organization.id),kind});})}>{t("portal.download."+kind)}</Button>)}</div></div>)}
         </section>;
 }
