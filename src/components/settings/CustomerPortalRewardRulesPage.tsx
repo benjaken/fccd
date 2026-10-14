@@ -1,9 +1,10 @@
 import { type FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ArrowRight, Plus, RotateCcw, Search } from "lucide-react";
+import { ArrowRight, Plus, RotateCcw } from "lucide-react";
 import { useCurrentPageAccess } from "@/auth/use-page-access";
 import { Button } from "@/components/ui/button";
 import { ListTable } from "@/components/ui/list-table";
+import { SearchField } from "@/components/ui/search-field";
 import { SidePanel } from "@/components/ui/side-panel";
 import { createRewardRule, listRewardRules, recordFoodRefund, rewardRuleThreshold, searchRefundOrders,
   type RefundOrderMatch, type RewardRuleVersion } from "@/lib/customer-portal-reward-rules-ops";
@@ -154,12 +155,6 @@ export function CustomerPortalRewardRulesPage() {
   }
   const title = panel === "version" ? "createVersion" : panel === "view" ? "versionDetail" : "refundTitle";
   return <section className="reward-rules-page">
-    <header className="reward-rules-heading">
-      <div className="reward-rules-actions">
-        {active && activeRate !== null ? <span className="reward-rule-status" data-status={activeRate === 0 ? "scheduled" : "active"}>{activeRate === 0 ? text("earningPaused") : text("healthy")}</span> : null}
-        {canEdit ? <Button onClick={() => open("version")} disabled={loading || invalid || Boolean(error)}><Plus size={18} />{text("createVersion")}</Button> : null}
-      </div>
-    </header>
     {error ? <div className="reward-rules-message" role="alert"><span>{error}</span><Button variant="outline" onClick={() => void load()}>{t("portal.retry")}</Button></div> : null}
     {invalid ? <div className="reward-rules-message" role="alert"><span>{text("dataUpdateRequired")}</span><Button variant="outline" onClick={() => void load()}>{t("portal.retry")}</Button></div> : null}
     {notice ? <p className="reward-rules-notice" role="status">{notice}</p> : null}
@@ -168,7 +163,11 @@ export function CustomerPortalRewardRulesPage() {
         <section className="reward-rule-current" aria-label={text("currentRule")}>
           <div className="reward-rule-section-heading">
             <h2>{text("currentRule")}</h2>
-            {active && activeRate !== null ? <span className="reward-rule-status" data-status="active">{activeRate === 0 ? text("earningPaused") : text("active")}</span> : null}
+            <div className="reward-rules-actions">
+              {active && activeRate !== null ? <span className="reward-rule-status" data-status="active">{activeRate === 0 ? text("earningPaused") : text("active")}</span> : null}
+              {active && activeRate !== null && activeRate > 0 ? <span className="reward-rule-status" data-status="active">{text("healthy")}</span> : null}
+              {canEdit ? <Button onClick={() => open("version")} disabled={loading || invalid || Boolean(error)}><Plus size={18} />{text("createVersion")}</Button> : null}
+            </div>
           </div>
           {loading ? <p role="status">{text("loading")}</p> : active && activeRate !== null && activeRate > 0 ? <>
             <div className="reward-rule-banner">
@@ -202,7 +201,7 @@ export function CustomerPortalRewardRulesPage() {
           <div className="reward-rule-section-heading"><h2>{text("history")}</h2><span>{t("portalRewardRules.versionCount", { count: rules.length })}</span></div>
           <div className="reward-rule-history-tools">
             <p>{text("effectiveAtHint")}</p>
-            <label className="reward-rule-search"><Search size={16} aria-hidden="true" /><input aria-label={text("searchVersions")} value={versionQuery} onChange={event => setVersionQuery(event.target.value)} placeholder={text("searchVersionsPlaceholder")} /></label>
+            <SearchField id="reward-rule-version-search" value={versionQuery} onChange={setVersionQuery} label={text("searchVersions")} placeholder={text("searchVersionsPlaceholder")} />
           </div>
           <ListTable loading={loading} loadingLabel={text("loading")} skeletonColumns={6} skeletonRows={5} onRefresh={load} header={<tr><th>{text("versionLabel")}</th><th>{text("hkdPerPoint")}</th><th>{text("effectiveAt")}</th><th>{text("createdAt")}</th><th>{text("status")}</th><th>{text("viewVersion")}</th></tr>}>
             {filtered.map(rule => {
