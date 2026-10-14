@@ -750,6 +750,12 @@ export const secondaryNav: Record<string, NavItem[]> = {
       permissionKey: "settings.customer_portal",
     },
     {
+      key: "customerPortalGuides",
+      to: "/settings/customer-portal/guides",
+      icon: FilePenLine,
+      permissionKey: "settings.customer_portal",
+    },
+    {
       key: "customerPortalRewardRules",
       to: "/settings/customer-portal/reward-rules",
       icon: Coins,

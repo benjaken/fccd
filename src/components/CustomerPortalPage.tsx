@@ -25,6 +25,7 @@ import { CustomerTeamPage } from "@/components/customer-portal/CustomerTeamPage"
 import { CustomerProfilePage } from "@/components/customer-portal/CustomerProfilePage";
 import { CustomerCompanyPage } from "@/components/customer-portal/CustomerCompanyPage";
 import { OrganizationVipPage } from "@/components/customer-portal/OrganizationVipPage";
+import { CustomerGuidePage } from "@/components/customer-portal/CustomerGuidePage";
 import { PAYMENT_DELIVERY_URL } from "@/lib/customer-portal-sitemap";
 
 type Page = "home" | "menus" | "vip" | "orders" | "receipts" | "points" | "team" | "addresses" | "profile" | "company";
@@ -171,6 +172,7 @@ function PortalTeamGate({ children }: { children: ReactNode }) {
 
 export function CustomerPortalPage({ load = fetchPortal, loginIntro, canSwitch = false, organizations = [], activeOrganizationId, onSelectOrganization, onMembershipChanged }: { load?: typeof fetchPortal; loginIntro?: ReactNode; canSwitch?: boolean; organizations?: Array<{ id: string; name: string }>; activeOrganizationId?: string; onSelectOrganization?: (organizationId: string) => void; onMembershipChanged?: () => void }) {
   const portal = useCustomerPortalController(load,onMembershipChanged,activeOrganizationId);
+  const onGuide = Boolean(useMatch("/customer/guides/:slug"));
   const {t, setParams, loggedIn, authLoading, data, setQuantities, busy, error, notice, financialDocument, setFinancialDocument, inviteToken, refresh, run, setPage, setData, setInviteLink} = portal;
   const permissions = portalPermissions(data);
   const navItems = useMemo(() => {
@@ -207,10 +209,11 @@ export function CustomerPortalPage({ load = fetchPortal, loginIntro, canSwitch =
     {financialDocument&&<ReceiptPreview order={financialDocument.order} documentKind={financialDocument.kind} printReceipt={printPdf} onClose={()=>setFinancialDocument(null)}/>}
     {authLoading?<p role="status">{t("portal.loading")}</p>:!loggedIn?<CustomerOtpLogin mode="organization" modeSelector={loginIntro} />:<>
       {inviteToken&&<section><h2>{t("portal.invitation")}</h2><Button disabled={busy} onClick={()=>void run(async()=>{await acceptPortalInvite(inviteToken);setParams({});await refresh();onMembershipChanged?.();},t("portal.joined"))}>{t("portal.acceptInvite")}</Button></section>}
-      {!data?<CustomerPortalAccessState error={error} busy={busy} onRetry={()=>void run(refresh,undefined,"portal.loadFailed")} />:<>
+      {!data && !onGuide ? <CustomerPortalAccessState error={error} busy={busy} onRetry={()=>void run(refresh,undefined,"portal.loadFailed")} /> : <>
         <Routes>
           <Route element={<Outlet context={portal} />}>
-            <Route index element={<CustomerHomePage />} />
+            <Route path="guides/:slug" element={<CustomerGuidePage />} />
+            {data ? <Route index element={<CustomerHomePage />} /> : null}
             <Route path="menus" element={<PortalPermissionGate permission="ordering"><CustomerMenusPage /></PortalPermissionGate>} />
             <Route path="menus/:menuId" element={<PortalPermissionGate permission="ordering"><CustomerMenusPage /></PortalPermissionGate>} />
             <Route path="vip" element={<PortalPermissionGate permission="ordering"><OrganizationVipPage /></PortalPermissionGate>} />

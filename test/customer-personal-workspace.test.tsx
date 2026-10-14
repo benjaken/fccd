@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { CustomerPersonalWorkspace } from "@/components/customer-portal/CustomerPersonalWorkspace";
+import { supabase } from "@/lib/supabase";
 import type { PersonalSnapshot } from "@/lib/customer-personal";
 const mocks = vi.hoisted(() => ({ session: vi.fn(), snapshot: vi.fn(), profile: vi.fn(), address: vi.fn(), remove: vi.fn(), upload: vi.fn(), reorder: vi.fn(), reorderQuote: vi.fn(), logout: vi.fn(), points: vi.fn() }));
 vi.mock("@/lib/customer-reward-catalog", () => ({ listRewardCatalog: async () => [], redeemPersonalCatalog: async () => ({ id: "reward", balance: 0 }) }));
@@ -25,6 +26,16 @@ beforeEach(() => {
   mocks.reorder.mockResolvedValue({ domain: "brand.myshopify.com", items: [{ variant: "123", quantity: 2 }] });
   mocks.reorderQuote.mockRejectedValue(new Error("not_portal_quote"));
   mocks.points.mockResolvedValue({ balance: 0, pending: 0, ledger: [] });
+  vi.mocked(supabase.rpc).mockImplementation(async (fn: string) => {
+    if (fn === "customer_portal_list_guides") return { data: [
+      { slug: "about", title: "關於我們", body: "我們做到會。" },
+      { slug: "clients", title: "客戶清單", body: "" },
+      { slug: "cases", title: "真實案例", body: "" },
+      { slug: "company-meals", title: "公司訂飯", body: "" },
+      { slug: "promise", title: "服務承諾", body: "" },
+    ], error: null };
+    return { data: null, error: null };
+  });
 });
 describe("personal customer pages", () => {
   it("shows the earliest upcoming order and honest reward availability", async () => {
@@ -43,6 +54,13 @@ describe("personal customer pages", () => {
     expect(screen.getByRole("button", { name: "編輯" })).toBeInTheDocument();
     expect(screen.queryByLabelText("密碼")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("姓名")).not.toBeInTheDocument();
+  });
+  it("shows a published guide from the sidebar", async () => {
+    mount(); await screen.findByRole("heading", { name: "下一張單狀態" });
+    fireEvent.click(screen.getByRole("button", { name: "開啟選單" }));
+    fireEvent.click(screen.getByRole("link", { name: "關於我們" }));
+    expect(await screen.findByRole("heading", { name: "關於我們" })).toBeInTheDocument();
+    expect(screen.getByText("我們做到會。")).toBeInTheDocument();
   });
   it("opens configured brand menus on Shopify", async () => {
     mount("/customer/personal/menus"); await screen.findByText("Brand menu"); expect(screen.getByRole("link", { name: /Brand menu/ })).toHaveAttribute("href", "https://brand.myshopify.com");

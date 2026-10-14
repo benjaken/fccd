@@ -167,6 +167,7 @@ import { CustomerPortalMealCalendarPage } from "@/components/settings/CustomerPo
 import { CustomerPortalOpsPage } from "@/components/settings/CustomerPortalOpsPage";
 import { CustomerPortalRewardCatalogPage } from "@/components/settings/CustomerPortalRewardCatalogPage";
 import { CustomerPortalApplicationsPage } from "@/components/settings/CustomerPortalApplicationsPage";
+import { CustomerPortalGuidesPage } from "@/components/settings/CustomerPortalGuidesPage";
 import { CustomerPortalRewardRulesPage } from "@/components/settings/CustomerPortalRewardRulesPage";
 import "@/lib/customer-portal-i18n";
 import { DeliveryDistrictsPage } from "@/components/settings/DeliveryDistrictsPage";
@@ -1644,6 +1645,16 @@ function OperationsShell() {
                 element={
                   pageAccess.canAccess("settings.customer_portal") ? (
                     <CustomerPortalApplicationsPage />
+                  ) : (
+                    <SettingsAccessDenied />
+                  )
+                }
+              />
+              <Route
+                path="/settings/customer-portal/guides"
+                element={
+                  pageAccess.canAccess("settings.customer_portal") ? (
+                    <CustomerPortalGuidesPage />
                   ) : (
                     <SettingsAccessDenied />
                   )

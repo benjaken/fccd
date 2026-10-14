@@ -3,7 +3,8 @@ import { Link, NavLink } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Bell, ClipboardList, Gift, Globe, Home, LogOut, MapPin, Menu, ShoppingCart, Truck, UserRound, X } from "lucide-react";
 import { FOOD_CHANNEL_CATERING_LOGO_PATH } from "@/lib/brand-logo";
-import { PAYMENT_DELIVERY_URL, PORTAL_GUIDE_LINKS } from "@/lib/customer-portal-sitemap";
+import { PAYMENT_DELIVERY_URL } from "@/lib/customer-portal-sitemap";
+import { CustomerPortalGuideLinks } from "@/components/customer-portal/CustomerPortalGuideLinks";
 
 type IconComponent = ComponentType<SVGProps<SVGSVGElement> & { size?: number | string }>;
 type NavItem = { key: string; to?: string; href?: string; end?: boolean; icon: IconComponent };
@@ -40,9 +41,7 @@ function NavItems({ onNavigate }: { onNavigate?: () => void }) {
       if (item.href) return <a key={item.key} className="personal-nav-link" href={item.href} target="_blank" rel="noreferrer" onClick={onNavigate}><Icon size={18} />{label}</a>;
       return <NavLink key={item.key} to={item.to || base} end={item.end} className={({ isActive }) => `personal-nav-link${isActive ? " is-active" : ""}`} onClick={onNavigate}><Icon size={18} />{label}</NavLink>;
     })}
-    <div className="personal-nav-guides">
-      {PORTAL_GUIDE_LINKS.map(link => <a key={link.key} href={link.href} target="_blank" rel="noreferrer" onClick={onNavigate}>{t(`portal.siteNav.${link.key}`)}</a>)}
-    </div>
+    <CustomerPortalGuideLinks base={base} onNavigate={onNavigate} />
   </>;
 }
 

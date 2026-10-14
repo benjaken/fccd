@@ -419,3 +419,38 @@ i18n.addResourceBundle("en", "translation", { mealCalendar: {
   ordersHeading: "Orders placed",
 }}, true, true);
 
+
+i18n.addResourceBundle("zh-HK", "translation", { portalOps: { formBasics: "基本資料", formDelivery: "供餐安排", formSettings: "設定" } }, true, true);
+i18n.addResourceBundle("en-GB", "translation", { portalOps: { formBasics: "Basic information", formDelivery: "Delivery schedule", formSettings: "Settings" } }, true, true);
+i18n.addResourceBundle("zh-HK", "translation", { portalGuides: {
+  title: "客戶介紹",
+  description: "編輯後會顯示在客戶服務平台側邊欄。關閉顯示就不會出現。",
+  edit: "編輯",
+  titleField: "標題",
+  body: "內容",
+  published: "在側邊欄顯示",
+  visible: "顯示中",
+  hidden: "已隱藏",
+  saved: "已儲存。",
+  emptyBody: "尚未編寫內容。",
+  notFound: "找不到這頁。",
+  loading: "載入中…",
+  operationFailed: "操作未完成，請重試。",
+  invalid: "標題需為 1 至 40 字，內容不可超過 8000 字。",
+}}, true, true);
+i18n.addResourceBundle("en", "translation", { portalGuides: {
+  title: "Customer guides",
+  description: "Edits appear in the customer service sidebar. Hidden pages stay out of the menu.",
+  edit: "Edit",
+  titleField: "Title",
+  body: "Content",
+  published: "Show in the sidebar",
+  visible: "Visible",
+  hidden: "Hidden",
+  saved: "Saved.",
+  emptyBody: "No content yet.",
+  notFound: "This page could not be found.",
+  loading: "Loading…",
+  operationFailed: "Could not complete the action. Please retry.",
+  invalid: "Use a title of 1 to 40 characters, and keep the content within 8000 characters.",
+}}, true, true);

@@ -146,7 +146,13 @@
   font-weight:650;
   text-decoration:none;
 }
-.customer-portal-drawer-guides a:hover{color:#fff;background:rgba(255,255,255,.08)}
+.customer-portal-drawer-guides a:hover,
+.customer-portal-drawer-guides a[aria-current="page"]{color:#fff;background:rgba(255,255,255,.08)}
+.portal-guide-body{white-space:pre-wrap;max-width:42rem;line-height:1.7}
+.portal-guide-form{display:grid;gap:16px}
+.portal-guide-form label{display:grid;gap:8px;font-weight:650}
+.portal-guide-form textarea{width:100%;min-height:240px;padding:12px;border:1px solid var(--border);border-radius:12px;background:var(--card);color:inherit;font:inherit}
+.portal-guide-publish{display:flex;align-items:center;gap:10px}
 .customer-portal .portal-access-state{display:grid;justify-items:center;gap:16px;width:min(100%,560px);margin:64px auto 32px;padding:40px 32px;border:1px solid var(--border);border-radius:18px;background:var(--card);text-align:center}
 .portal-state-icon{display:grid;place-items:center;width:56px;height:56px;border-radius:16px;background:var(--muted);color:var(--primary)}
 .portal-state-icon svg{width:28px;height:28px}

@@ -9,6 +9,7 @@ import { CustomerWorkspaceHeader, CustomerPortalAccessState } from "@/components
 import { personalNavigation, personalNavLabel } from "@/components/customer-portal/PersonalPortalChrome";
 import { CustomerPersonalAddressesPage, CustomerPersonalEvidencePage, CustomerPersonalProfilePage } from "./CustomerPersonalSettingsPages";
 import { PersonalLunchboxPage } from "@/components/customer-portal/PersonalLunchboxPage";
+import { CustomerGuidePage } from "@/components/customer-portal/CustomerGuidePage";
 import { AccountOrderFeedback } from "@/components/customer-portal/OrderFeedbackPage";
 import { RewardCatalogList } from "@/components/customer-portal/RewardCatalogList";
 import { fetchPersonalOtpSession, logoutPersonalOtpSession } from "@/lib/customer-otp-session";
@@ -251,7 +252,7 @@ export function CustomerPersonalWorkspace({ canSwitch, loggingOut, onLogout }: {
   const pageKey = location.pathname.startsWith(`${base}/payments`) ? "orders"
     : personalNavigation.find(item => item.to && (item.end ? location.pathname === item.to : location.pathname === item.to || location.pathname.startsWith(`${item.to}/`)))?.key
     || (location.pathname.startsWith(`${base}/`) ? "orders" : "home");
-  const header = <CustomerWorkspaceHeader desktopTitle={t(`personal.${pageKey}`)} mode="personal" personal canSwitch={canSwitch} navItems={personalNavigation.map(item => ({ ...item, label: t(personalNavLabel[item.key]) }))} loggingOut={loggingOut} onLogout={onLogout} />;
+  const header = <CustomerWorkspaceHeader desktopTitle={location.pathname.startsWith(`${base}/guides/`) ? t("portal.siteNav.guides") : t(`personal.${pageKey}`)} mode="personal" personal canSwitch={canSwitch} navItems={personalNavigation.map(item => ({ ...item, label: t(personalNavLabel[item.key]) }))} loggingOut={loggingOut} onLogout={onLogout} />;
   const frame = (child: ReactNode) => <main className="customer-portal personal-workspace">{header}{child}</main>;
   if (loading) return frame(<PageSkeleton label={t("personal.loading")} variant="dashboard" />);
   if (!session || sessionError) return frame(<CustomerPortalAccessState error={sessionError || t("personal.loadFailed")} busy={false} onRetry={() => setVersion(v => v + 1)} />);
@@ -268,6 +269,7 @@ export function CustomerPersonalWorkspace({ canSwitch, loggingOut, onLogout }: {
       <Route path="personal/points" element={<PersonalPointsPage />} />
       <Route path="personal/addresses" element={<CustomerPersonalAddressesPage />} />
       <Route path="personal/profile" element={<CustomerPersonalProfilePage />} />
+      <Route path="personal/guides/:slug" element={<CustomerGuidePage />} />
       <Route path="personal/feedback/:orderId" element={<PersonalOrderFeedbackPage />} />
       <Route path="personal/:orderId" element={<CustomerSelfServicePage routeBase={base} listPath={`${base}/orders`} loginPath="/customer?mode=personal" restore={fetchPersonalOtpSession} logout={logoutPersonalOtpSession} otpOnly embedded />} />
       <Route path="*" element={<Navigate to={base} replace />} />
