@@ -1,35 +1,48 @@
 import { useEffect, useState, type ComponentType, type ReactNode, type SVGProps } from "react";
 import { Link, NavLink } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { Bell, ClipboardList, Gift, Home, LogOut, MapPin, Menu, ShoppingCart, Upload, UserRound, UtensilsCrossed, X } from "lucide-react";
+import { Bell, ClipboardList, Gift, Globe, Home, LogOut, MapPin, Menu, ShoppingCart, Truck, UserRound, X } from "lucide-react";
 import { FOOD_CHANNEL_CATERING_LOGO_PATH } from "@/lib/brand-logo";
+import { PAYMENT_DELIVERY_URL, PORTAL_GUIDE_LINKS } from "@/lib/customer-portal-sitemap";
 
 type IconComponent = ComponentType<SVGProps<SVGSVGElement> & { size?: number | string }>;
-type NavItem = { key: string; to: string; end?: boolean; icon: IconComponent };
+type NavItem = { key: string; to?: string; href?: string; end?: boolean; icon: IconComponent };
 
 const base = "/customer/personal";
 export const personalNavigation: NavItem[] = [
   { key: "home", to: base, end: true, icon: Home },
-  { key: "menus", to: `${base}/menus`, icon: UtensilsCrossed },
+  { key: "menus", to: `${base}/menus`, icon: Globe },
   { key: "lunchbox", to: `${base}/lunchbox`, icon: ShoppingCart },
-  { key: "instant", to: `${base}/lunchbox`, icon: ShoppingCart },
-  { key: "evidence", to: `${base}/payments`, icon: Upload },
   { key: "orders", to: `${base}/orders`, icon: ClipboardList },
   { key: "points", to: `${base}/points`, icon: Gift },
   { key: "addresses", to: `${base}/addresses`, icon: MapPin },
+  { key: "paymentDelivery", href: PAYMENT_DELIVERY_URL, icon: Truck },
   { key: "profile", to: `${base}/profile`, icon: UserRound },
 ];
+
+export const personalNavLabel: Record<string, string> = {
+  home: "personal.home",
+  menus: "portal.siteNav.cateringSite",
+  lunchbox: "portal.siteNav.eventLunch",
+  orders: "portal.siteNav.orders",
+  points: "portal.siteNav.rewards",
+  addresses: "personal.addresses",
+  paymentDelivery: "portal.siteNav.paymentDelivery",
+  profile: "portal.siteNav.profile",
+};
 
 function NavItems({ onNavigate }: { onNavigate?: () => void }) {
   const { t } = useTranslation();
   return <>
     {personalNavigation.map(item => {
       const Icon = item.icon;
-      if (item.key === "instant") {
-        return <Link key={item.key} to={item.to} className="personal-nav-link" onClick={onNavigate}><Icon size={18} />{t(`personal.${item.key}`)}</Link>;
-      }
-      return <NavLink key={item.key} to={item.to} end={item.end} className={({ isActive }) => `personal-nav-link${isActive ? " is-active" : ""}`} onClick={onNavigate}><Icon size={18} />{t(`personal.${item.key}`)}</NavLink>;
+      const label = t(personalNavLabel[item.key]);
+      if (item.href) return <a key={item.key} className="personal-nav-link" href={item.href} target="_blank" rel="noreferrer" onClick={onNavigate}><Icon size={18} />{label}</a>;
+      return <NavLink key={item.key} to={item.to || base} end={item.end} className={({ isActive }) => `personal-nav-link${isActive ? " is-active" : ""}`} onClick={onNavigate}><Icon size={18} />{label}</NavLink>;
     })}
+    <div className="personal-nav-guides">
+      {PORTAL_GUIDE_LINKS.map(link => <a key={link.key} href={link.href} target="_blank" rel="noreferrer" onClick={onNavigate}>{t(`portal.siteNav.${link.key}`)}</a>)}
+    </div>
   </>;
 }
 

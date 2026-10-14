@@ -37,6 +37,8 @@
 .personal-drawer .personal-nav-link{color:#e7f2ec}
 .personal-drawer .personal-nav-link.is-active{background:#1f7a45;color:#fff}
 .personal-nav-link{display:flex;align-items:center;gap:12px;min-height:44px;padding:0 12px;border-radius:12px;color:inherit;font-weight:650;text-decoration:none}
+.personal-nav-guides{display:grid;gap:2px;margin-top:12px;padding-top:12px;border-top:1px solid rgba(255,255,255,.16)}
+.personal-nav-guides a{display:flex;align-items:center;min-height:40px;padding:0 12px;border-radius:12px;color:inherit;font-weight:650;text-decoration:none}
 .personal-mode-switch{display:grid;gap:6px;margin-top:12px}
 .personal-mode-switch a{display:flex;align-items:center;min-height:40px;padding:0 12px;border-radius:10px;color:#eef6f2;background:rgba(255,255,255,.08);text-decoration:none}
 .customer-portal.personal-workspace .portal-access-state{width:auto;margin:24px 16px;border:0;background:transparent;text-align:left;justify-items:start}

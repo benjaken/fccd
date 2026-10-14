@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
 import { CustomerSelfServicePage } from "@/components/CustomerSelfServicePage";
 import { CustomerWorkspaceHeader, CustomerPortalAccessState } from "@/components/customer-portal/CustomerWorkspaceChrome";
-import { personalNavigation } from "@/components/customer-portal/PersonalPortalChrome";
+import { personalNavigation, personalNavLabel } from "@/components/customer-portal/PersonalPortalChrome";
 import { CustomerPersonalAddressesPage, CustomerPersonalEvidencePage, CustomerPersonalProfilePage } from "./CustomerPersonalSettingsPages";
 import { PersonalLunchboxPage } from "@/components/customer-portal/PersonalLunchboxPage";
 import { AccountOrderFeedback } from "@/components/customer-portal/OrderFeedbackPage";
@@ -190,7 +190,7 @@ function PersonalMenusPage() {
 function PersonalOrdersPage() {
   const { t } = useTranslation();
   const { session } = usePersonalWorkspace();
-  return <section><h1>{t("personal.orders")}</h1>{session.orders.length ? session.orders.map(order => <PersonalOrderRow key={order.id} order={order} />) : <div className="personal-empty"><p>{t("personal.noOrders")}</p><p>{t("personal.orderHelp")}</p><Button asChild><Link to={`${base}/menus`}>{t("personal.orderNow")}</Link></Button></div>}</section>;
+  return <section><h1>{t("personal.orders")}</h1><p><Link to={`${base}/payments`}>{t("portal.siteNav.evidenceLink")}</Link></p>{session.orders.length ? session.orders.map(order => <PersonalOrderRow key={order.id} order={order} />) : <div className="personal-empty"><p>{t("personal.noOrders")}</p><p>{t("personal.orderHelp")}</p><Button asChild><Link to={`${base}/menus`}>{t("personal.orderNow")}</Link></Button></div>}</section>;
 }
 
 function PersonalOrderFeedbackPage() {
@@ -248,9 +248,10 @@ export function CustomerPersonalWorkspace({ canSwitch, loggingOut, onLogout }: {
     catch { setOperationError(t("personal.operationFailed")); return false; }
     finally { setBusy(false); }
   }
-  const pageKey = personalNavigation.find(item => item.key !== "instant" && (item.end ? location.pathname === item.to : location.pathname === item.to || location.pathname.startsWith(`${item.to}/`)))?.key
+  const pageKey = location.pathname.startsWith(`${base}/payments`) ? "orders"
+    : personalNavigation.find(item => item.to && (item.end ? location.pathname === item.to : location.pathname === item.to || location.pathname.startsWith(`${item.to}/`)))?.key
     || (location.pathname.startsWith(`${base}/`) ? "orders" : "home");
-  const header = <CustomerWorkspaceHeader desktopTitle={t(`personal.${pageKey}`)} mode="personal" personal canSwitch={canSwitch} navItems={personalNavigation.map(item => ({ ...item, label: t(`personal.${item.key}`) }))} loggingOut={loggingOut} onLogout={onLogout} />;
+  const header = <CustomerWorkspaceHeader desktopTitle={t(`personal.${pageKey}`)} mode="personal" personal canSwitch={canSwitch} navItems={personalNavigation.map(item => ({ ...item, label: t(personalNavLabel[item.key]) }))} loggingOut={loggingOut} onLogout={onLogout} />;
   const frame = (child: ReactNode) => <main className="customer-portal personal-workspace">{header}{child}</main>;
   if (loading) return frame(<PageSkeleton label={t("personal.loading")} variant="dashboard" />);
   if (!session || sessionError) return frame(<CustomerPortalAccessState error={sessionError || t("personal.loadFailed")} busy={false} onRetry={() => setVersion(v => v + 1)} />);

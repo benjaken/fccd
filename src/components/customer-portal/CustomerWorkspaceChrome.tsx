@@ -4,12 +4,14 @@ import { useTranslation } from "react-i18next";
 import { CircleAlert, LoaderCircle, LogOut, Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FOOD_CHANNEL_CATERING_LOGO_PATH } from "@/lib/brand-logo";
+import { PORTAL_GUIDE_LINKS } from "@/lib/customer-portal-sitemap";
 
 type IconComponent = ComponentType<SVGProps<SVGSVGElement> & { size?: number | string }>;
 
 export type CustomerPortalNavItem = {
   key: string;
-  to: string;
+  to?: string;
+  href?: string;
   end?: boolean;
   icon: IconComponent;
   label: string;
@@ -82,10 +84,18 @@ function CustomerPortalDrawer({
           <nav>
             {navItems.map(item => {
               const Icon = item.icon;
+              if (item.href) {
+                return (
+                  <a key={item.key} className="driver-nav-primary" href={item.href} target="_blank" rel="noreferrer" onClick={onClose}>
+                    <Icon />
+                    {item.label}
+                  </a>
+                );
+              }
               return (
                 <NavLink
                   key={item.key}
-                  to={item.to}
+                  to={item.to || "/customer"}
                   end={item.end}
                   className={({ isActive }) => `driver-nav-primary${isActive ? " is-active" : ""}`}
                   onClick={onClose}
@@ -97,6 +107,11 @@ function CustomerPortalDrawer({
             })}
           </nav>
         ) : null}
+        <nav className="customer-portal-drawer-guides" aria-label={t("portal.siteNav.guides")}>
+          {PORTAL_GUIDE_LINKS.map(link => (
+            <a key={link.key} href={link.href} target="_blank" rel="noreferrer" onClick={onClose}>{t(`portal.siteNav.${link.key}`)}</a>
+          ))}
+        </nav>
         <footer>
           <button type="button" disabled={loggingOut} onClick={() => { onClose(); onLogout(); }}>
             <LogOut />

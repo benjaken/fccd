@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Navigate, Outlet, Route, Routes, useMatch, useNavigate, useOutletContext, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { ShoppingBag, Coins, Users, MapPin, ReceiptText, Home, UserRound, Building2, CalendarDays } from "lucide-react";
+import { Globe, Coins, Users, MapPin, ReceiptText, Home, UserRound, Building2, UtensilsCrossed, Truck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/lib/supabase";
 import { fetchPortal, acceptPortalInvite, submitPortalOrder, portalCart, portalPermissions, fetchPortalEvidence, defaultMenuServiceDate, hongKongToday, menuValidUntil, type PaymentEvidence, type PortalPermission, type PortalSnapshot, type PortalMenu } from "@/lib/customer-portal";
@@ -25,9 +25,10 @@ import { CustomerTeamPage } from "@/components/customer-portal/CustomerTeamPage"
 import { CustomerProfilePage } from "@/components/customer-portal/CustomerProfilePage";
 import { CustomerCompanyPage } from "@/components/customer-portal/CustomerCompanyPage";
 import { OrganizationVipPage } from "@/components/customer-portal/OrganizationVipPage";
+import { PAYMENT_DELIVERY_URL } from "@/lib/customer-portal-sitemap";
 
 type Page = "home" | "menus" | "vip" | "orders" | "receipts" | "points" | "team" | "addresses" | "profile" | "company";
-const nav: Array<[Page, typeof Home]> = [["home",Home],["menus",ShoppingBag],["vip",CalendarDays],["orders",ReceiptText],["receipts",ReceiptText],["points",Coins],["team",Users],["addresses",MapPin],["company",Building2],["profile",UserRound]];
+const nav: Array<[Page, typeof Home]> = [["home",Home],["menus",Globe],["vip",UtensilsCrossed],["orders",ReceiptText],["receipts",ReceiptText],["points",Coins],["team",Users],["addresses",MapPin],["company",Building2],["profile",UserRound]];
 
 function portalErrorText(error: unknown) {
   if (!error || typeof error !== "object") return "";
@@ -172,20 +173,25 @@ export function CustomerPortalPage({ load = fetchPortal, loginIntro, canSwitch =
   const portal = useCustomerPortalController(load,onMembershipChanged,activeOrganizationId);
   const {t, setParams, loggedIn, authLoading, data, setQuantities, busy, error, notice, financialDocument, setFinancialDocument, inviteToken, refresh, run, setPage, setData, setInviteLink} = portal;
   const permissions = portalPermissions(data);
-  const navItems = useMemo(() => nav
-    .filter(([key]) => key === "home" || key === "profile" || key === "company"
-      || ((key === "menus" || key === "vip") && permissions.ordering)
-      || ((key === "orders" || key === "receipts") && permissions.orders)
-      || (key === "points" && permissions.points)
-      || (key === "addresses" && permissions.delivery)
-      || (key === "team" && (permissions.members || permissions.menus || permissions.settings)))
-    .map(([key, Icon]) => ({
-      key,
-      icon: Icon,
-      label: t(`portal.${key}`),
-      end: key === "home",
-      to: key === "home" ? "/customer" : `/customer/${key}`,
-    })), [permissions, t]);
+  const navItems = useMemo(() => {
+    const items = nav
+      .filter(([key]) => key === "home" || key === "profile"
+        || ((key === "menus" || key === "vip") && permissions.ordering)
+        || (key === "orders" && permissions.orders)
+        || (key === "points" && permissions.points)
+        || (key === "addresses" && permissions.delivery)
+        || (key === "team" && (permissions.members || permissions.menus || permissions.settings)))
+      .map(([key, Icon]) => ({
+        key,
+        icon: Icon,
+        label: t(`portal.siteNav.${key === "menus" ? "cateringSite" : key === "vip" ? "eventLunch" : key === "orders" ? "orders" : key === "points" ? "rewards" : key === "profile" ? "profile" : key}`, { defaultValue: t(`portal.${key}`) }),
+        end: key === "home",
+        to: key === "home" ? "/customer" : `/customer/${key}`,
+      }));
+    const profileIndex = items.findIndex(item => item.key === "profile");
+    items.splice(Math.max(profileIndex, 0), 0, { key: "paymentDelivery", icon: Truck, label: t("portal.siteNav.paymentDelivery"), end: false, to: "", href: PAYMENT_DELIVERY_URL } as typeof items[number] & { href: string });
+    return items;
+  }, [permissions, t]);
   async function logout() {
     await run(async () => {
       const revoked = await supabase.rpc("customer_personal_logout");

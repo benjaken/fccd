@@ -8,6 +8,7 @@ export function CustomerOrdersPage() {
   const { data, t, run } = portal;
   if (!data) return null;
   return <section><h1>{t("portal.orders")}</h1>
+    <p><Link to="/customer/receipts">{t("portal.siteNav.evidenceLink")}</Link></p>
     {portalPermissions(data).export ? <Button variant="outline" onClick={() => void run(async () => {
       const csv = await exportPortalOrders(data.organization.id);
       const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
