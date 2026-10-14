@@ -59,20 +59,24 @@
 .reward-rule-form-actions{display:flex;gap:12px;margin-top:12px}
 .reward-rule-form-error{margin:0;color:var(--destructive);line-height:1.7}
 .side-panel.reward-refund-panel{width:min(760px,100vw)}
-.reward-order-results{list-style:none;margin:0;padding:0;display:grid;gap:8px;max-height:240px;overflow:auto}
-.reward-order-results button{display:flex;width:100%;min-height:44px;align-items:center;justify-content:space-between;gap:16px;padding:10px 12px;border:1px solid var(--border);border-radius:8px;background:var(--background);color:var(--foreground);font:inherit;text-align:left;cursor:pointer}
-.reward-order-results button:hover,.reward-order-results button[aria-selected=true]{border-color:var(--primary);background:color-mix(in srgb,var(--primary) 10%,var(--background))}
-.reward-order-results button:focus-visible{outline:2px solid var(--ring);outline-offset:2px}
-.reward-order-results strong{font-variant-numeric:tabular-nums}
-.reward-order-results span,.reward-order-empty{color:var(--muted-foreground);font-size:13px;line-height:1.6}
-.reward-order-empty{margin:0}
+.reward-order-field{display:grid;gap:8px}
+.reward-order-combo{position:relative;display:block}
+.reward-order-menu{position:absolute;z-index:3;left:0;right:0;top:calc(100% + 4px);max-height:240px;overflow:auto;border:1px solid var(--border);border-radius:8px;background:var(--card);box-shadow:0 12px 28px color-mix(in srgb,var(--foreground) 14%,transparent)}
+.reward-order-menu ul{list-style:none;margin:0;padding:0}
+.reward-order-menu p{margin:0;padding:12px}
+.reward-order-menu button{display:flex;width:100%;min-height:44px;align-items:center;justify-content:space-between;gap:16px;padding:10px 12px;border:0;border-bottom:1px solid var(--border);background:transparent;color:var(--foreground);font:inherit;text-align:left;cursor:pointer}
+.reward-order-menu li:last-child button{border-bottom:0}
+.reward-order-menu button:hover,.reward-order-menu button[aria-selected=true]{background:color-mix(in srgb,var(--primary) 10%,var(--card))}
+.reward-order-menu button:focus-visible{outline:2px solid var(--ring);outline-offset:-2px}
+.reward-order-menu strong{font-variant-numeric:tabular-nums}
+.reward-order-menu span,.reward-order-empty{color:var(--muted-foreground);font-size:13px;line-height:1.6}
 .reward-order-detail{padding:16px;border:1px solid var(--border);border-radius:10px;background:var(--card);animation:reward-order-detail-in 180ms cubic-bezier(.22,1,.36,1)}
 .reward-order-detail h3{margin:0;font-size:18px;font-weight:650;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
 .reward-order-detail dl{display:grid;grid-template-columns:1fr 1fr;gap:14px 24px;margin:16px 0 0}
 .reward-order-detail dt{font-size:13px;line-height:1.5;color:var(--muted-foreground)}
 .reward-order-detail dd{margin:2px 0 0;font-variant-numeric:tabular-nums}
 @keyframes reward-order-detail-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
-@media(max-width:640px){.reward-order-detail dl{grid-template-columns:1fr}.reward-order-results button{align-items:flex-start;flex-direction:column;gap:2px}}
+@media(max-width:640px){.reward-order-detail dl{grid-template-columns:1fr}.reward-order-menu button{align-items:flex-start;flex-direction:column;gap:2px}}
 @media(prefers-reduced-motion:reduce){.reward-order-detail{animation:none}}
 @media(max-width:1100px){.reward-rules-layout{grid-template-columns:minmax(0,1fr)}.reward-rule-facts{grid-template-columns:1fr}.reward-rule-banner{grid-template-columns:minmax(0,1fr)}}
 @media(max-width:640px){.reward-rules-heading,.reward-rules-actions{flex-direction:column;align-items:stretch;gap:16px}.reward-rules-actions>.ui-button{width:100%}.reward-rules-page,.reward-rules-main,.reward-rules-aside{gap:16px}.reward-rule-current,.reward-rule-history,.reward-rules-aside>section{padding:20px}.reward-rule-banner{padding:20px}.reward-rule-banner strong{font-size:22px}.reward-rule-history-tools{flex-direction:column;align-items:stretch}.reward-rule-history th,.reward-rule-history td{padding:12px 10px}.reward-rules-message{align-items:flex-start;flex-direction:column}}

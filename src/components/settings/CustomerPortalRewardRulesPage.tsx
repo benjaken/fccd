@@ -59,6 +59,7 @@ export function CustomerPortalRewardRulesPage() {
   const [sample, setSample] = useState(String(EXAMPLE_SPEND));
   const [viewing, setViewing] = useState<RewardRuleVersion | null>(null);
   const [orderQuery, setOrderQuery] = useState("");
+  const [orderMenuOpen, setOrderMenuOpen] = useState(false);
   const [orderMatches, setOrderMatches] = useState<RefundOrderMatch[]>([]);
   const [orderSearchState, setOrderSearchState] = useState<"idle" | "loading" | "error">("idle");
   const [selectedOrder, setSelectedOrder] = useState<RefundOrderMatch | null>(null);
@@ -112,7 +113,7 @@ export function CustomerPortalRewardRulesPage() {
   function open(next: Panel) {
     setFormError("");
     if (next === "version") { setRate(String(activeRate ?? 25)); setEffectiveAt(hongKongInput(new Date())); }
-    if (next === "refund") { setOrderQuery(""); setOrderMatches([]); setOrderSearchState("idle"); setSelectedOrder(null); setRefundFood(""); }
+    if (next === "refund") { setOrderQuery(""); setOrderMatches([]); setOrderSearchState("idle"); setOrderMenuOpen(false); setSelectedOrder(null); setRefundFood(""); }
     if (next === "estimate") setSample(String(EXAMPLE_SPEND));
     setPanel(next);
   }
@@ -246,10 +247,15 @@ export function CustomerPortalRewardRulesPage() {
           <label>{text("hkdPerPoint")}<input aria-label={text("hkdPerPoint")} type="number" min={0} max={100000} step="0.0001" value={rate} onChange={event => setRate(event.target.value)} required /><small>{text("hkdPerPointHint")}</small></label>
           <label>{text("effectiveAt")}<input aria-label={text("effectiveAt")} type="datetime-local" value={effectiveAt} onChange={event => setEffectiveAt(event.target.value)} required /><small>{text("hkTime")}</small></label>
         </> : panel === "refund" ? <>
-          <label>{text("refundOrder")}<input aria-label={text("refundOrder")} value={orderQuery} onChange={event => setOrderQuery(event.target.value)} placeholder={text("refundOrderPlaceholder")} autoComplete="off" /><small>{text("selectOrderHint")}</small></label>
-          {orderSearchState === "loading" ? <p role="status">{text("searchingOrders")}</p> : null}
-          {orderSearchState === "error" ? <p role="alert">{text("orderSearchFailed")}</p> : null}
-          {orderMatches.length ? <ul className="reward-order-results" role="listbox" aria-label={text("refundOrder")}>{orderMatches.map(order => <li key={order.id}><button type="button" role="option" aria-selected={selectedOrder?.id === order.id} onClick={() => setSelectedOrder(order)}><strong>{order.order_number || "—"}</strong><span>{[order.customer_name, order.company_name].filter(Boolean).join(" · ") || "—"}</span></button></li>)}</ul> : orderQuery.trim().length >= 2 && orderSearchState === "idle" ? <p className="reward-order-empty">{text("noOrderMatches")}</p> : null}
+          <div className="reward-order-field">
+            <label>{text("refundOrder")}<span className="reward-order-combo"><input aria-label={text("refundOrder")} role="combobox" aria-expanded={orderMenuOpen && orderQuery.trim().length >= 2} aria-controls="reward-order-menu" aria-autocomplete="list" value={orderQuery} onFocus={() => setOrderMenuOpen(true)} onChange={event => { setOrderQuery(event.target.value); setOrderMenuOpen(true); setSelectedOrder(null); }} onKeyDown={event => { if (event.key === "Escape") setOrderMenuOpen(false); }} placeholder={text("refundOrderPlaceholder")} autoComplete="off" />
+            {orderMenuOpen && orderQuery.trim().length >= 2 ? <div id="reward-order-menu" className="reward-order-menu">
+              {orderSearchState === "loading" ? <p role="status">{text("searchingOrders")}</p> : null}
+              {orderSearchState === "error" ? <p role="alert">{text("orderSearchFailed")}</p> : null}
+              {orderMatches.length ? <ul role="listbox" aria-label={text("refundOrder")}>{orderMatches.map(order => <li key={order.id}><button type="button" role="option" aria-selected={selectedOrder?.id === order.id} onClick={() => { setSelectedOrder(order); setOrderQuery(order.order_number || ""); setOrderMenuOpen(false); }}><strong>{order.order_number || "—"}</strong><span>{[order.customer_name, order.company_name].filter(Boolean).join(" · ") || "—"}</span></button></li>)}</ul> : orderSearchState === "idle" ? <p className="reward-order-empty">{text("noOrderMatches")}</p> : null}
+            </div> : null}</span></label>
+            <small>{text("selectOrderHint")}</small>
+          </div>
           {selectedOrder ? <section className="reward-order-detail" aria-live="polite"><h3>{selectedOrder.order_number || "—"}</h3><dl>
             <div><dt>{text("orderCustomer")}</dt><dd>{selectedOrder.customer_name || "—"}</dd></div>
             {selectedOrder.company_name ? <div><dt>{text("orderCompany")}</dt><dd>{selectedOrder.company_name}</dd></div> : null}
