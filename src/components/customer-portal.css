@@ -3,6 +3,8 @@
 .customer-portal section{margin:24px 0}.customer-portal h1{font-size:28px;margin:16px 0}.customer-portal h2{font-size:20px;margin:16px 0}
 .customer-portal p{margin:8px 0;color:var(--muted-foreground)}.customer-portal label{display:flex;flex-direction:column;gap:8px}
 .customer-portal form,.portal-checkout{display:grid;gap:16px;grid-template-columns:repeat(2,minmax(0,1fr));margin:20px 0}
+.portal-checkout .portal-service-date{grid-column:1/-1;display:grid;gap:6px}
+.portal-checkout .portal-service-date small{color:var(--muted-foreground)}
 .customer-portal input,.customer-portal select{border:1px solid var(--input);background:var(--background);color:var(--foreground);padding:12px;border-radius:8px;min-width:0;font-size:16px;width:100%}
 .portal-row{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;padding:16px 0;border-bottom:1px solid var(--border)}
 .portal-row>input{width:90px}.portal-row label span{color:var(--muted-foreground)}
@@ -221,6 +223,7 @@
 .customer-portal-ops .linkish{border:0;background:transparent;color:var(--primary);font:inherit;font-weight:700;cursor:pointer;padding:0}
 .customer-portal-ops a.portal-ops-org-link{color:var(--primary);font-weight:700;text-decoration:underline;text-underline-offset:3px}
 .portal-ops-form,.customer-portal-ops .portal-ops-inline-form{display:grid;gap:14px}
+.portal-ops-form .portal-ops-period{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px}
 .customer-portal-ops > .portal-ops-form,.customer-portal-ops .portal-ops-inline-form{margin:16px 0 28px}
 .customer-portal-ops .portal-ops-inline-form{grid-template-columns:minmax(0,1fr) auto;align-items:end}
 .portal-ops-form > label,.portal-ops-form .portal-ops-switch,.customer-portal-ops label:not(.table-pagination-jump):not(.search-field){display:grid;gap:6px;font-size:14px;font-weight:600}

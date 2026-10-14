@@ -33,6 +33,8 @@ beforeEach(async () => {
   await db.exec(`alter table orders add column source_system text;alter table orders add column delivery_time text;`);
   await db.exec(readFileSync("supabase/migrations/20261012090000_customer_organization_portal.sql", "utf8"));
   await db.exec(readFileSync("supabase/migrations/20261012170000_customer_portal_ops_admin.sql", "utf8"));
+  const period = readFileSync("supabase/migrations/20261014200000_customer_menu_valid_period.sql", "utf8");
+  await db.exec(period.split("\n-- ordering\n")[0]);
   await db.exec(`select set_config('test.user_id','${ids.user}',false);
     select set_config('test.has_access','1',false);
     insert into auth.users values('${ids.user}','admin@example.com',now()),('${ids.other}','member@example.com',now());
@@ -54,17 +56,24 @@ describe("customer portal ops SQL", () => {
     expect(detail.rows[0].d.members).toEqual([expect.objectContaining({ email: "admin@example.com", role: "admin" })]);
 
     const menuId = (await db.query<{ id: string }>(
-      `select customer_portal_ops_upsert_menu(null,$1,$2,'Lunch',current_date+1,'12:00',now()+interval '1 day',50,true) id`,
+      `select customer_portal_ops_upsert_menu(null,$1,$2,'Lunch',current_date+1,current_date+7,'12:00',now()+interval '1 day',50,true) id`,
       [orgId, ids.brand],
     )).rows[0].id;
     await db.query(
       "select customer_portal_ops_replace_menu_items($1,$2::jsonb)",
       [menuId, JSON.stringify([{ product_id: ids.product, unit_price: 88, available_quantity: 12 }])],
     );
-    const menu = await db.query<{ d: { items: Array<{ unit_price: number; available_quantity: number }> } }>(
+    const menu = await db.query<{ d: { valid_until: string; items: Array<{ unit_price: number; available_quantity: number }> } }>(
       "select customer_portal_ops_get_menu($1) d", [menuId],
     );
     expect(menu.rows[0].d.items).toEqual([expect.objectContaining({ unit_price: 88, available_quantity: 12 })]);
+    expect(menu.rows[0].d.valid_until).toBe(
+      (await db.query<{ service_day: string }>("select (current_date+7)::text as service_day")).rows[0].service_day,
+    );
+    await expect(db.query(
+      `select customer_portal_ops_upsert_menu(null,$1,$2,'Lunch',current_date+7,current_date+1,'12:00',now()+interval '1 day',50,true)`,
+      [orgId, ids.brand],
+    )).rejects.toThrow("invalid_menu");
   });
 
   it("rejects ops without page access and blocks cross-org membership", async () => {

@@ -47,6 +47,8 @@ beforeEach(async()=>{
     insert into customer_menu_items(menu_id,product_id,unit_price,available_quantity) values('${ids.menu}','${ids.product}',100,10);
     insert into customer_addresses(id,organization_id,label,recipient,phone,address,created_by)
       values('${ids.address}','${ids.org}','Office','Name','91234567','Office address','${ids.user}');`);
+  const period = readFileSync("supabase/migrations/20261014200000_customer_menu_valid_period.sql", "utf8");
+  await db.exec(period.split("\n-- workspace-overlay\n")[0]);
 },20000);
 afterEach(async()=>{await db.close();});
 function order(request=ids.request,points=0){return db.query<{id:string}>(`select customer_portal_submit_order($1,$2,$3,$4::jsonb,$5) as id`,[request,ids.menu,ids.address,JSON.stringify([{product_id:ids.product,quantity:1}]),points]);}
@@ -149,6 +151,25 @@ describe("customer portal SQL transactions",()=>{
     await expect(db.query("select customer_portal_review_queue()")).rejects.toThrow("finance_access_required");
     await db.exec(`insert into user_profiles(id,role) values('${ids.user}','Accounting')`);
     expect((await db.query<{q:{evidence:unknown[]}}>("select customer_portal_review_queue() q")).rows[0].q.evidence).toEqual([]);
+  });
+  it("accepts any day inside a menu period and rejects days outside it",async()=>{
+    await db.exec("update customer_menu_assignments set valid_until=current_date+10");
+    const day=(await db.query<{service_day:string}>("select (current_date+4)::text as service_day")).rows[0].service_day;
+    const {rows}=await db.query<{id:string}>(
+      `select customer_portal_submit_order($1,$2,$3,$4::jsonb,0,$5::date) as id`,
+      ["00000000-0000-0000-0000-0000000000d1",ids.menu,ids.address,JSON.stringify([{product_id:ids.product,quantity:1}]),day],
+    );
+    const saved=await db.query<{service_day:string}>("select (delivery_at at time zone 'Asia/Hong_Kong')::date::text as service_day from orders where id=$1",[rows[0].id]);
+    expect(saved.rows[0].service_day).toBe(day);
+    await expect(db.query(
+      `select customer_portal_submit_order($1,$2,$3,$4::jsonb,0,(current_date+11)::date)`,
+      ["00000000-0000-0000-0000-0000000000d2",ids.menu,ids.address,JSON.stringify([{product_id:ids.product,quantity:1}])],
+    )).rejects.toThrow("delivery_date_unavailable");
+    await db.exec("update customer_menu_assignments set delivery_date=current_date-3, valid_until=current_date-1");
+    await expect(db.query(
+      `select customer_portal_submit_order($1,$2,$3,$4::jsonb,0,current_date)`,
+      ["00000000-0000-0000-0000-0000000000d3",ids.menu,ids.address,JSON.stringify([{product_id:ids.product,quantity:1}])],
+    )).rejects.toThrow("menu_unavailable");
   });
   it("limits member menus by assigned scopes and rejects off-scope orders",async()=>{
     const invite=(await db.query<{token:string}>("select customer_portal_invite('member@example.com') token")).rows[0].token;

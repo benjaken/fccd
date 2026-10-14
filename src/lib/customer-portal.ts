@@ -5,7 +5,7 @@ import type { CustomerSelfServiceOrderDetail } from "@/lib/customer-self-service
 
 export type PortalMenu = {
   id: string; name: string; brand: string; channel_id: string;
-  delivery_date: string; delivery_time: string; cutoff_at: string; shipping_fee: number;
+  delivery_date: string; valid_until?: string; delivery_time: string; cutoff_at: string; shipping_fee: number;
   items: Array<{ id: string; product_id: string; name: string; unit_price: number; available_quantity: number }>;
 };
 export type PortalSnapshot = {
@@ -13,7 +13,7 @@ export type PortalSnapshot = {
   menus: PortalMenu[];
   addresses: Array<{ id: string; label: string; recipient: string; phone: string; address: string }>;
   members: Array<{ user_id: string; email: string; role: string; is_active: boolean; menu_ids?: string[] }>;
-  org_menus?: Array<{ id: string; name: string; brand: string; delivery_date: string; is_active: boolean }>;
+  org_menus?: Array<{ id: string; name: string; brand: string; delivery_date: string; valid_until?: string; is_active: boolean }>;
   invitations: Array<{ id: string; email: string; expires_at: string; created_at: string }>;
   templates: Array<{ id: string; name: string; updated_at: string; items: Array<{ product_id: string; name: string; quantity: number }> }>;
   orders: Array<{ id: string; number: string; delivery_at: string; status: string | null; stage?: "quote" | "order"; total: number;
@@ -73,8 +73,26 @@ export const updatePortalTemplate = (id: string, name: string, items: Array<{ pr
 export const archivePortalTemplate = (id: string, organizationId?: string) =>
   rpc<void>("customer_portal_archive_template", { p_id: id }, organizationId);
 export const submitPortalOrder = (requestId: string, menuId: string, addressId: string,
-  items: Array<{ product_id: string; quantity: number }>, organizationId?: string) =>
-  rpc<string>("customer_portal_submit_order", { p_request_id: requestId, p_menu_id: menuId, p_address_id: addressId, p_items: items, p_points: 0 }, organizationId);
+  items: Array<{ product_id: string; quantity: number }>, serviceDate: string, organizationId?: string) =>
+  rpc<string>("customer_portal_submit_order", {
+    p_request_id: requestId, p_menu_id: menuId, p_address_id: addressId, p_items: items, p_points: 0, p_service_date: serviceDate,
+  }, organizationId);
+export function menuValidUntil(menu: { delivery_date: string; valid_until?: string | null }) {
+  return menu.valid_until || menu.delivery_date;
+}
+export function formatMenuPeriod(menu: { delivery_date: string; valid_until?: string | null }) {
+  const end = menuValidUntil(menu);
+  return end === menu.delivery_date ? menu.delivery_date : `${menu.delivery_date} – ${end}`;
+}
+export function hongKongToday() {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Hong_Kong" }).format(new Date());
+}
+export function defaultMenuServiceDate(menu: { delivery_date: string; valid_until?: string | null }) {
+  const end = menuValidUntil(menu);
+  const today = hongKongToday();
+  if (today >= menu.delivery_date && today <= end) return today;
+  return menu.delivery_date;
+}
 export const requestPortalCancellation = (orderId: string, reason: string, organizationId?: string) =>
   rpc<void>("customer_portal_request_cancel", { p_order_id: orderId, p_reason: reason }, organizationId);
 export type PaymentEvidence = {id:string; order_id:string; amount:number; status:string; review_reason:string|null; created_at:string};

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useOutletContext, useParams, Navigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { archivePortalTemplate, savePortalTemplate } from "@/lib/customer-portal";
+import { archivePortalTemplate, formatMenuPeriod, hongKongToday, menuValidUntil, savePortalTemplate } from "@/lib/customer-portal";
 import type { CustomerPortalController } from "@/components/CustomerPortalPage";
 
 const money = (cents: number) => new Intl.NumberFormat("zh-HK", { style: "currency", currency: "HKD" }).format(cents / 100);
@@ -10,7 +10,7 @@ export function CustomerMenusPage() {
   const portal = useOutletContext<CustomerPortalController>();
   const { menuId } = useParams();
   const {
-    t, menu, quantities, setQuantities, addressId, setAddressId,
+    t, menu, quantities, setQuantities, serviceDate, setServiceDate, addressId, setAddressId,
     busy, requestId, chooseMenu, applyTemplate, cart, checkout, setPage, refresh, run,
   } = portal;
   const data = portal.data;
@@ -29,7 +29,7 @@ export function CustomerMenusPage() {
             <div className="portal-row" key={row.id}>
               <div>
                 <strong>{row.brand} · {row.name}</strong>
-                <p>{row.delivery_date} · {row.delivery_time}</p>
+                <p>{formatMenuPeriod(row)} · {row.delivery_time}</p>
               </div>
               <Button onClick={() => chooseMenu(row)}>{t("portal.choose")}</Button>
             </div>
@@ -68,7 +68,7 @@ export function CustomerMenusPage() {
         </>
       ) : (
         <>
-          <p>{menu.brand} · {menu.delivery_date} · {menu.delivery_time}</p>
+          <p>{menu.brand} · {formatMenuPeriod(menu)} · {menu.delivery_time}</p>
           {menu.items.map(item => (
             <div className="portal-row" key={item.id}>
               <label>
@@ -90,6 +90,20 @@ export function CustomerMenusPage() {
             </div>
           ))}
           <div className="portal-checkout">
+            <div className="portal-service-date">
+              <label>
+                {t("portal.serviceDate")}
+                <input
+                  type="date"
+                  required
+                  min={hongKongToday() > menu.delivery_date ? hongKongToday() : menu.delivery_date}
+                  max={menuValidUntil(menu)}
+                  value={serviceDate}
+                  onChange={event => { requestId.current = null; setServiceDate(event.target.value); }}
+                />
+              </label>
+              <small>{t("portal.serviceDateHint")}</small>
+            </div>
             <label>
               {t("portal.addresses")}
               <select value={addressId} onChange={e => { requestId.current = null; setAddressId(e.target.value); }}>
@@ -103,7 +117,7 @@ export function CustomerMenusPage() {
             <p>{t("portal.pointsHint")}</p>
             <p>{t("portal.shipping")}: {money(Math.round(Number(menu.shipping_fee) * 100))}</p>
             <strong>{t("portal.payable")}: {money(cart?.payableCents || 0)}</strong>
-            <Button disabled={busy || !cart?.valid || !addressId} onClick={() => void checkout()}>
+            <Button disabled={busy || !cart?.valid || !addressId || !serviceDate} onClick={() => void checkout()}>
               {busy ? t("portal.submitting") : t("portal.confirmOrder")}
             </Button>
             <label>

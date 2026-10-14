@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useOutletContext, Navigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
+  formatMenuPeriod,
   invitePortalMember,
   memberPermissionGrants,
   portalPermissionKeys,
@@ -87,7 +88,7 @@ export function CustomerTeamPage() {
                         disabled={busy}
                         onChange={() => toggleMenu(member.user_id, menu.id, selected)}
                       />
-                      <span>{menu.brand} · {menu.name} · {menu.delivery_date}</span>
+                      <span>{menu.brand} · {menu.name} · {formatMenuPeriod(menu)}</span>
                     </label>
                   ))}
                   <p className="portal-muted">{unrestricted ? t("portal.menuScopesAll") : t("portal.menuScopesSelected", { count: selected.length })}</p>

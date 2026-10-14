@@ -25,6 +25,7 @@ export type OpsMenuSummary = {
   channel_id: string;
   brand: string;
   delivery_date: string;
+  valid_until: string;
   delivery_time: string;
   cutoff_at: string;
   shipping_fee: number;
@@ -58,12 +59,18 @@ export type OpsMenuDetail = {
   channel_id: string;
   brand: string;
   delivery_date: string;
+  valid_until: string;
   delivery_time: string;
   cutoff_at: string;
   shipping_fee: number;
   is_active: boolean;
   items: OpsMenuItem[];
 };
+
+export function formatMenuPeriod(menu: { delivery_date: string; valid_until?: string | null }) {
+  const end = menu.valid_until || menu.delivery_date;
+  return end === menu.delivery_date ? menu.delivery_date : `${menu.delivery_date} – ${end}`;
+}
 
 export type OpsChannel = { id: string; name: string };
 export type OpsProduct = { id: string; name: string; sku: string | null; price: number | null };
@@ -99,6 +106,7 @@ export const upsertPortalOpsMenu = (input: {
   channelId: string;
   name: string;
   deliveryDate: string;
+  validUntil: string;
   deliveryTime: string;
   cutoffAt: string;
   shippingFee: number;
@@ -110,6 +118,7 @@ export const upsertPortalOpsMenu = (input: {
     p_channel_id: input.channelId,
     p_name: input.name,
     p_delivery_date: input.deliveryDate,
+    p_valid_until: input.validUntil,
     p_delivery_time: input.deliveryTime,
     p_cutoff_at: input.cutoffAt,
     p_shipping_fee: input.shippingFee,

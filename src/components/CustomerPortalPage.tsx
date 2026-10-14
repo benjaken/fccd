@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { ShoppingBag, Coins, Users, MapPin, ReceiptText, Home, UserRound, Building2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/lib/supabase";
-import { fetchPortal, acceptPortalInvite, submitPortalOrder, portalCart, portalPermissions, fetchPortalEvidence, type PaymentEvidence, type PortalPermission, type PortalSnapshot, type PortalMenu } from "@/lib/customer-portal";
+import { fetchPortal, acceptPortalInvite, submitPortalOrder, portalCart, portalPermissions, fetchPortalEvidence, defaultMenuServiceDate, hongKongToday, menuValidUntil, type PaymentEvidence, type PortalPermission, type PortalSnapshot, type PortalMenu } from "@/lib/customer-portal";
 import { ReceiptPreview } from "@/components/CustomerSelfServicePage";
 import type { CustomerSelfServiceOrderDetail } from "@/lib/customer-self-service";
 import { printPdf } from "@/lib/print-pdf";
@@ -37,6 +37,7 @@ function portalErrorText(error: unknown) {
 
 function portalErrorKey(error: unknown, fallback: string) {
   const text = portalErrorText(error);
+  if (text.includes("delivery_date_unavailable")) return "portal.invalidServiceDate";
   if (text.includes("customer_membership_required")) return "portal.membershipRequired";
   if (text.includes("email_verification_required")) return "portal.verifyEmail";
   return fallback;
@@ -59,6 +60,7 @@ function useCustomerPortalController(load: typeof fetchPortal, onMembershipChang
     setError("");
   }
   const [quantities, setQuantities] = useState<Record<string,number>>({});
+  const [serviceDate, setServiceDate] = useState("");
   const [addressId, setAddressId] = useState(""); const [busy, setBusy] = useState(false);
   const [error, setError] = useState(""); const [notice, setNotice] = useState("");
   const [inviteLink, setInviteLink] = useState(""); const [inviteEmail, setInviteEmail] = useState("");
@@ -89,6 +91,7 @@ function useCustomerPortalController(load: typeof fetchPortal, onMembershipChang
       .catch(error=>{if(active){setError(t(portalErrorKey(error,"portal.loadFailed")));if(portalErrorKey(error,"")==="portal.membershipRequired")onMembershipChanged?.();}});
     return ()=>{active=false;};
   }, [loggedIn,load,t,organizationId]);
+  useEffect(() => { setServiceDate(menu ? defaultMenuServiceDate(menu) : ""); }, [menu]);
   useEffect(()=>{if(page!=="receipts"||!loggedIn||!data)return;let active=true;
     void fetchPortalEvidence(data?.organization.id).then(rows=>{if(active)setEvidence(rows);}).catch(()=>{if(active)setError(t("portal.operationFailed"));});
     return()=>{active=false;};},[page,loggedIn,t,data?.organization.id]);
@@ -118,13 +121,18 @@ function useCustomerPortalController(load: typeof fetchPortal, onMembershipChang
   }
   const cart=menu?portalCart(menu,quantities):null;
   async function checkout() {
-    if(!menu||!data||!cart?.valid||!addressId)return;
+    if(!menu||!data||!cart?.valid||!addressId||!serviceDate)return;
+    const end = menuValidUntil(menu);
+    if (serviceDate < menu.delivery_date || serviceDate > end || serviceDate < hongKongToday()) {
+      setError(t("portal.invalidServiceDate"));
+      return;
+    }
     requestId.current??=crypto.randomUUID();
-    await run(async()=>{await submitPortalOrder(requestId.current!,menu.id,addressId,cart.items,data.organization.id);
+    await run(async()=>{await submitPortalOrder(requestId.current!,menu.id,addressId,cart.items,serviceDate,data.organization.id);
       requestId.current=null;setQuantities({});setPage("orders");await refresh();},t("portal.orderCreated"));
   }
 
-  return {t,params,setParams,loggedIn,authLoading,email,setEmail,data,page,menu,quantities,setQuantities,addressId,setAddressId,busy,error,setError,notice,inviteLink,inviteEmail,setInviteEmail,receiptOrder,setReceiptOrder,receiptFile,setReceiptFile,receiptAmount,setReceiptAmount,evidence,setEvidence,financialDocument,setFinancialDocument,address,setAddress,requestId,inviteToken,refresh,run,chooseMenu,applyTemplate,cart,checkout,setPage,setData,setInviteLink};
+  return {t,params,setParams,loggedIn,authLoading,email,setEmail,data,page,menu,quantities,setQuantities,serviceDate,setServiceDate,addressId,setAddressId,busy,error,setError,notice,inviteLink,inviteEmail,setInviteEmail,receiptOrder,setReceiptOrder,receiptFile,setReceiptFile,receiptAmount,setReceiptAmount,evidence,setEvidence,financialDocument,setFinancialDocument,address,setAddress,requestId,inviteToken,refresh,run,chooseMenu,applyTemplate,cart,checkout,setPage,setData,setInviteLink};
 }
 
 export type CustomerPortalController = ReturnType<typeof useCustomerPortalController>;

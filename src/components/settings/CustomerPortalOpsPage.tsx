@@ -13,6 +13,7 @@ import "@/components/customer-portal.css";
 import {
   assignPortalOpsAdmin,
   getPortalOpsMenu,
+  formatMenuPeriod,
   getPortalOpsOrg,
   listPortalOpsChannels,
   listPortalOpsOrgs,
@@ -76,6 +77,7 @@ export function CustomerPortalOpsPage() {
     name: "",
     channelId: "",
     deliveryDate: "",
+    validUntil: "",
     deliveryTime: "12:00",
     cutoffAt: "",
     shippingFee: "0",
@@ -139,6 +141,7 @@ export function CustomerPortalOpsPage() {
         name: detail.name,
         channelId: detail.channel_id,
         deliveryDate: detail.delivery_date,
+        validUntil: detail.valid_until || detail.delivery_date,
         deliveryTime: detail.delivery_time,
         cutoffAt: toLocalInput(detail.cutoff_at),
         shippingFee: String(detail.shipping_fee),
@@ -212,6 +215,7 @@ export function CustomerPortalOpsPage() {
       name: "",
       channelId: channels[0]?.id ?? "",
       deliveryDate: "",
+      validUntil: "",
       deliveryTime: "12:00",
       cutoffAt: "",
       shippingFee: "0",
@@ -252,7 +256,7 @@ export function CustomerPortalOpsPage() {
     event.preventDefault();
     if (!orgId) return;
     const cutoffAt = fromLocalInput(menuForm.cutoffAt);
-    if (!cutoffAt) {
+    if (!cutoffAt || !menuForm.deliveryDate || !menuForm.validUntil || menuForm.validUntil < menuForm.deliveryDate) {
       setError(t("portalOps.invalidMenu"));
       return;
     }
@@ -263,6 +267,7 @@ export function CustomerPortalOpsPage() {
         channelId: menuForm.channelId,
         name: menuForm.name.trim(),
         deliveryDate: menuForm.deliveryDate,
+        validUntil: menuForm.validUntil,
         deliveryTime: menuForm.deliveryTime.trim(),
         cutoffAt,
         shippingFee: Number(menuForm.shippingFee) || 0,
@@ -289,7 +294,7 @@ export function CustomerPortalOpsPage() {
           <div>
             <p><Link to={`/settings/customer-portal/${menu.organization_id}`}>{t("portalOps.backToOrg")}</Link></p>
             <h1>{menu.name}</h1>
-            <p>{menu.brand} · {menu.delivery_date} · {menu.delivery_time}</p>
+            <p>{menu.brand} · {formatMenuPeriod(menu)} · {menu.delivery_time}</p>
           </div>
           {canEdit ? (
             <Button onClick={() => { setMenuPanelOpen(true); }}>
@@ -410,7 +415,7 @@ export function CustomerPortalOpsPage() {
                         </button>
                       </td>
                       <td>{row.brand}</td>
-                      <td>{row.delivery_date} {row.delivery_time}</td>
+                      <td>{formatMenuPeriod(row)} {row.delivery_time}</td>
                       <td>{new Date(row.cutoff_at).toLocaleString()}</td>
                       <td>{Number(row.shipping_fee).toFixed(2)}</td>
                       <td>{row.item_count}</td>
@@ -593,10 +598,17 @@ export function CustomerPortalOpsPage() {
               ))}
             </select>
           </label>
-          <label>
-            {t("portalOps.deliveryDate")}
-            <input required type="date" value={menuForm.deliveryDate} onChange={event => setMenuForm({ ...menuForm, deliveryDate: event.target.value })} />
-          </label>
+          <div className="portal-ops-period">
+            <label>
+              {t("portalOps.periodStart")}
+              <input required type="date" value={menuForm.deliveryDate} onChange={event => setMenuForm({ ...menuForm, deliveryDate: event.target.value })} />
+            </label>
+            <label>
+              {t("portalOps.periodEnd")}
+              <input required type="date" min={menuForm.deliveryDate || undefined} value={menuForm.validUntil} onChange={event => setMenuForm({ ...menuForm, validUntil: event.target.value })} />
+            </label>
+          </div>
+          <small>{t("portalOps.periodHint")}</small>
           <label>
             {t("portalOps.deliveryTime")}
             <input required value={menuForm.deliveryTime} onChange={event => setMenuForm({ ...menuForm, deliveryTime: event.target.value })} />
