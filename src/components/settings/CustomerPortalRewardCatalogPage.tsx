@@ -52,7 +52,7 @@ export function CustomerPortalRewardCatalogPage() {
   const [ownerId, setOwnerId] = useState("");
   const [customerId, setCustomerId] = useState("");
   const [linkStoreId, setLinkStoreId] = useState("");
-  const [panel, setPanel] = useState<"editor" | "catalog" | null>(null);
+  const [panel, setPanel] = useState<"editor" | "catalog" | "link" | null>(null);
 
   function resetEditor() {
     setEditing(null); setName(""); setDescription(""); setAmount(""); setStoreId("");
@@ -107,9 +107,10 @@ export function CustomerPortalRewardCatalogPage() {
     <div className="reward-admin-actions">
       {canEdit ? <Button type="button" onClick={openCreate}>{t("portalRewardCatalog.create")}</Button> : null}
       <Button type="button" variant="outline" onClick={() => setPanel("catalog")}>{t("portalRewardCatalog.items")}</Button>
+      {canEdit ? <Button type="button" variant="outline" onClick={() => { setActionError(""); setPanel("link"); }}>{t("portalVoucher.linkTitle")}</Button> : null}
     </div>
     {error ? <div className="reward-admin-error" role="alert">{error} <Button variant="outline" disabled={loading} onClick={() => void load().catch(reason => setError(t(failure(reason))))}>{t("portal.retry")}</Button></div> : null}
-    {actionError && panel !== "editor" ? <p className="reward-admin-error" role="alert">{actionError}</p> : null}
+    {actionError && panel !== "editor" && panel !== "link" ? <p className="reward-admin-error" role="alert">{actionError}</p> : null}
     {notice ? <p className="reward-admin-notice" role="status">{notice}</p> : null}
     {canEdit ? <SidePanel wide open={panel === "editor"} title={editing ? t("portalRewardCatalog.edit") : t("portalRewardCatalog.create")} onClose={() => { if (!saving) { resetEditor(); setPanel(null); } }} closeLabel={t("portalOps.close")}>
       <form className="reward-admin-form reward-admin-panel-form" onSubmit={event => void save(event)}>
@@ -142,18 +143,18 @@ export function CustomerPortalRewardCatalogPage() {
     {loading ? <PageSkeleton label={t("portalCatalog.loading")} variant="profile" compact /> : error ? <p>{t("portalRewardCatalog.failed")}</p> : items.length ? items.map(item => <article className="reward-admin-item" key={item.id}><div><h3>{item.name}</h3><p>{t(item.kind === "gift" ? "portalRewardCatalog.gift" : "portalRewardCatalog.voucher")} · {item.points_cost} · {t("portalRewardCatalog.stock")} {item.stock} · {t(item.is_active ? "portalRewardCatalog.active" : "portalRewardCatalog.inactive")}</p><p>{item.description}</p>{item.voucher_amount_hkd ? <p>HK$ {Number(item.voucher_amount_hkd).toFixed(2)}</p> : null}</div>{canEdit ? <Button variant="outline" disabled={saving} onClick={() => openEdit(item)}>{t("portalRewardCatalog.edit")}</Button> : null}</article>) : <div className="reward-admin-empty">{t("portalRewardCatalog.empty")}</div>}
     </section>
     </SidePanel>
-    {canEdit ? <details className="reward-admin-link"><summary>{t("portalVoucher.linkTitle")}</summary><form className="reward-admin-form" onSubmit={event => {
+    {canEdit ? <SidePanel wide open={panel === "link"} title={t("portalVoucher.linkTitle")} description={t("portalVoucher.linkIntro")} onClose={() => { if (!linking) setPanel(null); }} closeLabel={t("portalOps.close")}>
+      <form className="reward-admin-form reward-admin-panel-form" onSubmit={event => {
       event.preventDefault();
       setActionError(""); setNotice("");
       if (linking) return;
       setLinking(true);
       void linkShopifyCustomer({ ownerType, ownerId, storeId: linkStoreId, customerId })
-        .then(() => setNotice(t("portalVoucher.linked")))
+        .then(() => { setNotice(t("portalVoucher.linked")); setPanel(null); })
         .catch(reason => setActionError(t(failure(reason))))
         .finally(() => setLinking(false));
     }}>
-
-      <p>{t("portalVoucher.linkIntro")}</p>
+      {actionError ? <p className="reward-admin-error" role="alert">{actionError}</p> : null}
       {storeError ? <p role="alert">{t("portalRewardAdmin.storeFailed")} <Button type="button" variant="outline" onClick={loadStores}>{t("portal.retry")}</Button></p> : !stores.length ? <p>{t("portalRewardAdmin.noStores")}</p> : null}
       <div className="reward-admin-field"><label htmlFor="link-owner-type">{t("portalVoucher.ownerType")}</label><select id="link-owner-type" value={ownerType} onChange={event => setOwnerType(event.target.value === "organization" ? "organization" : "user")}>
         <option value="user">{t("portalVoucher.user")}</option>
@@ -165,8 +166,8 @@ export function CustomerPortalRewardCatalogPage() {
         {stores.map(store => <option key={store.id} value={store.id}>{store.shop_domain}</option>)}
       </select></div>
       <div className="reward-admin-field"><label htmlFor="link-customer">{t("portalVoucher.customerId")}</label><input id="link-customer" value={customerId} onChange={event => setCustomerId(event.target.value)} required /></div>
-      <Button type="submit" variant="outline" disabled={linking || !stores.length || storeError} aria-busy={linking}>{t("portalVoucher.link")}</Button>
-    </form></details> : null}
+      <div className="reward-admin-form-actions"><Button type="submit" disabled={linking || !stores.length || storeError} aria-busy={linking}>{t("portalVoucher.link")}</Button></div>
+    </form></SidePanel> : null}
     <section className="panel reward-admin-records">
     <h2>{t("portalRewardCatalog.redemptions")}</h2>
     <ListTable loading={loading} loadingLabel={t("portalCatalog.loading")} skeletonColumns={3} onRefresh={() => load().catch(reason => setError(t(failure(reason))))}

@@ -1,7 +1,7 @@
 .reward-admin{display:grid;gap:24px;min-width:0;color:var(--foreground)}
 .reward-admin-actions{display:flex;flex-wrap:wrap;gap:12px}
 .reward-admin h2{font-size:18px;font-weight:650;margin:0 0 20px;line-height:1.4}
-.reward-admin-catalog,.reward-admin-link{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:24px;min-width:0}
+.reward-admin-catalog{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:24px;min-width:0}
 .side-panel .reward-admin-catalog{background:transparent;border:0;padding:0}
 .reward-admin-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px 16px}
 .reward-admin-field{display:flex;flex-direction:column;gap:8px;min-width:0}
@@ -9,7 +9,7 @@
 .reward-admin-field input,.reward-admin-field select,.reward-admin-field textarea{width:100%;min-width:0;min-height:44px;border:1px solid var(--input);border-radius:8px;background:var(--background);color:var(--foreground);padding:10px 12px;font-size:14px}
 .reward-admin-field textarea{min-height:96px;resize:vertical}
 .reward-admin-field:has(textarea){grid-column:1/-1}
-.reward-admin-field :is(input,select,textarea):focus-visible,.reward-admin-link summary:focus-visible{outline:2px solid var(--ring);outline-offset:3px}
+.reward-admin-field :is(input,select,textarea):focus-visible{outline:2px solid var(--ring);outline-offset:3px}
 .reward-admin-form>p{grid-column:1/-1;color:var(--muted-foreground);line-height:1.65;margin:0}
 .reward-admin-checkbox{display:flex;align-items:center;gap:8px;font-size:14px;min-height:44px}
 .reward-admin-checkbox input{width:18px;height:18px;accent-color:var(--primary)}
@@ -21,11 +21,9 @@
 .reward-admin-item h3{font-weight:600;font-size:16px;margin:0 0 8px;overflow-wrap:anywhere}
 .reward-admin-item p{font-size:14px;color:var(--muted-foreground);line-height:1.65;overflow-wrap:anywhere}
 .reward-admin-empty{padding:48px 12px;text-align:center;color:var(--muted-foreground);background:var(--muted);border-radius:8px;font-size:14px}
-.reward-admin-link summary{cursor:pointer;font-weight:600;min-height:24px}
-.reward-admin-link[open] summary{margin-bottom:20px}
 .reward-admin-error{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px;border:1px solid var(--destructive);border-radius:8px;color:var(--destructive);background:var(--card)}
 .reward-admin-notice{padding:16px;background:var(--selection-bg);color:var(--primary);border-radius:8px}
 .reward-admin-records{min-width:0;overflow:hidden}
 .reward-admin-records>h2{padding:20px 24px;margin:0;border-bottom:1px solid var(--border)}
 .reward-admin-records td{overflow-wrap:anywhere}
-@media(max-width:600px){.reward-admin{gap:16px}.reward-admin-catalog,.reward-admin-link{padding:18px}.reward-admin-form{grid-template-columns:1fr;gap:16px}.reward-admin-form>button,.reward-admin-form-actions{justify-self:stretch}.reward-admin-actions>button,.reward-admin-form-actions>button{flex:1}.reward-admin-error{align-items:start;flex-direction:column}}
+@media(max-width:600px){.reward-admin{gap:16px}.reward-admin-catalog{padding:18px}.reward-admin-form{grid-template-columns:1fr;gap:16px}.reward-admin-form>button,.reward-admin-form-actions{justify-self:stretch}.reward-admin-actions>button,.reward-admin-form-actions>button{flex:1}.reward-admin-error{align-items:start;flex-direction:column}}

@@ -120,6 +120,15 @@ it("edits the published BR policy from a side panel", async () => {
   expect(within(dialog).getByRole("spinbutton", { name: "提前提醒日數" })).toHaveValue(30);
 });
 
+it("opens a side panel to add a company BR", async () => {
+  render(<MemoryRouter><CustomerPortalApplicationsPage /></MemoryRouter>);
+  fireEvent.click(await screen.findByRole("button", { name: "新增公司" }));
+  const dialog = await screen.findByRole("dialog");
+  expect(within(dialog).getByRole("heading", { name: "新增公司 BR" })).toBeInTheDocument();
+  expect(within(dialog).getByRole("textbox", { name: "公司名稱" })).toBeInTheDocument();
+  expect(within(dialog).getByRole("textbox", { name: "BR 號碼" })).toBeInTheDocument();
+});
+
 it("requests the next company-application page from the server and keeps the total visible", async () => {
   mocks.applications.mockImplementation(async (page: number) => ({
     rows: [{ id: `application-${page}`, company_name: `Company ${page}`, applicant_email: "applicant@example.com", status: "pending_review", br_expires_on: null }],

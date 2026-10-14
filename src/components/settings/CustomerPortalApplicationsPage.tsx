@@ -1,6 +1,6 @@
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ChevronLeft, ChevronRight, ClipboardList, Pencil, RefreshCw } from "lucide-react";
+import { ChevronLeft, ChevronRight, ClipboardList, Pencil, Plus, RefreshCw } from "lucide-react";
 import { useCurrentPageAccess } from "@/auth/use-page-access";
 import { Button } from "@/components/ui/button";
 import { ListSearchBar } from "@/components/ui/list-search-bar";
@@ -10,7 +10,7 @@ import { Switch } from "@/components/ui/switch";
 import { useDeferredFilter } from "@/lib/use-deferred-filter";
 import "@/components/customer-portal.css";
 import { supabase } from "@/lib/supabase";
-import { listPortalOpsOrgs, type OpsOrgListItem } from "@/lib/customer-portal-ops";
+import { listPortalOpsOrgs, upsertPortalOpsOrg, type OpsOrgListItem } from "@/lib/customer-portal-ops";
 import {
   getBrExpiryPolicy,
   getOrganizationApplication,
@@ -34,6 +34,7 @@ function errorKey(error: unknown) {
   if (message.includes("membership_conflict")) return "portalApplications.membershipConflict";
   if (message.includes("invalid_email")) return "portalApplications.invalidEmail";
   if (message.includes("invalid_settlement_cycle")) return "portalApplications.invalidCycle";
+  if (message.includes("invalid_organization")) return "portalApplications.invalidOrganization";
   if (message.includes("invalid_br_policy")) return "portalApplications.invalidPolicy";
   if (message.includes("invalid_br")) return "portalApplications.invalidBr";
   if (message.includes("application_not_pending")) return "portalApplications.notPending";
@@ -65,8 +66,14 @@ export function CustomerPortalApplicationsPage() {
   const [renewExpires, setRenewExpires] = useState("");
   const [renewReason, setRenewReason] = useState("");
   const [renewFile, setRenewFile] = useState<File | null>(null);
+  const [createName, setCreateName] = useState("");
+  const [createBr, setCreateBr] = useState("");
+  const [createExpires, setCreateExpires] = useState("");
+  const [createReason, setCreateReason] = useState("");
+  const [createFile, setCreateFile] = useState<File | null>(null);
   const [policyOpen, setPolicyOpen] = useState(false);
   const [renewOpen, setRenewOpen] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
   const [draftSearch, setDraftSearch] = useState("");
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<"" | ApplicationStatus>("");
@@ -200,6 +207,35 @@ export function CustomerPortalApplicationsPage() {
     }, "portalApplications.renewed");
   }
 
+  async function createCompany(event: FormEvent) {
+    event.preventDefault();
+    const name = createName.trim();
+    if (!createFile || name.length < 1) {
+      setError(t("portalApplications.invalidBr"));
+      return;
+    }
+    await run(async () => {
+      const session = await supabase.auth.getSession();
+      const userId = session.data.session?.user.id;
+      if (!userId) throw new Error("page_access_required");
+      const orgId = await upsertPortalOpsOrg({ name, isActive: true });
+      const path = await uploadStaffBr(orgId, userId, createFile);
+      await renewOrganizationBr({
+        orgId,
+        brNumber: createBr,
+        expiresOn: createExpires,
+        objectPath: path,
+        reason: createReason,
+      });
+      setCreateName("");
+      setCreateBr("");
+      setCreateExpires("");
+      setCreateReason("");
+      setCreateFile(null);
+      setCreateOpen(false);
+    }, "portalApplications.companyCreated");
+  }
+
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const visibleFrom = total === 0 ? 0 : (page - 1) * pageSize + 1;
   const visibleTo = Math.min(page * pageSize, total);
@@ -260,7 +296,10 @@ export function CustomerPortalApplicationsPage() {
               </label>
             }
             actions={canEdit ? (
-              <Button type="button" variant="outline" onClick={() => setRenewOpen(true)}>{t("portalApplications.renew")}</Button>
+              <>
+                <Button type="button" onClick={() => setCreateOpen(true)}><Plus /> {t("portalApplications.createCompany")}</Button>
+                <Button type="button" variant="outline" onClick={() => setRenewOpen(true)}>{t("portalApplications.renew")}</Button>
+              </>
             ) : undefined}
           />
         </header>
@@ -330,6 +369,34 @@ export function CustomerPortalApplicationsPage() {
           <div className="portal-ops-actions">
             <Button type="submit" disabled={busy}>{t("portalApplications.publishPolicy")}</Button>
             <Button type="button" variant="outline" onClick={() => setPolicyOpen(false)}>{t("portalApplications.close")}</Button>
+          </div>
+        </form>
+      </SidePanel>
+      <SidePanel open={createOpen} title={t("portalApplications.createCompanyTitle")} onClose={() => setCreateOpen(false)} closeLabel={t("portalApplications.close")}>
+        <form className="portal-ops-form" onSubmit={event => void createCompany(event)}>
+          <label>
+            {t("portalApplications.companyName")}
+            <input value={createName} onChange={event => setCreateName(event.target.value)} required maxLength={120} />
+          </label>
+          <label>
+            {t("portalApplications.brNumber")}
+            <input value={createBr} onChange={event => setCreateBr(event.target.value)} required pattern="[A-Za-z0-9-]{4,40}" />
+          </label>
+          <label>
+            {t("portalApplications.expiresOn")}
+            <input type="date" value={createExpires} onChange={event => setCreateExpires(event.target.value)} required />
+          </label>
+          <label>
+            {t("portalApplications.attachment")}
+            <input type="file" accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf" onChange={event => setCreateFile(event.target.files?.[0] ?? null)} required />
+          </label>
+          <label>
+            {t("portalApplications.reason")}
+            <input value={createReason} onChange={event => setCreateReason(event.target.value)} required maxLength={500} />
+          </label>
+          <div className="portal-ops-actions">
+            <Button type="submit" disabled={busy}>{t("portalApplications.createCompany")}</Button>
+            <Button type="button" variant="outline" onClick={() => setCreateOpen(false)}>{t("portalApplications.close")}</Button>
           </div>
         </form>
       </SidePanel>
