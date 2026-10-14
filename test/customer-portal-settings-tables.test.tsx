@@ -84,12 +84,14 @@ it("preserves organization navigation and edit permission", async () => {
   mocks.orgs.mockResolvedValue([{ id: "org", name: "測試機構", admin_count: 1, member_count: 2, menu_count: 3, is_active: true }]);
   const { unmount } = render(<MemoryRouter><CustomerPortalOpsPage /></MemoryRouter>);
   expect(await screen.findByRole("link", { name: "測試機構" })).toHaveAttribute("href", "/settings/customer-portal/org");
+  expect(screen.getByRole("link", { name: "管理" })).toHaveAttribute("href", "/settings/customer-portal/org");
   fireEvent.click(screen.getByRole("button", { name: "編輯機構" }));
   expect(screen.getByLabelText("機構名稱")).toHaveValue("測試機構");
   unmount();
   mocks.canEdit = false;
   render(<MemoryRouter><CustomerPortalOpsPage /></MemoryRouter>);
   await screen.findByRole("link", { name: "測試機構" });
+  expect(screen.getByRole("link", { name: "管理" })).toHaveAttribute("href", "/settings/customer-portal/org");
   expect(screen.queryByRole("button", { name: "編輯機構" })).not.toBeInTheDocument();
 });
 

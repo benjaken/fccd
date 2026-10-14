@@ -187,6 +187,7 @@
   margin: 0;
 }
 .customer-portal-ops .linkish{border:0;background:transparent;color:var(--primary);font:inherit;font-weight:700;cursor:pointer;padding:0}
+.customer-portal-ops a.portal-ops-org-link{color:var(--primary);font-weight:700;text-decoration:underline;text-underline-offset:3px}
 .portal-ops-form,.customer-portal-ops .portal-ops-inline-form{display:grid;gap:14px}
 .customer-portal-ops > .portal-ops-form,.customer-portal-ops .portal-ops-inline-form{margin:16px 0 28px}
 .customer-portal-ops .portal-ops-inline-form{grid-template-columns:minmax(0,1fr) auto;align-items:end}

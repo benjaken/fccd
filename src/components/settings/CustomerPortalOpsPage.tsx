@@ -507,18 +507,23 @@ export function CustomerPortalOpsPage() {
             {visibleOrgs.map(row => (
               <tr key={row.id}>
                 <td>
-                  <Link to={`/settings/customer-portal/${row.id}`}>{row.name}</Link>
+                  <Link className="portal-ops-org-link" to={`/settings/customer-portal/${row.id}`}>{row.name}</Link>
                 </td>
                 <td>{row.admin_count}</td>
                 <td>{row.member_count}</td>
                 <td>{row.menu_count}</td>
                 <td>{row.is_active ? t("portalOps.active") : t("portalOps.inactive")}</td>
                 <td className="table-actions-cell">
-                  {canEdit ? (
-                    <Button type="button" variant="ghost" size="icon" onClick={() => openEditOrg(row)} aria-label={t("portalOps.editOrg")}>
-                      <Pencil />
+                  <div className="table-row-actions">
+                    <Button asChild variant="outline" size="sm">
+                      <Link to={`/settings/customer-portal/${row.id}`}>{t("portalOps.manage")}</Link>
                     </Button>
-                  ) : null}
+                    {canEdit ? (
+                      <Button type="button" variant="ghost" size="icon" onClick={() => openEditOrg(row)} aria-label={t("portalOps.editOrg")}>
+                        <Pencil />
+                      </Button>
+                    ) : null}
+                  </div>
                 </td>
               </tr>
             ))}
