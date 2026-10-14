@@ -129,6 +129,20 @@ it("opens a side panel to add a company BR", async () => {
   expect(within(dialog).getByRole("textbox", { name: "BR 號碼" })).toBeInTheDocument();
 });
 
+it("keeps a dropped BR file on the add-company form", async () => {
+  render(<MemoryRouter><CustomerPortalApplicationsPage /></MemoryRouter>);
+  fireEvent.click(await screen.findByRole("button", { name: "新增公司" }));
+  const dialog = await screen.findByRole("dialog");
+  const target = within(dialog).getByText("拖放檔案到這裡，或按此選擇").closest(".portal-br-drop-target");
+  expect(target).not.toBeNull();
+  const file = new File(["%PDF"], "br-cert.pdf", { type: "application/pdf" });
+  fireEvent.drop(target!, { dataTransfer: { files: [file] } });
+  expect(within(dialog).getByText("br-cert.pdf")).toBeInTheDocument();
+  const rejected = new File(["notes"], "notes.txt", { type: "text/plain" });
+  fireEvent.drop(target!, { dataTransfer: { files: [rejected] } });
+  expect(within(dialog).getByText("只接受 JPG、PNG 或 PDF，而且不可超過 10MB。")).toBeInTheDocument();
+});
+
 it("requests the next company-application page from the server and keeps the total visible", async () => {
   mocks.applications.mockImplementation(async (page: number) => ({
     rows: [{ id: `application-${page}`, company_name: `Company ${page}`, applicant_email: "applicant@example.com", status: "pending_review", br_expires_on: null }],

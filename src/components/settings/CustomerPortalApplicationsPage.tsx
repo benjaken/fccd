@@ -1,4 +1,4 @@
-import { FormEvent, useCallback, useEffect, useState } from "react";
+import { FormEvent, useCallback, useEffect, useRef, useState, type DragEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { ChevronLeft, ChevronRight, ClipboardList, Pencil, Plus, RefreshCw } from "lucide-react";
 import { useCurrentPageAccess } from "@/auth/use-page-access";
@@ -26,6 +26,66 @@ import {
   type OrganizationApplicationSummary,
   type SettlementCycle,
 } from "@/lib/customer-portal-applications-ops";
+
+function acceptedBrFile(file: File) {
+  return /\.(jpe?g|png|pdf)$/i.test(file.name) && file.size <= 10 * 1024 * 1024;
+}
+
+function BrAttachmentField({ file, onChange }: { file: File | null; onChange: (file: File | null) => void }) {
+  const { t } = useTranslation();
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [over, setOver] = useState(false);
+  const [rejected, setRejected] = useState(false);
+
+  function accept(next: File | null) {
+    const chosen = next && acceptedBrFile(next) ? next : null;
+    setRejected(Boolean(next) && !chosen);
+    const input = inputRef.current;
+    if (input && typeof DataTransfer !== "undefined") {
+      const transfer = new DataTransfer();
+      if (chosen) transfer.items.add(chosen);
+      input.files = transfer.files;
+    }
+    onChange(chosen);
+  }
+
+  function allowDrop(event: DragEvent<HTMLElement>) {
+    event.preventDefault();
+    setOver(true);
+  }
+
+  return (
+    <label className="portal-br-drop">
+      <span>{t("portalApplications.attachment")}</span>
+      <span
+        className={over ? "portal-br-drop-target is-over" : "portal-br-drop-target"}
+        data-rejected={rejected ? "" : undefined}
+        onDragEnter={allowDrop}
+        onDragOver={allowDrop}
+        onDragLeave={(event) => {
+          event.preventDefault();
+          if (event.currentTarget.contains(event.relatedTarget as Node | null)) return;
+          setOver(false);
+        }}
+        onDrop={(event) => {
+          event.preventDefault();
+          setOver(false);
+          accept(event.dataTransfer.files?.[0] ?? null);
+        }}
+      >
+        <strong>{file ? file.name : t("portalApplications.attachmentDrop")}</strong>
+        <small>{rejected ? t("portalApplications.attachmentRejected") : t("portalApplications.attachmentHint")}</small>
+      </span>
+      <input
+        ref={inputRef}
+        type="file"
+        accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf"
+        required
+        onChange={(event) => accept(event.target.files?.[0] ?? null)}
+      />
+    </label>
+  );
+}
 
 function errorKey(error: unknown) {
   const message = error && typeof error === "object" && "message" in error ? String(error.message) : String(error ?? "");
@@ -386,10 +446,7 @@ export function CustomerPortalApplicationsPage() {
             {t("portalApplications.expiresOn")}
             <input type="date" value={createExpires} onChange={event => setCreateExpires(event.target.value)} required />
           </label>
-          <label>
-            {t("portalApplications.attachment")}
-            <input type="file" accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf" onChange={event => setCreateFile(event.target.files?.[0] ?? null)} required />
-          </label>
+          <BrAttachmentField file={createFile} onChange={setCreateFile} />
           <label>
             {t("portalApplications.reason")}
             <input value={createReason} onChange={event => setCreateReason(event.target.value)} required maxLength={500} />
@@ -417,10 +474,7 @@ export function CustomerPortalApplicationsPage() {
             {t("portalApplications.expiresOn")}
             <input type="date" value={renewExpires} onChange={event => setRenewExpires(event.target.value)} required />
           </label>
-          <label>
-            {t("portalApplications.attachment")}
-            <input type="file" accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf" onChange={event => setRenewFile(event.target.files?.[0] ?? null)} required />
-          </label>
+          <BrAttachmentField file={renewFile} onChange={setRenewFile} />
           <label>
             {t("portalApplications.reason")}
             <input value={renewReason} onChange={event => setRenewReason(event.target.value)} required maxLength={500} />

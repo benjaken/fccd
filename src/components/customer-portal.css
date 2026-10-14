@@ -267,6 +267,13 @@
 .customer-portal-ops .table-pagination-jump{display:inline-flex;align-items:center;gap:6px;font-size:14px;font-weight:700}
 .customer-portal-ops .table-pagination-jump input{width:58px;min-height:34px;height:34px;padding:0 6px}
 .portal-ops-form input[type="file"],.customer-portal-ops input[type="file"]{width:100%;font:inherit}
+.portal-br-drop{position:relative}
+.portal-br-drop-target{display:grid;gap:4px;min-height:92px;align-content:center;justify-items:center;padding:16px;border:1px dashed color-mix(in srgb,var(--primary) 45%,var(--border));border-radius:10px;background:var(--muted);text-align:center;cursor:pointer}
+.portal-br-drop-target.is-over{border-color:var(--primary);background:color-mix(in srgb,var(--primary) 12%,var(--card))}
+.portal-br-drop-target strong{font-weight:700}
+.portal-br-drop-target small{color:var(--muted-foreground);font-weight:500}
+.portal-br-drop-target[data-rejected] small{color:var(--destructive)}
+.portal-ops-form .portal-br-drop input[type="file"]{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 .portal-ops-form small{color:var(--muted-foreground);font-weight:500;line-height:1.45}
 .portal-ops-form > .ui-button{justify-self:start}
 .portal-ops-form .portal-ops-switch,.customer-portal-ops .portal-ops-switch{display:flex;align-items:center;justify-content:space-between;gap:12px}
