@@ -5,6 +5,7 @@ export type OpsOrgListItem = {
   name: string;
   customer_id: string | null;
   is_active: boolean;
+  is_vip: boolean;
   created_at: string;
   member_count: number;
   admin_count: number;
@@ -38,6 +39,7 @@ export type OpsOrgDetail = {
   name: string;
   customer_id: string | null;
   is_active: boolean;
+  is_vip: boolean;
   created_at: string;
   members: OpsOrgMember[];
   menus: OpsMenuSummary[];
@@ -89,12 +91,14 @@ export const upsertPortalOpsOrg = (input: {
   name: string;
   customerId?: string | null;
   isActive: boolean;
+  isVip?: boolean;
 }) =>
   rpc<string>("customer_portal_ops_upsert_org", {
     p_id: input.id ?? null,
     p_name: input.name,
     p_customer_id: input.customerId ?? null,
     p_is_active: input.isActive,
+    p_is_vip: input.isVip ?? false,
   });
 export const assignPortalOpsAdmin = (orgId: string, email: string) =>
   rpc<string>("customer_portal_ops_assign_admin", { p_org_id: orgId, p_email: email });

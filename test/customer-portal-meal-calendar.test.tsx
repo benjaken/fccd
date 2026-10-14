@@ -51,6 +51,7 @@ beforeEach(() => {
 
 it("shows which group customer ordered which meals", async () => {
   render(<MemoryRouter><CustomerPortalMealCalendarPage /></MemoryRouter>);
+  expect(screen.queryByRole("heading", { level: 1 })).not.toBeInTheDocument();
   expect(await screen.findByRole("button", { name: `恒隆集團 · ${mealSummary(first.lines)}` })).toBeInTheDocument();
   fireEvent.click(screen.getByRole("button", { name: new RegExp(today) }));
   expect(await screen.findByRole("heading", { name: "恒隆集團" })).toBeInTheDocument();
@@ -60,10 +61,10 @@ it("shows which group customer ordered which meals", async () => {
   expect(screen.getByText("中環總部")).toBeInTheDocument();
   fireEvent.click(screen.getByRole("button", { name: "關閉" }));
   const user = userEvent.setup();
-  await user.click(await screen.findByRole("combobox", { name: "團體客戶" }));
+  await user.click(await screen.findByRole("combobox", { name: "VIP 客戶" }));
   await user.type(screen.getByRole("combobox", { name: "搜尋選項" }), "李氏");
   await user.click(screen.getByRole("option", { name: "李氏公司" }));
-  expect(screen.getByRole("combobox", { name: "團體客戶" })).toHaveTextContent("李氏公司");
+  expect(screen.getByRole("combobox", { name: "VIP 客戶" })).toHaveTextContent("李氏公司");
   fireEvent.click(screen.getByRole("button", { name: new RegExp(today) }));
   expect(await screen.findByRole("heading", { name: "李氏公司" })).toBeInTheDocument();
   expect(screen.queryByRole("heading", { name: "恒隆集團" })).not.toBeInTheDocument();

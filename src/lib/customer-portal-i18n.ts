@@ -35,7 +35,7 @@ i18n.addResourceBundle("zh-HK", "translation", { portalOps: {
   description:"建立機構、指定首位管理員，並配置指定餐單、價格、庫存、截單及運費。",
   loading:"載入中…",saved:"已儲存。",close:"關閉",accessDenied:"沒有客戶訂購營運權限。",operationFailed:"操作未完成，請重試。",
   userNotFound:"找不到已驗證電郵的使用者。",membershipConflict:"此使用者已屬於其他機構。",invalidEmail:"電郵格式無效。",invalidMenu:"請核對餐單欄位及餐點。",
-  createOrg:"新增機構",editOrg:"編輯機構",orgName:"機構名稱",noOrgs:"尚未建立機構。",noOrgsDescription:"建立機構後，可在此指定管理員及餐單。",noMatches:"未找到機構",noMatchesDescription:"調整搜尋或狀態條件後再試。",search:"搜尋機構",searchPlaceholder:"搜尋機構名稱",statusFilter:"狀態",allStatuses:"全部狀態",active:"有效",inactive:"停用",
+  createOrg:"新增機構",editOrg:"編輯機構",orgName:"機構名稱",vip:"VIP 客戶",vipHint:"只有標為 VIP 的客戶會出現在訂餐日曆。",noOrgs:"尚未建立機構。",noOrgsDescription:"建立機構後，可在此指定管理員及餐單。",noMatches:"未找到機構",noMatchesDescription:"調整搜尋或狀態條件後再試。",search:"搜尋機構",searchPlaceholder:"搜尋機構名稱",statusFilter:"狀態",allStatuses:"全部狀態",active:"有效",inactive:"停用",
   admins:"管理員",members:"成員",menus:"指定餐單",status:"狀態",save:"儲存",manage:"管理",
   roles:{admin:"管理員",member:"成員"},
   noMenus:"尚未建立指定餐單。",noMenusDescription:"新增後，成員可在供餐期間內用同一張餐牌訂購。",
@@ -88,7 +88,7 @@ i18n.addResourceBundle("en", "translation", { portalOps: {
   description:"Create organizations, assign the first admin, and configure assigned menus, prices, stock, cutoffs and delivery fees.",
   loading:"Loading…",saved:"Saved.",close:"Close",accessDenied:"You do not have customer ordering ops access.",operationFailed:"Could not complete the action. Please retry.",
   userNotFound:"No verified user was found for that email.",membershipConflict:"That user already belongs to another organization.",invalidEmail:"Invalid email format.",invalidMenu:"Check the menu fields and items.",
-  createOrg:"Create organization",editOrg:"Edit organization",orgName:"Organization name",noOrgs:"No organizations yet.",noOrgsDescription:"Create an organization to assign its admin and menus.",noMatches:"No organizations found",noMatchesDescription:"Try a different search or status.",search:"Search organizations",searchPlaceholder:"Search by organization name",statusFilter:"Status",allStatuses:"All statuses",active:"Active",inactive:"Inactive",
+  createOrg:"Create organization",editOrg:"Edit organization",orgName:"Organization name",vip:"VIP customer",vipHint:"Only customers marked VIP appear on the meal calendar.",noOrgs:"No organizations yet.",noOrgsDescription:"Create an organization to assign its admin and menus.",noMatches:"No organizations found",noMatchesDescription:"Try a different search or status.",search:"Search organizations",searchPlaceholder:"Search by organization name",statusFilter:"Status",allStatuses:"All statuses",active:"Active",inactive:"Inactive",
   admins:"Admins",members:"Members",menus:"Assigned menus",status:"Status",save:"Save",manage:"Manage",
   roles:{admin:"Admin",member:"Member"},
   noMenus:"No assigned menus yet.",noMenusDescription:"After you add one, members can order from it throughout the service period.",
@@ -350,9 +350,9 @@ i18n.addResourceBundle("en", "translation", { portal: {
 }}, true, true);
 i18n.addResourceBundle("zh-HK", "translation", { mealCalendar: {
   title: "訂餐日曆",
-  description: "按送餐日查看哪個團體客戶訂了哪些餐。已開放餐牌仍可核對，節日可設為禁單。",
-  organization: "團體客戶",
-  allOrganizations: "全部團體客戶",
+  description: "只顯示已標為 VIP 的團體客戶：哪天開放訂餐、訂了哪些餐。節日可設為禁單。",
+  organization: "VIP 客戶",
+  allOrganizations: "全部 VIP 客戶",
   today: "今天",
   previousMonth: "上一個月",
   nextMonth: "下一個月",
@@ -385,9 +385,9 @@ i18n.addResourceBundle("zh-HK", "translation", { mealCalendar: {
 }}, true, true);
 i18n.addResourceBundle("en", "translation", { mealCalendar: {
   title: "Group calendar",
-  description: "See which companies are open for ordering each month, and their menus. A holiday can close that day. Placed orders stay visible on the day.",
-  organization: "Group customer",
-  allOrganizations: "All group customers",
+  description: "Only group customers marked VIP. See which days they can order and which meals they placed. A holiday can close that day.",
+  organization: "VIP customer",
+  allOrganizations: "All VIP customers",
   today: "Today",
   previousMonth: "Previous month",
   nextMonth: "Next month",

@@ -37,6 +37,7 @@ beforeEach(async () => {
   await db.exec(period.split("\n-- ordering\n")[0]);
   await db.exec(readFileSync("supabase/migrations/20261014210000_customer_group_order_calendar.sql", "utf8").split("\n-- ordering\n")[0]);
   await db.exec(readFileSync("supabase/migrations/20261014213000_customer_portal_meal_calendar.sql", "utf8"));
+  await db.exec(readFileSync("supabase/migrations/20261014230000_customer_vip_calendar.sql", "utf8"));
   await db.exec(`select set_config('test.user_id','${ids.user}',false);
     select set_config('test.has_access','1',false);
     insert into auth.users values('${ids.user}','admin@example.com',now()),('${ids.other}','member@example.com',now());
@@ -91,7 +92,10 @@ describe("customer portal ops SQL", () => {
 
   it("lists each group customer's meals on the Hong Kong service date", async () => {
     const orgId = (await db.query<{ id: string }>(
-      "select customer_portal_ops_upsert_org(null,'恒隆集團',null,true) id",
+      "select customer_portal_ops_upsert_org(null,'恒隆集團',null,true,true) id",
+    )).rows[0].id;
+    const hiddenOrgId = (await db.query<{ id: string }>(
+      "select customer_portal_ops_upsert_org(null,'普通公司',null,true,false) id",
     )).rows[0].id;
     const menuId = (await db.query<{ id: string }>(
       `select customer_portal_ops_upsert_menu(null,$1,$2,'Lunch',current_date,current_date,'12:00',now()+interval '1 day',0,true) id`,
@@ -101,11 +105,13 @@ describe("customer portal ops SQL", () => {
     const quoteId = "00000000-0000-0000-0000-000000000091";
     const orderId = "00000000-0000-0000-0000-000000000092";
     const archivedId = "00000000-0000-0000-0000-000000000093";
+    const plainId = "00000000-0000-0000-0000-000000000096";
     await db.exec(`
       insert into orders(id,legacy_id,channel_id,document_type,order_number,delivery_at,delivery_time,delivery_status,shipping_address_snapshot)
         values('${quoteId}','cal-quote','${ids.brand}','quote','Q-1','2026-10-16 04:00:00+00','11:00','未派車隊','舊地址'),
               ('${orderId}','cal-order','${ids.brand}','order','FC-9001','2026-10-16 04:00:00+00','12:00','未派車隊','中環'),
-              ('${archivedId}','cal-archived','${ids.brand}','order','FC-HIDE','2026-10-16 04:00:00+00','12:00',null,'隱藏');
+              ('${archivedId}','cal-archived','${ids.brand}','order','FC-HIDE','2026-10-16 04:00:00+00','12:00',null,'隱藏'),
+              ('${plainId}','cal-plain','${ids.brand}','order','FC-PLAIN','2026-10-16 04:00:00+00','12:00',null,'普通地址');
       update orders set source_quote_id='${quoteId}' where id='${orderId}';
       update orders set archived_at=now() where id='${archivedId}';
       insert into order_lines(legacy_id,order_id,product_name_snapshot,quantity,is_void)
@@ -115,11 +121,13 @@ describe("customer portal ops SQL", () => {
               ('line-void','${orderId}','取消餐',4,true);
       insert into customer_portal_orders(order_id,organization_id,created_by,menu_id,request_id,reward_rule_id,food_amount)
         values('${quoteId}','${orgId}','${ids.user}','${menuId}','00000000-0000-0000-0000-000000000094','${ruleId}',200),
-              ('${archivedId}','${orgId}','${ids.user}','${menuId}','00000000-0000-0000-0000-000000000095','${ruleId}',10);
+              ('${archivedId}','${orgId}','${ids.user}','${menuId}','00000000-0000-0000-0000-000000000095','${ruleId}',10),
+              ('${plainId}','${hiddenOrgId}','${ids.user}','${menuId}','00000000-0000-0000-0000-000000000097','${ruleId}',10);
     `);
     const rows = (await db.query<{ calendar: Array<{ order_id: string; organization_name: string; service_date: string; lines: Array<{ name: string; quantity: number }> }> }>(
       "select customer_portal_ops_meal_calendar('2026-10-01','2026-10-31') calendar",
     )).rows[0].calendar;
+    expect(rows.map((row) => row.organization_name)).toEqual(["恒隆集團"]);
     expect(rows).toEqual([expect.objectContaining({
       order_id: orderId,
       organization_name: "恒隆集團",
@@ -140,11 +148,18 @@ describe("customer portal ops SQL", () => {
   it("lists open company menus for the month and stores a holiday closure", async () => {
     await db.exec(`select set_config('test.has_access','1',false)`);
     const orgId = (await db.query<{ id: string }>(
-      "select customer_portal_ops_upsert_org(null,'日曆公司',null,true) id",
+      "select customer_portal_ops_upsert_org(null,'日曆公司',null,true,true) id",
+    )).rows[0].id;
+    const hiddenOrgId = (await db.query<{ id: string }>(
+      "select customer_portal_ops_upsert_org(null,'非VIP公司',null,true,false) id",
     )).rows[0].id;
     await db.query(
       `select customer_portal_ops_upsert_menu(null,$1,$2,'午市餐牌',current_date,current_date+6,'12:00',now()+interval '5 day',0,true)`,
       [orgId, ids.brand],
+    );
+    await db.query(
+      `select customer_portal_ops_upsert_menu(null,$1,$2,'隱藏餐牌',current_date,current_date+6,'12:00',now()+interval '5 day',0,true)`,
+      [hiddenOrgId, ids.brand],
     );
     const holiday = (await db.query<{ day: string }>("select (current_date+1)::text as day")).rows[0].day;
     await db.query("select customer_portal_ops_set_order_blackout($1::date,'國慶',false)", [holiday]);

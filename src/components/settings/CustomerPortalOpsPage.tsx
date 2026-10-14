@@ -1,8 +1,10 @@
+import { TablePagination } from "@/components/ui/table-pagination";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { Building2, ChevronLeft, ChevronRight, Pencil, Plus, RefreshCw, Settings, Trash2 } from "lucide-react";
+import { Building2, Pencil, Plus, RefreshCw, Settings, Trash2 } from "lucide-react";
 import { useCurrentPageAccess } from "@/auth/use-page-access";
+import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ListSearchBar } from "@/components/ui/list-search-bar";
 import { ListTable } from "@/components/ui/list-table";
@@ -70,6 +72,7 @@ export function CustomerPortalOpsPage() {
   const [orgPanelOpen, setOrgPanelOpen] = useState(false);
   const [orgName, setOrgName] = useState("");
   const [orgActive, setOrgActive] = useState(true);
+  const [orgVip, setOrgVip] = useState(false);
   const [editingOrgId, setEditingOrgId] = useState<string | null>(null);
   const [adminEmail, setAdminEmail] = useState("");
   const [menuPanelOpen, setMenuPanelOpen] = useState(false);
@@ -175,10 +178,10 @@ export function CustomerPortalOpsPage() {
   }
 
   function openCreateOrg() {
-    setEditingOrgId(null); setOrgName(""); setOrgActive(true); setOrgPanelOpen(true);
+    setEditingOrgId(null); setOrgName(""); setOrgActive(true); setOrgVip(false); setOrgPanelOpen(true);
   }
   function openEditOrg(row: OpsOrgListItem | OpsOrgDetail) {
-    setEditingOrgId(row.id); setOrgName(row.name); setOrgActive(row.is_active); setOrgPanelOpen(true);
+    setEditingOrgId(row.id); setOrgName(row.name); setOrgActive(row.is_active); setOrgVip(row.is_vip); setOrgPanelOpen(true);
   }
 
   async function submitOrg(event: FormEvent) {
@@ -188,6 +191,7 @@ export function CustomerPortalOpsPage() {
         id: editingOrgId,
         name: orgName.trim(),
         isActive: orgActive,
+        isVip: orgVip,
       });
       setOrgPanelOpen(false);
       if (orgId) await loadOrg(id);
@@ -345,7 +349,7 @@ export function CustomerPortalOpsPage() {
           <div>
             <p><Link to="/settings/customer-portal">{t("portalOps.backToList")}</Link></p>
             <h1>{org.name}</h1>
-            <p>{org.is_active ? t("portalOps.active") : t("portalOps.inactive")}</p>
+            <p>{org.is_active ? t("portalOps.active") : t("portalOps.inactive")}{org.is_vip ? ` · ${t("portalOps.vip")}` : ""}</p>
           </div>
           {canEdit ? (
             <div className="portal-ops-actions">
@@ -385,7 +389,7 @@ export function CustomerPortalOpsPage() {
               <form className="portal-ops-inline-form" onSubmit={event => void submitAdmin(event)}>
                 <label>
                   {t("portalOps.assignAdmin")}
-                  <input
+                  <Input
                     required
                     type="email"
                     value={adminEmail}
@@ -453,13 +457,7 @@ export function CustomerPortalOpsPage() {
   return (
     <section className="orders-page customer-portal-ops">
       <div className="portal-ops-list-intro">
-        <header className="page-heading orders-heading">
-          <div>
-            <span className="eyebrow">{t("navigation.promotion")}</span>
-            <h1>{t("navigation.customerPortalOps")}</h1>
-            <p>{t("portalOps.description")}</p>
-          </div>
-        </header>
+
         {notice ? <p role="status">{notice}</p> : null}
       </div>
       <article className="panel orders-panel">
@@ -531,6 +529,7 @@ export function CustomerPortalOpsPage() {
               <tr key={row.id}>
                 <td>
                   <Link className="portal-ops-org-link" to={`/settings/customer-portal/${row.id}`}>{row.name}</Link>
+                  {row.is_vip ? <span> · {t("portalOps.vip")}</span> : null}
                 </td>
                 <td>{row.admin_count}</td>
                 <td>{row.member_count}</td>
@@ -552,14 +551,10 @@ export function CustomerPortalOpsPage() {
             ))}
           </ListTable>
         )}
-        <footer className="orders-pagination">
-          <span>{t("settings.pagination", { from: orgFrom, to: orgTo, total: filteredOrgs.length })}</span>
-          <div>
-            <Button variant="outline" size="icon" disabled={loading || orgPage <= 1} onClick={() => setPage(orgPage - 1)} aria-label={t("settings.previous")}><ChevronLeft /></Button>
-            <strong>{orgPage} / {orgTotalPages}</strong>
-            <Button variant="outline" size="icon" disabled={loading || orgPage >= orgTotalPages} onClick={() => setPage(orgPage + 1)} aria-label={t("settings.next")}><ChevronRight /></Button>
-          </div>
-        </footer>
+        <TablePagination summary={t("settings.pagination", { from: orgFrom, to: orgTo, total: filteredOrgs.length })} page={orgPage} totalPages={orgTotalPages} loading={loading}
+ onPrevious={() => setPage(Math.max(1, orgPage - 1))} onNext={() => setPage(Math.min(orgTotalPages, orgPage + 1))}
+ onPageChange={setPage} previousLabel={t("settings.previous")} nextLabel={t("settings.next")}
+ pageLabel={t("orders.pageOf")} jumpLabel={t("orders.jumpToPage")} />
       </article>
       {orgPanelOpen ? renderOrgPanel() : null}
     </section>
@@ -577,8 +572,13 @@ export function CustomerPortalOpsPage() {
         <form id="portal-org-form" className="portal-ops-form" onSubmit={event => void submitOrg(event)}>
           <label>
             {t("portalOps.orgName")}
-            <input required value={orgName} onChange={event => setOrgName(event.target.value)} />
+            <Input required value={orgName} onChange={event => setOrgName(event.target.value)} />
           </label>
+          <label className="portal-ops-switch">
+            <span>{t("portalOps.vip")}</span>
+            <Switch checked={orgVip} onCheckedChange={setOrgVip} aria-describedby="portal-org-vip-hint" />
+          </label>
+          <p id="portal-org-vip-hint">{t("portalOps.vipHint")}</p>
           <label className="portal-ops-switch">
             <span>{t("portalOps.active")}</span>
             <Switch checked={orgActive} onCheckedChange={setOrgActive} />
@@ -596,12 +596,13 @@ export function CustomerPortalOpsPage() {
         title={menu ? t("portalOps.editMenu") : t("portalOps.createMenu")}
         closeLabel={t("portalOps.close")}
         extraWide
+        footer={<Button type="submit" form="portal-menu-form" disabled={busy || !canEdit || !menuForm.channelId}>{t("portalOps.save")}</Button>}
       >
-        <form className="portal-ops-form" onSubmit={event => void submitMenu(event)}>
+        <form id="portal-menu-form" className="portal-ops-form" onSubmit={event => void submitMenu(event)}>
           <div className="portal-ops-fields">
           <label>
             {t("portalOps.menuName")}
-            <input required value={menuForm.name} onChange={event => setMenuForm({ ...menuForm, name: event.target.value })} />
+            <Input required value={menuForm.name} onChange={event => setMenuForm({ ...menuForm, name: event.target.value })} />
           </label>
           <label>
             {t("portalOps.brand")}
@@ -620,25 +621,25 @@ export function CustomerPortalOpsPage() {
           <div className="portal-ops-period">
             <label>
               {t("portalOps.periodStart")}
-              <input required type="date" value={menuForm.deliveryDate} onChange={event => setMenuForm({ ...menuForm, deliveryDate: event.target.value })} />
+              <Input required type="date" value={menuForm.deliveryDate} onChange={event => setMenuForm({ ...menuForm, deliveryDate: event.target.value })} />
             </label>
             <label>
               {t("portalOps.periodEnd")}
-              <input required type="date" min={menuForm.deliveryDate || undefined} value={menuForm.validUntil} onChange={event => setMenuForm({ ...menuForm, validUntil: event.target.value })} />
+              <Input required type="date" min={menuForm.deliveryDate || undefined} value={menuForm.validUntil} onChange={event => setMenuForm({ ...menuForm, validUntil: event.target.value })} />
             </label>
           </div>
           <small className="portal-ops-span">{t("portalOps.periodHint")}</small>
           <label>
             {t("portalOps.deliveryTime")}
-            <input required value={menuForm.deliveryTime} onChange={event => setMenuForm({ ...menuForm, deliveryTime: event.target.value })} />
+            <Input required value={menuForm.deliveryTime} onChange={event => setMenuForm({ ...menuForm, deliveryTime: event.target.value })} />
           </label>
           <label>
             {t("portalOps.cutoff")}
-            <input required type="datetime-local" value={menuForm.cutoffAt} onChange={event => setMenuForm({ ...menuForm, cutoffAt: event.target.value })} />
+            <Input required type="datetime-local" value={menuForm.cutoffAt} onChange={event => setMenuForm({ ...menuForm, cutoffAt: event.target.value })} />
           </label>
           <label>
             {t("portalOps.fee")}
-            <input required type="number" min={0} step="0.01" value={menuForm.shippingFee} onChange={event => setMenuForm({ ...menuForm, shippingFee: event.target.value })} />
+            <Input required type="number" min={0} step="0.01" value={menuForm.shippingFee} onChange={event => setMenuForm({ ...menuForm, shippingFee: event.target.value })} />
           </label>
           <label className="portal-ops-switch">
             <span>{t("portalOps.active")}</span>
@@ -661,7 +662,7 @@ export function CustomerPortalOpsPage() {
               <strong className="portal-ops-item-name">{item.name}</strong>
               <label>
                 {t("portalOps.unitPrice")}
-                <input
+                <Input
                   type="number"
                   min={0}
                   step="0.01"
@@ -672,7 +673,7 @@ export function CustomerPortalOpsPage() {
               </label>
               <label>
                 {t("portalOps.stock")}
-                <input
+                <Input
                   type="number"
                   min={0}
                   step={1}
@@ -692,7 +693,6 @@ export function CustomerPortalOpsPage() {
               </Button>
             </div>
           ))}
-          <Button disabled={busy || !canEdit || !menuForm.channelId}>{t("portalOps.save")}</Button>
         </form>
       </SidePanel>
     );
