@@ -4,6 +4,25 @@
 
 ## Personal customer workspace (2026-10-13)
 
+### Review fixes (2026-10-14)
+
+Apply `20261014130000_customer_personal_order_isolation.sql`,
+`20261014131000_customer_br_versions_and_application_pages.sql`, then
+`20261014132000_customer_email_matched_order_feedback.sql` after the preceding
+portal migrations. Corporate portal orders are excluded from personal email
+matching, session listings and personal actions, including after membership
+revocation. Existing legacy phone/email lookup behavior is preserved.
+
+BR uploads use unique object names and never overwrite an existing document;
+Storage also blocks updates to paths referenced by submitted BR versions.
+Company applications use permission-checked server pages of 15 with a stable
+sort order and total count, retaining the shared table and refresh behavior.
+
+Future completion events also enqueue feedback for historical personal orders
+owned through a verified email match. This migration does not backfill completed
+orders or dispatch email; the existing worker enablement and scheduling remain
+separate deployment steps.
+
 `CustomerPersonalWorkspace` replaces the personal list-only entry with home, brand menus, order history, payment evidence, rewards availability, addresses and profile routes under `/customer/personal`. Existing `/customer/personal/:orderId` links remain valid. Details retain the original receipt and PayPal add-on workflow, use the shared header and return to `/customer/personal/orders`. No password or additional phone matching is offered. Contact phone edits never change trusted order ownership.
 
 Apply `20261013130000_customer_personal_workspace.sql` after the existing customer portal migrations. This creates personal profile/address storage and RPCs, reuses the private payment-evidence bucket and finance review action, and exposes active Shopify store links and guarded repeat-cart data. Personal data is scoped to the verified Auth user; order actions use trusted personal links or the existing, Auth-user-scoped parent-order guard. Previously established capabilities continue to work without asking customers to match their phone again. Profile phone edits are separate from order identity. Organization data/rewards remain separate.

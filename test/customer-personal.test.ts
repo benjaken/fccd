@@ -1,8 +1,14 @@
 import { describe, expect, it, vi } from "vitest";
-import { shopifyCartUrl, shopifyStoreUrl, uploadPersonalEvidence } from "@/lib/customer-personal";
+import { fetchPersonalReorder, shopifyCartUrl, shopifyStoreUrl, uploadPersonalEvidence } from "@/lib/customer-personal";
 const mocks = vi.hoisted(() => ({ upload: vi.fn(), rpc: vi.fn() }));
 vi.mock("@/lib/supabase", () => ({ supabase: { rpc: mocks.rpc, auth: { getUser: async () => ({ data: { user: { id: "user" } }, error: null }) }, storage: { from: () => ({ upload: mocks.upload }) } } }));
 describe("Shopify personal links", () => {
+  it("loads the authorized reorder cart without losing variant precision", async () => {
+    const cart = { domain: "brand.myshopify.com", items: [{ variant: "9007199254740993", quantity: 2 }] };
+    mocks.rpc.mockResolvedValueOnce({ data: cart, error: null });
+    expect(await fetchPersonalReorder("order")).toEqual(cart);
+    expect(mocks.rpc).toHaveBeenCalledWith("customer_personal_reorder", { p_order_id: "order" });
+  });
   it("preserves big variant IDs and original quantities in a cart permalink", () => {
     expect(shopifyCartUrl({ domain: "brand.myshopify.com", items: [{ variant: "9007199254740993", quantity: 2 }, { variant: "3", quantity: 4 }] })).toBe("https://brand.myshopify.com/cart/9007199254740993:2,3:4?storefront=true");
   });

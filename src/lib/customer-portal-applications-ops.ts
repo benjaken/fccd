@@ -40,6 +40,10 @@ async function rpc<T>(name: string, args?: Record<string, unknown>): Promise<T> 
 
 export const listOrganizationApplications = () =>
   rpc<OrganizationApplicationSummary[]>("customer_portal_ops_list_applications");
+export const fetchOrganizationApplicationPage = (page: number) =>
+  rpc<{ rows: OrganizationApplicationSummary[]; total: number; page: number }>(
+    "customer_portal_ops_application_page", { p_page: page },
+  );
 export const getOrganizationApplication = (id: string) =>
   rpc<OrganizationApplicationDetail>("customer_portal_ops_get_application", { p_id: id });
 export const reviewOrganizationApplication = (input: {
@@ -86,8 +90,8 @@ export async function uploadStaffBr(orgId: string, userId: string, file: File) {
   const safe = file.name.replace(/[^A-Za-z0-9._-]/g, "_").replace(/^\.+/, "").slice(0, 120);
   if (!/\.(jpg|jpeg|png|pdf)$/i.test(safe)) throw new Error("invalid_br");
   if (file.size > 10 * 1024 * 1024) throw new Error("invalid_br");
-  const path = `${userId}/${orgId}/${safe}`;
-  const uploaded = await supabase.storage.from("customer-br-documents").upload(path, file, { upsert: true });
+  const path = `${userId}/${orgId}/${crypto.randomUUID()}.${safe.split(".").pop()!.toLowerCase()}`;
+  const uploaded = await supabase.storage.from("customer-br-documents").upload(path, file, { upsert: false });
   if (uploaded.error) throw uploaded.error;
   return path;
 }

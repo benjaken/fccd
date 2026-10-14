@@ -163,6 +163,7 @@ import { CompanyEmployeesPage } from "@/components/settings/CompanyEmployeesPage
 import { DictionariesPage } from "@/components/settings/DictionariesPage";
 import { CustomerFaqPage } from "@/components/settings/CustomerFaqPage";
 import { CustomerPortalLunchboxPage } from "@/components/settings/CustomerPortalLunchboxPage";
+import { CustomerPortalOpsPage } from "@/components/settings/CustomerPortalOpsPage";
 import { CustomerPortalRewardCatalogPage } from "@/components/settings/CustomerPortalRewardCatalogPage";
 import { CustomerPortalApplicationsPage } from "@/components/settings/CustomerPortalApplicationsPage";
 import { CustomerPortalRewardRulesPage } from "@/components/settings/CustomerPortalRewardRulesPage";

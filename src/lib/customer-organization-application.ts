@@ -77,8 +77,8 @@ export async function uploadOrganizationBr(applicationId: string, userId: string
   const safe = file.name.replace(/[^A-Za-z0-9._-]/g, "_").replace(/^\.+/, "").slice(0, 120);
   if (!/\.(jpg|jpeg|png|pdf)$/i.test(safe)) throw new Error("invalid_br_attachment");
   if (file.size > 10 * 1024 * 1024) throw new Error("invalid_br_attachment");
-  const path = `${userId}/${applicationId}/${safe}`;
-  const uploaded = await supabase.storage.from("customer-br-documents").upload(path, file, { upsert: true });
+  const path = `${userId}/${applicationId}/${crypto.randomUUID()}.${safe.split(".").pop()!.toLowerCase()}`;
+  const uploaded = await supabase.storage.from("customer-br-documents").upload(path, file, { upsert: false });
   if (uploaded.error) throw uploaded.error;
   return path;
 }

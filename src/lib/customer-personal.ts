@@ -8,6 +8,9 @@ export type PersonalEvidence = { id: string; order_id: string; amount: number; s
 export type PersonalSnapshot = { profile: PersonalProfile; addresses: PersonalAddress[]; stores: PersonalStore[]; evidence: PersonalEvidence[]; order_states: Record<string, { delivery_status: string | null; paid: boolean }> };
 export type ReorderCart = { domain: string; items: Array<{ variant: string; quantity: number }> };
 
+export const fetchPersonalReorder = (orderId: string) =>
+  rpc<ReorderCart>("customer_personal_reorder", { p_order_id: orderId });
+
 async function rpc<T>(name: string, args?: Record<string, unknown>): Promise<T> {
   const { data, error } = await supabase.rpc(name, args);
   if (error) throw error;

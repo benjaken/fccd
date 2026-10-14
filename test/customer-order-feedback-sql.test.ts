@@ -34,10 +34,28 @@ beforeEach(async () => {
       ('${orgOrder}','order','已送達',null,'org@example.com','FCC-2','2026-10-14T04:00:00Z'),
       ('${outside}','order','已送達',null,'other@example.com','FCC-3','2026-10-14T04:00:00Z');`);
   await db.exec(readFileSync("supabase/migrations/20261013200000_customer_order_feedback.sql", "utf8"));
+  await db.exec(`create function private.personal_email_matches_order(p_order orders,p_email text)
+    returns boolean language sql as $$select lower(btrim(p_order.email_snapshot))=lower(btrim(p_email))$$;`);
+  await db.exec(readFileSync("supabase/migrations/20261014132000_customer_email_matched_order_feedback.sql", "utf8"));
 }, 20000);
 afterEach(async () => { await db.close(); });
 
 describe("order feedback links", () => {
+  it("emails a historical order claimed by verified email without an explicit link", async () => {
+    await db.exec("delete from private.customer_personal_order_links");
+    await db.query("select private.customer_order_feedback_enqueue($1)", [order]);
+    const queue=(await db.query<{token:string;recipient:string}>("select token,recipient from customer_order_feedback_email_outbox")).rows;
+    expect(queue).toEqual([{token:expect.stringMatching(/^[0-9a-f]{64}$/),recipient:"person@example.com"}]);
+    await db.exec(`select set_config('test.user_id','${user}',false)`);
+    expect((await db.query<{data:{submitted:boolean}}>("select customer_portal_order_feedback($1) data",[order])).rows[0].data.submitted).toBe(false);
+    await db.query("select private.customer_order_feedback_enqueue($1)", [order]);
+    expect((await db.query("select id from customer_order_feedback_email_outbox")).rows).toHaveLength(1);
+  });
+  it("does not claim an unverified mailbox for feedback", async () => {
+    await db.exec(`delete from private.customer_personal_order_links;update auth.users set email_confirmed_at=null`);
+    await db.query("select private.customer_order_feedback_enqueue($1)", [order]);
+    expect((await db.query("select id from customer_order_feedback_email_outbox")).rows).toHaveLength(0);
+  });
   it("emails one token for a portal order and keeps the comment on that order", async () => {
     await db.query("select private.customer_order_feedback_enqueue($1)", [order]);
     await db.query("select private.customer_order_feedback_enqueue($1)", [order]);

@@ -37,6 +37,7 @@ beforeEach(async () => {
   await db.exec(readFileSync("supabase/migrations/20261012090000_customer_organization_portal.sql", "utf8"));
   await db.exec(readFileSync("supabase/migrations/20261012170000_customer_portal_ops_admin.sql", "utf8"));
   await db.exec(readFileSync("supabase/migrations/20261013090000_customer_organization_applications.sql", "utf8"));
+  await db.exec(readFileSync("supabase/migrations/20261014131000_customer_br_versions_and_application_pages.sql", "utf8"));
   await db.exec(`select set_config('test.has_access','1',false);
     insert into auth.users values
       ('${ids.staff}','staff@example.com',now()),
@@ -67,6 +68,38 @@ async function draftApplication(brNumber = "12345678", expires = "current_date +
 }
 
 describe("customer organization BR applications", () => {
+  it("keeps submitted attachment versions immutable through actual Storage RLS", async () => {
+    const { id, path } = await draftApplication();
+    await db.query("select customer_org_application_submit()");
+    await db.query("update customer_organization_applications set status='needs_info' where id=$1", [id]);
+    expect((await db.query<{ allowed: boolean }>("select private.customer_br_upload_allowed($1) allowed", [path])).rows[0].allowed).toBe(true);
+    await db.exec("grant usage on schema storage to authenticated; grant select,insert,update on storage.objects to authenticated; set role authenticated");
+    const changed=await db.query("update storage.objects set name=$1 where name=$1 returning name", [path]);
+    expect(changed.rows).toHaveLength(0);
+    await db.query("insert into storage.objects(bucket_id,name) values('customer-br-documents',$1)", [`${ids.applicant}/${id}/new.pdf`]);
+    await db.exec("reset role");
+    expect((await db.query("select id from storage.objects where name=$1", [path])).rows).toHaveLength(1);
+  });
+
+  it("returns deterministic server pages of 15 applications with a total and permission guard", async () => {
+    await asUser(ids.staff);
+    await db.exec(`insert into auth.users(id,email,email_confirmed_at)
+      select gen_random_uuid(),'page-'||n||'@example.com',now() from generate_series(1,31) n;
+      insert into customer_organization_applications(applicant_user_id,company_name)
+        select id,email from auth.users where email like 'page-%';`);
+    type Page = { rows: Array<{ id: string }>; total: number; page: number };
+    const page = async (number: number) => (await db.query<{ data: Page }>("select customer_portal_ops_application_page($1) data", [number])).rows[0].data;
+    const first = await page(1), second = await page(2), last = await page(999);
+    expect(first).toMatchObject({ total: 31, page: 1 });
+    expect(first.rows).toHaveLength(15);
+    expect(second.rows).toHaveLength(15);
+    expect(last).toMatchObject({ total: 31, page: 3 });
+    expect(last.rows).toHaveLength(1);
+    expect(new Set([...first.rows,...second.rows,...last.rows].map(row=>row.id)).size).toBe(31);
+    expect(await page(1)).toEqual(first);
+    await db.exec("select set_config('test.has_access','0',false)");
+    await expect(page(1)).rejects.toThrow("page_access_required");
+  });
   it("keeps the applicant out of the company until FCC assigns a different admin", async () => {
     const { id } = await draftApplication();
     await db.query("select customer_org_application_submit()");
