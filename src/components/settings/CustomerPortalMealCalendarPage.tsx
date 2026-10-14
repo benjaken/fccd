@@ -166,26 +166,6 @@ export function CustomerPortalMealCalendarPage() {
 
   return (
     <section className="kitchen-calendar-page meal-order-calendar">
-      <header className="page-heading kitchen-calendar-heading">
-        <div>
-          <h1>{t("mealCalendar.title")}</h1>
-          <p>{t("mealCalendar.description")}</p>
-        </div>
-        <label className="meal-calendar-filter">
-          <span>{t("mealCalendar.organization")}</span>
-          <FilterableSelect
-            searchable
-            value={organizationId}
-            onChange={(event) => setOrganizationId(event.target.value)}
-          >
-            <option value="">{t("mealCalendar.allOrganizations")}</option>
-            {organizations.map((org) => (
-              <option key={org.id} value={org.id}>{org.name}</option>
-            ))}
-          </FilterableSelect>
-        </label>
-      </header>
-
       <article className="panel kitchen-calendar-panel">
         <header className="kitchen-calendar-toolbar">
           <div className="kitchen-calendar-nav">
@@ -207,6 +187,19 @@ export function CustomerPortalMealCalendarPage() {
           <h2 className="kitchen-calendar-month">{monthTitle}</h2>
           <div className="kitchen-calendar-toolbar-spacer" aria-hidden="true" />
         </header>
+        <label className="meal-calendar-filter">
+          <span>{t("mealCalendar.organization")}</span>
+          <FilterableSelect
+            searchable
+            value={organizationId}
+            onChange={(event) => setOrganizationId(event.target.value)}
+          >
+            <option value="">{t("mealCalendar.allOrganizations")}</option>
+            {organizations.map((org) => (
+              <option key={org.id} value={org.id}>{org.name}</option>
+            ))}
+          </FilterableSelect>
+        </label>
         {error ? (
           <div className="orders-state orders-state-error" role="alert">
             <CalendarDays />

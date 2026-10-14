@@ -1092,6 +1092,10 @@ button.product-tag[aria-pressed="true"] {
   gap: 4px;
 }
 
+.kitchen-calendar-toolbar-spacer {
+  min-width: 0;
+}
+
 .kitchen-calendar-month {
   margin: 0;
   color: var(--foreground);

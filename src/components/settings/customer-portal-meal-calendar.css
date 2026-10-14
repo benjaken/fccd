@@ -1,3 +1,7 @@
+.meal-order-calendar .kitchen-calendar-panel {
+  grid-template-rows: auto auto minmax(0, 1fr);
+}
+
 .meal-order-calendar .kitchen-calendar-event-copy {
   white-space: nowrap;
 }
@@ -65,10 +69,15 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 8px 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
 }
 
 .meal-calendar-filter .filterable-select {
-  width: 14rem;
+  flex: 1 1 auto;
+  width: auto;
+  min-width: 0;
+  max-width: none;
 }
 
 .meal-calendar-filter .multi-select-trigger {
