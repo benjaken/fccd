@@ -3,6 +3,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { CalendarDays, ChevronLeft, ChevronRight, RefreshCw } from "lucide-react";
 import { useCurrentPageAccess } from "@/auth/use-page-access";
+import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { FilterableSelect } from "@/components/ui/filterable-select";
 import { SidePanel } from "@/components/ui/side-panel";
@@ -308,7 +309,7 @@ export function CustomerPortalMealCalendarPage() {
             <form className="meal-calendar-holiday" onSubmit={(event) => void saveHoliday(event)}>
               <label>
                 {t("mealCalendar.holidayName")}
-                <input value={holidayName} maxLength={80} placeholder={t("mealCalendar.holidayPlaceholder")} onChange={(event) => setHolidayName(event.target.value)} />
+                <Input value={holidayName} maxLength={80} placeholder={t("mealCalendar.holidayPlaceholder")} onChange={(event) => setHolidayName(event.target.value)} />
               </label>
               <div>
                 <Button type="submit" disabled={busy}>{busy ? t("mealCalendar.saving") : t("mealCalendar.saveHoliday")}</Button>
@@ -338,7 +339,7 @@ export function CustomerPortalMealCalendarPage() {
                 {order.lines.map((line, index) => (
                   <li key={`${order.order_id}-${index}`}>
                     <span>{line.name}</span>
-                    <span>×{formatMealQuantity(line.quantity)}</span>
+                    {line.quantity === null || line.quantity === undefined ? null : <span>×{formatMealQuantity(line.quantity)}</span>}
                   </li>
                 ))}
               </ul>

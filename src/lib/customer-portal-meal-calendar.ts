@@ -1,7 +1,7 @@
 import { supabase } from "@/lib/supabase";
 import { hongKongDateParts } from "@/lib/kitchen-calendar";
 
-export type MealCalendarLine = { name: string; quantity: number };
+export type MealCalendarLine = { name: string; quantity: number | null };
 export type MealCalendarOrder = {
   order_id: string;
   order_number: string | null;
@@ -32,6 +32,9 @@ export function formatMealQuantity(value: number | string | null | undefined) {
 }
 
 export function mealLineLabel(line: MealCalendarLine) {
+  if (line.quantity === null || line.quantity === undefined || !Number.isFinite(Number(line.quantity))) {
+    return line.name;
+  }
   return `${line.name} ×${formatMealQuantity(line.quantity)}`;
 }
 
