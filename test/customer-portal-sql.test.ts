@@ -49,6 +49,7 @@ beforeEach(async()=>{
       values('${ids.address}','${ids.org}','Office','Name','91234567','Office address','${ids.user}');`);
   const period = readFileSync("supabase/migrations/20261014200000_customer_menu_valid_period.sql", "utf8");
   await db.exec(period.split("\n-- workspace-overlay\n")[0]);
+  await db.exec(readFileSync("supabase/migrations/20261014210000_customer_group_order_calendar.sql", "utf8"));
 },20000);
 afterEach(async()=>{await db.close();});
 function order(request=ids.request,points=0){return db.query<{id:string}>(`select customer_portal_submit_order($1,$2,$3,$4::jsonb,$5) as id`,[request,ids.menu,ids.address,JSON.stringify([{product_id:ids.product,quantity:1}]),points]);}
@@ -170,6 +171,16 @@ describe("customer portal SQL transactions",()=>{
       `select customer_portal_submit_order($1,$2,$3,$4::jsonb,0,current_date)`,
       ["00000000-0000-0000-0000-0000000000d3",ids.menu,ids.address,JSON.stringify([{product_id:ids.product,quantity:1}])],
     )).rejects.toThrow("menu_unavailable");
+  });
+  it("refuses an order on a holiday even when the menu covers that day", async () => {
+    await db.exec("update customer_menu_assignments set valid_until=current_date+10");
+    const day = (await db.query<{ service_day: string }>("select (current_date+4)::text as service_day")).rows[0].service_day;
+    await db.query("insert into customer_order_blackouts(blackout_on, name) values($1,'補假')", [day]);
+    await expect(db.query(
+      `select customer_portal_submit_order($1,$2,$3,$4::jsonb,0,$5::date)`,
+      ["00000000-0000-0000-0000-0000000000e1", ids.menu, ids.address, JSON.stringify([{ product_id: ids.product, quantity: 1 }]), day],
+    )).rejects.toThrow("order_blackout");
+    expect((await db.query<{ n: number }>("select count(*)::int n from orders")).rows[0].n).toBe(0);
   });
   it("limits member menus by assigned scopes and rejects off-scope orders",async()=>{
     const invite=(await db.query<{token:string}>("select customer_portal_invite('member@example.com') token")).rows[0].token;

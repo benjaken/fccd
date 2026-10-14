@@ -1,0 +1,118 @@
+.meal-order-calendar .kitchen-calendar-event-copy {
+  white-space: nowrap;
+}
+
+.meal-order-calendar .kitchen-calendar-day.is-closed {
+  background: color-mix(in srgb, var(--destructive) 8%, var(--card));
+}
+
+.meal-calendar-closed {
+  display: block;
+  margin: 0 8px;
+  color: var(--destructive);
+  font-size: 12px;
+  font-weight: 650;
+  line-height: 1.4;
+}
+
+.meal-calendar-openings,
+.meal-calendar-holiday {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.meal-calendar-openings ul {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.meal-calendar-openings small {
+  display: block;
+  color: var(--muted-foreground);
+}
+
+.meal-calendar-holiday input {
+  width: 100%;
+  min-height: 44px;
+  margin-top: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--input);
+  border-radius: 8px;
+  background: var(--background);
+  color: var(--foreground);
+  font: inherit;
+}
+
+.meal-calendar-holiday div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.meal-order-calendar .kitchen-calendar-day.is-selected {
+  outline: 2px solid var(--primary);
+  outline-offset: -2px;
+}
+
+.meal-calendar-filter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+
+.meal-calendar-filter select {
+  min-height: 36px;
+  min-width: 12rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--card);
+  color: var(--foreground);
+  padding: 0 10px;
+}
+
+.meal-calendar-day-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.meal-calendar-order {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--card);
+}
+
+.meal-calendar-order h3 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.meal-calendar-order p,
+.meal-calendar-lines {
+  margin: 0;
+}
+
+.meal-calendar-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 0;
+  list-style: none;
+}
+
+.meal-calendar-lines li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}

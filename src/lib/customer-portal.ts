@@ -87,11 +87,22 @@ export function formatMenuPeriod(menu: { delivery_date: string; valid_until?: st
 export function hongKongToday() {
   return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Hong_Kong" }).format(new Date());
 }
-export function defaultMenuServiceDate(menu: { delivery_date: string; valid_until?: string | null }) {
+function shiftIsoDate(iso: string, days: number) {
+  const [year, month, day] = iso.split("-").map(Number);
+  const date = new Date(year, month - 1, day + days);
+  const pad = (value: number) => String(value).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+export function defaultMenuServiceDate(menu: { delivery_date: string; valid_until?: string | null }, blackouts: string[] = []) {
   const end = menuValidUntil(menu);
-  const today = hongKongToday();
-  if (today >= menu.delivery_date && today <= end) return today;
-  return menu.delivery_date;
+  const blocked = new Set(blackouts);
+  let cursor = hongKongToday() > menu.delivery_date ? hongKongToday() : menu.delivery_date;
+  if (cursor > end) return "";
+  for (let step = 0; step < 400 && cursor <= end; step += 1) {
+    if (!blocked.has(cursor)) return cursor;
+    cursor = shiftIsoDate(cursor, 1);
+  }
+  return "";
 }
 export const requestPortalCancellation = (orderId: string, reason: string, organizationId?: string) =>
   rpc<void>("customer_portal_request_cancel", { p_order_id: orderId, p_reason: reason }, organizationId);

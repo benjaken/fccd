@@ -290,7 +290,15 @@ i18n.addResourceBundle("en", "translation", { portal: {
 }}, true, true);
 i18n.addResourceBundle("zh-HK", "translation", { portalRewardRules: {
   holidays: "不能訂餐", holidaysHint: "這些日期不能落單。未加入的日子，包括星期六、日，仍可訂餐。",
-  pageIntro: "管理賺分規則、生效版本與入帳安排。", currentRule: "目前生效規則", earnStatement: "每 HK${{rate}} 餐費，賺取 1 分", historyUnavailable: "未能載入版本紀錄。",
+  pageIntro: "管理訂單賺分比率、歷史版本與退款扣分。", currentRule: "目前生效規則", earnStatement: "每 HK${{rate}} 餐費，賺取 1 分", historyUnavailable: "未能載入版本紀錄。",
+  healthy: "正常入帳", formulaLabel: "會員下單賺分公式", runningDays: "已生效 {{count}} 天", scheduledRule: "尚未生效",
+  exampleTitle: "範例換算", exampleSpend: "HK${{amount}} 餐費", examplePoints: "+ {{points}} 分", exampleShare: "相當於 {{percent}}% 餐費回贈",
+  scopeTitle: "計費範疇", scopeBody: "只計餐費。運費、急單附加費及租賃費不計入。",
+  postingTitle: "入帳時效", postingBody: "訂單完成後按當時鎖定的門檻入帳。門檻為 0 時，新訂單暫停賺分。",
+  limitTitle: "使用限制", limitBody: "積分只可兌換禮品或現金券，不能抵付訂單金額。",
+  calculator: "積分試算", calculatorHint: "用目前生效門檻試算餐費可賺取的積分。", foodSample: "餐費（HK$）", estimateEmpty: "請輸入大於 0 的餐費。",
+  searchVersions: "搜尋版本", searchVersionsPlaceholder: "門檻或生效時間", noVersionMatches: "沒有符合的版本。",
+  viewVersion: "查看", versionDetail: "版本詳情", versionLabel: "版本",
   hkTime: "香港時間", foodOnly: "只計餐費，運費不計", businessDay: "完成後 1 個工作日內入帳", noCashOffset: "積分只用於禮品或現金券兌換",
   versionCount: "{{count}} 個版本", earningPaused: "暫停賺分", pausedDescription: "目前暫停新訂單賺取積分。", ruleUnavailable: "暫時未有可用的賺分規則。",
   dataUpdateRequired: "積分規則資料尚未更新，暫時無法讀取賺分門檻。請完成資料更新後重新載入。",
@@ -306,7 +314,15 @@ i18n.addResourceBundle("zh-HK", "translation", { portalRewardRules: {
 }}, true, true);
 i18n.addResourceBundle("en", "translation", { portalRewardRules: {
   holidays: "Closed to orders", holidaysHint: "Orders cannot be placed for these dates. Other days, including Saturdays and Sundays, stay open.",
-  pageIntro: "Manage earning rules, effective versions and posting dates.", currentRule: "Current earning rule", earnStatement: "Earn 1 point per HK${{rate}} of food", historyUnavailable: "Could not load version history.",
+  pageIntro: "Manage the earning rate, version history and refund clawbacks.", currentRule: "Current earning rule", earnStatement: "Earn 1 point per HK${{rate}} of food", historyUnavailable: "Could not load version history.",
+  healthy: "Earning normally", formulaLabel: "How orders earn points", runningDays: "In effect for {{count}} days", scheduledRule: "Not effective yet",
+  exampleTitle: "Example", exampleSpend: "HK${{amount}} of food", examplePoints: "+ {{points}} pts", exampleShare: "About {{percent}}% of the food spend",
+  scopeTitle: "What counts", scopeBody: "Food only. Delivery, rush fees and rental charges are excluded.",
+  postingTitle: "When points post", postingBody: "Completed orders use the threshold locked for that order. A threshold of 0 pauses earning.",
+  limitTitle: "How points are used", limitBody: "Points redeem gifts or cash vouchers. They cannot reduce an order total.",
+  calculator: "Estimate points", calculatorHint: "Estimate points from the current threshold.", foodSample: "Food spend (HK$)", estimateEmpty: "Enter a food amount above 0.",
+  searchVersions: "Search versions", searchVersionsPlaceholder: "Threshold or effective time", noVersionMatches: "No matching versions.",
+  viewVersion: "View", versionDetail: "Version details", versionLabel: "Version",
   hkTime: "Hong Kong time", foodOnly: "Food only; delivery excluded", businessDay: "Posts within one business day of completion", noCashOffset: "Redeem points for gifts or cash vouchers",
   versionCount: "{{count}} versions", earningPaused: "Earning paused", pausedDescription: "New orders are not currently earning points.", ruleUnavailable: "No earning rule is available at the moment.",
   dataUpdateRequired: "Reward rule data needs updating. The earning threshold cannot be read yet. Update the data, then reload.",

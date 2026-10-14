@@ -10,7 +10,7 @@ export function CustomerMenusPage() {
   const portal = useOutletContext<CustomerPortalController>();
   const { menuId } = useParams();
   const {
-    t, menu, quantities, setQuantities, serviceDate, setServiceDate, addressId, setAddressId,
+    t, menu, quantities, setQuantities, serviceDate, setServiceDate, blackouts, addressId, setAddressId,
     busy, requestId, chooseMenu, applyTemplate, cart, checkout, setPage, refresh, run,
   } = portal;
   const data = portal.data;
@@ -18,6 +18,7 @@ export function CustomerMenusPage() {
   if (!data) return null;
   if (menuId && !menu) return <Navigate to="/customer/menus" replace />;
   const templates = data.templates ?? [];
+  const holiday = blackouts.find(day => day.blackout_on === serviceDate);
   const cartItems = cart?.items ?? [];
 
   return (
@@ -102,7 +103,7 @@ export function CustomerMenusPage() {
                   onChange={event => { requestId.current = null; setServiceDate(event.target.value); }}
                 />
               </label>
-              <small>{t("portal.serviceDateHint")}</small>
+              <small>{holiday ? t("portal.orderBlackoutNamed", { date: holiday.blackout_on, name: holiday.name }) : t("portal.serviceDateHint")}</small>
             </div>
             <label>
               {t("portal.addresses")}
@@ -117,7 +118,7 @@ export function CustomerMenusPage() {
             <p>{t("portal.pointsHint")}</p>
             <p>{t("portal.shipping")}: {money(Math.round(Number(menu.shipping_fee) * 100))}</p>
             <strong>{t("portal.payable")}: {money(cart?.payableCents || 0)}</strong>
-            <Button disabled={busy || !cart?.valid || !addressId || !serviceDate} onClick={() => void checkout()}>
+            <Button disabled={busy || !cart?.valid || !addressId || !serviceDate || Boolean(holiday)} onClick={() => void checkout()}>
               {busy ? t("portal.submitting") : t("portal.confirmOrder")}
             </Button>
             <label>

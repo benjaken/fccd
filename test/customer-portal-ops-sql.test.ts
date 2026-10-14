@@ -30,11 +30,13 @@ beforeEach(async () => {
     const definition = core.match(new RegExp(`create table public\\.${table} \\([\\s\\S]*?\\n\\);`))![0];
     await db.exec(definition.replace(/references public\.\w+ \(id\)/g, ""));
   }
-  await db.exec(`alter table orders add column source_system text;alter table orders add column delivery_time text;`);
+  await db.exec(`alter table orders add column source_system text;alter table orders add column delivery_time text;alter table orders add column if not exists source_quote_id uuid;`);
   await db.exec(readFileSync("supabase/migrations/20261012090000_customer_organization_portal.sql", "utf8"));
   await db.exec(readFileSync("supabase/migrations/20261012170000_customer_portal_ops_admin.sql", "utf8"));
   const period = readFileSync("supabase/migrations/20261014200000_customer_menu_valid_period.sql", "utf8");
   await db.exec(period.split("\n-- ordering\n")[0]);
+  await db.exec(readFileSync("supabase/migrations/20261014210000_customer_group_order_calendar.sql", "utf8").split("\n-- ordering\n")[0]);
+  await db.exec(readFileSync("supabase/migrations/20261014213000_customer_portal_meal_calendar.sql", "utf8"));
   await db.exec(`select set_config('test.user_id','${ids.user}',false);
     select set_config('test.has_access','1',false);
     insert into auth.users values('${ids.user}','admin@example.com',now()),('${ids.other}','member@example.com',now());
@@ -85,5 +87,72 @@ describe("customer portal ops SQL", () => {
     await db.query("select customer_portal_ops_assign_admin($1,'admin@example.com')", [first]);
     await expect(db.query("select customer_portal_ops_assign_admin($1,'admin@example.com')", [second]))
       .rejects.toThrow("membership_conflict");
+  });
+
+  it("lists each group customer's meals on the Hong Kong service date", async () => {
+    const orgId = (await db.query<{ id: string }>(
+      "select customer_portal_ops_upsert_org(null,'恒隆集團',null,true) id",
+    )).rows[0].id;
+    const menuId = (await db.query<{ id: string }>(
+      `select customer_portal_ops_upsert_menu(null,$1,$2,'Lunch',current_date,current_date,'12:00',now()+interval '1 day',0,true) id`,
+      [orgId, ids.brand],
+    )).rows[0].id;
+    const ruleId = (await db.query<{ id: string }>("select id from customer_reward_rules limit 1")).rows[0].id;
+    const quoteId = "00000000-0000-0000-0000-000000000091";
+    const orderId = "00000000-0000-0000-0000-000000000092";
+    const archivedId = "00000000-0000-0000-0000-000000000093";
+    await db.exec(`
+      insert into orders(id,legacy_id,channel_id,document_type,order_number,delivery_at,delivery_time,delivery_status,shipping_address_snapshot)
+        values('${quoteId}','cal-quote','${ids.brand}','quote','Q-1','2026-10-16 04:00:00+00','11:00','未派車隊','舊地址'),
+              ('${orderId}','cal-order','${ids.brand}','order','FC-9001','2026-10-16 04:00:00+00','12:00','未派車隊','中環'),
+              ('${archivedId}','cal-archived','${ids.brand}','order','FC-HIDE','2026-10-16 04:00:00+00','12:00',null,'隱藏');
+      update orders set source_quote_id='${quoteId}' where id='${orderId}';
+      update orders set archived_at=now() where id='${archivedId}';
+      insert into order_lines(legacy_id,order_id,product_name_snapshot,quantity,is_void)
+        values('line-old','${quoteId}','舊餐',9,false),
+              ('line-meal','${orderId}','叉燒飯',2,false),
+              ('line-soup','${orderId}','例湯',1,false),
+              ('line-void','${orderId}','取消餐',4,true);
+      insert into customer_portal_orders(order_id,organization_id,created_by,menu_id,request_id,reward_rule_id,food_amount)
+        values('${quoteId}','${orgId}','${ids.user}','${menuId}','00000000-0000-0000-0000-000000000094','${ruleId}',200),
+              ('${archivedId}','${orgId}','${ids.user}','${menuId}','00000000-0000-0000-0000-000000000095','${ruleId}',10);
+    `);
+    const rows = (await db.query<{ calendar: Array<{ order_id: string; organization_name: string; service_date: string; lines: Array<{ name: string; quantity: number }> }> }>(
+      "select customer_portal_ops_meal_calendar('2026-10-01','2026-10-31') calendar",
+    )).rows[0].calendar;
+    expect(rows).toEqual([expect.objectContaining({
+      order_id: orderId,
+      organization_name: "恒隆集團",
+      order_number: "FC-9001",
+      service_date: "2026-10-16",
+      lines: expect.arrayContaining([
+        { name: "叉燒飯", quantity: 2 },
+        { name: "例湯", quantity: 1 },
+      ]),
+    })]);
+    await expect(db.query("select customer_portal_ops_meal_calendar('2026-10-01','2026-12-01')"))
+      .rejects.toThrow("invalid_range");
+    await db.exec(`select set_config('test.has_access','0',false)`);
+    await expect(db.query("select customer_portal_ops_meal_calendar('2026-10-01','2026-10-31')"))
+      .rejects.toThrow("page_access_required");
+  });
+
+  it("lists open company menus for the month and stores a holiday closure", async () => {
+    await db.exec(`select set_config('test.has_access','1',false)`);
+    const orgId = (await db.query<{ id: string }>(
+      "select customer_portal_ops_upsert_org(null,'日曆公司',null,true) id",
+    )).rows[0].id;
+    await db.query(
+      `select customer_portal_ops_upsert_menu(null,$1,$2,'午市餐牌',current_date,current_date+6,'12:00',now()+interval '5 day',0,true)`,
+      [orgId, ids.brand],
+    );
+    const holiday = (await db.query<{ day: string }>("select (current_date+1)::text as day")).rows[0].day;
+    await db.query("select customer_portal_ops_set_order_blackout($1::date,'國慶',false)", [holiday]);
+    const calendar = (await db.query<{ d: { openings: Array<{ organization_name: string; menu_name: string }>; blackouts: Array<{ blackout_on: string; name: string }> } }>(
+      "select customer_portal_ops_list_group_calendar(current_date, current_date+7) d",
+    )).rows[0].d;
+    expect(calendar.openings).toEqual([expect.objectContaining({ organization_name: "日曆公司", menu_name: "午市餐牌" })]);
+    expect(calendar.blackouts).toEqual([expect.objectContaining({ blackout_on: holiday, name: "國慶" })]);
+    await expect(db.query("select customer_portal_ops_set_order_blackout(current_date,'',false)")).rejects.toThrow("invalid_blackout");
   });
 });

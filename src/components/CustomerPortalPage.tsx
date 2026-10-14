@@ -5,6 +5,7 @@ import { ShoppingBag, Coins, Users, MapPin, ReceiptText, Home, UserRound, Buildi
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/lib/supabase";
 import { fetchPortal, acceptPortalInvite, submitPortalOrder, portalCart, portalPermissions, fetchPortalEvidence, defaultMenuServiceDate, hongKongToday, menuValidUntil, type PaymentEvidence, type PortalPermission, type PortalSnapshot, type PortalMenu } from "@/lib/customer-portal";
+import { listPortalOrderBlackouts, type OrderBlackout } from "@/lib/customer-portal-calendar-ops";
 import { ReceiptPreview } from "@/components/CustomerSelfServicePage";
 import type { CustomerSelfServiceOrderDetail } from "@/lib/customer-self-service";
 import { printPdf } from "@/lib/print-pdf";
@@ -37,6 +38,7 @@ function portalErrorText(error: unknown) {
 
 function portalErrorKey(error: unknown, fallback: string) {
   const text = portalErrorText(error);
+  if (text.includes("order_blackout")) return "portal.orderBlackout";
   if (text.includes("delivery_date_unavailable")) return "portal.invalidServiceDate";
   if (text.includes("customer_membership_required")) return "portal.membershipRequired";
   if (text.includes("email_verification_required")) return "portal.verifyEmail";
@@ -61,6 +63,7 @@ function useCustomerPortalController(load: typeof fetchPortal, onMembershipChang
   }
   const [quantities, setQuantities] = useState<Record<string,number>>({});
   const [serviceDate, setServiceDate] = useState("");
+  const [blackouts, setBlackouts] = useState<OrderBlackout[]>([]);
   const [addressId, setAddressId] = useState(""); const [busy, setBusy] = useState(false);
   const [error, setError] = useState(""); const [notice, setNotice] = useState("");
   const [inviteLink, setInviteLink] = useState(""); const [inviteEmail, setInviteEmail] = useState("");
@@ -91,7 +94,16 @@ function useCustomerPortalController(load: typeof fetchPortal, onMembershipChang
       .catch(error=>{if(active){setError(t(portalErrorKey(error,"portal.loadFailed")));if(portalErrorKey(error,"")==="portal.membershipRequired")onMembershipChanged?.();}});
     return ()=>{active=false;};
   }, [loggedIn,load,t,organizationId]);
-  useEffect(() => { setServiceDate(menu ? defaultMenuServiceDate(menu) : ""); }, [menu]);
+  useEffect(() => {
+    if (!loggedIn || !data) return;
+    let active = true;
+    void listPortalOrderBlackouts(data.organization.id)
+      .then(rows => { if (active) setBlackouts(rows ?? []); })
+      .catch(() => { if (active) setBlackouts([]); });
+    return () => { active = false; };
+  }, [loggedIn, data?.organization.id]);
+  const blockedDays = blackouts.map(day => day.blackout_on).join(",");
+  useEffect(() => { setServiceDate(menu ? defaultMenuServiceDate(menu, blockedDays ? blockedDays.split(",") : []) : ""); }, [menu, blockedDays]);
   useEffect(()=>{if(page!=="receipts"||!loggedIn||!data)return;let active=true;
     void fetchPortalEvidence(data?.organization.id).then(rows=>{if(active)setEvidence(rows);}).catch(()=>{if(active)setError(t("portal.operationFailed"));});
     return()=>{active=false;};},[page,loggedIn,t,data?.organization.id]);
@@ -123,6 +135,11 @@ function useCustomerPortalController(load: typeof fetchPortal, onMembershipChang
   async function checkout() {
     if(!menu||!data||!cart?.valid||!addressId||!serviceDate)return;
     const end = menuValidUntil(menu);
+    const holiday = blackouts.find(day => day.blackout_on === serviceDate);
+    if (holiday) {
+      setError(t("portal.orderBlackoutNamed", { date: holiday.blackout_on, name: holiday.name }));
+      return;
+    }
     if (serviceDate < menu.delivery_date || serviceDate > end || serviceDate < hongKongToday()) {
       setError(t("portal.invalidServiceDate"));
       return;
@@ -132,7 +149,7 @@ function useCustomerPortalController(load: typeof fetchPortal, onMembershipChang
       requestId.current=null;setQuantities({});setPage("orders");await refresh();},t("portal.orderCreated"));
   }
 
-  return {t,params,setParams,loggedIn,authLoading,email,setEmail,data,page,menu,quantities,setQuantities,serviceDate,setServiceDate,addressId,setAddressId,busy,error,setError,notice,inviteLink,inviteEmail,setInviteEmail,receiptOrder,setReceiptOrder,receiptFile,setReceiptFile,receiptAmount,setReceiptAmount,evidence,setEvidence,financialDocument,setFinancialDocument,address,setAddress,requestId,inviteToken,refresh,run,chooseMenu,applyTemplate,cart,checkout,setPage,setData,setInviteLink};
+  return {t,params,setParams,loggedIn,authLoading,email,setEmail,data,page,menu,quantities,setQuantities,serviceDate,setServiceDate,blackouts,addressId,setAddressId,busy,error,setError,notice,inviteLink,inviteEmail,setInviteEmail,receiptOrder,setReceiptOrder,receiptFile,setReceiptFile,receiptAmount,setReceiptAmount,evidence,setEvidence,financialDocument,setFinancialDocument,address,setAddress,requestId,inviteToken,refresh,run,chooseMenu,applyTemplate,cart,checkout,setPage,setData,setInviteLink};
 }
 
 export type CustomerPortalController = ReturnType<typeof useCustomerPortalController>;
