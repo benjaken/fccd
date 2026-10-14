@@ -30,7 +30,7 @@ this file in the same change set.
 
 ## 1. Page layout (all authenticated pages)
 
-客戶積分規則頁保留全寬 shell；內容採主欄規則與版本紀錄、輔欄假期與退款入口。
+客戶積分規則頁保留全寬 shell；內容採主欄規則與版本紀錄、輔欄不能訂餐的日子與退款入口。
 所有編輯操作使用共享 SidePanel，退款面板加寬並以搜索選擇訂單。手機改單欄。時間明示 Asia/Hong_Kong，零門檻顯示暫停賺分；
 缺少門檻或未開通的 API 顯示可恢復的狀態，不得呈現 NaN 或猜測賺分門檻。
 

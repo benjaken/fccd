@@ -21,7 +21,7 @@ vi.mock("@/lib/customer-portal-ops", async (original) => ({
 vi.mock("@/lib/customer-portal-reward-rules-ops", async (original) => ({
   ...await original<typeof import("@/lib/customer-portal-reward-rules-ops")>(),
   listRewardRules: mocks.rules,
-  listPointHolidays: vi.fn(async()=>[]),
+  listOrderClosures: vi.fn(async()=>[]),
 }));
 vi.mock("@/lib/customer-portal-applications-ops", async (original) => ({
   ...await original<typeof import("@/lib/customer-portal-applications-ops")>(),
@@ -35,7 +35,7 @@ vi.mock("@/lib/customer-portal-applications-ops", async (original) => ({
 
 const pages = [
   { Component: CustomerPortalOpsPage, load: mocks.orgs, columns: 6, skeletonRows: 15, empty: "尚未建立機構。", emptyInTable: false },
-  { Component: CustomerPortalRewardRulesPage, load: mocks.rules, columns: 4, skeletonRows: 15, empty: "尚未有積分規則版本。", emptyInTable: true },
+  { Component: CustomerPortalRewardRulesPage, load: mocks.rules, columns: 4, skeletonRows: 5, empty: "尚未有積分規則版本。", emptyInTable: true },
   { Component: CustomerPortalApplicationsPage, load: mocks.applications, columns: 5, skeletonRows: 15, empty: "目前沒有公司申請。", emptyInTable: false },
 ];
 

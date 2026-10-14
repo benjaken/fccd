@@ -5,8 +5,8 @@ import { useCurrentPageAccess } from "@/auth/use-page-access";
 import { Button } from "@/components/ui/button";
 import { ListTable } from "@/components/ui/list-table";
 import { SidePanel } from "@/components/ui/side-panel";
-import { createRewardRule, listPointHolidays, listRewardRules, recordFoodRefund, rewardRuleThreshold, searchRefundOrders, setPointHoliday,
-  type PointHoliday, type RefundOrderMatch, type RewardRuleVersion } from "@/lib/customer-portal-reward-rules-ops";
+import { createRewardRule, listOrderClosures, listRewardRules, recordFoodRefund, rewardRuleThreshold, searchRefundOrders, setOrderClosure,
+  type OrderClosure, type RefundOrderMatch, type RewardRuleVersion } from "@/lib/customer-portal-reward-rules-ops";
 import "@/components/customer-portal.css";
 import "./customer-reward-rules.css";
 
@@ -17,6 +17,7 @@ function errorKey(error: unknown) {
   if (message.includes("duplicate_effective_at")) return "duplicateEffectiveAt";
   if (message.includes("invalid_reward_rule")) return "invalidRewardRule";
   if (message.includes("invalid_food_refund")) return "invalidRefund";
+  if (message.includes("invalid_blackout") || message.includes("invalid_holiday")) return "invalidHoliday";
   if (message.includes("Could not find the function") || message.includes("schema cache")) return "serviceUnavailable";
   return "operationFailed";
 }
@@ -31,7 +32,7 @@ export function CustomerPortalRewardRulesPage() {
   const access=useCurrentPageAccess();
   const canEdit=access.canAccess("settings.customer_portal.reward_rules.edit") || Boolean(access.canManage?.("settings.customer_portal.reward_rules"));
   const [rules,setRules]=useState<RewardRuleVersion[]>([]);
-  const [holidays,setHolidays]=useState<PointHoliday[] | null>(null);
+  const [closures,setClosures]=useState<OrderClosure[] | null>(null);
   const [loading,setLoading]=useState(true);
   const [error,setError]=useState("");
   const [notice,setNotice]=useState("");
@@ -56,10 +57,10 @@ export function CustomerPortalRewardRulesPage() {
   const money=(value:number | null)=>value===null || Number.isNaN(Number(value)) ? "—" : new Intl.NumberFormat(i18n.language,{style:"currency",currency:"HKD",currencyDisplay:"narrowSymbol"}).format(Number(value));
   const load=useCallback(async()=>{
     setLoading(true);setError("");
-    const [versions,dates]=await Promise.allSettled([listRewardRules(),listPointHolidays()]);
+    const [versions,dates]=await Promise.allSettled([listRewardRules(),listOrderClosures()]);
     if (versions.status==="fulfilled") setRules(versions.value.map(row=>({...row,hkd_per_point:rewardRuleThreshold(row.hkd_per_point)})));
     else {setRules([]);setError(t(`portalRewardRules.${errorKey(versions.reason)}`));}
-    setHolidays(dates.status==="fulfilled" ? dates.value : null);
+    setClosures(dates.status==="fulfilled" ? dates.value : null);
     setLoading(false);
   },[t]);
   useEffect(()=>{void load();},[load]);
@@ -91,8 +92,8 @@ export function CustomerPortalRewardRulesPage() {
       if (threshold===null || !effectiveAt || Number.isNaN(date.getTime())) {setFormError(text("invalidRewardRule"));return;}
       action=()=>createRewardRule(threshold,date.toISOString());success="saved";
     } else if (panel==="holiday") {
-      if (!holidayOn) {setFormError(text("invalidHoliday"));return;}
-      action=()=>setPointHoliday(holidayOn,holidayName.trim());success="holidaySaved";
+      if (!holidayOn || !holidayName.trim()) {setFormError(text("invalidHoliday"));return;}
+      action=()=>setOrderClosure(holidayOn,holidayName.trim());success="holidaySaved";
     } else if (panel==="refund") {
       const food=Number(refundFood);
       if (!selectedOrder || !Number.isFinite(food) || food<=0 || Math.abs(food*100-Math.round(food*100))>0.000001) {setFormError(text("invalidRefund"));return;}
@@ -128,9 +129,9 @@ export function CustomerPortalRewardRulesPage() {
         </ListTable>
       </section>
     </div><aside className="reward-rules-aside">
-      <section className="reward-rule-holidays"><div className="reward-rule-section-heading"><h2><CalendarDays size={18}/>{text("holidays")}</h2>{canEdit ? <Button size="icon" variant="ghost" aria-label={text("saveHoliday")} title={text("saveHoliday")} disabled={loading || holidays===null} onClick={()=>open("holiday")}><Plus size={18}/></Button> : null}</div>
+      <section className="reward-rule-holidays"><div className="reward-rule-section-heading"><h2><CalendarDays size={18}/>{text("holidays")}</h2>{canEdit ? <Button size="icon" variant="ghost" aria-label={text("saveHoliday")} title={text("saveHoliday")} disabled={loading || closures===null} onClick={()=>open("holiday")}><Plus size={18}/></Button> : null}</div>
         <p>{text("holidaysHint")}</p>
-        {loading ? <p role="status">{text("loading")}</p> : holidays===null ? <div className="reward-rule-unavailable"><p>{text("holidaysUnavailable")}</p><Button variant="outline" onClick={()=>void load()}>{t("portal.retry")}</Button></div> : holidays.length ? <ul>{holidays.map(day=><li key={day.holiday_on}><time dateTime={day.holiday_on}>{day.holiday_on}</time><span>{day.name || text("unnamedHoliday")}</span></li>)}</ul> : <p className="reward-rule-empty">{text("noHolidays")}</p>}
+        {loading ? <p role="status">{text("loading")}</p> : closures===null ? <div className="reward-rule-unavailable"><p>{text("holidaysUnavailable")}</p><Button variant="outline" onClick={()=>void load()}>{t("portal.retry")}</Button></div> : closures.length ? <ul>{closures.map(day=><li key={day.blackout_on}><time dateTime={day.blackout_on}>{day.blackout_on}</time><span>{day.name}</span></li>)}</ul> : <p className="reward-rule-empty">{text("noHolidays")}</p>}
       </section>
       <section className="reward-rule-refund"><h2><RotateCcw size={18}/>{text("refundTitle")}</h2><p>{text("refundSummary")}</p>{canEdit ? <Button variant="outline" onClick={()=>open("refund")}>{text("recordRefund")}<ArrowRight size={16}/></Button> : null}</section>
     </aside></div>

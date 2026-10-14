@@ -32,10 +32,10 @@ export const createRewardRule = (hkdPerPoint: number, effectiveAt: string) =>
     p_effective_at: effectiveAt,
   });
 
-export type PointHoliday = { holiday_on: string; name: string };
-export const listPointHolidays = () => rpc<PointHoliday[]>("customer_portal_ops_list_point_holidays");
-export const setPointHoliday = (day: string, name: string, remove = false) =>
-  rpc<void>("customer_portal_ops_set_point_holiday", { p_day: day, p_name: name, p_remove: remove });
+export type OrderClosure = { blackout_on: string; name: string };
+export const listOrderClosures = () => rpc<OrderClosure[]>("customer_portal_ops_list_order_blackouts");
+export const setOrderClosure = (day: string, name: string, remove = false) =>
+  rpc<void>("customer_portal_ops_set_order_blackout", { p_day: day, p_name: name, p_remove: remove });
 export const recordFoodRefund = (orderId: string, foodAmount: number) =>
   rpc<void>("customer_portal_ops_record_food_refund", { p_order_id: orderId, p_food: foodAmount });
 
