@@ -307,6 +307,7 @@ export const CATERING_ENQUIRY_SEED_FORM: Omit<EnquiryFormDefinition, "id"> = {
   publicTitle: "FC Catering + Lunch Box 餐飲到會+活動策劃網上查詢",
   publicDescription:
     "榮獲ISO 9001食品到會 及 香港Q嘜優質服務認證 (since 2009)",
+  pageHtml: "",
   submitLabel: "Submit",
   slug: "quote-inquiry",
   isDefault: true,
@@ -341,6 +342,7 @@ export function createBlankEnquiryForm(): EnquiryFormDefinition {
     internalName: "未命名表單",
     publicTitle: "未命名表單",
     publicDescription: "",
+    pageHtml: "",
     submitLabel: "Submit",
     slug: "",
     isDefault: false,

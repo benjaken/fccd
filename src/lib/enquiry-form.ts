@@ -46,6 +46,7 @@ export type EnquiryFormDefinition = {
   internalName: string;
   publicTitle: string;
   publicDescription: string;
+  pageHtml: string;
   submitLabel: string;
   slug: string;
   isDefault: boolean;

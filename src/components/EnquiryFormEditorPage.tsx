@@ -10,6 +10,7 @@ import { Modal } from "@/components/ui/modal";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
+import { sanitizeEnquiryHtml } from "@/lib/enquiry-page-html";
 import {
   emptyAnswers,
   enquiryFormEditorPath,
@@ -364,8 +365,13 @@ export function EnquiryFormEditorPage() {
           </label>
           <label>
             <span>公開說明</span>
-            <textarea rows={4} value={form.publicDescription} onChange={(event) => patchForm({ publicDescription: event.target.value })} />
+            <textarea rows={3} value={form.publicDescription} onChange={(event) => patchForm({ publicDescription: event.target.value })} />
           </label>
+          <label>
+            <span>頁面 HTML</span>
+            <textarea rows={12} spellCheck={false} value={form.pageHtml} onChange={(event) => patchForm({ pageHtml: event.target.value })} placeholder="<p>歡迎查詢</p>" />
+          </label>
+          {form.pageHtml.trim() ? <div className="enquiry-html-preview" dangerouslySetInnerHTML={{ __html: sanitizeEnquiryHtml(form.pageHtml) }} /> : <p className="enquiry-html-preview">尚未輸入 HTML。公開頁會繼續顯示上面的純文字說明。</p>}
           <label>
             <span>成功頁短訊</span>
             <textarea rows={4} value={form.successMessage} onChange={(event) => patchForm({ successMessage: event.target.value })} />
