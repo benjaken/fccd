@@ -14,7 +14,9 @@ it("shows the earning rule and keeps operational forms out of the main page",asy
   expect(screen.getAllByText(/16:00/).length).toBeGreaterThan(0);
   expect(screen.queryByLabelText("訂單 ID")).not.toBeInTheDocument();
   expect(screen.queryByText("入分假期")).not.toBeInTheDocument();
-  expect(screen.getByRole("heading",{name:"不能訂餐"})).toBeInTheDocument();
+  expect(screen.queryByRole("heading",{name:"不能訂餐"})).not.toBeInTheDocument();
+  expect(screen.getByText("HK$2,500 餐費")).toBeInTheDocument();
+  expect(screen.getByText("+ 100 分")).toBeInTheDocument();
   expect(screen.getByRole("heading",{name:"規則版本紀錄"})).toBeInTheDocument();
 });
 it("reports missing legacy threshold data without inventing a rate or rendering NaN",async()=>{
@@ -39,23 +41,20 @@ it("creates a rule with Hong Kong time and retains an unsuccessful form",async()
   expect(await within(dialog).findByRole("alert")).toHaveTextContent("此生效時間已有規則版本");
   expect(within(dialog).getByRole("spinbutton")).toHaveValue(25);
 });
-it("shows a closure load failure rather than an empty list",async()=>{
-  mocks.closures.mockRejectedValue(new Error("unavailable"));render(<CustomerPortalRewardRulesPage/>);
-  expect(await screen.findByText("暫時無法載入不能訂餐的日子，請重試。")).toBeInTheDocument();
-  expect(screen.queryByText("尚未設定不能訂餐的日子。")).not.toBeInTheDocument();
-  expect(screen.getByRole("button",{name:"加入禁單日"})).toBeDisabled();
-});
-it("closes ordering on a named date",async()=>{
+it("estimates points from the active threshold",async()=>{
   render(<CustomerPortalRewardRulesPage/>);await screen.findByText("每 HK$25 餐費，賺取 1 分");
-  fireEvent.click(screen.getByRole("button",{name:"加入禁單日"}));const dialog=screen.getByRole("dialog");
-  fireEvent.change(within(dialog).getByLabelText("日期"),{target:{value:"2026-12-25"}});
-  fireEvent.click(within(dialog).getByRole("button",{name:"加入禁單日"}));
-  expect(await within(dialog).findByRole("alert")).toHaveTextContent("請選擇日期並填寫名稱");
-  expect(mocks.closure).not.toHaveBeenCalled();
-  fireEvent.change(within(dialog).getByLabelText("名稱"),{target:{value:"聖誕節"}});
-  fireEvent.click(within(dialog).getByRole("button",{name:"加入禁單日"}));
-  await waitFor(()=>expect(mocks.closure).toHaveBeenCalledWith("2026-12-25","聖誕節"));
-  await waitFor(()=>expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+  fireEvent.click(screen.getByRole("button",{name:"積分試算"}));
+  const dialog=screen.getByRole("dialog");
+  fireEvent.change(within(dialog).getByLabelText("餐費（HK$）"),{target:{value:"100"}});
+  expect(within(dialog).getByRole("status")).toHaveTextContent("+ 4 分");
+});
+it("opens a read-only version and filters the history",async()=>{
+  render(<CustomerPortalRewardRulesPage/>);await screen.findByText("每 HK$25 餐費，賺取 1 分");
+  fireEvent.click(screen.getByRole("button",{name:"查看"}));
+  expect(within(screen.getByRole("dialog")).getByText("版本詳情")).toBeInTheDocument();
+  fireEvent.click(within(screen.getByRole("dialog")).getByRole("button",{name:"關閉"}));
+  fireEvent.change(screen.getByLabelText("搜尋版本"),{target:{value:"沒有這筆"}});
+  expect(await screen.findByText("沒有符合的版本。")).toBeInTheDocument();
 });
 it("searches for an order and shows its details before recording a refund",async()=>{
   render(<CustomerPortalRewardRulesPage/>);await screen.findByText("每 HK$25 餐費，賺取 1 分");
@@ -72,10 +71,10 @@ it("searches for an order and shows its details before recording a refund",async
   fireEvent.click(within(dialog).getByRole("button",{name:"記錄退款"}));
   await waitFor(()=>expect(mocks.refund).toHaveBeenCalledWith("00000000-0000-0000-0000-000000000001",25));
 });
-it("keeps rules and closed dates readable without edit permissions",async()=>{
-  mocks.edit=false;mocks.closures.mockResolvedValue([{blackout_on:"2026-12-25",name:"聖誕節"}]);render(<CustomerPortalRewardRulesPage/>);
-  expect(await screen.findByText("聖誕節")).toBeInTheDocument();
+it("keeps the rule readable without edit permissions",async()=>{
+  mocks.edit=false;render(<CustomerPortalRewardRulesPage/>);
+  expect(await screen.findByText("每 HK$25 餐費，賺取 1 分")).toBeInTheDocument();
   expect(screen.queryByRole("button",{name:"新增規則版本"})).not.toBeInTheDocument();
   expect(screen.queryByRole("button",{name:"記錄退款"})).not.toBeInTheDocument();
-  expect(screen.queryByRole("button",{name:"加入禁單日"})).not.toBeInTheDocument();
+  expect(screen.getByRole("button",{name:"積分試算"})).toBeInTheDocument();
 });
