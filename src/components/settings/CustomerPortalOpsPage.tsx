@@ -572,8 +572,9 @@ export function CustomerPortalOpsPage() {
         onClose={() => setOrgPanelOpen(false)}
         title={editingOrgId ? t("portalOps.editOrg") : t("portalOps.createOrg")}
         closeLabel={t("portalOps.close")}
+        footer={<Button type="submit" form="portal-org-form" disabled={busy || !canEdit}>{t("portalOps.save")}</Button>}
       >
-        <form className="portal-ops-form" onSubmit={event => void submitOrg(event)}>
+        <form id="portal-org-form" className="portal-ops-form" onSubmit={event => void submitOrg(event)}>
           <label>
             {t("portalOps.orgName")}
             <input required value={orgName} onChange={event => setOrgName(event.target.value)} />
@@ -582,7 +583,6 @@ export function CustomerPortalOpsPage() {
             <span>{t("portalOps.active")}</span>
             <Switch checked={orgActive} onCheckedChange={setOrgActive} />
           </label>
-          <Button disabled={busy || !canEdit}>{t("portalOps.save")}</Button>
         </form>
       </SidePanel>
     );
