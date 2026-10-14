@@ -282,8 +282,9 @@ export function CustomerPortalOpsPage() {
         })),
       );
       setMenuPanelOpen(false);
-      navigate(`/settings/customer-portal/${orgId}/menus/${id}`);
-      await loadMenu(id);
+      setMenu(null);
+      navigate(`/settings/customer-portal/${orgId}`);
+      await loadOrg(orgId);
     }, "saved");
   }
 
@@ -292,15 +293,19 @@ export function CustomerPortalOpsPage() {
       <section className="ingredients-page customer-portal-ops">
         <header className="page-heading ingredients-heading">
           <div>
-            <p><Link to={`/settings/customer-portal/${menu.organization_id}`}>{t("portalOps.backToOrg")}</Link></p>
             <h1>{menu.name}</h1>
             <p>{menu.brand} · {formatMenuPeriod(menu)} · {menu.delivery_time}</p>
           </div>
-          {canEdit ? (
-            <Button onClick={() => { setMenuPanelOpen(true); }}>
-              <Pencil /> {t("portalOps.editMenu")}
+          <div className="portal-ops-actions">
+            <Button asChild variant="outline">
+              <Link to={`/settings/customer-portal/${menu.organization_id}`}>{t("portalOps.backToOrg")}</Link>
             </Button>
-          ) : null}
+            {canEdit ? (
+              <Button onClick={() => { setMenuPanelOpen(true); }}>
+                <Pencil /> {t("portalOps.editMenu")}
+              </Button>
+            ) : null}
+          </div>
         </header>
         {error ? <p role="alert">{error}</p> : null}
         {notice ? <p role="status">{notice}</p> : null}
