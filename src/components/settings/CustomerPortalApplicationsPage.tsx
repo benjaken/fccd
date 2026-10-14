@@ -1,6 +1,6 @@
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ChevronLeft, ChevronRight, ClipboardList, Pencil, Plus, RefreshCw } from "lucide-react";
+import { ChevronLeft, ChevronRight, ClipboardList, Pencil, RefreshCw } from "lucide-react";
 import { useCurrentPageAccess } from "@/auth/use-page-access";
 import { Button } from "@/components/ui/button";
 import { ListSearchBar } from "@/components/ui/list-search-bar";
@@ -159,6 +159,13 @@ export function CustomerPortalApplicationsPage() {
     }, "portalApplications.reviewed");
   }
 
+  function openPolicy() {
+    setReminderDays(policy ? String(policy.reminder_lead_days) : "");
+    setBlockOrders(Boolean(policy?.block_new_orders_when_expired));
+    setPolicyReason("");
+    setPolicyOpen(true);
+  }
+
   async function publishPolicy(event: FormEvent) {
     event.preventDefault();
     const days = Number(reminderDays);
@@ -206,13 +213,22 @@ export function CustomerPortalApplicationsPage() {
             <p>{t("portalApplications.description")}</p>
           </div>
         </header>
-        {notice ? <p role="status">{notice}</p> : null}
-        <p role="status">
-          {policy
-            ? t("portalApplications.policyActive", { days: policy.reminder_lead_days, block: t(policy.block_new_orders_when_expired ? "portalApplications.blockYes" : "portalApplications.blockNo") })
-            : t("portalApplications.policyUnpublished")}
-          {" "}{t("portalApplications.reminderNotSent")}
-        </p>
+        <div className="portal-br-policy">
+          <div>
+            {notice ? <p role="status">{notice}</p> : null}
+            <p>
+              {policy
+                ? t("portalApplications.policyActive", { days: policy.reminder_lead_days, block: t(policy.block_new_orders_when_expired ? "portalApplications.blockYes" : "portalApplications.blockNo") })
+                : t("portalApplications.policyUnpublished")}
+              {" "}{t("portalApplications.reminderNotSent")}
+            </p>
+          </div>
+          {canEdit ? (
+            <Button type="button" onClick={openPolicy}>
+              {policy ? t("portalApplications.editPolicy") : t("portalApplications.publishPolicy")}
+            </Button>
+          ) : null}
+        </div>
       </div>
       <article className="panel orders-panel">
         <header className="orders-toolbar">
@@ -244,10 +260,7 @@ export function CustomerPortalApplicationsPage() {
               </label>
             }
             actions={canEdit ? (
-              <>
-                <Button type="button" variant="outline" onClick={() => setRenewOpen(true)}>{t("portalApplications.renew")}</Button>
-                <Button type="button" onClick={() => setPolicyOpen(true)}><Plus /> {t("portalApplications.publishPolicy")}</Button>
-              </>
+              <Button type="button" variant="outline" onClick={() => setRenewOpen(true)}>{t("portalApplications.renew")}</Button>
             ) : undefined}
           />
         </header>
@@ -300,7 +313,7 @@ export function CustomerPortalApplicationsPage() {
           </div>
         </footer>
       </article>
-      <SidePanel open={policyOpen} title={t("portalApplications.policyTitle")} onClose={() => setPolicyOpen(false)} closeLabel={t("portalApplications.close")}>
+      <SidePanel open={policyOpen} title={t("portalApplications.policyTitle")} description={t("portalApplications.reminderNotSent")} onClose={() => setPolicyOpen(false)} closeLabel={t("portalApplications.close")}>
         <form className="portal-ops-form" onSubmit={event => void publishPolicy(event)}>
           <label>
             {t("portalApplications.reminderDays")}

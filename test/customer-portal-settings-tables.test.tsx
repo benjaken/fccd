@@ -103,6 +103,23 @@ it("shows reward history and opens the existing version form", async () => {
   expect(screen.getByRole("spinbutton")).toHaveValue(25);
 });
 
+it("edits the published BR policy from a side panel", async () => {
+  mocks.policy.mockResolvedValue({
+    id: "policy",
+    reminder_lead_days: 30,
+    block_new_orders_when_expired: true,
+    reason: "到期後阻擋",
+    published_at: "2026-10-14T00:00:00Z",
+  });
+  render(<MemoryRouter><CustomerPortalApplicationsPage /></MemoryRouter>);
+  expect(await screen.findByText(/到期前 30 日提醒/)).toBeInTheDocument();
+  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "修改" }));
+  const dialog = await screen.findByRole("dialog");
+  expect(within(dialog).getByRole("heading", { name: "BR 到期政策" })).toBeInTheDocument();
+  expect(within(dialog).getByRole("spinbutton", { name: "提前提醒日數" })).toHaveValue(30);
+});
+
 it("requests the next company-application page from the server and keeps the total visible", async () => {
   mocks.applications.mockImplementation(async (page: number) => ({
     rows: [{ id: `application-${page}`, company_name: `Company ${page}`, applicant_email: "applicant@example.com", status: "pending_review", br_expires_on: null }],

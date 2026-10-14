@@ -186,6 +186,38 @@
 .customer-portal-ops .portal-ops-list-intro > p {
   margin: 0;
 }
+.portal-br-policy {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 16px;
+  border: 1px solid color-mix(in srgb, var(--primary) 24%, var(--border));
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--primary) 8%, var(--card));
+}
+.portal-br-policy p {
+  margin: 0;
+  line-height: 1.5;
+}
+.portal-br-policy p + p,
+.portal-br-policy p:last-child {
+  color: var(--muted-foreground);
+}
+.portal-br-policy [role="status"] {
+  margin-bottom: 4px;
+  color: var(--foreground);
+  font-weight: 700;
+}
+.portal-br-policy > .ui-button {
+  flex: 0 0 auto;
+}
+@media (max-width: 720px) {
+  .portal-br-policy {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}
 .customer-portal-ops .linkish{border:0;background:transparent;color:var(--primary);font:inherit;font-weight:700;cursor:pointer;padding:0}
 .customer-portal-ops a.portal-ops-org-link{color:var(--primary);font-weight:700;text-decoration:underline;text-underline-offset:3px}
 .portal-ops-form,.customer-portal-ops .portal-ops-inline-form{display:grid;gap:14px}
