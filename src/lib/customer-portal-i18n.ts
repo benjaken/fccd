@@ -37,6 +37,8 @@ i18n.addResourceBundle("zh-HK", "translation", { portalOps: {
   userNotFound:"找不到已驗證電郵的使用者。",membershipConflict:"此使用者已屬於其他機構。",invalidEmail:"電郵格式無效。",invalidMenu:"請核對餐單欄位及餐點。",
   createOrg:"新增機構",editOrg:"編輯機構",orgName:"機構名稱",noOrgs:"尚未建立機構。",noOrgsDescription:"建立機構後，可在此指定管理員及餐單。",noMatches:"未找到機構",noMatchesDescription:"調整搜尋或狀態條件後再試。",search:"搜尋機構",searchPlaceholder:"搜尋機構名稱",statusFilter:"狀態",allStatuses:"全部狀態",active:"有效",inactive:"停用",
   admins:"管理員",members:"成員",menus:"指定餐單",status:"狀態",save:"儲存",manage:"管理",
+  roles:{admin:"管理員",member:"成員"},
+  noMenus:"尚未建立指定餐單。",noMenusDescription:"新增後，成員可在供餐期間內用同一張餐牌訂購。",
   assignAdmin:"指定管理員",adminEmailPlaceholder:"已驗證的管理員電郵",adminAssigned:"已指定管理員。",
   email:"電郵",role:"角色",createMenu:"新增餐單",editMenu:"編輯餐單",menuName:"餐單名稱",brand:"品牌",
   chooseBrand:"選擇品牌",delivery:"供餐期間",periodStart:"供餐開始",periodEnd:"供餐結束",
@@ -88,6 +90,8 @@ i18n.addResourceBundle("en", "translation", { portalOps: {
   userNotFound:"No verified user was found for that email.",membershipConflict:"That user already belongs to another organization.",invalidEmail:"Invalid email format.",invalidMenu:"Check the menu fields and items.",
   createOrg:"Create organization",editOrg:"Edit organization",orgName:"Organization name",noOrgs:"No organizations yet.",noOrgsDescription:"Create an organization to assign its admin and menus.",noMatches:"No organizations found",noMatchesDescription:"Try a different search or status.",search:"Search organizations",searchPlaceholder:"Search by organization name",statusFilter:"Status",allStatuses:"All statuses",active:"Active",inactive:"Inactive",
   admins:"Admins",members:"Members",menus:"Assigned menus",status:"Status",save:"Save",manage:"Manage",
+  roles:{admin:"Admin",member:"Member"},
+  noMenus:"No assigned menus yet.",noMenusDescription:"After you add one, members can order from it throughout the service period.",
   assignAdmin:"Assign admin",adminEmailPlaceholder:"Verified admin email",adminAssigned:"Admin assigned.",
   email:"Email",role:"Role",createMenu:"Create menu",editMenu:"Edit menu",menuName:"Menu name",brand:"Brand",
   chooseBrand:"Choose brand",delivery:"Service period",periodStart:"Period starts",periodEnd:"Period ends",
@@ -275,7 +279,8 @@ i18n.addResourceBundle("zh-HK", "translation", { lunchboxOps: {
 i18n.addResourceBundle("en", "translation", { lunchboxOps: {
   vipTitle: "VIP lunch cycle", vipIntro: "Group several lunchbox days into one cycle. After the cycle cutoff, bulk ordering closes. Each day remains its own quote.",
   vipName: "Cycle name", vipSave: "Publish cycle", vipSaved: "VIP lunch cycle published.", vipInvalid: "Enter a cycle name, a cutoff and at least one day.",
-  vipDays: "{{count}} days", failed: "The action could not be completed. Please retry.",
+  vipDays: "{{count}} days", vipNoMenus: "Create at least one active menu before adding it to a cycle.", failed: "The action could not be completed. Please retry.",
+  loading: "Loading…", emptyDescription: "Menus you create will appear here.",
 }}, true, true);
 i18n.addResourceBundle("zh-HK", "translation", { portal: {
   exportOrders: "匯出訂單", exported: "已下載訂單。",
@@ -291,11 +296,13 @@ i18n.addResourceBundle("zh-HK", "translation", { portalRewardRules: {
   dataUpdateRequired: "積分規則資料尚未更新，暫時無法讀取賺分門檻。請完成資料更新後重新載入。",
   serviceUnavailable: "此項功能尚未開通，請完成資料更新後再試。", holidaysUnavailable: "暫時無法載入假期，請重試。",
   noHolidays: "尚未加入額外假期。星期六、日會自動跳過。", unnamedHoliday: "入帳假期", invalidHoliday: "請選擇有效的假期日期。", saving: "儲存中…",
-  holidayNamePlaceholder: "例如：聖誕節", refundOrderPlaceholder: "貼上要處理的訂單 ID", refundFoodPlaceholder: "例如：125.00",
+  holidayNamePlaceholder: "例如：聖誕節", refundOrderPlaceholder: "訂單編號、客戶、公司或電話", refundFoodPlaceholder: "例如：125.00",
+  searchingOrders: "搜尋中…", orderSearchFailed: "暫時無法搜尋訂單，請重試。", noOrderMatches: "找不到相符訂單。", selectOrderHint: "選擇訂單後，資料會顯示在下方。",
+  orderCustomer: "客戶", orderCompany: "公司", orderPhone: "電話", orderDelivery: "送餐時間", orderStatus: "狀態", orderFood: "餐費", orderTotal: "訂單總額", orderOutstanding: "未付",
   refundSummary: "按訂單規則調整退回餐費的積分。尚未入帳的先調整可賺餐費；餘額不足會記為待處理。",
   holidayDate: "日期", holidayName: "名稱", saveHoliday: "加入假期", holidaySaved: "已更新入分假期。",
   refundTitle: "部分退款扣分", refundHint: "填退回的餐費。未入帳的訂單會先減少可入分餐費；已入帳的按每 HK$25 扣回，餘額不足則記待處理。",
-  refundOrder: "訂單 ID", refundFood: "退回餐費（HK$）", recordRefund: "記錄退款", refundSaved: "已按餐費比例處理積分。", invalidRefund: "請填訂單和大於 0 的餐費。",
+  refundOrder: "搜索訂單", refundFood: "退回餐費（HK$）", recordRefund: "記錄退款", refundSaved: "已按餐費比例處理積分。", invalidRefund: "請先選擇訂單，並填大於 0 的餐費。",
 }}, true, true);
 i18n.addResourceBundle("en", "translation", { portalRewardRules: {
   holidays: "Point holidays", holidaysHint: "These dates are skipped when counting the one business day after completion. Saturdays and Sundays are still skipped.",
@@ -305,11 +312,13 @@ i18n.addResourceBundle("en", "translation", { portalRewardRules: {
   dataUpdateRequired: "Reward rule data needs updating. The earning threshold cannot be read yet. Update the data, then reload.",
   serviceUnavailable: "This feature is not available yet. Update the data, then retry.", holidaysUnavailable: "Could not load holidays. Please retry.",
   noHolidays: "No extra holidays yet. Saturdays and Sundays are skipped automatically.", unnamedHoliday: "Posting holiday", invalidHoliday: "Choose a valid holiday date.", saving: "Saving…",
-  holidayNamePlaceholder: "e.g. Christmas Day", refundOrderPlaceholder: "Paste the order ID", refundFoodPlaceholder: "e.g. 125.00",
+  holidayNamePlaceholder: "e.g. Christmas Day", refundOrderPlaceholder: "Order number, customer, company or phone", refundFoodPlaceholder: "e.g. 125.00",
+  searchingOrders: "Searching…", orderSearchFailed: "Could not search orders. Please retry.", noOrderMatches: "No matching orders.", selectOrderHint: "Choose an order to show its details below.",
+  orderCustomer: "Customer", orderCompany: "Company", orderPhone: "Phone", orderDelivery: "Delivery", orderStatus: "Status", orderFood: "Food", orderTotal: "Order total", orderOutstanding: "Outstanding",
   refundSummary: "Adjust points for refunded food using the order's rule. Unposted orders earn less; any balance shortfall is recorded as pending.",
   holidayDate: "Date", holidayName: "Name", saveHoliday: "Add holiday", holidaySaved: "Point holiday updated.",
   refundTitle: "Partial refund clawback", refundHint: "Enter the food amount refunded. Unposted orders earn less. Posted orders lose points at the current threshold, and any shortfall is pending instead of a negative balance.",
-  refundOrder: "Order ID", refundFood: "Food refunded (HK$)", recordRefund: "Record refund", refundSaved: "Points were adjusted for the refunded food.", invalidRefund: "Enter an order and a food amount above 0.",
+  refundOrder: "Search orders", refundFood: "Food refunded (HK$)", recordRefund: "Record refund", refundSaved: "Points were adjusted for the refunded food.", invalidRefund: "Choose an order and enter a food amount above 0.",
 }}, true, true);
 i18n.addResourceBundle("zh-HK", "translation", { portal: {
   company: "公司資料", companyReadOnly: "商業登記由 FCCD 核對，這裡只可查看，不能修改。",

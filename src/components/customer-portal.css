@@ -172,6 +172,19 @@
   flex: 1 1 auto;
   min-height: 180px;
 }
+.customer-portal-ops.ingredients-page > .operational-table-wrap,
+.customer-portal-ops.ingredients-page > .ingredients-panel,
+.customer-portal-ops .portal-ops-section > .operational-table-wrap {
+  flex: 0 0 auto;
+  min-height: 0;
+}
+.portal-ops-section{display:grid;gap:12px}
+.portal-ops-section > h2{margin:0}
+.portal-ops-empty{display:grid;gap:4px;padding:28px 16px;border:1px solid var(--border);border-radius:12px;background:var(--card);text-align:center}
+.portal-ops-empty span{color:var(--muted-foreground)}
+.portal-ops-fields{display:grid;grid-template-columns:1fr 1fr;gap:12px 16px;align-items:end}
+.portal-ops-fields > .portal-ops-period,.portal-ops-fields > .portal-ops-span{grid-column:1 / -1}
+.portal-ops-item-name{align-self:center;line-height:1.35}
 .customer-portal-ops > .ingredients-panel > .operational-list-pagination {
   position: static;
   flex: 0 0 auto;
@@ -225,7 +238,7 @@
 .portal-ops-form,.customer-portal-ops .portal-ops-inline-form{display:grid;gap:14px}
 .portal-ops-form .portal-ops-period{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px}
 .customer-portal-ops > .portal-ops-form,.customer-portal-ops .portal-ops-inline-form{margin:16px 0 28px}
-.customer-portal-ops .portal-ops-inline-form{grid-template-columns:minmax(0,1fr) auto;align-items:end}
+.customer-portal-ops .portal-ops-inline-form{grid-template-columns:minmax(220px,420px) auto;justify-content:start;align-items:end;margin:0}
 .portal-ops-form > label,.portal-ops-form .portal-ops-switch,.customer-portal-ops label:not(.table-pagination-jump):not(.search-field){display:grid;gap:6px;font-size:14px;font-weight:600}
 .portal-ops-form input:not([type="checkbox"]):not([type="file"]),
 .portal-ops-form select,
@@ -238,10 +251,66 @@
 .portal-ops-form > .ui-button{justify-self:start}
 .portal-ops-form .portal-ops-switch,.customer-portal-ops .portal-ops-switch{display:flex;align-items:center;justify-content:space-between;gap:12px}
 .customer-portal-ops .portal-ops-item-add,.portal-ops-form .portal-ops-item-add{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px}
-.customer-portal-ops .portal-ops-item-row,.portal-ops-form .portal-ops-item-row{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,.8fr) minmax(0,.8fr) auto;gap:8px;align-items:end;padding:10px 0;border-bottom:1px solid var(--border)}
+.customer-portal-ops .portal-ops-item-row,.portal-ops-form .portal-ops-item-row{display:grid;grid-template-columns:minmax(0,1fr) 120px 120px auto;gap:8px;align-items:end;padding:10px 0;border-bottom:1px solid var(--border)}
 .portal-ops-definition{display:grid;gap:4px;margin:0;padding:12px;border:1px solid var(--border);border-radius:10px;background:var(--muted)}
 .portal-ops-definition dt{color:var(--muted-foreground);font-size:12px;font-weight:700}
 .portal-ops-definition dd{margin:0}
 @media(max-width:720px){
-  .customer-portal-ops .portal-ops-inline-form,.customer-portal-ops .portal-ops-item-add,.customer-portal-ops .portal-ops-item-row,.portal-ops-form .portal-ops-item-add,.portal-ops-form .portal-ops-item-row{grid-template-columns:1fr}
+  .customer-portal-ops .portal-ops-inline-form,.customer-portal-ops .portal-ops-item-add,.customer-portal-ops .portal-ops-item-row,.portal-ops-form .portal-ops-item-add,.portal-ops-form .portal-ops-item-row,.portal-ops-fields{grid-template-columns:1fr}
+}
+.orders-page.customer-portal-ops > .portal-ops-scroll {
+  min-height: 0;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding-bottom: 8px;
+}
+.portal-ops-section { display: grid; gap: 16px; padding-bottom: 20px; }
+.portal-ops-section .panel-header p { max-width: 72ch; line-height: 1.5; }
+.portal-ops-section > .portal-ops-form { margin: 0; padding: 0 20px; }
+.portal-ops-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.portal-ops-menu-picker { display: grid; gap: 4px; }
+.portal-ops-menu-picker > p { margin: 0; color: var(--muted-foreground); font-weight: 500; line-height: 1.5; }
+.customer-portal-ops .portal-ops-form .portal-ops-check {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 40px;
+  font-weight: 600;
+}
+.customer-portal-ops .portal-ops-form .portal-ops-check input {
+  width: 16px;
+  height: 16px;
+  min-height: 16px;
+  padding: 0;
+}
+.portal-ops-cycles { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.portal-ops-cycles li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: baseline;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--muted);
+}
+.portal-ops-cycles span { color: var(--muted-foreground); font-size: 13px; font-variant-numeric: tabular-nums; }
+.portal-ops-alert {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: color-mix(in oklch, var(--destructive) 8%, var(--card));
+  color: var(--foreground);
+  font-weight: 700;
+}
+.portal-ops-notice { margin: 0; color: var(--foreground); font-weight: 700; }
+.portal-ops-form .portal-ops-item-row.is-fields {
+  grid-template-columns: minmax(0, 1.4fr) minmax(110px, 0.6fr) minmax(110px, 0.6fr);
+}
+@media (max-width: 720px) {
+  .portal-ops-fields,
+  .portal-ops-form .portal-ops-item-row.is-fields { grid-template-columns: 1fr; }
+  .portal-ops-cycles li { flex-direction: column; align-items: flex-start; }
 }

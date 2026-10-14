@@ -353,12 +353,14 @@ export function CustomerPortalOpsPage() {
         {notice ? <p role="status">{notice}</p> : null}
         {loading ? <p role="status">{t("portalOps.loading")}</p> : (
           <>
+            <section className="portal-ops-section">
             <h2>{t("portalOps.members")}</h2>
             <ListTable
               className="panel"
               loading={loading}
               loadingLabel={t("portalOps.loading")}
               skeletonColumns={3}
+              skeletonRows={3}
               onRefresh={() => loadOrg(orgId!)}
               header={<tr>
                     <th>{t("portalOps.email")}</th>
@@ -369,7 +371,7 @@ export function CustomerPortalOpsPage() {
                   {org.members.map(member => (
                     <tr key={member.user_id}>
                       <td>{member.email}</td>
-                      <td>{member.role}</td>
+                      <td>{t(`portalOps.roles.${member.role}`, { defaultValue: member.role })}</td>
                       <td>{member.is_active ? t("portalOps.active") : t("portalOps.inactive")}</td>
                     </tr>
                   ))}
@@ -389,13 +391,22 @@ export function CustomerPortalOpsPage() {
                 <Button disabled={busy}>{t("portalOps.assignAdmin")}</Button>
               </form>
             ) : null}
+            </section>
 
+            <section className="portal-ops-section">
             <h2>{t("portalOps.menus")}</h2>
+            {org.menus.length === 0 ? (
+              <div className="portal-ops-empty">
+                <strong>{t("portalOps.noMenus")}</strong>
+                <span>{t("portalOps.noMenusDescription")}</span>
+              </div>
+            ) : (
             <ListTable
               className="panel"
               loading={loading}
               loadingLabel={t("portalOps.loading")}
               skeletonColumns={7}
+              skeletonRows={4}
               onRefresh={() => loadOrg(orgId!)}
               header={<tr>
                     <th>{t("portalOps.menuName")}</th>
@@ -423,6 +434,8 @@ export function CustomerPortalOpsPage() {
                     </tr>
                   ))}
             </ListTable>
+            )}
+            </section>
           </>
         )}
         {orgPanelOpen ? renderOrgPanel() : null}
@@ -577,9 +590,10 @@ export function CustomerPortalOpsPage() {
         onClose={() => setMenuPanelOpen(false)}
         title={menu ? t("portalOps.editMenu") : t("portalOps.createMenu")}
         closeLabel={t("portalOps.close")}
-        wide
+        extraWide
       >
         <form className="portal-ops-form" onSubmit={event => void submitMenu(event)}>
+          <div className="portal-ops-fields">
           <label>
             {t("portalOps.menuName")}
             <input required value={menuForm.name} onChange={event => setMenuForm({ ...menuForm, name: event.target.value })} />
@@ -608,7 +622,7 @@ export function CustomerPortalOpsPage() {
               <input required type="date" min={menuForm.deliveryDate || undefined} value={menuForm.validUntil} onChange={event => setMenuForm({ ...menuForm, validUntil: event.target.value })} />
             </label>
           </div>
-          <small>{t("portalOps.periodHint")}</small>
+          <small className="portal-ops-span">{t("portalOps.periodHint")}</small>
           <label>
             {t("portalOps.deliveryTime")}
             <input required value={menuForm.deliveryTime} onChange={event => setMenuForm({ ...menuForm, deliveryTime: event.target.value })} />
@@ -625,6 +639,7 @@ export function CustomerPortalOpsPage() {
             <span>{t("portalOps.active")}</span>
             <Switch checked={menuForm.isActive} onCheckedChange={value => setMenuForm({ ...menuForm, isActive: value })} />
           </label>
+          </div>
 
           <h3>{t("portalOps.items")}</h3>
           <div className="portal-ops-item-add">
@@ -638,7 +653,7 @@ export function CustomerPortalOpsPage() {
           </div>
           {menuItems.map(item => (
             <div className="portal-ops-item-row" key={item.product_id}>
-              <strong>{item.name}</strong>
+              <strong className="portal-ops-item-name">{item.name}</strong>
               <label>
                 {t("portalOps.unitPrice")}
                 <input
