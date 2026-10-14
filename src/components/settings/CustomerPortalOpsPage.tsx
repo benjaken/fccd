@@ -1,7 +1,7 @@
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { Building2, ChevronLeft, ChevronRight, Pencil, Plus, RefreshCw, Trash2 } from "lucide-react";
+import { Building2, ChevronLeft, ChevronRight, Pencil, Plus, RefreshCw, Settings, Trash2 } from "lucide-react";
 import { useCurrentPageAccess } from "@/auth/use-page-access";
 import { Button } from "@/components/ui/button";
 import { ListSearchBar } from "@/components/ui/list-search-bar";
@@ -514,14 +514,14 @@ export function CustomerPortalOpsPage() {
                 <td>{row.menu_count}</td>
                 <td>{row.is_active ? t("portalOps.active") : t("portalOps.inactive")}</td>
                 <td className="table-actions-cell">
-                  <div className="table-row-actions">
-                    <Button asChild variant="outline" size="sm">
-                      <Link to={`/settings/customer-portal/${row.id}`}>{t("portalOps.manage")}</Link>
-                    </Button>
+                  <div className="order-row-actions quote-row-actions">
+                    <Link to={`/settings/customer-portal/${row.id}`} aria-label={t("portalOps.manage")} title={t("portalOps.manage")}>
+                      <Settings />
+                    </Link>
                     {canEdit ? (
-                      <Button type="button" variant="ghost" size="icon" onClick={() => openEditOrg(row)} aria-label={t("portalOps.editOrg")}>
+                      <button type="button" onClick={() => openEditOrg(row)} aria-label={t("portalOps.editOrg")} title={t("portalOps.editOrg")}>
                         <Pencil />
-                      </Button>
+                      </button>
                     ) : null}
                   </div>
                 </td>
