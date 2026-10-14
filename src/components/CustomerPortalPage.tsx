@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { Navigate, Outlet, Route, Routes, useMatch, useNavigate, useSearchParams } from "react-router-dom";
+import { Navigate, Outlet, Route, Routes, useMatch, useNavigate, useOutletContext, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { ShoppingBag, Coins, Users, MapPin, ReceiptText, Home, UserRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/lib/supabase";
-import { fetchPortal, acceptPortalInvite, submitPortalOrder, portalCart, fetchPortalEvidence, type PaymentEvidence, type PortalSnapshot, type PortalMenu } from "@/lib/customer-portal";
+import { fetchPortal, acceptPortalInvite, submitPortalOrder, portalCart, portalPermissions, fetchPortalEvidence, type PaymentEvidence, type PortalPermission, type PortalSnapshot, type PortalMenu } from "@/lib/customer-portal";
 import { ReceiptPreview } from "@/components/CustomerSelfServicePage";
 import type { CustomerSelfServiceOrderDetail } from "@/lib/customer-self-service";
 import { printPdf } from "@/lib/print-pdf";
@@ -128,18 +128,37 @@ function useCustomerPortalController(load: typeof fetchPortal, onMembershipChang
 
 export type CustomerPortalController = ReturnType<typeof useCustomerPortalController>;
 
+function PortalPermissionGate({ permission, children }: { permission: PortalPermission; children: ReactNode }) {
+  const portal = useOutletContext<CustomerPortalController>();
+  if (!portal.data || portalPermissions(portal.data)[permission]) return children;
+  return <Navigate to="/customer" replace />;
+}
+
+function PortalTeamGate({ children }: { children: ReactNode }) {
+  const portal = useOutletContext<CustomerPortalController>();
+  const permissions = portalPermissions(portal.data);
+  if (!portal.data || permissions.members || permissions.menus || permissions.settings) return children;
+  return <Navigate to="/customer" replace />;
+}
+
 export function CustomerPortalPage({ load = fetchPortal, loginIntro, canSwitch = false, organizations = [], activeOrganizationId, onSelectOrganization, onMembershipChanged }: { load?: typeof fetchPortal; loginIntro?: ReactNode; canSwitch?: boolean; organizations?: Array<{ id: string; name: string }>; activeOrganizationId?: string; onSelectOrganization?: (organizationId: string) => void; onMembershipChanged?: () => void }) {
   const portal = useCustomerPortalController(load,onMembershipChanged);
   const {t, setParams, loggedIn, authLoading, data, setQuantities, busy, error, notice, financialDocument, setFinancialDocument, inviteToken, refresh, run, setPage, setData, setInviteLink} = portal;
+  const permissions = portalPermissions(data);
   const navItems = useMemo(() => nav
-    .filter(([key]) => key !== "team" || data?.role === "admin")
+    .filter(([key]) => key === "home" || key === "profile"
+      || (key === "menus" && permissions.ordering)
+      || ((key === "orders" || key === "receipts") && permissions.orders)
+      || (key === "points" && permissions.points)
+      || (key === "addresses" && permissions.delivery)
+      || (key === "team" && (permissions.members || permissions.menus || permissions.settings)))
     .map(([key, Icon]) => ({
       key,
       icon: Icon,
       label: t(`portal.${key}`),
       end: key === "home",
       to: key === "home" ? "/customer" : `/customer/${key}`,
-    })), [data?.role, t]);
+    })), [permissions, t]);
   async function logout() {
     await run(async () => {
       const revoked = await supabase.rpc("customer_personal_logout");
@@ -159,14 +178,14 @@ export function CustomerPortalPage({ load = fetchPortal, loginIntro, canSwitch =
         <Routes>
           <Route element={<Outlet context={portal} />}>
             <Route index element={<CustomerHomePage />} />
-            <Route path="menus" element={<CustomerMenusPage />} />
-            <Route path="menus/:menuId" element={<CustomerMenusPage />} />
-            <Route path="orders" element={<CustomerOrdersPage />} />
-            <Route path="orders/:orderId" element={<CustomerOrderDetailPage />} />
-            <Route path="receipts" element={<CustomerReceiptsPage />} />
-            <Route path="points" element={<CustomerPointsPage />} />
-            <Route path="addresses" element={<CustomerAddressesPage />} />
-            <Route path="team" element={<CustomerTeamPage />} />
+            <Route path="menus" element={<PortalPermissionGate permission="ordering"><CustomerMenusPage /></PortalPermissionGate>} />
+            <Route path="menus/:menuId" element={<PortalPermissionGate permission="ordering"><CustomerMenusPage /></PortalPermissionGate>} />
+            <Route path="orders" element={<PortalPermissionGate permission="orders"><CustomerOrdersPage /></PortalPermissionGate>} />
+            <Route path="orders/:orderId" element={<PortalPermissionGate permission="orders"><CustomerOrderDetailPage /></PortalPermissionGate>} />
+            <Route path="receipts" element={<PortalPermissionGate permission="orders"><CustomerReceiptsPage /></PortalPermissionGate>} />
+            <Route path="points" element={<PortalPermissionGate permission="points"><CustomerPointsPage /></PortalPermissionGate>} />
+            <Route path="addresses" element={<PortalPermissionGate permission="delivery"><CustomerAddressesPage /></PortalPermissionGate>} />
+            <Route path="team" element={<PortalTeamGate><CustomerTeamPage /></PortalTeamGate>} />
             <Route path="profile" element={<CustomerProfilePage />} />
             <Route path="*" element={<Navigate to="/customer" replace />} />
           </Route>

@@ -19,13 +19,27 @@ export type PortalSnapshot = {
     outstanding: number; brand: string; points_used: number; cancel_status: string | null;
     lines: Array<{ product_id: string; name: string; quantity: number; unit_price: number }> }>;
   ledger: Array<{ id: string; points: number; kind: string; order_id: string | null; actor_id: string | null; expires_at: string | null; created_at: string }>;
+  permissions?: Partial<Record<PortalPermission, boolean>>;
+  memberPermissions?: Partial<Record<PortalPermission, boolean>> | null;
 };
+export const portalPermissionKeys = ["members", "ordering", "orders", "export", "menus", "delivery", "points", "redeem", "settings"] as const;
+export type PortalPermission = typeof portalPermissionKeys[number];
+const memberPermissionDefaults: PortalPermission[] = ["ordering", "orders", "delivery", "points", "redeem"];
+export function portalPermissions(data: Pick<PortalSnapshot, "role" | "permissions"> | null | undefined): Record<PortalPermission, boolean> {
+  const admin = data?.role === "admin";
+  return Object.fromEntries(portalPermissionKeys.map(key => [key, data?.permissions?.[key] ?? (admin || memberPermissionDefaults.includes(key))])) as Record<PortalPermission, boolean>;
+}
+export function memberPermissionGrants(data: Pick<PortalSnapshot, "memberPermissions"> | null | undefined): Record<PortalPermission, boolean> {
+  return Object.fromEntries(portalPermissionKeys.map(key => [key, data?.memberPermissions?.[key] ?? memberPermissionDefaults.includes(key)])) as Record<PortalPermission, boolean>;
+}
 async function rpc<T>(name: string, args?: Record<string, unknown>): Promise<T> {
   const { data, error } = await supabase.rpc(name, args);
   if (error) throw error;
   return data as T;
 }
-export const fetchPortal = () => rpc<PortalSnapshot>("customer_portal_snapshot");
+export const fetchPortal = () => rpc<PortalSnapshot>("customer_portal_workspace");
+export const setPortalMemberPermission = (permission: PortalPermission, allowed: boolean) =>
+  rpc<Record<PortalPermission, boolean>>("customer_portal_set_member_permission", { p_permission: permission, p_allowed: allowed });
 export const acceptPortalInvite = (token: string) => rpc<void>("customer_portal_accept_invite", { p_token: token });
 export const invitePortalMember = (email: string) => rpc<string>("customer_portal_invite", { p_email: email });
 export const removePortalMember = (id: string) => rpc<void>("customer_portal_remove_member", { p_user_id: id });

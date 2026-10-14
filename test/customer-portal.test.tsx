@@ -166,8 +166,14 @@ describe("organization portal",()=>{
     };
     mount(adminSnapshot,"/customer/team");
     await screen.findByRole("heading",{name:"團隊管理"});
-    fireEvent.click(screen.getByRole("checkbox"));
+    fireEvent.click(screen.getByRole("checkbox", { name: "HK Party Food · 指定餐單 · 2026-10-14" }));
     fireEvent.click(screen.getByRole("button",{name:"儲存餐牌權限"}));
     await waitFor(()=>expect(mocks.setMenuScopes).toHaveBeenCalledWith("member",["m"]));
+  });
+  it("lets an admin turn off a member permission", async () => {
+    mocks.submit.mockResolvedValue({ data: { ordering: false, orders: true, delivery: true, points: true, redeem: true, members: false, export: false, menus: false, settings: false }, error: null });
+    mount({ ...snapshot, role: "admin" }, "/customer/team");
+    fireEvent.click(await screen.findByRole("checkbox", { name: "訂餐管理" }));
+    await waitFor(() => expect(mocks.submit).toHaveBeenCalledWith("customer_portal_set_member_permission", { p_permission: "ordering", p_allowed: false }));
   });
 });

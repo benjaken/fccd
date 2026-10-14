@@ -1,12 +1,17 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useOutletContext, Navigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   invitePortalMember,
+  memberPermissionGrants,
+  portalPermissionKeys,
+  portalPermissions,
   removePortalMember,
   revokePortalInvitation,
   setPortalMemberMenuScopes,
+  setPortalMemberPermission,
   setPortalMemberRole,
+  type PortalPermission,
 } from "@/lib/customer-portal";
 import type { CustomerPortalController } from "@/components/CustomerPortalPage";
 
@@ -15,8 +20,13 @@ export function CustomerTeamPage() {
   const { t, busy, inviteLink, inviteEmail, setInviteEmail, refresh, run, setInviteLink } = portal;
   const data = portal.data;
   const [scopeDrafts, setScopeDrafts] = useState<Record<string, string[]>>({});
+  const [grants, setGrants] = useState<Record<PortalPermission, boolean> | null>(null);
+  useEffect(() => {
+    if (data?.role === "admin") setGrants(memberPermissionGrants(data));
+  }, [data?.organization.id, data?.role, data?.memberPermissions]);
   if (!data) return null;
-  if (data.role !== "admin") return <Navigate to="/customer" replace />;
+  const permissions = portalPermissions(data);
+  if (!permissions.members && !permissions.menus && !permissions.settings) return <Navigate to="/customer" replace />;
   const invitations = data.invitations ?? [];
   const orgMenus = data.org_menus ?? [];
 
@@ -34,8 +44,30 @@ export function CustomerTeamPage() {
   return (
     <section>
       <h1>{t("portal.team")}</h1>
-      <h2>{t("portal.members")}</h2>
-      {data.members.map(member => {
+      {data.role === "admin" && grants ? (
+        <div className="portal-menu-scopes">
+          <h2>{t("portal.memberPermissions")}</h2>
+          <p>{t("portal.memberPermissionsHint")}</p>
+          {portalPermissionKeys.map(key => (
+            <label key={key} className="portal-menu-scope-option">
+              <input
+                type="checkbox"
+                checked={grants[key]}
+                disabled={busy}
+                onChange={() => void run(async () => {
+                  const allowed = !grants[key];
+                  const saved = await setPortalMemberPermission(key, allowed);
+                  setGrants(memberPermissionGrants({ memberPermissions: saved }));
+                  await refresh();
+                }, t("portal.permissionsSaved"))}
+              />
+              <span>{t(`portal.permissions.${key}`)}</span>
+            </label>
+          ))}
+        </div>
+      ) : null}
+      {permissions.members ? <h2>{t("portal.members")}</h2> : null}
+      {permissions.members ? data.members.map(member => {
         const selected = menuIdsFor(member);
         const unrestricted = selected.length === 0;
         return (
@@ -43,7 +75,7 @@ export function CustomerTeamPage() {
             <div>
               <strong>{member.email}</strong>
               <p>{t(`portal.roles.${member.role}`)} · {member.is_active ? t("portal.active") : t("portal.inactive")}</p>
-              {member.is_active && member.role === "member" ? (
+              {permissions.menus && member.is_active && member.role === "member" ? (
                 <div className="portal-menu-scopes">
                   <p>{t("portal.menuScopesHint")}</p>
                   {orgMenus.length === 0 ? <p>{t("portal.noAssignableMenus")}</p> : null}
@@ -79,7 +111,7 @@ export function CustomerTeamPage() {
               ) : null}
             </div>
             <div className="portal-actions">
-              {member.is_active && member.role === "member" ? (
+              {data.role === "admin" && member.is_active && member.role === "member" ? (
                 <Button
                   type="button"
                   variant="outline"
@@ -92,7 +124,7 @@ export function CustomerTeamPage() {
                   {t("portal.promoteAdmin")}
                 </Button>
               ) : null}
-              {member.is_active && member.role === "admin" ? (
+              {data.role === "admin" && member.is_active && member.role === "admin" ? (
                 <Button
                   type="button"
                   variant="outline"
@@ -119,11 +151,11 @@ export function CustomerTeamPage() {
             </div>
           </div>
         );
-      })}
+      }) : null}
 
-      <h2>{t("portal.pendingInvites")}</h2>
-      {invitations.length === 0 ? <p>{t("portal.noPendingInvites")}</p> : null}
-      {invitations.map(invite => (
+      {permissions.members ? <h2>{t("portal.pendingInvites")}</h2> : null}
+      {permissions.members && invitations.length === 0 ? <p>{t("portal.noPendingInvites")}</p> : null}
+      {permissions.members ? invitations.map(invite => (
         <div className="portal-row" key={invite.id}>
           <div>
             <strong>{invite.email}</strong>
@@ -141,8 +173,9 @@ export function CustomerTeamPage() {
             {t("portal.revokeInvite")}
           </Button>
         </div>
-      ))}
+      )) : null}
 
+      {permissions.members ? <>
       <h2>{t("portal.createInvite")}</h2>
       <form
         onSubmit={e => {
@@ -172,6 +205,7 @@ export function CustomerTeamPage() {
           <input readOnly value={inviteLink} onFocus={e => e.target.select()} />
         </label>
       ) : null}
+      </> : null}
     </section>
   );
 }

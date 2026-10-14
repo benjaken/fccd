@@ -242,3 +242,21 @@ i18n.addResourceBundle("en", "translation", { portalVoucher: {
 }}, true, true);
 i18n.addResourceBundle("zh-HK", "translation", { portal: { switchOrganization: "切換企業" } }, true, true);
 i18n.addResourceBundle("en", "translation", { portal: { switchOrganization: "Switch organization" } }, true, true);
+i18n.addResourceBundle("zh-HK", "translation", { portal: {
+  memberPermissions: "成員權限",
+  memberPermissionsHint: "Admin 永遠擁有全部權限。以下只設定 Member 可以做的事，不會改變 FCCD 平台管理權。",
+  permissionsSaved: "已更新成員權限。",
+  permissions: {
+    members: "成員管理", ordering: "訂餐管理", orders: "訂單查看", export: "訂單匯出",
+    menus: "餐單管理", delivery: "送貨資料", points: "積分查看", redeem: "積分兌換", settings: "團隊設定",
+  },
+}}, true, true);
+i18n.addResourceBundle("en", "translation", { portal: {
+  memberPermissions: "Member permissions",
+  memberPermissionsHint: "Admins always keep every permission. These switches apply to members only and do not change FCCD platform admin rights.",
+  permissionsSaved: "Member permissions updated.",
+  permissions: {
+    members: "Manage members", ordering: "Place orders", orders: "View orders", export: "Export orders",
+    menus: "Manage menus", delivery: "Delivery details", points: "View points", redeem: "Redeem points", settings: "Team settings",
+  },
+}}, true, true);
