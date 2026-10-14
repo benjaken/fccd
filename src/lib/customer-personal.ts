@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { requestShopifyCustomerSync } from "@/lib/shopify-customer-bridge";
 
 export type PersonalAddress = { id: string; label: string; recipient: string; phone: string; address: string; is_default: boolean };
 export type PersonalProfile = { name: string; phone: string; email: string; notify_email: boolean; notify_whatsapp: boolean };
@@ -20,9 +21,15 @@ export async function fetchPersonalSnapshot(): Promise<PersonalSnapshot> {
   return { ...data, stores: data.stores.filter(store => /^[a-z0-9][a-z0-9-]*\.myshopify\.com$/i.test(store.domain)) };
 }
 export const savePersonalProfile = (profile: Omit<PersonalProfile, "email">) => rpc<void>("customer_personal_save_profile", { p_profile: profile });
-export const savePersonalAddress = (address: Omit<PersonalAddress, "id">, id: string | null = null) =>
-  rpc<string>("customer_personal_save_address", { p_id: id, p_address: address });
-export const deletePersonalAddress = (id: string) => rpc<void>("customer_personal_delete_address", { p_id: id });
+export async function savePersonalAddress(address: Omit<PersonalAddress, "id">, id: string | null = null) {
+  const saved = await rpc<string>("customer_personal_save_address", { p_id: id, p_address: address });
+  requestShopifyCustomerSync("sync_mine");
+  return saved;
+}
+export async function deletePersonalAddress(id: string) {
+  await rpc<void>("customer_personal_delete_address", { p_id: id });
+  requestShopifyCustomerSync("sync_mine");
+}
 export type PersonalPoints = {
   balance: number;
   pending: number;

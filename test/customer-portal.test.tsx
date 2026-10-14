@@ -13,6 +13,7 @@ const mocks=vi.hoisted(()=>({
   revokeInvite:vi.fn(async()=>undefined),
   setMenuScopes:vi.fn(async()=>undefined),
 }));
+vi.mock("@/lib/customer-reward-catalog", () => ({ listRewardCatalog: async () => [], redeemOrganizationCatalog: async () => ({ id: "reward", balance: 0 }) }));
 vi.mock("@/lib/supabase",()=>({supabase:{auth:{getSession:mocks.getSession,
   onAuthStateChange:()=>({data:{subscription:{unsubscribe:vi.fn()}}}),signInWithOtp:mocks.signin},rpc:mocks.submit}}));
 vi.mock("@/lib/customer-portal", async importOriginal => {

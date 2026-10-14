@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { requestShopifyCustomerSync } from "@/lib/shopify-customer-bridge";
 import type { CustomerSelfServiceOrderDetail } from "@/lib/customer-self-service";
 
 export type PortalMenu = {
@@ -34,12 +35,19 @@ export const revokePortalInvitation = (id: string) =>
   rpc<void>("customer_portal_revoke_invitation", { p_invitation_id: id });
 export const setPortalMemberMenuScopes = (userId: string, menuIds: string[]) =>
   rpc<void>("customer_portal_set_member_menu_scopes", { p_user_id: userId, p_menu_ids: menuIds });
-export const savePortalAddress = (a: { label: string; recipient: string; phone: string; address: string }) =>
-  rpc<string>("customer_portal_save_address", { p_label: a.label, p_recipient: a.recipient, p_phone: a.phone, p_address: a.address });
-export const updatePortalAddress = (id: string, a: { label: string; recipient: string; phone: string; address: string }) =>
-  rpc<void>("customer_portal_update_address", { p_id: id, p_label: a.label, p_recipient: a.recipient, p_phone: a.phone, p_address: a.address });
-export const archivePortalAddress = (id: string) =>
-  rpc<void>("customer_portal_archive_address", { p_id: id });
+export async function savePortalAddress(a: { label: string; recipient: string; phone: string; address: string }) {
+  const id = await rpc<string>("customer_portal_save_address", { p_label: a.label, p_recipient: a.recipient, p_phone: a.phone, p_address: a.address });
+  requestShopifyCustomerSync("sync_mine");
+  return id;
+}
+export async function updatePortalAddress(id: string, a: { label: string; recipient: string; phone: string; address: string }) {
+  await rpc<void>("customer_portal_update_address", { p_id: id, p_label: a.label, p_recipient: a.recipient, p_phone: a.phone, p_address: a.address });
+  requestShopifyCustomerSync("sync_mine");
+}
+export async function archivePortalAddress(id: string) {
+  await rpc<void>("customer_portal_archive_address", { p_id: id });
+  requestShopifyCustomerSync("sync_mine");
+}
 export const savePortalTemplate = (name: string, items: Array<{ product_id: string; quantity: number }>) =>
   rpc<string>("customer_portal_save_template", { p_name: name, p_items: items });
 export const updatePortalTemplate = (id: string, name: string, items: Array<{ product_id: string; quantity: number }>) =>

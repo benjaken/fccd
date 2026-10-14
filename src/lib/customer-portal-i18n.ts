@@ -202,3 +202,41 @@ i18n.addResourceBundle("en", "translation", { portalFeedback: {
   comment:"Your comment", submit:"Submit feedback", submitting:"Submitting…", loading:"Loading order feedback",
   unavailable:"This order feedback link is not available.", alreadySubmitted:"Feedback was already submitted for this order.", required:"Enter a comment.",
 }}, true, true);
+i18n.addResourceBundle("zh-HK", "translation", { portalCatalog: {
+  title:"兌換", intro:"積分只可兌換實物或現金券，不能抵付訂單金額。兌換後由 FCCD 安排領取或發送。",
+  gift:"實物", voucher:"現金券", points:"分", redeem:"兌換", soldOut:"已兌完", empty:"暫時沒有可兌換的項目。",
+  loading:"正在載入兌換目錄", confirm:"用 {{points}} 分兌換{{name}}？這不會減少訂單應付金額。",
+  insufficient:"積分不足。", unavailable:"這項目前不能兌換。", failed:"兌換未完成，請稍後再試。",
+}}, true, true);
+i18n.addResourceBundle("en", "translation", { portalCatalog: {
+  title:"Redeem", intro:"Points can be exchanged for goods or cash vouchers. They do not reduce an order total. FCCD arranges collection or delivery after redemption.",
+  gift:"Goods", voucher:"Cash voucher", points:"points", redeem:"Redeem", soldOut:"Out of stock", empty:"Nothing is available to redeem.",
+  loading:"Loading rewards", confirm:"Redeem {{name}} for {{points}} points? This does not reduce an order total.",
+  insufficient:"Not enough points.", unavailable:"This reward is not available.", failed:"Redemption could not be completed. Please retry.",
+}}, true, true);
+i18n.addResourceBundle("zh-HK", "translation", { portalRewardCatalog: {
+  back:"返回客戶訂購營運", intro:"設定可用積分兌換的實物和現金券。兌換只扣積分，不抵訂單金額。",
+  name:"名稱", kind:"類型", gift:"實物", voucher:"現金券", points:"所需積分", stock:"庫存", description:"說明", active:"上架",
+  create:"新增兌換項目", save:"儲存", edit:"編輯", saved:"已儲存兌換項目。", items:"兌換目錄", empty:"尚未設定兌換項目。", inactive:"已下架",
+  redemptions:"兌換紀錄", noRedemptions:"尚未有兌換。", pending:"待履約", fulfilled:"已履約", fulfill:"標記已履約",
+  accessDenied:"沒有客戶訂購營運權限。", invalid:"請核對名稱、類型、積分和庫存。", notPending:"這筆兌換已不是待履約。", failed:"操作未完成，請重試。",
+}}, true, true);
+i18n.addResourceBundle("en", "translation", { portalRewardCatalog: {
+  back:"Back to customer ordering ops", intro:"Publish goods and cash vouchers that customers redeem with points. Redemption deducts points and does not reduce an order total.",
+  name:"Name", kind:"Type", gift:"Goods", voucher:"Cash voucher", points:"Points required", stock:"Stock", description:"Description", active:"Published",
+  create:"Add reward", save:"Save", edit:"Edit", saved:"Reward saved.", items:"Catalog", empty:"No rewards yet.", inactive:"Hidden",
+  redemptions:"Redemptions", noRedemptions:"No redemptions yet.", pending:"Pending", fulfilled:"Fulfilled", fulfill:"Mark fulfilled",
+  accessDenied:"You do not have customer ordering ops access.", invalid:"Check the name, type, points and stock.", notPending:"This redemption is no longer pending.", failed:"The action could not be completed. Please retry.",
+}}, true, true);
+i18n.addResourceBundle("zh-HK", "translation", { portalVoucher: {
+  codes:"Shopify 現金券碼", queued:"正在建立折扣碼", issuing:"正在向 Shopify 發碼", issued:"可在 Shopify 結帳輸入", failed:"發碼未完成，請稍後再看",
+  amount:"面額（HK$）", store:"Shopify 店舖", validDays:"有效天數", noStore:"不經 Shopify，由 FCCD 發送",
+  linkTitle:"Shopify 客戶對應", linkIntro:"把 Portal 個人或企業連到店舖裡的既有客戶後，送貨地址才會雙向同步，現金券也會限定該客戶使用。",
+  ownerType:"對象", user:"個人用戶", organization:"企業", ownerId:"用戶或企業 ID", customerId:"Shopify 客戶 ID", link:"儲存對應", linked:"已儲存 Shopify 客戶對應。",
+}}, true, true);
+i18n.addResourceBundle("en", "translation", { portalVoucher: {
+  codes:"Shopify voucher codes", queued:"Creating the discount code", issuing:"Sending the code to Shopify", issued:"Enter this code at Shopify checkout", failed:"The code could not be created yet. Check again shortly.",
+  amount:"Face value (HK$)", store:"Shopify store", validDays:"Valid days", noStore:"Manual voucher, not sent to Shopify",
+  linkTitle:"Shopify customer link", linkIntro:"Link a personal or company account to an existing store customer before addresses sync both ways. Voucher codes are then limited to that customer.",
+  ownerType:"Account", user:"Personal user", organization:"Company", ownerId:"User or company ID", customerId:"Shopify customer ID", link:"Save link", linked:"Shopify customer link saved.",
+}}, true, true);

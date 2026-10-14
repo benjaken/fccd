@@ -18,6 +18,7 @@ import {
   FileImage,
   FilePenLine,
   FileText,
+  Gift,
   HandCoins,
   Handshake,
   History,
@@ -758,6 +759,12 @@ export const secondaryNav: Record<string, NavItem[]> = {
       key: "customerPortalLunchbox",
       to: "/settings/customer-portal/lunchbox",
       icon: ClipboardList,
+      permissionKey: "settings.customer_portal",
+    },
+    {
+      key: "customerPortalRewardCatalog",
+      to: "/settings/customer-portal/rewards",
+      icon: Gift,
       permissionKey: "settings.customer_portal",
     },
     {

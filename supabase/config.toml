@@ -129,3 +129,6 @@ verify_jwt = false
 [functions.wati-customer-service-backfill]
 verify_jwt = false
 
+[functions.shopify-customer-bridge]
+verify_jwt = false
+
