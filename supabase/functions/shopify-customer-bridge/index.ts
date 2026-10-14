@@ -89,6 +89,15 @@ function constantTimeEqual(supplied: string, expected: string): boolean {
 
 const shopifyTokens = new Map<string, string>();
 
+function shopHost(target: { secret_prefix: string; shop_domain: string }): string {
+  const configured = envFor(target.secret_prefix, "SHOP")
+    ?.trim().toLowerCase().replace(/^https?:\/\//, "").replace(/\/.*$/, "") ?? "";
+  if (configured.endsWith(".myshopify.com")) return configured;
+  const stored = target.shop_domain.trim().toLowerCase();
+  if (!stored.endsWith(".myshopify.com")) throw new Error("shopify_store_invalid");
+  return stored;
+}
+
 async function shopifyToken(target: { secret_prefix: string; shop_domain: string }): Promise<string> {
   const cached = shopifyTokens.get(target.secret_prefix);
   if (cached) return cached;
@@ -99,14 +108,14 @@ async function shopifyToken(target: { secret_prefix: string; shop_domain: string
   }
   const clientId = envFor(target.secret_prefix, "CLIENT_ID");
   const clientSecret = envFor(target.secret_prefix, "CLIENT_SECRET");
-  const shop = envFor(target.secret_prefix, "SHOP") || target.shop_domain;
+  const shop = shopHost(target);
   if (!clientId || !clientSecret || !shop) throw new Error("shopify_credentials_missing");
   const response = await fetch(`https://${shop}/admin/oauth/access_token`, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({ grant_type: "client_credentials", client_id: clientId, client_secret: clientSecret }),
   });
-  if (!response.ok) throw new Error("shopify_auth_failed");
+  if (!response.ok) throw new Error(`shopify_auth_failed:${response.status}`);
   const payload = await response.json() as { access_token?: string };
   if (!payload.access_token) throw new Error("shopify_auth_failed");
   shopifyTokens.set(target.secret_prefix, payload.access_token);
@@ -115,7 +124,7 @@ async function shopifyToken(target: { secret_prefix: string; shop_domain: string
 
 async function shopifyGraph<T>(target: { secret_prefix: string; shop_domain: string }, query: string, variables: Record<string, unknown>): Promise<T> {
   const token = await shopifyToken(target);
-  const shop = envFor(target.secret_prefix, "SHOP") || target.shop_domain;
+  const shop = shopHost(target);
   const response = await fetch(`https://${shop}/admin/api/${SHOPIFY_API_VERSION}/graphql.json`, {
     method: "POST",
     headers: { "X-Shopify-Access-Token": token, "Content-Type": "application/json" },
