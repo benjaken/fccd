@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Navigate, Outlet, Route, Routes, useMatch, useNavigate, useOutletContext, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { ShoppingBag, Coins, Users, MapPin, ReceiptText, Home, UserRound } from "lucide-react";
+import { ShoppingBag, Coins, Users, MapPin, ReceiptText, Home, UserRound, Building2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/lib/supabase";
 import { fetchPortal, acceptPortalInvite, submitPortalOrder, portalCart, portalPermissions, fetchPortalEvidence, type PaymentEvidence, type PortalPermission, type PortalSnapshot, type PortalMenu } from "@/lib/customer-portal";
@@ -22,9 +22,10 @@ import { CustomerPointsPage } from "@/components/customer-portal/CustomerPointsP
 import { CustomerAddressesPage } from "@/components/customer-portal/CustomerAddressesPage";
 import { CustomerTeamPage } from "@/components/customer-portal/CustomerTeamPage";
 import { CustomerProfilePage } from "@/components/customer-portal/CustomerProfilePage";
+import { CustomerCompanyPage } from "@/components/customer-portal/CustomerCompanyPage";
 
-type Page = "home" | "menus" | "orders" | "receipts" | "points" | "team" | "addresses" | "profile";
-const nav: Array<[Page, typeof Home]> = [["home",Home],["menus",ShoppingBag],["orders",ReceiptText],["receipts",ReceiptText],["points",Coins],["team",Users],["addresses",MapPin],["profile",UserRound]];
+type Page = "home" | "menus" | "orders" | "receipts" | "points" | "team" | "addresses" | "profile" | "company";
+const nav: Array<[Page, typeof Home]> = [["home",Home],["menus",ShoppingBag],["orders",ReceiptText],["receipts",ReceiptText],["points",Coins],["team",Users],["addresses",MapPin],["company",Building2],["profile",UserRound]];
 
 function portalErrorText(error: unknown) {
   if (!error || typeof error !== "object") return "";
@@ -146,7 +147,7 @@ export function CustomerPortalPage({ load = fetchPortal, loginIntro, canSwitch =
   const {t, setParams, loggedIn, authLoading, data, setQuantities, busy, error, notice, financialDocument, setFinancialDocument, inviteToken, refresh, run, setPage, setData, setInviteLink} = portal;
   const permissions = portalPermissions(data);
   const navItems = useMemo(() => nav
-    .filter(([key]) => key === "home" || key === "profile"
+    .filter(([key]) => key === "home" || key === "profile" || key === "company"
       || (key === "menus" && permissions.ordering)
       || ((key === "orders" || key === "receipts") && permissions.orders)
       || (key === "points" && permissions.points)
@@ -187,6 +188,7 @@ export function CustomerPortalPage({ load = fetchPortal, loginIntro, canSwitch =
             <Route path="addresses" element={<PortalPermissionGate permission="delivery"><CustomerAddressesPage /></PortalPermissionGate>} />
             <Route path="team" element={<PortalTeamGate><CustomerTeamPage /></PortalTeamGate>} />
             <Route path="profile" element={<CustomerProfilePage />} />
+            <Route path="company" element={<CustomerCompanyPage />} />
             <Route path="*" element={<Navigate to="/customer" replace />} />
           </Route>
         </Routes>

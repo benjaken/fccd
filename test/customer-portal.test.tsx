@@ -176,4 +176,12 @@ describe("organization portal",()=>{
     fireEvent.click(await screen.findByRole("checkbox", { name: "訂餐管理" }));
     await waitFor(() => expect(mocks.submit).toHaveBeenCalledWith("customer_portal_set_member_permission", { p_permission: "ordering", p_allowed: false }));
   });
+  it("shows the selected company registration without a document path", async () => {
+    mocks.submit.mockResolvedValue({ data: { name: "示例機構", brNumber: "12345678", brExpiresOn: "2027-01-01", settlementCycle: "monthly", contacts: [{ name: "陳先生", phone: "91234567", title: "經理", primary: true }] }, error: null });
+    mount(snapshot, "/customer/company");
+    expect(await screen.findByRole("heading", { name: "公司資料" })).toBeInTheDocument();
+    expect(screen.getByText(/12345678/)).toBeInTheDocument();
+    expect(screen.getByText("陳先生")).toBeInTheDocument();
+    expect(screen.queryByText(/object_path/)).not.toBeInTheDocument();
+  });
 });

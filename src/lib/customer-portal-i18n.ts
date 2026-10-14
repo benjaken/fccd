@@ -270,3 +270,17 @@ i18n.addResourceBundle("en", "translation", { lunchboxOps: {
   vipName: "Cycle name", vipSave: "Publish cycle", vipSaved: "VIP lunch cycle published.", vipInvalid: "Enter a cycle name, a cutoff and at least one day.",
   vipDays: "{{count}} days", failed: "The action could not be completed. Please retry.",
 }}, true, true);
+i18n.addResourceBundle("zh-HK", "translation", { portal: {
+  company: "公司資料", companyReadOnly: "商業登記由 FCCD 核對，這裡只可查看，不能修改。",
+  companyLoadFailed: "暫時未能載入公司資料。", companyMissing: "尚未填寫",
+  brNumber: "商業登記號碼", brExpires: "商業登記到期日", settlementCycle: "結算週期",
+  companyContacts: "公司聯絡人", noCompanyContacts: "尚未有公司聯絡人。", primaryContact: "主要聯絡人",
+  cycles: { weekly: "每週", semi_monthly: "半月", monthly: "每月" },
+}}, true, true);
+i18n.addResourceBundle("en", "translation", { portal: {
+  company: "Company", companyReadOnly: "FCCD verifies the business registration. This page is view only.",
+  companyLoadFailed: "The company profile could not be loaded.", companyMissing: "Not on file",
+  brNumber: "Business registration number", brExpires: "Registration expiry", settlementCycle: "Settlement cycle",
+  companyContacts: "Company contacts", noCompanyContacts: "No company contacts yet.", primaryContact: "Primary contact",
+  cycles: { weekly: "Weekly", semi_monthly: "Twice a month", monthly: "Monthly" },
+}}, true, true);
