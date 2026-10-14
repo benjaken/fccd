@@ -20,6 +20,6 @@ export const submitLunchbox = (requestId: string, menuId: string, addressId: str
 
 export type VipCycleMenu = LunchboxMenu;
 export type VipCycleCatalog = { id: string; name: string; cutoff_at: string; menus: VipCycleMenu[] };
-export const fetchVipCatalog = () => rpc<VipCycleCatalog[]>("customer_personal_vip_catalog");
+export const fetchVipCatalog = () => rpc<VipCycleCatalog[]>("customer_portal_vip_catalog");
 export const submitVipCycle = (requestId: string, cycleId: string, addressId: string, days: Array<{ menu_id: string; items: Array<{ product_id: string; quantity: number }> }>) =>
-  rpc<string[]>("customer_personal_submit_vip", { p_request_id: requestId, p_cycle_id: cycleId, p_address_id: addressId, p_days: days });
+  rpc<string[]>("customer_portal_submit_vip", { p_request_id: requestId, p_cycle_id: cycleId, p_address_id: addressId, p_days: days });

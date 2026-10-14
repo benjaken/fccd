@@ -12,7 +12,7 @@ i18n.addResourceBundle("zh-HK", "translation", { portal: {
   email:"電郵", password:"密碼", emailPlaceholder:"輸入電郵地址", passwordPlaceholder:"輸入密碼", login:"登入", register:"建立受邀帳戶", verifyEmail:"請查閱電郵完成驗證，再登入接受邀請。",
   forgotPassword:"重設密碼", resetSent:"重設密碼電郵已發出，請查閱收件箱。", lookup:"使用電話及電郵查單", invitation:"機構邀請", acceptInvite:"接受邀請", joined:"已加入機構。",
   membershipRequired:"此帳戶尚未取得機構訂購權限。請先完成電郵驗證，並透過機構管理員提供的邀請連結加入；如已加入，請聯絡管理員確認帳戶及機構是否仍有效。", loadFailed:"暫時無法載入機構資料，請重試；如問題持續，請聯絡客服。", operationFailed:"操作未完成，請核對資料及權限後重試。", retry:"重試", navigation:"客戶功能", openMenu:"開啟選單", closeMenu:"關閉選單",
-  home:"主頁", menus:"最新餐單", orders:"訂單紀錄", points:"獎勵積分", team:"團隊管理", addresses:"送貨地址", profile:"個人資料",
+  home:"主頁", menus:"最新餐單", vip:"VIP 訂飯", vipIntro:"一個週期共用一個截單時間。可一次為多日選數量，每一天會各自成為一張報價單。", noVip:"目前沒有開放中的 VIP 訂飯週期。", chooseVip:"選擇週期", vipCutoff:"截單時間 {{time}}", submitVip:"一次提交 {{count}} 日", vipSubmitted:"已提交各日的預備訂單，等待 FCCD 確認。", orders:"訂單紀錄", points:"獎勵積分", team:"團隊管理", addresses:"送貨地址", profile:"個人資料",
   headline:"幾步就訂好。", homeDescription:"選擇指定餐單，確認送貨資料，快捷完成訂購。", orderNow:"立即訂購", details:"查看明細", pointUnit:"分",
   choose:"選擇餐單", noMenus:"目前沒有可訂購餐單，請聯絡營運核對授權。", serviceDate:"送貨日期", serviceDateHint:"只可選擇此餐牌供餐期間內、今天或之後的日期。", invalidServiceDate:"請選擇供餐期間內的送貨日期。", orderBlackout:"這天是節日，不能落單。", orderBlackoutNamed:"{{date}} 是{{name}}，這天不能落單。", available:"可訂 {{count}} 份", quantityLabel:"{{name}} 數量", chooseAddress:"選擇送貨地址", addAddress:"新增地址", editAddress:"編輯地址", deleteAddress:"刪除地址", cancelEdit:"取消編輯", addressArchived:"已刪除地址。",
   pointsHint:"每消費 HK$25 餐費得 1 分，訂單完成後 1 個工作日內入帳。運費不計分。積分只可兌換實物或現金券，不可抵付金額。", shipping:"運費", payable:"應付金額", submitting:"提交中…", confirmOrder:"提交預備訂單",
@@ -73,7 +73,7 @@ i18n.addResourceBundle("en", "translation", { portal: {
   email:"Email",password:"Password",emailPlaceholder:"Enter email",passwordPlaceholder:"Enter password",login:"Sign in",register:"Create invited account",verifyEmail:"Verify your email, then sign in to accept the invitation.",
   forgotPassword:"Reset password",resetSent:"Check your inbox for the reset link.",lookup:"Look up orders by phone and email",invitation:"Organization invitation",acceptInvite:"Accept invitation",joined:"Organization joined.",
   membershipRequired:"This account does not currently have organization ordering access. Verify your email and join using an invitation link from your organization administrator. If you have already joined, ask the administrator to confirm that your account and organization are active.",loadFailed:"Unable to load organization details. Please retry. If the problem persists, contact support.",operationFailed:"Could not complete the action. Check your details and permissions, then retry.",retry:"Retry",navigation:"Customer navigation",openMenu:"Open menu",closeMenu:"Close menu",
-  home:"Home",menus:"Menus",orders:"Orders",points:"Rewards",team:"Team",addresses:"Addresses",profile:"Profile",headline:"Your order, in a few steps.",homeDescription:"Choose a menu and confirm delivery details.",orderNow:"Order now",details:"View details",pointUnit:"points",
+  home:"Home",menus:"Menus",vip:"VIP lunch",vipIntro:"One cycle shares one cutoff. Choose quantities for several days at once. Each day becomes its own quote.",noVip:"No VIP lunch cycle is open.",chooseVip:"Choose a cycle",vipCutoff:"Cutoff {{time}}",submitVip:"Submit {{count}} days",vipSubmitted:"Preliminary orders were submitted for each day and are waiting for FCCD confirmation.",orders:"Orders",points:"Rewards",team:"Team",addresses:"Addresses",profile:"Profile",headline:"Your order, in a few steps.",homeDescription:"Choose a menu and confirm delivery details.",orderNow:"Order now",details:"View details",pointUnit:"points",
   choose:"Choose menu",noMenus:"No menus available. Contact operations to check access.",serviceDate:"Delivery date",serviceDateHint:"Choose today or a later day inside this menu period.",invalidServiceDate:"Choose a delivery date inside the menu period.",orderBlackout:"This holiday is closed for orders.", orderBlackoutNamed:"{{date}} is {{name}}. Orders are closed that day.",available:"{{count}} available",quantityLabel:"{{name}} quantity",chooseAddress:"Choose address",addAddress:"Add address",editAddress:"Edit address",deleteAddress:"Delete address",cancelEdit:"Cancel edit",addressArchived:"Address deleted.",pointsHint:"Earn 1 point for every HK$25 of food. Points post within one business day after the order is completed. Delivery is excluded. Points can be exchanged for goods or cash vouchers, and cannot reduce the amount due.",shipping:"Delivery",payable:"Amount due",submitting:"Submitting…",confirmOrder:"Submit preliminary order",orderCreated:"Preliminary order submitted. It becomes a confirmed order after FCCD review.",noOrders:"No orders yet.",awaitingConfirmation:"Awaiting confirmation",confirmed:"Confirmed",settled:"Settled",awaitingPayment:"Awaiting payment",reorder:"Order again",reorderNotice:"Available items were copied. Review quantities and current prices; unavailable items were omitted.",cancelReason:"Enter cancellation reason",cancelRequested:"Cancellation requested. Awaiting operations review.",requestCancel:"Request cancellation",cancelPending:"Cancellation requested",rewardRules:"Personal and organization points stay separate. Earn 1 point per HK$25 of food when the order is completed, valid for one year. Points redeem gifts and cannot reduce the amount due.",expires:"Expires",noLedger:"No rewards transactions yet.",ledger:{earn:"Order rewards",redeem:"Redemption",return:"Returned points",expire:"Expired points",clawback:"Refund clawback"},addressFields:{label:"Label",recipient:"Recipient",phone:"Phone",address:"Delivery address"},addressPlaceholders:{label:"e.g. Office",recipient:"Enter recipient",phone:"Enter phone",address:"Enter full address"},save:"Save",saved:"Saved.",roles:{admin:"Organization admin",member:"Member"},active:"Active",inactive:"Inactive",remove:"Deactivate",createInvite:"Create invitation link",inviteLink:"Invitation link (valid for 7 days; share with the specified recipient)",
   members:"Members",pendingInvites:"Pending invitations",noPendingInvites:"No pending invitations.",revokeInvite:"Cancel invitation",inviteRevoked:"Invitation cancelled.",inviteExpires:"Expires {{date}}",
   promoteAdmin:"Make admin",demoteMember:"Make member",roleUpdated:"Role updated.",
@@ -290,13 +290,12 @@ i18n.addResourceBundle("en", "translation", { portal: {
 }}, true, true);
 i18n.addResourceBundle("zh-HK", "translation", { portalRewardRules: {
   holidays: "不能訂餐", holidaysHint: "這些日期不能落單。未加入的日子，包括星期六、日，仍可訂餐。",
-  pageIntro: "管理訂單賺分比率、歷史版本與退款扣分。", currentRule: "目前生效規則", earnStatement: "每 HK${{rate}} 餐費，賺取 1 分", historyUnavailable: "未能載入版本紀錄。",
+  pageIntro: "管理訂單賺分比率與歷史版本。", currentRule: "目前生效規則", earnStatement: "每 HK${{rate}} 餐費，賺取 1 分", historyUnavailable: "未能載入版本紀錄。",
   healthy: "正常入帳", formulaLabel: "會員下單賺分公式", runningDays: "已生效 {{count}} 天", scheduledRule: "尚未生效",
   exampleTitle: "範例換算", exampleSpend: "HK${{amount}} 餐費", examplePoints: "+ {{points}} 分", exampleShare: "相當於 {{percent}}% 餐費回贈",
   scopeTitle: "計費範疇", scopeBody: "只計餐費。運費、急單附加費及租賃費不計入。",
   postingTitle: "入帳時效", postingBody: "訂單完成後按當時鎖定的門檻入帳。門檻為 0 時，新訂單暫停賺分。",
   limitTitle: "使用限制", limitBody: "積分只可兌換禮品或現金券，不能抵付訂單金額。",
-  calculator: "積分試算", calculatorHint: "用目前生效門檻試算餐費可賺取的積分。", foodSample: "餐費（HK$）", estimateEmpty: "請輸入大於 0 的餐費。",
   searchVersions: "搜尋版本", searchVersionsPlaceholder: "門檻或生效時間", noVersionMatches: "沒有符合的版本。",
   viewVersion: "查看", versionDetail: "版本詳情", versionLabel: "版本",
   hkTime: "香港時間", foodOnly: "只計餐費，運費不計", businessDay: "完成後 1 個工作日內入帳", noCashOffset: "積分只用於禮品或現金券兌換",
@@ -314,13 +313,12 @@ i18n.addResourceBundle("zh-HK", "translation", { portalRewardRules: {
 }}, true, true);
 i18n.addResourceBundle("en", "translation", { portalRewardRules: {
   holidays: "Closed to orders", holidaysHint: "Orders cannot be placed for these dates. Other days, including Saturdays and Sundays, stay open.",
-  pageIntro: "Manage the earning rate, version history and refund clawbacks.", currentRule: "Current earning rule", earnStatement: "Earn 1 point per HK${{rate}} of food", historyUnavailable: "Could not load version history.",
+  pageIntro: "Manage the earning rate and version history.", currentRule: "Current earning rule", earnStatement: "Earn 1 point per HK${{rate}} of food", historyUnavailable: "Could not load version history.",
   healthy: "Earning normally", formulaLabel: "How orders earn points", runningDays: "In effect for {{count}} days", scheduledRule: "Not effective yet",
   exampleTitle: "Example", exampleSpend: "HK${{amount}} of food", examplePoints: "+ {{points}} pts", exampleShare: "About {{percent}}% of the food spend",
   scopeTitle: "What counts", scopeBody: "Food only. Delivery, rush fees and rental charges are excluded.",
   postingTitle: "When points post", postingBody: "Completed orders use the threshold locked for that order. A threshold of 0 pauses earning.",
   limitTitle: "How points are used", limitBody: "Points redeem gifts or cash vouchers. They cannot reduce an order total.",
-  calculator: "Estimate points", calculatorHint: "Estimate points from the current threshold.", foodSample: "Food spend (HK$)", estimateEmpty: "Enter a food amount above 0.",
   searchVersions: "Search versions", searchVersionsPlaceholder: "Threshold or effective time", noVersionMatches: "No matching versions.",
   viewVersion: "View", versionDetail: "Version details", versionLabel: "Version",
   hkTime: "Hong Kong time", foodOnly: "Food only; delivery excluded", businessDay: "Posts within one business day of completion", noCashOffset: "Redeem points for gifts or cash vouchers",
@@ -351,8 +349,8 @@ i18n.addResourceBundle("en", "translation", { portal: {
   cycles: { weekly: "Weekly", semi_monthly: "Twice a month", monthly: "Monthly" },
 }}, true, true);
 i18n.addResourceBundle("zh-HK", "translation", { mealCalendar: {
-  title: "團體日曆",
-  description: "按月查看已開放訂餐的公司及其餐牌。節日可設為禁單，當天不能落單。已落單的餐點仍可在當日查看。",
+  title: "訂餐日曆",
+  description: "按送餐日查看哪個團體客戶訂了哪些餐。已開放餐牌仍可核對，節日可設為禁單。",
   organization: "團體客戶",
   allOrganizations: "全部團體客戶",
   today: "今天",

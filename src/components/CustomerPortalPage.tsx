@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Navigate, Outlet, Route, Routes, useMatch, useNavigate, useOutletContext, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { ShoppingBag, Coins, Users, MapPin, ReceiptText, Home, UserRound, Building2 } from "lucide-react";
+import { ShoppingBag, Coins, Users, MapPin, ReceiptText, Home, UserRound, Building2, CalendarDays } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/lib/supabase";
 import { fetchPortal, acceptPortalInvite, submitPortalOrder, portalCart, portalPermissions, fetchPortalEvidence, defaultMenuServiceDate, hongKongToday, menuValidUntil, type PaymentEvidence, type PortalPermission, type PortalSnapshot, type PortalMenu } from "@/lib/customer-portal";
@@ -24,9 +24,10 @@ import { CustomerAddressesPage } from "@/components/customer-portal/CustomerAddr
 import { CustomerTeamPage } from "@/components/customer-portal/CustomerTeamPage";
 import { CustomerProfilePage } from "@/components/customer-portal/CustomerProfilePage";
 import { CustomerCompanyPage } from "@/components/customer-portal/CustomerCompanyPage";
+import { OrganizationVipPage } from "@/components/customer-portal/OrganizationVipPage";
 
-type Page = "home" | "menus" | "orders" | "receipts" | "points" | "team" | "addresses" | "profile" | "company";
-const nav: Array<[Page, typeof Home]> = [["home",Home],["menus",ShoppingBag],["orders",ReceiptText],["receipts",ReceiptText],["points",Coins],["team",Users],["addresses",MapPin],["company",Building2],["profile",UserRound]];
+type Page = "home" | "menus" | "vip" | "orders" | "receipts" | "points" | "team" | "addresses" | "profile" | "company";
+const nav: Array<[Page, typeof Home]> = [["home",Home],["menus",ShoppingBag],["vip",CalendarDays],["orders",ReceiptText],["receipts",ReceiptText],["points",Coins],["team",Users],["addresses",MapPin],["company",Building2],["profile",UserRound]];
 
 function portalErrorText(error: unknown) {
   if (!error || typeof error !== "object") return "";
@@ -173,7 +174,7 @@ export function CustomerPortalPage({ load = fetchPortal, loginIntro, canSwitch =
   const permissions = portalPermissions(data);
   const navItems = useMemo(() => nav
     .filter(([key]) => key === "home" || key === "profile" || key === "company"
-      || (key === "menus" && permissions.ordering)
+      || ((key === "menus" || key === "vip") && permissions.ordering)
       || ((key === "orders" || key === "receipts") && permissions.orders)
       || (key === "points" && permissions.points)
       || (key === "addresses" && permissions.delivery)
@@ -206,6 +207,7 @@ export function CustomerPortalPage({ load = fetchPortal, loginIntro, canSwitch =
             <Route index element={<CustomerHomePage />} />
             <Route path="menus" element={<PortalPermissionGate permission="ordering"><CustomerMenusPage /></PortalPermissionGate>} />
             <Route path="menus/:menuId" element={<PortalPermissionGate permission="ordering"><CustomerMenusPage /></PortalPermissionGate>} />
+            <Route path="vip" element={<PortalPermissionGate permission="ordering"><OrganizationVipPage /></PortalPermissionGate>} />
             <Route path="orders" element={<PortalPermissionGate permission="orders"><CustomerOrdersPage /></PortalPermissionGate>} />
             <Route path="orders/:orderId" element={<PortalPermissionGate permission="orders"><CustomerOrderDetailPage /></PortalPermissionGate>} />
             <Route path="receipts" element={<PortalPermissionGate permission="orders"><CustomerReceiptsPage /></PortalPermissionGate>} />

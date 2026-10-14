@@ -1,7 +1,7 @@
 import { useEffect, useState, type ComponentType, type ReactNode, type SVGProps } from "react";
 import { Link, NavLink } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { Bell, CalendarDays, ClipboardList, Gift, Home, LogOut, MapPin, Menu, ShoppingCart, Upload, UserRound, UtensilsCrossed, X } from "lucide-react";
+import { Bell, ClipboardList, Gift, Home, LogOut, MapPin, Menu, ShoppingCart, Upload, UserRound, UtensilsCrossed, X } from "lucide-react";
 import { FOOD_CHANNEL_CATERING_LOGO_PATH } from "@/lib/brand-logo";
 
 type IconComponent = ComponentType<SVGProps<SVGSVGElement> & { size?: number | string }>;
@@ -12,7 +12,6 @@ export const personalNavigation: NavItem[] = [
   { key: "home", to: base, end: true, icon: Home },
   { key: "menus", to: `${base}/menus`, icon: UtensilsCrossed },
   { key: "lunchbox", to: `${base}/lunchbox`, icon: ShoppingCart },
-  { key: "vip", to: `${base}/vip`, icon: CalendarDays },
   { key: "instant", to: `${base}/lunchbox`, icon: ShoppingCart },
   { key: "evidence", to: `${base}/payments`, icon: Upload },
   { key: "orders", to: `${base}/orders`, icon: ClipboardList },
