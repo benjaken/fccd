@@ -5,7 +5,7 @@ import { useCurrentPageAccess } from "@/auth/use-page-access";
 import { Button } from "@/components/ui/button";
 import { SidePanel } from "@/components/ui/side-panel";
 import { listPortalOpsChannels, listPortalOpsProducts, type OpsChannel, type OpsProduct } from "@/lib/customer-portal-ops";
-import { listLunchboxes, replaceLunchboxItems, upsertLunchbox, type LunchboxOpsMenu } from "@/lib/customer-lunchbox-ops";
+import { listLunchboxes, listVipCycles, replaceLunchboxItems, setVipCycleMenus, upsertLunchbox, upsertVipCycle, type LunchboxOpsMenu, type VipCycle } from "@/lib/customer-lunchbox-ops";
 import "@/lib/customer-portal-i18n";
 
 type ItemDraft = { product_id: string; unit_price: string; available_quantity: string };
@@ -33,11 +33,16 @@ export function CustomerPortalLunchboxPage() {
   const [shippingFee, setShippingFee] = useState("0");
   const [active, setActive] = useState(true);
   const [items, setItems] = useState<ItemDraft[]>([]);
+  const [cycles, setCycles] = useState<VipCycle[]>([]);
+  const [cycleName, setCycleName] = useState("");
+  const [cycleCutoff, setCycleCutoff] = useState(localInput(new Date()));
+  const [cycleMenus, setCycleMenus] = useState<string[]>([]);
 
   const load = useCallback(async () => {
-    const [rows, brands] = await Promise.all([listLunchboxes(), listPortalOpsChannels()]);
+    const [rows, brands, vipCycles] = await Promise.all([listLunchboxes(), listPortalOpsChannels(), listVipCycles()]);
     setMenus(rows ?? []);
     setChannels(brands ?? []);
+    setCycles(vipCycles ?? []);
   }, []);
   useEffect(() => { void load().catch(() => setError(t("lunchboxOps.operationFailed"))); }, [load, t]);
   useEffect(() => {
@@ -106,6 +111,28 @@ export function CustomerPortalLunchboxPage() {
         </tr>)}
       </tbody>
     </table>
+    {canEdit ? <form className="portal-ops-form" onSubmit={event => {
+      event.preventDefault();
+      const cutoff = new Date(cycleCutoff);
+      if (!cycleName.trim() || Number.isNaN(cutoff.getTime()) || cycleMenus.length === 0) { setError(t("lunchboxOps.vipInvalid")); return; }
+      void (async () => {
+        setError("");
+        try {
+          const id = await upsertVipCycle({ name: cycleName.trim(), cutoffAt: cutoff.toISOString(), isActive: true });
+          await setVipCycleMenus(id, cycleMenus);
+          setCycleName(""); setCycleMenus([]); setNotice(t("lunchboxOps.vipSaved"));
+          await load();
+        } catch { setError(t("lunchboxOps.failed")); }
+      })();
+    }}>
+      <h2>{t("lunchboxOps.vipTitle")}</h2>
+      <p>{t("lunchboxOps.vipIntro")}</p>
+      {cycles.map(cycle => <p key={cycle.id}>{cycle.name} · {new Date(cycle.cutoff_at).toLocaleString()} · {t("lunchboxOps.vipDays", { count: cycle.menu_ids.length })}</p>)}
+      <label>{t("lunchboxOps.vipName")}<input value={cycleName} onChange={event => setCycleName(event.target.value)} /></label>
+      <label>{t("lunchboxOps.cutoff")}<input type="datetime-local" value={cycleCutoff} onChange={event => setCycleCutoff(event.target.value)} /></label>
+      {menus.filter(menu => menu.is_active).map(menu => <label key={menu.id}><input type="checkbox" checked={cycleMenus.includes(menu.id)} onChange={() => setCycleMenus(current => current.includes(menu.id) ? current.filter(id => id !== menu.id) : [...current, menu.id])} /> {menu.delivery_date} · {menu.name}</label>)}
+      <Button type="submit">{t("lunchboxOps.vipSave")}</Button>
+    </form> : null}
     <SidePanel open={open} onClose={() => setOpen(false)} title={editing ? t("lunchboxOps.edit") : t("lunchboxOps.create")} closeLabel={t("lunchboxOps.close")}>
       <form className="portal-ops-form" onSubmit={event => void submit(event)}>
         <label>{t("lunchboxOps.name")}<input value={name} onChange={event => setName(event.target.value)} required /></label>

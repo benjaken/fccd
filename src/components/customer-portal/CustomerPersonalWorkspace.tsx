@@ -9,6 +9,7 @@ import { CustomerWorkspaceHeader, CustomerPortalAccessState } from "@/components
 import { personalNavigation } from "@/components/customer-portal/PersonalPortalChrome";
 import { CustomerPersonalAddressesPage, CustomerPersonalEvidencePage, CustomerPersonalProfilePage } from "./CustomerPersonalSettingsPages";
 import { PersonalLunchboxPage } from "@/components/customer-portal/PersonalLunchboxPage";
+import { PersonalVipPage } from "@/components/customer-portal/PersonalVipPage";
 import { AccountOrderFeedback } from "@/components/customer-portal/OrderFeedbackPage";
 import { RewardCatalogList } from "@/components/customer-portal/RewardCatalogList";
 import { fetchPersonalOtpSession, logoutPersonalOtpSession } from "@/lib/customer-otp-session";
@@ -101,6 +102,7 @@ function PersonalHomePage() {
         <h1>{name ? t("personal.helloName", { name }) : t("personal.hello")}</h1>
         <p>{t("personal.helloIntro")}</p>
         <Button asChild><Link to={`${base}/lunchbox`}>{t("personal.orderNow")}<ArrowUpRight size={16} /></Link></Button>
+        <Button variant="outline" asChild><Link to={`${base}/vip`}>{t("personal.vip")}</Link></Button>
       </div>
       <div className="personal-hero-art" aria-hidden="true">
         <svg viewBox="0 0 320 220" role="img">
@@ -254,6 +256,7 @@ export function CustomerPersonalWorkspace({ canSwitch, loggingOut, onLogout }: {
       <Route path="personal" element={location.search.includes("addonCheckout=") ? <CustomerSelfServicePage routeBase={base} listPath={`${base}/orders`} loginPath="/customer?mode=personal" restore={fetchPersonalOtpSession} logout={logoutPersonalOtpSession} otpOnly embedded /> : <PersonalHomePage />} />
       <Route path="personal/menus" element={<PersonalMenusPage />} />
       <Route path="personal/lunchbox" element={<PersonalLunchboxPage />} />
+      <Route path="personal/vip" element={<PersonalVipPage />} />
       <Route path="personal/orders" element={<PersonalOrdersPage />} />
       <Route path="personal/payments" element={<CustomerPersonalEvidencePage />} />
       <Route path="personal/points" element={<PersonalPointsPage />} />
