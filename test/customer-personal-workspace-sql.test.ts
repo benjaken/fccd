@@ -31,6 +31,7 @@ beforeEach(async () => {
     create table shopify_catalog_drafts(id uuid primary key,store_id uuid,shopify_product_id bigint,shopify_status text,approval_status text,catalog_type text);
     create table shopify_catalog_draft_variants(draft_id uuid,shopify_variant_id bigint,requires_components boolean);`);
   await db.exec(readFileSync("supabase/migrations/20261013130000_customer_personal_workspace.sql", "utf8"));
+  await db.exec(readFileSync("supabase/migrations/20261014133000_customer_receipt_membership_guard.sql", "utf8"));
   await db.exec(`create policy "Organization uploads" on storage.objects for insert to authenticated with check(private.customer_receipt_path_allowed(name));
     grant execute on function private.customer_receipt_path_allowed(text) to authenticated;
     insert into auth.users values('${user}','person@example.com',now()),('${other}','other@example.com',now());
@@ -45,6 +46,14 @@ async function snapshot() { return (await db.query<{ data: { profile: { phone: s
 const address = { label: "Home", recipient: "Name", phone: "91234567", address: "Hong Kong", is_default: false };
 async function saveAddress(id: string | null = null, isDefault = false) { return (await db.query<{ id: string }>("select customer_personal_save_address($1,$2::jsonb) id", [id, JSON.stringify({ ...address, is_default: isDefault })])).rows[0].id; }
 describe("personal workspace authorization and transactions", () => {
+  it("treats the multi-organization membership error as a denied organization Storage policy", async () => {
+    await db.exec(`create or replace function private.customer_organization() returns uuid language plpgsql as $$
+      begin raise exception 'customer_membership_required' using errcode='P0001'; end$$;`);
+    expect((await db.query<{allowed:boolean}>("select private.customer_receipt_path_allowed($1) allowed",[`${user}/${order}/scan.pdf`])).rows[0].allowed).toBe(false);
+    await db.exec(`set role authenticated`);
+    await db.query("insert into storage.objects(bucket_id,name) values('customer-payment-evidence',$1)", [`${user}/${order}/00000000-0000-0000-0000-000000000009.pdf`]);
+    await db.exec("reset role");
+  });
   it("reuses only the current user's unexpired parent-order capability without a new phone step", async () => {
     await db.exec(`delete from private.customer_personal_order_links;
       insert into private.customer_self_service_sessions values('${other}',now()+interval '1 hour',decode('01','hex'),decode('02','hex'));`);
