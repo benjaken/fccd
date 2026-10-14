@@ -69,6 +69,7 @@ export type PortalCompany = {
   name: string; brNumber: string; brExpiresOn: string | null; settlementCycle: string | null; contacts: PortalCompanyContact[];
 };
 export const fetchPortalCompany = () => rpc<PortalCompany>("customer_portal_company");
+export const exportPortalOrders = () => rpc<string>("customer_portal_export_orders");
 export const savePortalTemplate = (name: string, items: Array<{ product_id: string; quantity: number }>) =>
   rpc<string>("customer_portal_save_template", { p_name: name, p_items: items });
 export const updatePortalTemplate = (id: string, name: string, items: Array<{ product_id: string; quantity: number }>) =>

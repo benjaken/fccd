@@ -48,9 +48,11 @@ i18n.addResourceBundle("zh-HK", "translation", { personal: {
   vip: "VIP 訂飯", vipIntro: "一個週期共用一個截單時間。可一次為多日選數量，每一天會各自成為一張報價單。",
   noVip: "目前沒有開放中的 VIP 訂飯週期。", chooseVip: "選擇週期", vipCutoff: "截單時間 {{time}}",
   submitVip: "一次提交 {{count}} 日", vipSubmitted: "已提交各日的預備訂單，等待 FCCD 確認。",
+  reorderQuoted: "已用原單餐點提交一張新的預備訂單。",
 }}, true, true);
 i18n.addResourceBundle("en-GB", "translation", { personal: {
   vip: "VIP lunch", vipIntro: "One cycle shares one cutoff. Choose quantities for several days at once. Each day becomes its own quote.",
   noVip: "No VIP lunch cycle is open.", chooseVip: "Choose a cycle", vipCutoff: "Cutoff {{time}}",
   submitVip: "Submit {{count}} days", vipSubmitted: "Preliminary orders were submitted for each day and are waiting for FCCD confirmation.",
+  reorderQuoted: "A new preliminary order was submitted from the original items.",
 }}, true, true);

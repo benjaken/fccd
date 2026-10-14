@@ -8,7 +8,11 @@ import { SidePanel } from "@/components/ui/side-panel";
 import "@/components/customer-portal.css";
 import {
   createRewardRule,
+  listPointHolidays,
   listRewardRules,
+  recordFoodRefund,
+  setPointHoliday,
+  type PointHoliday,
   type RewardRuleVersion,
 } from "@/lib/customer-portal-reward-rules-ops";
 
@@ -48,12 +52,18 @@ export function CustomerPortalRewardRulesPage() {
   const [panelOpen, setPanelOpen] = useState(false);
   const [hkdPerPoint, setHkdPerPoint] = useState("25");
   const [effectiveAt, setEffectiveAt] = useState(() => toLocalInput(new Date()));
+  const [holidays, setHolidays] = useState<PointHoliday[]>([]);
+  const [holidayOn, setHolidayOn] = useState("");
+  const [holidayName, setHolidayName] = useState("");
+  const [refundOrder, setRefundOrder] = useState("");
+  const [refundFood, setRefundFood] = useState("");
 
   const load = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
       setRules(await listRewardRules());
+      try { setHolidays(await listPointHolidays()); } catch { setHolidays([]); }
     } catch (err) {
       setError(t(`portalRewardRules.${errorText(err)}`));
     } finally {
@@ -197,6 +207,29 @@ export function CustomerPortalRewardRulesPage() {
           </div>
         </form>
       </SidePanel>
+      {canEdit ? <form className="portal-ops-form" onSubmit={event => {
+        event.preventDefault();
+        void run(async () => { await setPointHoliday(holidayOn, holidayName); setHolidayOn(""); setHolidayName(""); }, "holidaySaved");
+      }}>
+        <h2>{t("portalRewardRules.holidays")}</h2>
+        <p>{t("portalRewardRules.holidaysHint")}</p>
+        {holidays.map(holiday => <p key={holiday.holiday_on}>{holiday.holiday_on} · {holiday.name}</p>)}
+        <label>{t("portalRewardRules.holidayDate")}<input type="date" value={holidayOn} onChange={event => setHolidayOn(event.target.value)} required /></label>
+        <label>{t("portalRewardRules.holidayName")}<input value={holidayName} onChange={event => setHolidayName(event.target.value)} /></label>
+        <Button type="submit" disabled={busy}>{t("portalRewardRules.saveHoliday")}</Button>
+      </form> : null}
+      {canEdit ? <form className="portal-ops-form" onSubmit={event => {
+        event.preventDefault();
+        const amount = Number(refundFood);
+        if (!refundOrder || !Number.isFinite(amount) || amount <= 0) { setError(t("portalRewardRules.invalidRefund")); return; }
+        void run(async () => { await recordFoodRefund(refundOrder, amount); setRefundFood(""); }, "refundSaved");
+      }}>
+        <h2>{t("portalRewardRules.refundTitle")}</h2>
+        <p>{t("portalRewardRules.refundHint")}</p>
+        <label>{t("portalRewardRules.refundOrder")}<input value={refundOrder} onChange={event => setRefundOrder(event.target.value)} required /></label>
+        <label>{t("portalRewardRules.refundFood")}<input type="number" min="0.01" step="0.01" value={refundFood} onChange={event => setRefundFood(event.target.value)} required /></label>
+        <Button type="submit" disabled={busy}>{t("portalRewardRules.recordRefund")}</Button>
+      </form> : null}
     </section>
   );
 }

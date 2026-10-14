@@ -3,10 +3,10 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { CustomerPersonalWorkspace } from "@/components/customer-portal/CustomerPersonalWorkspace";
 import type { PersonalSnapshot } from "@/lib/customer-personal";
-const mocks = vi.hoisted(() => ({ session: vi.fn(), snapshot: vi.fn(), profile: vi.fn(), address: vi.fn(), remove: vi.fn(), upload: vi.fn(), reorder: vi.fn(), logout: vi.fn(), points: vi.fn() }));
+const mocks = vi.hoisted(() => ({ session: vi.fn(), snapshot: vi.fn(), profile: vi.fn(), address: vi.fn(), remove: vi.fn(), upload: vi.fn(), reorder: vi.fn(), reorderQuote: vi.fn(), logout: vi.fn(), points: vi.fn() }));
 vi.mock("@/lib/customer-reward-catalog", () => ({ listRewardCatalog: async () => [], redeemPersonalCatalog: async () => ({ id: "reward", balance: 0 }) }));
 vi.mock("@/lib/customer-otp-session", () => ({ fetchPersonalOtpSession: mocks.session, logoutPersonalOtpSession: mocks.logout }));
-vi.mock("@/lib/customer-personal", async importOriginal => ({ ...await importOriginal<typeof import("@/lib/customer-personal")>(), fetchPersonalSnapshot: mocks.snapshot, savePersonalProfile: mocks.profile, savePersonalAddress: mocks.address, deletePersonalAddress: mocks.remove, uploadPersonalEvidence: mocks.upload, fetchPersonalReorder: mocks.reorder, fetchPersonalPoints: mocks.points }));
+vi.mock("@/lib/customer-personal", async importOriginal => ({ ...await importOriginal<typeof import("@/lib/customer-personal")>(), fetchPersonalSnapshot: mocks.snapshot, savePersonalProfile: mocks.profile, savePersonalAddress: mocks.address, deletePersonalAddress: mocks.remove, uploadPersonalEvidence: mocks.upload, fetchPersonalReorder: mocks.reorder, reorderPersonalQuote: mocks.reorderQuote, fetchPersonalPoints: mocks.points }));
 const orders = [
   { id: "late", orderNumber: "FCC-2", orderDate: "2098-01-01", deliveryDate: "2099-02-01", grandTotal: 300, currency: "HKD" },
   { id: "next", orderNumber: "FCC-1", orderDate: "2098-01-01", deliveryDate: "2099-01-01", grandTotal: 200, currency: "HKD" },
@@ -23,6 +23,7 @@ beforeEach(() => {
   mocks.snapshot.mockResolvedValue(structuredClone(data));
   for (const fn of [mocks.profile, mocks.address, mocks.remove, mocks.upload]) fn.mockResolvedValue(undefined);
   mocks.reorder.mockResolvedValue({ domain: "brand.myshopify.com", items: [{ variant: "123", quantity: 2 }] });
+  mocks.reorderQuote.mockRejectedValue(new Error("not_portal_quote"));
   mocks.points.mockResolvedValue({ balance: 0, pending: 0, ledger: [] });
 });
 describe("personal customer pages", () => {

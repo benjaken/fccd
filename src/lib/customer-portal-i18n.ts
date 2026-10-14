@@ -271,6 +271,24 @@ i18n.addResourceBundle("en", "translation", { lunchboxOps: {
   vipDays: "{{count}} days", failed: "The action could not be completed. Please retry.",
 }}, true, true);
 i18n.addResourceBundle("zh-HK", "translation", { portal: {
+  exportOrders: "匯出訂單", exported: "已下載訂單。",
+}}, true, true);
+i18n.addResourceBundle("en", "translation", { portal: {
+  exportOrders: "Export orders", exported: "Orders downloaded.",
+}}, true, true);
+i18n.addResourceBundle("zh-HK", "translation", { portalRewardRules: {
+  holidays: "入分假期", holidaysHint: "這些日期不計入「完成後 1 個工作日」。星期六、日仍然跳過。",
+  holidayDate: "日期", holidayName: "名稱", saveHoliday: "加入假期", holidaySaved: "已更新入分假期。",
+  refundTitle: "部分退款扣分", refundHint: "填退回的餐費。未入帳的訂單會先減少可入分餐費；已入帳的按每 HK$25 扣回，餘額不足則記待處理。",
+  refundOrder: "訂單 ID", refundFood: "退回餐費（HK$）", recordRefund: "記錄退款", refundSaved: "已按餐費比例處理積分。", invalidRefund: "請填訂單和大於 0 的餐費。",
+}}, true, true);
+i18n.addResourceBundle("en", "translation", { portalRewardRules: {
+  holidays: "Point holidays", holidaysHint: "These dates are skipped when counting the one business day after completion. Saturdays and Sundays are still skipped.",
+  holidayDate: "Date", holidayName: "Name", saveHoliday: "Add holiday", holidaySaved: "Point holiday updated.",
+  refundTitle: "Partial refund clawback", refundHint: "Enter the food amount refunded. Unposted orders earn less. Posted orders lose points at the current threshold, and any shortfall is pending instead of a negative balance.",
+  refundOrder: "Order ID", refundFood: "Food refunded (HK$)", recordRefund: "Record refund", refundSaved: "Points were adjusted for the refunded food.", invalidRefund: "Enter an order and a food amount above 0.",
+}}, true, true);
+i18n.addResourceBundle("zh-HK", "translation", { portal: {
   company: "公司資料", companyReadOnly: "商業登記由 FCCD 核對，這裡只可查看，不能修改。",
   companyLoadFailed: "暫時未能載入公司資料。", companyMissing: "尚未填寫",
   brNumber: "商業登記號碼", brExpires: "商業登記到期日", settlementCycle: "結算週期",

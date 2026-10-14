@@ -14,7 +14,7 @@ import { AccountOrderFeedback } from "@/components/customer-portal/OrderFeedback
 import { RewardCatalogList } from "@/components/customer-portal/RewardCatalogList";
 import { fetchPersonalOtpSession, logoutPersonalOtpSession } from "@/lib/customer-otp-session";
 import type { CustomerSelfServiceOrderSummary, CustomerSelfServiceSession } from "@/lib/customer-self-service";
-import { fetchPersonalPoints, fetchPersonalSnapshot, fetchPersonalReorder, shopifyCartUrl, shopifyStoreUrl, type PersonalPoints, type PersonalSnapshot } from "@/lib/customer-personal";
+import { fetchPersonalPoints, fetchPersonalSnapshot, fetchPersonalReorder, reorderPersonalQuote, shopifyCartUrl, shopifyStoreUrl, type PersonalPoints, type PersonalSnapshot } from "@/lib/customer-personal";
 import { IssuedShopifyVouchers } from "@/components/customer-portal/IssuedShopifyVouchers";
 import { redeemPersonalCatalog } from "@/lib/customer-reward-catalog";
 import "@/lib/customer-personal-i18n";
@@ -49,12 +49,20 @@ export function PersonalReorderButton({ orderId }: { orderId: string }) {
   return <div className="personal-reorder">
     {!url && <Button type="button" variant="outline" disabled={loading} onClick={() => {
       setLoading(true); setError("");
-      void fetchPersonalReorder(orderId).then(cart => setUrl(shopifyCartUrl(cart))).catch(err => {
-        const message = err && typeof err === "object" && "message" in err ? String(err.message) : "";
-        setError(t(message.includes("reorder_options_required") ? "personal.reorderOptions" : "personal.reorderUnavailable"));
+      void reorderPersonalQuote(orderId, crypto.randomUUID()).then(() => setUrl("quote")).catch(quoteError => {
+        const quoteMessage = quoteError && typeof quoteError === "object" && "message" in quoteError ? String(quoteError.message) : "";
+        if (!quoteMessage.includes("not_portal_quote")) {
+          setError(t("personal.reorderUnavailable"));
+          return;
+        }
+        void fetchPersonalReorder(orderId).then(cart => setUrl(shopifyCartUrl(cart))).catch(err => {
+          const message = err && typeof err === "object" && "message" in err ? String(err.message) : "";
+          setError(t(message.includes("reorder_options_required") ? "personal.reorderOptions" : "personal.reorderUnavailable"));
+        });
       }).finally(() => setLoading(false));
     }}>{t(loading ? "personal.loading" : "personal.reorder")}</Button>}
-    {url && <div className="personal-reorder-confirm"><p>{t("personal.reorderIntro")}</p><div className="portal-actions">
+    {url === "quote" ? <p role="status">{t("personal.reorderQuoted")}</p> : null}
+    {url && url !== "quote" && <div className="personal-reorder-confirm"><p>{t("personal.reorderIntro")}</p><div className="portal-actions">
       <Button asChild><a href={url}>{t("personal.confirmReorder")}<ArrowUpRight size={16} /></a></Button>
       <Button type="button" variant="ghost" onClick={() => setUrl("")}>{t("personal.cancel")}</Button>
     </div></div>}

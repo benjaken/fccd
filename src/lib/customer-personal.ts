@@ -10,6 +10,8 @@ export type ReorderCart = { domain: string; items: Array<{ variant: string; quan
 
 export const fetchPersonalReorder = (orderId: string) =>
   rpc<ReorderCart>("customer_personal_reorder", { p_order_id: orderId });
+export const reorderPersonalQuote = (orderId: string, requestId: string, addressId?: string | null) =>
+  rpc<string>("customer_personal_reorder_as_quote", { p_order_id: orderId, p_request_id: requestId, p_address_id: addressId ?? null });
 
 async function rpc<T>(name: string, args?: Record<string, unknown>): Promise<T> {
   const { data, error } = await supabase.rpc(name, args);
