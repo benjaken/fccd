@@ -42,7 +42,7 @@ export function CustomerAddressesPage() {
               variant="outline"
               disabled={busy}
               onClick={() => void run(async () => {
-                await archivePortalAddress(row.id);
+                await archivePortalAddress(row.id, data.organization.id);
                 if (editingId === row.id) cancelEdit();
                 await refresh();
               }, t("portal.addressArchived"))}
@@ -57,8 +57,8 @@ export function CustomerAddressesPage() {
         onSubmit={e => {
           e.preventDefault();
           void run(async () => {
-            if (editingId) await updatePortalAddress(editingId, address);
-            else await savePortalAddress(address);
+            if (editingId) await updatePortalAddress(editingId, address, data.organization.id);
+            else await savePortalAddress(address, data.organization.id);
             cancelEdit();
             await refresh();
           }, t("portal.saved"));

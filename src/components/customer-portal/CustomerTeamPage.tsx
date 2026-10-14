@@ -56,7 +56,7 @@ export function CustomerTeamPage() {
                 disabled={busy}
                 onChange={() => void run(async () => {
                   const allowed = !grants[key];
-                  const saved = await setPortalMemberPermission(key, allowed);
+                  const saved = await setPortalMemberPermission(key, allowed, data.organization.id);
                   setGrants(memberPermissionGrants({ memberPermissions: saved }));
                   await refresh();
                 }, t("portal.permissionsSaved"))}
@@ -66,8 +66,8 @@ export function CustomerTeamPage() {
           ))}
         </div>
       ) : null}
-      {permissions.members ? <h2>{t("portal.members")}</h2> : null}
-      {permissions.members ? data.members.map(member => {
+      {permissions.members || permissions.menus ? <h2>{t("portal.members")}</h2> : null}
+      {permissions.members || permissions.menus ? data.members.map(member => {
         const selected = menuIdsFor(member);
         const unrestricted = selected.length === 0;
         return (
@@ -96,7 +96,7 @@ export function CustomerTeamPage() {
                     variant="outline"
                     disabled={busy}
                     onClick={() => void run(async () => {
-                      await setPortalMemberMenuScopes(member.user_id, selected);
+                      await setPortalMemberMenuScopes(member.user_id, selected, data.organization.id);
                       setScopeDrafts(draft => {
                         const next = { ...draft };
                         delete next[member.user_id];
@@ -117,7 +117,7 @@ export function CustomerTeamPage() {
                   variant="outline"
                   disabled={busy}
                   onClick={() => void run(async () => {
-                    await setPortalMemberRole(member.user_id, "admin");
+                    await setPortalMemberRole(member.user_id, "admin", data.organization.id);
                     await refresh();
                   }, t("portal.roleUpdated"))}
                 >
@@ -130,7 +130,7 @@ export function CustomerTeamPage() {
                   variant="outline"
                   disabled={busy}
                   onClick={() => void run(async () => {
-                    await setPortalMemberRole(member.user_id, "member");
+                    await setPortalMemberRole(member.user_id, "member", data.organization.id);
                     await refresh();
                   }, t("portal.roleUpdated"))}
                 >
@@ -140,9 +140,9 @@ export function CustomerTeamPage() {
               <Button
                 type="button"
                 variant="outline"
-                disabled={busy || !member.is_active}
+                disabled={busy || !member.is_active || !permissions.members}
                 onClick={() => void run(async () => {
-                  await removePortalMember(member.user_id);
+                  await removePortalMember(member.user_id, data.organization.id);
                   await refresh();
                 }, t("portal.saved"))}
               >
@@ -166,7 +166,7 @@ export function CustomerTeamPage() {
             variant="outline"
             disabled={busy}
             onClick={() => void run(async () => {
-              await revokePortalInvitation(invite.id);
+              await revokePortalInvitation(invite.id, data.organization.id);
               await refresh();
             }, t("portal.inviteRevoked"))}
           >
@@ -181,7 +181,7 @@ export function CustomerTeamPage() {
         onSubmit={e => {
           e.preventDefault();
           void run(async () => {
-            const token = await invitePortalMember(inviteEmail);
+            const token = await invitePortalMember(inviteEmail, data.organization.id);
             setInviteLink(`${window.location.origin}/customer?invite=${encodeURIComponent(token)}`);
             await refresh();
           });

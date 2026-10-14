@@ -23,7 +23,7 @@ export function CustomerOrderDetailPage() {
       <Button variant="outline" asChild><Link to="/customer/receipts">{t("portal.receipts")}</Link></Button>
       <Button variant="outline" disabled={busy || Boolean(order.cancel_status) || ["已取消","己取消","取消","已送達","己送達","送貨途中"].includes(order.status || "")} onClick={() => {
         const reason=window.prompt(t("portal.cancelReason"));
-        if(reason) void run(async()=>{await requestPortalCancellation(order.id,reason);await refresh();},t("portal.cancelRequested"));
+        if(reason) void run(async()=>{await requestPortalCancellation(order.id,reason,data.organization.id);await refresh();},t("portal.cancelRequested"));
       }}>{order.cancel_status ? t("portal.cancelPending") : t("portal.requestCancel")}</Button>
     </div>
   </section>;

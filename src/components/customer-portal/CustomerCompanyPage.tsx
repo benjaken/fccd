@@ -4,12 +4,12 @@ import type { CustomerPortalController } from "@/components/CustomerPortalPage";
 import { fetchPortalCompany, type PortalCompany } from "@/lib/customer-portal";
 
 export function CustomerCompanyPage() {
-  const { t } = useOutletContext<CustomerPortalController>();
+  const { t, data } = useOutletContext<CustomerPortalController>();
   const [company, setCompany] = useState<PortalCompany | null>(null);
   const [failed, setFailed] = useState(false);
   useEffect(() => {
-    void fetchPortalCompany().then(setCompany).catch(() => setFailed(true));
-  }, []);
+    if (data) void fetchPortalCompany(data.organization.id).then(setCompany).catch(() => setFailed(true));
+  }, [data?.organization.id]);
   const cycle = company?.settlementCycle;
   return <section>
     <h1>{t("portal.company")}</h1>

@@ -1,5 +1,6 @@
 import { supabase } from "@/lib/supabase";
 import { requestShopifyCustomerSync } from "@/lib/shopify-customer-bridge";
+import { portalRpc as rpc } from "@/lib/customer-portal-rpc";
 import type { CustomerSelfServiceOrderDetail } from "@/lib/customer-self-service";
 
 export type PortalMenu = {
@@ -32,34 +33,29 @@ export function portalPermissions(data: Pick<PortalSnapshot, "role" | "permissio
 export function memberPermissionGrants(data: Pick<PortalSnapshot, "memberPermissions"> | null | undefined): Record<PortalPermission, boolean> {
   return Object.fromEntries(portalPermissionKeys.map(key => [key, data?.memberPermissions?.[key] ?? memberPermissionDefaults.includes(key)])) as Record<PortalPermission, boolean>;
 }
-async function rpc<T>(name: string, args?: Record<string, unknown>): Promise<T> {
-  const { data, error } = await supabase.rpc(name, args);
-  if (error) throw error;
-  return data as T;
-}
-export const fetchPortal = () => rpc<PortalSnapshot>("customer_portal_workspace");
-export const setPortalMemberPermission = (permission: PortalPermission, allowed: boolean) =>
-  rpc<Record<PortalPermission, boolean>>("customer_portal_set_member_permission", { p_permission: permission, p_allowed: allowed });
+export const fetchPortal = (organizationId?: string) => rpc<PortalSnapshot>("customer_portal_workspace", undefined, organizationId);
+export const setPortalMemberPermission = (permission: PortalPermission, allowed: boolean, organizationId?: string) =>
+  rpc<Record<PortalPermission, boolean>>("customer_portal_set_member_permission", { p_permission: permission, p_allowed: allowed }, organizationId);
 export const acceptPortalInvite = (token: string) => rpc<void>("customer_portal_accept_invite", { p_token: token });
-export const invitePortalMember = (email: string) => rpc<string>("customer_portal_invite", { p_email: email });
-export const removePortalMember = (id: string) => rpc<void>("customer_portal_remove_member", { p_user_id: id });
-export const setPortalMemberRole = (id: string, role: "admin" | "member") =>
-  rpc<void>("customer_portal_set_member_role", { p_user_id: id, p_role: role });
-export const revokePortalInvitation = (id: string) =>
-  rpc<void>("customer_portal_revoke_invitation", { p_invitation_id: id });
-export const setPortalMemberMenuScopes = (userId: string, menuIds: string[]) =>
-  rpc<void>("customer_portal_set_member_menu_scopes", { p_user_id: userId, p_menu_ids: menuIds });
-export async function savePortalAddress(a: { label: string; recipient: string; phone: string; address: string }) {
-  const id = await rpc<string>("customer_portal_save_address", { p_label: a.label, p_recipient: a.recipient, p_phone: a.phone, p_address: a.address });
+export const invitePortalMember = (email: string, organizationId?: string) => rpc<string>("customer_portal_invite", { p_email: email }, organizationId);
+export const removePortalMember = (id: string, organizationId?: string) => rpc<void>("customer_portal_remove_member", { p_user_id: id }, organizationId);
+export const setPortalMemberRole = (id: string, role: "admin" | "member", organizationId?: string) =>
+  rpc<void>("customer_portal_set_member_role", { p_user_id: id, p_role: role }, organizationId);
+export const revokePortalInvitation = (id: string, organizationId?: string) =>
+  rpc<void>("customer_portal_revoke_invitation", { p_invitation_id: id }, organizationId);
+export const setPortalMemberMenuScopes = (userId: string, menuIds: string[], organizationId?: string) =>
+  rpc<void>("customer_portal_set_member_menu_scopes", { p_user_id: userId, p_menu_ids: menuIds }, organizationId);
+export async function savePortalAddress(a: { label: string; recipient: string; phone: string; address: string }, organizationId?: string) {
+  const id = await rpc<string>("customer_portal_save_address", { p_label: a.label, p_recipient: a.recipient, p_phone: a.phone, p_address: a.address }, organizationId);
   requestShopifyCustomerSync("sync_mine");
   return id;
 }
-export async function updatePortalAddress(id: string, a: { label: string; recipient: string; phone: string; address: string }) {
-  await rpc<void>("customer_portal_update_address", { p_id: id, p_label: a.label, p_recipient: a.recipient, p_phone: a.phone, p_address: a.address });
+export async function updatePortalAddress(id: string, a: { label: string; recipient: string; phone: string; address: string }, organizationId?: string) {
+  await rpc<void>("customer_portal_update_address", { p_id: id, p_label: a.label, p_recipient: a.recipient, p_phone: a.phone, p_address: a.address }, organizationId);
   requestShopifyCustomerSync("sync_mine");
 }
-export async function archivePortalAddress(id: string) {
-  await rpc<void>("customer_portal_archive_address", { p_id: id });
+export async function archivePortalAddress(id: string, organizationId?: string) {
+  await rpc<void>("customer_portal_archive_address", { p_id: id }, organizationId);
   requestShopifyCustomerSync("sync_mine");
 }
 export const selectPortalOrganization = (organizationId: string) =>
@@ -68,24 +64,24 @@ export type PortalCompanyContact = { name: string; phone: string; title: string;
 export type PortalCompany = {
   name: string; brNumber: string; brExpiresOn: string | null; settlementCycle: string | null; contacts: PortalCompanyContact[];
 };
-export const fetchPortalCompany = () => rpc<PortalCompany>("customer_portal_company");
-export const exportPortalOrders = () => rpc<string>("customer_portal_export_orders");
-export const savePortalTemplate = (name: string, items: Array<{ product_id: string; quantity: number }>) =>
-  rpc<string>("customer_portal_save_template", { p_name: name, p_items: items });
-export const updatePortalTemplate = (id: string, name: string, items: Array<{ product_id: string; quantity: number }>) =>
-  rpc<void>("customer_portal_update_template", { p_id: id, p_name: name, p_items: items });
-export const archivePortalTemplate = (id: string) =>
-  rpc<void>("customer_portal_archive_template", { p_id: id });
+export const fetchPortalCompany = (organizationId?: string) => rpc<PortalCompany>("customer_portal_company", undefined, organizationId);
+export const exportPortalOrders = (organizationId?: string) => rpc<string>("customer_portal_export_orders", undefined, organizationId);
+export const savePortalTemplate = (name: string, items: Array<{ product_id: string; quantity: number }>, organizationId?: string) =>
+  rpc<string>("customer_portal_save_template", { p_name: name, p_items: items }, organizationId);
+export const updatePortalTemplate = (id: string, name: string, items: Array<{ product_id: string; quantity: number }>, organizationId?: string) =>
+  rpc<void>("customer_portal_update_template", { p_id: id, p_name: name, p_items: items }, organizationId);
+export const archivePortalTemplate = (id: string, organizationId?: string) =>
+  rpc<void>("customer_portal_archive_template", { p_id: id }, organizationId);
 export const submitPortalOrder = (requestId: string, menuId: string, addressId: string,
-  items: Array<{ product_id: string; quantity: number }>) =>
-  rpc<string>("customer_portal_submit_order", { p_request_id: requestId, p_menu_id: menuId, p_address_id: addressId, p_items: items, p_points: 0 });
-export const requestPortalCancellation = (orderId: string, reason: string) =>
-  rpc<void>("customer_portal_request_cancel", { p_order_id: orderId, p_reason: reason });
+  items: Array<{ product_id: string; quantity: number }>, organizationId?: string) =>
+  rpc<string>("customer_portal_submit_order", { p_request_id: requestId, p_menu_id: menuId, p_address_id: addressId, p_items: items, p_points: 0 }, organizationId);
+export const requestPortalCancellation = (orderId: string, reason: string, organizationId?: string) =>
+  rpc<void>("customer_portal_request_cancel", { p_order_id: orderId, p_reason: reason }, organizationId);
 export type PaymentEvidence = {id:string; order_id:string; amount:number; status:string; review_reason:string|null; created_at:string};
-export const fetchPortalEvidence = () => rpc<PaymentEvidence[]>("customer_portal_evidence");
-export const fetchPortalDocument = (id:string, kind:"receipt"|"invoice") =>
-  rpc<CustomerSelfServiceOrderDetail>("customer_portal_financial_document",{p_order_id:id,p_kind:kind});
-export async function uploadPortalEvidence(orderId:string, file:File, amount:number) {
+export const fetchPortalEvidence = (organizationId?: string) => rpc<PaymentEvidence[]>("customer_portal_evidence", undefined, organizationId);
+export const fetchPortalDocument = (id:string, kind:"receipt"|"invoice", organizationId?: string) =>
+  rpc<CustomerSelfServiceOrderDetail>("customer_portal_financial_document",{p_order_id:id,p_kind:kind}, organizationId);
+export async function uploadPortalEvidence(orderId:string, file:File, amount:number, organizationId?: string) {
   if(!["image/jpeg","image/png","application/pdf"].includes(file.type) || file.size>10*1024*1024 || !file.size || !Number.isFinite(amount) || amount<=0)
     throw new Error("invalid_payment_evidence");
   const {data,error}=await supabase.auth.getUser();
@@ -94,7 +90,7 @@ export async function uploadPortalEvidence(orderId:string, file:File, amount:num
   const path=`${data.user.id}/${orderId}/${crypto.randomUUID()}.${extension}`;
   const upload=await supabase.storage.from("customer-payment-evidence").upload(path,file,{contentType:file.type,upsert:false});
   if(upload.error)throw upload.error;
-  await rpc<void>("customer_portal_submit_evidence",{p_order_id:orderId,p_path:path,p_amount:amount});
+  await rpc<void>("customer_portal_submit_evidence",{p_order_id:orderId,p_path:path,p_amount:amount}, organizationId);
 }
 
 // Money calculations in the UI use cents. Final authority is always the RPC.

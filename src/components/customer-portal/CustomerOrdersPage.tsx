@@ -9,7 +9,7 @@ export function CustomerOrdersPage() {
   if (!data) return null;
   return <section><h1>{t("portal.orders")}</h1>
     {portalPermissions(data).export ? <Button variant="outline" onClick={() => void run(async () => {
-      const csv = await exportPortalOrders();
+      const csv = await exportPortalOrders(data.organization.id);
       const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
       const link = document.createElement("a");
       link.href = url; link.download = "orders.csv"; link.click();

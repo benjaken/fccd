@@ -15,9 +15,9 @@ export function CustomerPointsPage() {
     <strong>{data.balance.toLocaleString()} {t("portal.pointUnit")}</strong>
     <p>{t("portal.rewardRules")}</p>
     {portalPermissions(data).redeem ? (
-      <RewardCatalogList balance={Number(data.balance)} onRedeem={async item => { await redeemOrganizationCatalog(crypto.randomUUID(), item.id); await portal.refresh(); }} />
+      <RewardCatalogList balance={Number(data.balance)} onRedeem={async item => { await redeemOrganizationCatalog(crypto.randomUUID(), item.id, data.organization.id); await portal.refresh(); }} />
     ) : null}
-    <IssuedShopifyVouchers scope="organization" refreshKey={Number(data.balance)} />
+    <IssuedShopifyVouchers scope="organization" organizationId={data.organization.id} refreshKey={Number(data.balance)} />
     {data.ledger.map(entry => <div className="portal-row" key={entry.id}><div><strong>{t("portal.ledger." + entry.kind)}</strong><p>{new Date(entry.created_at).toLocaleDateString("zh-HK", { timeZone: "Asia/Hong_Kong" })}{entry.expires_at && " · " + t("portal.expires") + " " + new Date(entry.expires_at).toLocaleDateString("zh-HK", { timeZone: "Asia/Hong_Kong" })}</p></div><strong>{entry.points > 0 ? "+" : ""}{entry.points}</strong></div>)}
     {!data.ledger.length && <p>{t("portal.noLedger")}</p>}
   </section>;

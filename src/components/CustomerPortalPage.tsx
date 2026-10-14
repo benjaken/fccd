@@ -80,7 +80,7 @@ function useCustomerPortalController(load: typeof fetchPortal, onMembershipChang
     });
     return () => {active=false;listener.subscription.unsubscribe();};
   }, []);
-  async function refresh() { const next=await load();setData(next);setAddressId(current=>next.addresses.some(a=>a.id===current)?current:(next.addresses[0]?.id||"")); }
+  async function refresh() { const next=await load(data?.organization.id);setData(next);setAddressId(current=>next.addresses.some(a=>a.id===current)?current:(next.addresses[0]?.id||"")); }
   useEffect(() => {
     if (!loggedIn) return;
     let active=true;
@@ -90,8 +90,8 @@ function useCustomerPortalController(load: typeof fetchPortal, onMembershipChang
     return ()=>{active=false;};
   }, [loggedIn,load,t]);
   useEffect(()=>{if(page!=="receipts"||!loggedIn)return;let active=true;
-    void fetchPortalEvidence().then(rows=>{if(active)setEvidence(rows);}).catch(()=>{if(active)setError(t("portal.operationFailed"));});
-    return()=>{active=false;};},[page,loggedIn,t]);
+    void fetchPortalEvidence(data?.organization.id).then(rows=>{if(active)setEvidence(rows);}).catch(()=>{if(active)setError(t("portal.operationFailed"));});
+    return()=>{active=false;};},[page,loggedIn,t,data?.organization.id]);
   async function run(action: () => Promise<unknown>, success?: string, failureKey = "portal.operationFailed") {
     if(busy)return;setBusy(true);setError("");setNotice("");
     try {await action();if(success)setNotice(success);} catch (error) {setError(t(portalErrorKey(error,failureKey)));} finally {setBusy(false);}
@@ -120,7 +120,7 @@ function useCustomerPortalController(load: typeof fetchPortal, onMembershipChang
   async function checkout() {
     if(!menu||!data||!cart?.valid||!addressId)return;
     requestId.current??=crypto.randomUUID();
-    await run(async()=>{await submitPortalOrder(requestId.current!,menu.id,addressId,cart.items);
+    await run(async()=>{await submitPortalOrder(requestId.current!,menu.id,addressId,cart.items,data.organization.id);
       requestId.current=null;setQuantities({});setPage("orders");await refresh();},t("portal.orderCreated"));
   }
 

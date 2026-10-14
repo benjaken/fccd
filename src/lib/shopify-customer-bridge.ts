@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { portalRpc } from "@/lib/customer-portal-rpc";
 
 export type ShopifyVoucher = {
   id: string;
@@ -24,10 +25,8 @@ export async function listPersonalShopifyVouchers() {
   return (data ?? []) as ShopifyVoucher[];
 }
 
-export async function listPortalShopifyVouchers() {
-  const { data, error } = await supabase.rpc("customer_portal_shopify_vouchers");
-  if (error) throw error;
-  return (data ?? []) as ShopifyVoucher[];
+export async function listPortalShopifyVouchers(organizationId?: string) {
+  return (await portalRpc<ShopifyVoucher[]>("customer_portal_shopify_vouchers", undefined, organizationId)) ?? [];
 }
 
 export async function linkShopifyCustomer(input: { ownerType: "user" | "organization"; ownerId: string; storeId: string; customerId: string }) {

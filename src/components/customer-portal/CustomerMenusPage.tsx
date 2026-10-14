@@ -56,7 +56,7 @@ export function CustomerMenusPage() {
                   variant="outline"
                   disabled={busy}
                   onClick={() => void run(async () => {
-                    await archivePortalTemplate(template.id);
+                    await archivePortalTemplate(template.id, data.organization.id);
                     await refresh();
                   }, t("portal.templateArchived"))}
                 >
@@ -115,7 +115,7 @@ export function CustomerMenusPage() {
               variant="outline"
               disabled={busy || !templateName.trim() || cartItems.length === 0}
               onClick={() => void run(async () => {
-                await savePortalTemplate(templateName.trim(), cartItems);
+                await savePortalTemplate(templateName.trim(), cartItems, data.organization.id);
                 setTemplateName("");
                 await refresh();
               }, t("portal.templateSaved"))}
