@@ -38,6 +38,17 @@ beforeEach(async () => {
 afterEach(async () => { await db.close(); });
 
 describe("customer portal reward rules ops SQL", () => {
+  it("repairs a stale rule-list RPC only after the earning model is upgraded",async()=>{
+    const legacy=readFileSync("supabase/migrations/20261012190000_customer_portal_reward_rules_ops.sql","utf8");
+    await db.exec(legacy.slice(legacy.indexOf("create or replace function public.customer_portal_ops_list_reward_rules"),legacy.indexOf("create or replace function public.customer_portal_ops_create_reward_rule")));
+    const old=(await db.query<{d:Array<{hkd_per_point?:number}>}>("select customer_portal_ops_list_reward_rules() d")).rows[0].d;
+    expect(old[0].hkd_per_point).toBeUndefined();
+    await db.exec(readFileSync("supabase/migrations/20261014190000_customer_reward_rules_contract.sql","utf8"));
+    const current=(await db.query<{d:Array<{hkd_per_point:number}>}>("select customer_portal_ops_list_reward_rules() d")).rows[0].d;
+    expect(Number(current[0].hkd_per_point)).toBe(25);
+    await db.exec("alter table customer_reward_rules drop column hkd_per_point");
+    await expect(db.exec(readFileSync("supabase/migrations/20261014190000_customer_reward_rules_contract.sql","utf8"))).rejects.toThrow("reward_rule_prerequisite_migration_required");
+  });
   it("lists seed rule and creates a new version", async () => {
     const listed = await db.query<{ d: Array<{ hkd_per_point: number; is_active: boolean }> }>(
       "select customer_portal_ops_list_reward_rules() d",
@@ -98,5 +109,18 @@ describe("customer portal reward rules ops SQL", () => {
       select hkd_per_point::float rate from customer_reward_rules
       where effective_at <= now() order by effective_at desc limit 1`);
     expect(activeLater.rows[0].rate).toBe(0);
+  });
+
+  it("searches refund orders by number and ignores short or wildcard-only queries", async () => {
+    await db.exec(readFileSync("supabase/migrations/20261014055925_customer_portal_ops_search_refund_orders.sql", "utf8"));
+    await db.exec(`insert into orders(legacy_id, document_type, order_number, customer_name_snapshot, company_name_snapshot, grand_total, shipping_fee, outstanding)
+      values('refund-order','order','FC-1001','Chan','Example Co',280,30,0)`);
+    const short = await db.query<{ d: unknown[] }>("select customer_portal_ops_search_refund_orders('F') d");
+    expect(short.rows[0].d).toEqual([]);
+    const found = await db.query<{ d: Array<{ order_number: string; food_amount: number }> }>("select customer_portal_ops_search_refund_orders('FC-1001') d");
+    expect(found.rows[0].d[0].order_number).toBe("FC-1001");
+    expect(Number(found.rows[0].d[0].food_amount)).toBe(250);
+    const wildcard = await db.query<{ d: unknown[] }>("select customer_portal_ops_search_refund_orders('100%') d");
+    expect(wildcard.rows[0].d).toEqual([]);
   });
 });

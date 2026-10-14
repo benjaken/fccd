@@ -30,6 +30,10 @@ this file in the same change set.
 
 ## 1. Page layout (all authenticated pages)
 
+客戶積分規則頁保留全寬 shell；內容採主欄規則與版本紀錄、輔欄假期與退款入口。
+所有編輯操作使用共享 SidePanel，退款面板加寬並以搜索選擇訂單。手機改單欄。時間明示 Asia/Hong_Kong，零門檻顯示暫停賺分；
+缺少門檻或未開通的 API 顯示可恢復的狀態，不得呈現 NaN 或猜測賺分門檻。
+
 Main content must use the full available width inside the shell. Do **not**
 reintroduce a centered `max-width` (for example `1600px`) on page shells.
 
@@ -224,3 +228,5 @@ Automated coverage: `test/i18n-placeholders.test.ts` rejects English-prose
   access / RLS completion
 - [`../CONTRIBUTING.md`](../CONTRIBUTING.md) — branch, test, and merge workflow
 - [`../README.md`](../README.md) — local setup and preview env vars
+
+積分兌換管理頁使用有標籤的雙欄表單及獨立目錄，窄螢幕改為單欄；Shopify 客戶對應以可展開區域呈現。載入失敗保留重試，不能顯示成空目錄；提交及處理兌換期間鎖定相應操作，編輯可以取消。
