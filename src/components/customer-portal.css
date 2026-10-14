@@ -180,6 +180,8 @@
   font-weight: 700;
   text-decoration: none;
 }
+.customer-portal-ops .page-heading > div { min-width: 0; }
+.customer-portal-ops .page-heading > .ui-button { flex: 0 0 auto; }
 .customer-portal-ops > .page-heading,
 .customer-portal-ops > p,
 .customer-portal-ops > h2,
