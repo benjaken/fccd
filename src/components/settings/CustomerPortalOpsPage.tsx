@@ -1,12 +1,14 @@
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { Pencil, Plus, Trash2 } from "lucide-react";
+import { Building2, ChevronLeft, ChevronRight, Pencil, Plus, RefreshCw, Trash2 } from "lucide-react";
 import { useCurrentPageAccess } from "@/auth/use-page-access";
 import { Button } from "@/components/ui/button";
+import { ListSearchBar } from "@/components/ui/list-search-bar";
 import { ListTable } from "@/components/ui/list-table";
 import { SidePanel } from "@/components/ui/side-panel";
 import { Switch } from "@/components/ui/switch";
+import { useDeferredFilter } from "@/lib/use-deferred-filter";
 import "@/components/customer-portal.css";
 import {
   assignPortalOpsAdmin,
@@ -81,6 +83,25 @@ export function CustomerPortalOpsPage() {
   });
   const [menuItems, setMenuItems] = useState<OpsMenuItem[]>([]);
   const [productId, setProductId] = useState("");
+  const [draftSearch, setDraftSearch] = useState("");
+  const [search, setSearch] = useState("");
+  const [status, setStatus] = useState<"" | "active" | "inactive">("");
+  const [page, setPage] = useState(1);
+  const statusFilter = useDeferredFilter(status, (value: "" | "active" | "inactive") => {
+    setPage(1);
+    setStatus(value);
+  });
+  const pageSize = 15;
+  const filteredOrgs = orgs.filter((row) => {
+    const matchesName = row.name.toLocaleLowerCase().includes(search.toLocaleLowerCase());
+    const matchesStatus = status === "" || (status === "active" ? row.is_active : !row.is_active);
+    return matchesName && matchesStatus;
+  });
+  const orgTotalPages = Math.max(1, Math.ceil(filteredOrgs.length / pageSize));
+  const orgPage = Math.min(page, orgTotalPages);
+  const visibleOrgs = filteredOrgs.slice((orgPage - 1) * pageSize, orgPage * pageSize);
+  const orgFrom = filteredOrgs.length === 0 ? 0 : (orgPage - 1) * pageSize + 1;
+  const orgTo = Math.min(orgPage * pageSize, filteredOrgs.length);
 
   const loadOrgs = useCallback(async () => {
     setLoading(true); setError("");
@@ -405,25 +426,76 @@ export function CustomerPortalOpsPage() {
     );
   }
 
+  const filteredEmpty = Boolean(search || status);
   return (
-    <section className="ingredients-page customer-portal-ops">
-      <header className="page-heading ingredients-heading">
-        <div>
-          <span className="eyebrow">{t("navigation.promotion")}</span>
-          <h1>{t("navigation.customerPortalOps")}</h1>
-          <p>{t("portalOps.description")}</p>
-        </div>
-        {canEdit ? <Button onClick={openCreateOrg}><Plus /> {t("portalOps.createOrg")}</Button> : null}
-      </header>
-      {error ? <p role="alert">{error}</p> : null}
-      {notice ? <p role="status">{notice}</p> : null}
-        <ListTable
-          className="panel"
-          loading={loading}
-          loadingLabel={t("portalOps.loading")}
-          skeletonColumns={6}
-          onRefresh={loadOrgs}
-          header={<tr>
+    <section className="orders-page customer-portal-ops">
+      <div className="portal-ops-list-intro">
+        <header className="page-heading orders-heading">
+          <div>
+            <span className="eyebrow">{t("navigation.promotion")}</span>
+            <h1>{t("navigation.customerPortalOps")}</h1>
+            <p>{t("portalOps.description")}</p>
+          </div>
+        </header>
+        {notice ? <p role="status">{notice}</p> : null}
+      </div>
+      <article className="panel orders-panel">
+        <header className="orders-toolbar">
+          <ListSearchBar
+            id="customer-portal-org-search"
+            value={draftSearch}
+            onChange={setDraftSearch}
+            onSubmit={() => {
+              setPage(1);
+              setSearch(draftSearch.trim());
+            }}
+            label={t("portalOps.search")}
+            placeholder={t("portalOps.searchPlaceholder")}
+            filtersActive={Boolean(status)}
+            onConfirmFilters={statusFilter.confirm}
+            onDismissFilters={statusFilter.revert}
+            filters={
+              <label className="orders-status-filter">
+                <span>{t("portalOps.statusFilter")}</span>
+                <select
+                  value={statusFilter.value}
+                  onChange={(event) => statusFilter.setValue(event.target.value as "" | "active" | "inactive")}
+                >
+                  <option value="">{t("portalOps.allStatuses")}</option>
+                  <option value="active">{t("portalOps.active")}</option>
+                  <option value="inactive">{t("portalOps.inactive")}</option>
+                </select>
+              </label>
+            }
+            actions={canEdit ? (
+              <Button type="button" onClick={openCreateOrg}><Plus /> {t("portalOps.createOrg")}</Button>
+            ) : undefined}
+          />
+        </header>
+        {error ? (
+          <div className="orders-state orders-state-error" role="alert">
+            <Building2 />
+            <div>
+              <strong>{error}</strong>
+            </div>
+            <Button variant="outline" onClick={() => void loadOrgs()}><RefreshCw />{t("portal.retry")}</Button>
+          </div>
+        ) : !loading && visibleOrgs.length === 0 ? (
+          <div className="orders-state">
+            <Building2 />
+            <div>
+              <strong>{filteredEmpty ? t("portalOps.noMatches") : t("portalOps.noOrgs")}</strong>
+              <span>{filteredEmpty ? t("portalOps.noMatchesDescription") : t("portalOps.noOrgsDescription")}</span>
+            </div>
+          </div>
+        ) : (
+          <ListTable
+            className="orders-table-wrap"
+            loading={loading}
+            loadingLabel={t("portalOps.loading")}
+            skeletonColumns={6}
+            onRefresh={loadOrgs}
+            header={<tr>
               <th>{t("portalOps.orgName")}</th>
               <th>{t("portalOps.admins")}</th>
               <th>{t("portalOps.members")}</th>
@@ -431,9 +503,8 @@ export function CustomerPortalOpsPage() {
               <th>{t("portalOps.status")}</th>
               <th className="table-actions-cell">{t("orders.columns.actions")}</th>
             </tr>}
-        >
-            {!orgs.length ? <tr><td colSpan={6}>{error ? <Button variant="outline" onClick={() => void loadOrgs()}>{t("portal.retry")}</Button> : t("portalOps.noOrgs")}</td></tr> : null}
-            {orgs.map(row => (
+          >
+            {visibleOrgs.map(row => (
               <tr key={row.id}>
                 <td>
                   <Link to={`/settings/customer-portal/${row.id}`}>{row.name}</Link>
@@ -451,7 +522,17 @@ export function CustomerPortalOpsPage() {
                 </td>
               </tr>
             ))}
-        </ListTable>
+          </ListTable>
+        )}
+        <footer className="orders-pagination">
+          <span>{t("settings.pagination", { from: orgFrom, to: orgTo, total: filteredOrgs.length })}</span>
+          <div>
+            <Button variant="outline" size="icon" disabled={loading || orgPage <= 1} onClick={() => setPage(orgPage - 1)} aria-label={t("settings.previous")}><ChevronLeft /></Button>
+            <strong>{orgPage} / {orgTotalPages}</strong>
+            <Button variant="outline" size="icon" disabled={loading || orgPage >= orgTotalPages} onClick={() => setPage(orgPage + 1)} aria-label={t("settings.next")}><ChevronRight /></Button>
+          </div>
+        </footer>
+      </article>
       {orgPanelOpen ? renderOrgPanel() : null}
     </section>
   );

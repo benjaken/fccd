@@ -1,12 +1,13 @@
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Pencil, Plus } from "lucide-react";
+import { ChevronLeft, ChevronRight, ClipboardList, Pencil, Plus, RefreshCw } from "lucide-react";
 import { useCurrentPageAccess } from "@/auth/use-page-access";
 import { Button } from "@/components/ui/button";
+import { ListSearchBar } from "@/components/ui/list-search-bar";
 import { ListTable } from "@/components/ui/list-table";
-import { TablePagination } from "@/components/ui/table-pagination";
 import { SidePanel } from "@/components/ui/side-panel";
 import { Switch } from "@/components/ui/switch";
+import { useDeferredFilter } from "@/lib/use-deferred-filter";
 import "@/components/customer-portal.css";
 import { supabase } from "@/lib/supabase";
 import { listPortalOpsOrgs, type OpsOrgListItem } from "@/lib/customer-portal-ops";
@@ -66,19 +67,45 @@ export function CustomerPortalApplicationsPage() {
   const [renewFile, setRenewFile] = useState<File | null>(null);
   const [policyOpen, setPolicyOpen] = useState(false);
   const [renewOpen, setRenewOpen] = useState(false);
+  const [draftSearch, setDraftSearch] = useState("");
+  const [search, setSearch] = useState("");
+  const [status, setStatus] = useState<"" | ApplicationStatus>("");
+  const statusFilter = useDeferredFilter(status, (value: "" | ApplicationStatus) => {
+    setPage(1);
+    setStatus(value);
+  });
+  const pageSize = 15;
 
   const load = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
-      const [applications, published, organizations] = await Promise.all([
-        fetchOrganizationApplicationPage(page),
+      const [published, organizations] = await Promise.all([
         getBrExpiryPolicy(),
         listPortalOpsOrgs(),
       ]);
-      setRows(applications.rows);
-      setTotal(applications.total);
-      setPage(applications.page);
+      if (search || status) {
+        const first = await fetchOrganizationApplicationPage(1);
+        const pageCount = Math.max(1, Math.ceil(first.total / pageSize));
+        const rest = await Promise.all(
+          Array.from({ length: Math.max(0, pageCount - 1) }, (_, index) => fetchOrganizationApplicationPage(index + 2)),
+        );
+        const source = [first, ...rest].flatMap((result) => result.rows);
+        const filtered = source.filter((row) => {
+          const haystack = `${row.company_name} ${row.applicant_email}`.toLocaleLowerCase();
+          return (!search || haystack.includes(search.toLocaleLowerCase())) && (!status || row.status === status);
+        });
+        const lastPage = Math.max(1, Math.ceil(filtered.length / pageSize));
+        const current = Math.min(page, lastPage);
+        setRows(filtered.slice((current - 1) * pageSize, current * pageSize));
+        setTotal(filtered.length);
+        if (current !== page) setPage(current);
+      } else {
+        const applications = await fetchOrganizationApplicationPage(page);
+        setRows(applications.rows);
+        setTotal(applications.total);
+        setPage(applications.page);
+      }
       setPolicy(published);
       setOrgs(organizations);
       setRenewOrgId(current => current || organizations[0]?.id || "");
@@ -87,7 +114,7 @@ export function CustomerPortalApplicationsPage() {
     } finally {
       setLoading(false);
     }
-  }, [t, page]);
+  }, [page, pageSize, search, status, t]);
 
   useEffect(() => { void load(); }, [load]);
 
@@ -166,44 +193,93 @@ export function CustomerPortalApplicationsPage() {
     }, "portalApplications.renewed");
   }
 
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const visibleFrom = total === 0 ? 0 : (page - 1) * pageSize + 1;
+  const visibleTo = Math.min(page * pageSize, total);
+  const filteredEmpty = Boolean(search || status);
   return (
-    <section className="ingredients-page customer-portal-ops">
-      <header className="page-heading ingredients-heading">
-        <div>
-          <h1>{t("navigation.customerPortalApplications")}</h1>
-          <p>{t("portalApplications.description")}</p>
-        </div>
-        {canEdit ? (
-          <div className="portal-ops-actions">
-            <Button type="button" variant="outline" onClick={() => setRenewOpen(true)}>{t("portalApplications.renew")}</Button>
-            <Button type="button" onClick={() => setPolicyOpen(true)}><Plus /> {t("portalApplications.publishPolicy")}</Button>
+    <section className="orders-page customer-portal-ops">
+      <div className="portal-ops-list-intro">
+        <header className="page-heading orders-heading">
+          <div>
+            <h1>{t("navigation.customerPortalApplications")}</h1>
+            <p>{t("portalApplications.description")}</p>
           </div>
-        ) : null}
-      </header>
-      {error ? <p role="alert">{error}</p> : null}
-      {notice ? <p role="status">{notice}</p> : null}
-      <p role="status">
-        {policy
-          ? t("portalApplications.policyActive", { days: policy.reminder_lead_days, block: t(policy.block_new_orders_when_expired ? "portalApplications.blockYes" : "portalApplications.blockNo") })
-          : t("portalApplications.policyUnpublished")}
-        {" "}{t("portalApplications.reminderNotSent")}
-      </p>
-      <article className="panel ingredients-panel">
-        <ListTable
-          className="ingredients-table-wrap"
-          loading={loading}
-          loadingLabel={t("portalApplications.loading")}
-          skeletonColumns={5}
-          onRefresh={load}
-          header={<tr>
+        </header>
+        {notice ? <p role="status">{notice}</p> : null}
+        <p role="status">
+          {policy
+            ? t("portalApplications.policyActive", { days: policy.reminder_lead_days, block: t(policy.block_new_orders_when_expired ? "portalApplications.blockYes" : "portalApplications.blockNo") })
+            : t("portalApplications.policyUnpublished")}
+          {" "}{t("portalApplications.reminderNotSent")}
+        </p>
+      </div>
+      <article className="panel orders-panel">
+        <header className="orders-toolbar">
+          <ListSearchBar
+            id="customer-portal-application-search"
+            value={draftSearch}
+            onChange={setDraftSearch}
+            onSubmit={() => {
+              setPage(1);
+              setSearch(draftSearch.trim());
+            }}
+            label={t("portalApplications.search")}
+            placeholder={t("portalApplications.searchPlaceholder")}
+            filtersActive={Boolean(status)}
+            onConfirmFilters={statusFilter.confirm}
+            onDismissFilters={statusFilter.revert}
+            filters={
+              <label className="orders-status-filter">
+                <span>{t("portalApplications.statusFilter")}</span>
+                <select
+                  value={statusFilter.value}
+                  onChange={(event) => statusFilter.setValue(event.target.value as "" | ApplicationStatus)}
+                >
+                  <option value="">{t("portalApplications.allStatuses")}</option>
+                  {(["draft", "pending_review", "needs_info", "rejected", "approved"] as ApplicationStatus[]).map((value) => (
+                    <option key={value} value={value}>{t(`portalApplications.statusValue.${value}`)}</option>
+                  ))}
+                </select>
+              </label>
+            }
+            actions={canEdit ? (
+              <>
+                <Button type="button" variant="outline" onClick={() => setRenewOpen(true)}>{t("portalApplications.renew")}</Button>
+                <Button type="button" onClick={() => setPolicyOpen(true)}><Plus /> {t("portalApplications.publishPolicy")}</Button>
+              </>
+            ) : undefined}
+          />
+        </header>
+        {error ? (
+          <div className="orders-state orders-state-error" role="alert">
+            <ClipboardList />
+            <div><strong>{error}</strong></div>
+            <Button variant="outline" onClick={() => void load()}><RefreshCw />{t("portal.retry")}</Button>
+          </div>
+        ) : !loading && rows.length === 0 ? (
+          <div className="orders-state">
+            <ClipboardList />
+            <div>
+              <strong>{filteredEmpty ? t("portalApplications.noMatches") : t("portalApplications.empty")}</strong>
+              <span>{filteredEmpty ? t("portalApplications.noMatchesDescription") : t("portalApplications.emptyDescription")}</span>
+            </div>
+          </div>
+        ) : (
+          <ListTable
+            className="orders-table-wrap"
+            loading={loading}
+            loadingLabel={t("portalApplications.loading")}
+            skeletonColumns={5}
+            onRefresh={load}
+            header={<tr>
               <th>{t("portalApplications.company")}</th>
               <th>{t("portalApplications.applicant")}</th>
               <th>{t("portalApplications.status")}</th>
               <th>{t("portalApplications.expiresOn")}</th>
               <th className="table-actions-cell">{t("orders.columns.actions")}</th>
             </tr>}
-        >
-            {!rows.length ? <tr><td colSpan={5}>{error ? <Button variant="outline" onClick={() => void load()}>{t("portal.retry")}</Button> : t("portalApplications.empty")}</td></tr> : null}
+          >
             {rows.map(row => (
               <tr key={row.id}>
                 <td>{row.company_name}</td>
@@ -213,15 +289,16 @@ export function CustomerPortalApplicationsPage() {
                 <td className="table-actions-cell"><Button type="button" variant="ghost" size="icon" aria-label={t("portalApplications.review")} title={t("portalApplications.review")} onClick={() => void open(row.id)}><Pencil /></Button></td>
               </tr>
             ))}
-        </ListTable>
-        <TablePagination
-          summary={t("orders.pagination", { from: total ? (page - 1) * 15 + 1 : 0, to: Math.min(page * 15, total), total })}
-          page={page} totalPages={Math.max(1, Math.ceil(total / 15))} loading={loading}
-          onPrevious={() => setPage(current => Math.max(1, current - 1))}
-          onNext={() => setPage(current => Math.min(Math.max(1, Math.ceil(total / 15)), current + 1))}
-          onPageChange={setPage} previousLabel={t("orders.previous")} nextLabel={t("orders.next")}
-          pageLabel={t("orders.pageOf")} jumpLabel={t("orders.jumpToPage")}
-        />
+          </ListTable>
+        )}
+        <footer className="orders-pagination">
+          <span>{t("settings.pagination", { from: visibleFrom, to: visibleTo, total })}</span>
+          <div>
+            <Button variant="outline" size="icon" disabled={loading || page <= 1} onClick={() => setPage(current => Math.max(1, current - 1))} aria-label={t("settings.previous")}><ChevronLeft /></Button>
+            <strong>{page} / {totalPages}</strong>
+            <Button variant="outline" size="icon" disabled={loading || page >= totalPages} onClick={() => setPage(current => Math.min(totalPages, current + 1))} aria-label={t("settings.next")}><ChevronRight /></Button>
+          </div>
+        </footer>
       </article>
       <SidePanel open={policyOpen} title={t("portalApplications.policyTitle")} onClose={() => setPolicyOpen(false)} closeLabel={t("portalApplications.close")}>
         <form className="portal-ops-form" onSubmit={event => void publishPolicy(event)}>

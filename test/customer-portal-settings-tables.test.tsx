@@ -21,6 +21,7 @@ vi.mock("@/lib/customer-portal-ops", async (original) => ({
 vi.mock("@/lib/customer-portal-reward-rules-ops", async (original) => ({
   ...await original<typeof import("@/lib/customer-portal-reward-rules-ops")>(),
   listRewardRules: mocks.rules,
+  listPointHolidays: vi.fn(async()=>[]),
 }));
 vi.mock("@/lib/customer-portal-applications-ops", async (original) => ({
   ...await original<typeof import("@/lib/customer-portal-applications-ops")>(),
@@ -33,9 +34,9 @@ vi.mock("@/lib/customer-portal-applications-ops", async (original) => ({
 }));
 
 const pages = [
-  { Component: CustomerPortalOpsPage, load: mocks.orgs, columns: 6, empty: "尚未建立機構。" },
-  { Component: CustomerPortalRewardRulesPage, load: mocks.rules, columns: 4, empty: "尚未有積分規則版本。" },
-  { Component: CustomerPortalApplicationsPage, load: mocks.applications, columns: 5, empty: "目前沒有公司申請。" },
+  { Component: CustomerPortalOpsPage, load: mocks.orgs, columns: 6, skeletonRows: 15, empty: "尚未建立機構。", emptyInTable: false },
+  { Component: CustomerPortalRewardRulesPage, load: mocks.rules, columns: 4, skeletonRows: 15, empty: "尚未有積分規則版本。", emptyInTable: true },
+  { Component: CustomerPortalApplicationsPage, load: mocks.applications, columns: 5, skeletonRows: 15, empty: "目前沒有公司申請。", emptyInTable: false },
 ];
 
 beforeEach(() => {
@@ -46,25 +47,32 @@ beforeEach(() => {
   mocks.policy.mockResolvedValue(null);
 });
 
-describe.each(pages)("$Component.name shared table", ({ Component, load, columns, empty }) => {
+describe.each(pages)("$Component.name shared table", ({ Component, load, columns, skeletonRows, empty, emptyInTable }) => {
   it("keeps the header and loading skeleton in the table, then shows its empty state", async () => {
     load.mockReturnValue(new Promise(() => {}));
     const { unmount } = render(<MemoryRouter><Component /></MemoryRouter>);
     const table = screen.getByRole("table");
     expect(within(table).getAllByRole("columnheader")).toHaveLength(columns);
     expect(table.closest("[aria-busy]")).toHaveAttribute("aria-busy", "true");
-    expect(within(table).getAllByRole("row")).toHaveLength(16);
+    expect(within(table).getAllByRole("row")).toHaveLength(skeletonRows+1);
     unmount();
     load.mockResolvedValue([]);
     render(<MemoryRouter><Component /></MemoryRouter>);
-    expect(await within(screen.getByRole("table")).findByText(empty)).toBeInTheDocument();
+    if (emptyInTable) {
+      expect(await within(screen.getByRole("table")).findByText(empty)).toBeInTheDocument();
+    } else {
+      expect(await screen.findByText(empty)).toBeInTheDocument();
+      expect(screen.queryByRole("table")).not.toBeInTheDocument();
+    }
   });
 
   it("keeps table headings after a load failure and retries without reporting an empty list", async () => {
     load.mockRejectedValueOnce(new Error("unavailable"));
     render(<MemoryRouter><Component /></MemoryRouter>);
     expect(await screen.findByRole("alert")).toHaveTextContent("操作未完成，請重試。");
-    expect(within(screen.getByRole("table")).getAllByRole("columnheader")).toHaveLength(columns);
+    if (emptyInTable) {
+      expect(within(screen.getByRole("table")).getAllByRole("columnheader")).toHaveLength(columns);
+    }
     expect(screen.queryByText(empty)).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "重試" }));
     expect(await screen.findByText(empty)).toBeInTheDocument();
@@ -100,7 +108,7 @@ it("requests the next company-application page from the server and keeps the tot
   }));
   render(<MemoryRouter><CustomerPortalApplicationsPage /></MemoryRouter>);
   expect(await screen.findByText("Company 1")).toBeInTheDocument();
-  expect(screen.getByText("顯示 1–15，共 16 張")).toBeInTheDocument();
+  expect(screen.getByText("顯示 1–15，共 16 筆")).toBeInTheDocument();
   fireEvent.click(screen.getByRole("button", { name: "下一頁" }));
   expect(await screen.findByText("Company 2")).toBeInTheDocument();
   expect(mocks.applications).toHaveBeenCalledWith(2);
