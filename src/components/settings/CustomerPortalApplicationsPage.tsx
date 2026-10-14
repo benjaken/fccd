@@ -1,16 +1,19 @@
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Plus } from "lucide-react";
+import { Pencil, Plus } from "lucide-react";
 import { useCurrentPageAccess } from "@/auth/use-page-access";
 import { Button } from "@/components/ui/button";
+import { ListTable } from "@/components/ui/list-table";
+import { TablePagination } from "@/components/ui/table-pagination";
 import { SidePanel } from "@/components/ui/side-panel";
 import { Switch } from "@/components/ui/switch";
+import "@/components/customer-portal.css";
 import { supabase } from "@/lib/supabase";
 import { listPortalOpsOrgs, type OpsOrgListItem } from "@/lib/customer-portal-ops";
 import {
   getBrExpiryPolicy,
   getOrganizationApplication,
-  listOrganizationApplications,
+  fetchOrganizationApplicationPage,
   openBrDocument,
   publishBrExpiryPolicy,
   renewOrganizationBr,
@@ -41,6 +44,8 @@ export function CustomerPortalApplicationsPage() {
   const access = useCurrentPageAccess();
   const canEdit = access.canAccess("settings.customer_portal.edit");
   const [rows, setRows] = useState<OrganizationApplicationSummary[]>([]);
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
   const [orgs, setOrgs] = useState<OpsOrgListItem[]>([]);
   const [policy, setPolicy] = useState<BrExpiryPolicy | null>(null);
   const [detail, setDetail] = useState<OrganizationApplicationDetail | null>(null);
@@ -67,11 +72,13 @@ export function CustomerPortalApplicationsPage() {
     setError("");
     try {
       const [applications, published, organizations] = await Promise.all([
-        listOrganizationApplications(),
+        fetchOrganizationApplicationPage(page),
         getBrExpiryPolicy(),
         listPortalOpsOrgs(),
       ]);
-      setRows(applications);
+      setRows(applications.rows);
+      setTotal(applications.total);
+      setPage(applications.page);
       setPolicy(published);
       setOrgs(organizations);
       setRenewOrgId(current => current || organizations[0]?.id || "");
@@ -80,7 +87,7 @@ export function CustomerPortalApplicationsPage() {
     } finally {
       setLoading(false);
     }
-  }, [t]);
+  }, [t, page]);
 
   useEffect(() => { void load(); }, [load]);
 
@@ -181,32 +188,39 @@ export function CustomerPortalApplicationsPage() {
           : t("portalApplications.policyUnpublished")}
         {" "}{t("portalApplications.reminderNotSent")}
       </p>
-      {loading ? <p role="status">{t("portalApplications.loading")}</p> : rows.length === 0 ? <p>{t("portalApplications.empty")}</p> : (
-        <div className="portal-ops-table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>{t("portalApplications.company")}</th>
-                <th>{t("portalApplications.applicant")}</th>
-                <th>{t("portalApplications.status")}</th>
-                <th>{t("portalApplications.expiresOn")}</th>
-                <th></th>
+        <ListTable
+          className="panel"
+          loading={loading}
+          loadingLabel={t("portalApplications.loading")}
+          skeletonColumns={5}
+          onRefresh={load}
+          header={<tr>
+              <th>{t("portalApplications.company")}</th>
+              <th>{t("portalApplications.applicant")}</th>
+              <th>{t("portalApplications.status")}</th>
+              <th>{t("portalApplications.expiresOn")}</th>
+              <th className="table-actions-cell">{t("orders.columns.actions")}</th>
+            </tr>}
+        >
+            {!rows.length ? <tr><td colSpan={5}>{error ? <Button variant="outline" onClick={() => void load()}>{t("portal.retry")}</Button> : t("portalApplications.empty")}</td></tr> : null}
+            {rows.map(row => (
+              <tr key={row.id}>
+                <td>{row.company_name}</td>
+                <td>{row.applicant_email}</td>
+                <td>{t(`portalApplications.statusValue.${row.status as ApplicationStatus}`)}</td>
+                <td>{row.br_expires_on ?? "—"}</td>
+                <td className="table-actions-cell"><Button type="button" variant="ghost" size="icon" aria-label={t("portalApplications.review")} title={t("portalApplications.review")} onClick={() => void open(row.id)}><Pencil /></Button></td>
               </tr>
-            </thead>
-            <tbody>
-              {rows.map(row => (
-                <tr key={row.id}>
-                  <td>{row.company_name}</td>
-                  <td>{row.applicant_email}</td>
-                  <td>{t(`portalApplications.statusValue.${row.status as ApplicationStatus}`)}</td>
-                  <td>{row.br_expires_on ?? "—"}</td>
-                  <td><button type="button" className="linkish" onClick={() => void open(row.id)}>{t("portalApplications.review")}</button></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+            ))}
+        </ListTable>
+      <TablePagination
+        summary={t("orders.pagination", { from: total ? (page - 1) * 15 + 1 : 0, to: Math.min(page * 15, total), total })}
+        page={page} totalPages={Math.max(1, Math.ceil(total / 15))} loading={loading}
+        onPrevious={() => setPage(current => Math.max(1, current - 1))}
+        onNext={() => setPage(current => Math.min(Math.max(1, Math.ceil(total / 15)), current + 1))}
+        onPageChange={setPage} previousLabel={t("orders.previous")} nextLabel={t("orders.next")}
+        pageLabel={t("orders.pageOf")} jumpLabel={t("orders.jumpToPage")}
+      />
       <SidePanel open={policyOpen} title={t("portalApplications.policyTitle")} onClose={() => setPolicyOpen(false)} closeLabel={t("portalApplications.close")}>
         <form className="portal-ops-form" onSubmit={event => void publishPolicy(event)}>
           <label>

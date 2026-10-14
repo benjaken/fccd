@@ -123,5 +123,9 @@ lists.
   skeleton, and mobile pull-to-refresh via `ListTable`.
 - The same pages use toolbar search via `ListSearchBar` (inline on desktop,
   side drawer on mobile).
+- Customer ordering operations, reward rule history, company BR applications,
+  and organization detail tables use `ListTable` with the shared panel and table
+  styles. Keep summaries and notices above the table without stretching them
+  into the page's remaining height; loading and empty list states retain headings.
 - Reports, dashboard jobs, role permissions, and detail inline tables wrap
   `PullToRefresh` around the same table scroller.

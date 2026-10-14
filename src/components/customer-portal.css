@@ -151,10 +151,24 @@
 .portal-muted{color:var(--muted-foreground);font-size:13px}
 
 .customer-portal-ops .portal-ops-actions,.portal-ops-form .portal-ops-actions{display:flex;gap:8px;flex-wrap:wrap;justify-self:start}
-.customer-portal-ops .portal-ops-table-wrap{overflow:auto;margin:16px 0 28px;border:1px solid var(--border);border-radius:12px;background:var(--card)}
-.customer-portal-ops table{width:100%;border-collapse:collapse}
-.customer-portal-ops th,.customer-portal-ops td{padding:12px 14px;border-bottom:1px solid var(--border);text-align:left;vertical-align:top}
-.customer-portal-ops th{font-size:12px;color:var(--muted-foreground);font-weight:700}
+/* Keep notices above the shared table instead of stretching a grid row. */
+.customer-portal-ops.ingredients-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  overflow: auto;
+}
+.customer-portal-ops > .page-heading,
+.customer-portal-ops > p,
+.customer-portal-ops > h2,
+.customer-portal-ops > form {
+  flex: 0 0 auto;
+  margin: 0;
+}
+.customer-portal-ops > .operational-table-wrap {
+  flex: 1 1 auto;
+  min-height: 180px;
+}
 .customer-portal-ops .linkish{border:0;background:transparent;color:var(--primary);font:inherit;font-weight:700;cursor:pointer;padding:0}
 .portal-ops-form,.customer-portal-ops .portal-ops-inline-form{display:grid;gap:14px}
 .customer-portal-ops > .portal-ops-form,.customer-portal-ops .portal-ops-inline-form{margin:16px 0 28px}

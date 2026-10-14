@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Pencil, Plus, Trash2 } from "lucide-react";
 import { useCurrentPageAccess } from "@/auth/use-page-access";
 import { Button } from "@/components/ui/button";
+import { ListTable } from "@/components/ui/list-table";
 import { SidePanel } from "@/components/ui/side-panel";
 import { Switch } from "@/components/ui/switch";
 import "@/components/customer-portal.css";
@@ -278,17 +279,19 @@ export function CustomerPortalOpsPage() {
         {error ? <p role="alert">{error}</p> : null}
         {notice ? <p role="status">{notice}</p> : null}
         {loading ? <p role="status">{t("portalOps.loading")}</p> : (
-          <div className="portal-ops-table-wrap">
-            <table>
-              <thead>
-                <tr>
+          <ListTable
+            className="panel"
+            loading={loading}
+            loadingLabel={t("portalOps.loading")}
+            skeletonColumns={4}
+            onRefresh={() => loadMenu(menuId!)}
+            header={<tr>
                   <th>{t("portalOps.product")}</th>
                   <th>{t("portalOps.sku")}</th>
                   <th>{t("portalOps.unitPrice")}</th>
                   <th>{t("portalOps.stock")}</th>
-                </tr>
-              </thead>
-              <tbody>
+                </tr>}
+          >
                 {menu.items.map(item => (
                   <tr key={item.product_id}>
                     <td>{item.name}</td>
@@ -297,9 +300,7 @@ export function CustomerPortalOpsPage() {
                     <td>{item.available_quantity}</td>
                   </tr>
                 ))}
-              </tbody>
-            </table>
-          </div>
+          </ListTable>
         )}
         {menuPanelOpen ? renderMenuPanel() : null}
       </section>
@@ -327,16 +328,18 @@ export function CustomerPortalOpsPage() {
         {loading ? <p role="status">{t("portalOps.loading")}</p> : (
           <>
             <h2>{t("portalOps.members")}</h2>
-            <div className="portal-ops-table-wrap">
-              <table>
-                <thead>
-                  <tr>
+            <ListTable
+              className="panel"
+              loading={loading}
+              loadingLabel={t("portalOps.loading")}
+              skeletonColumns={3}
+              onRefresh={() => loadOrg(orgId!)}
+              header={<tr>
                     <th>{t("portalOps.email")}</th>
                     <th>{t("portalOps.role")}</th>
                     <th>{t("portalOps.status")}</th>
-                  </tr>
-                </thead>
-                <tbody>
+                  </tr>}
+            >
                   {org.members.map(member => (
                     <tr key={member.user_id}>
                       <td>{member.email}</td>
@@ -344,9 +347,7 @@ export function CustomerPortalOpsPage() {
                       <td>{member.is_active ? t("portalOps.active") : t("portalOps.inactive")}</td>
                     </tr>
                   ))}
-                </tbody>
-              </table>
-            </div>
+            </ListTable>
             {canEdit ? (
               <form className="portal-ops-inline-form" onSubmit={event => void submitAdmin(event)}>
                 <label>
@@ -364,10 +365,13 @@ export function CustomerPortalOpsPage() {
             ) : null}
 
             <h2>{t("portalOps.menus")}</h2>
-            <div className="portal-ops-table-wrap">
-              <table>
-                <thead>
-                  <tr>
+            <ListTable
+              className="panel"
+              loading={loading}
+              loadingLabel={t("portalOps.loading")}
+              skeletonColumns={7}
+              onRefresh={() => loadOrg(orgId!)}
+              header={<tr>
                     <th>{t("portalOps.menuName")}</th>
                     <th>{t("portalOps.brand")}</th>
                     <th>{t("portalOps.delivery")}</th>
@@ -375,9 +379,8 @@ export function CustomerPortalOpsPage() {
                     <th>{t("portalOps.fee")}</th>
                     <th>{t("portalOps.items")}</th>
                     <th>{t("portalOps.status")}</th>
-                  </tr>
-                </thead>
-                <tbody>
+                  </tr>}
+            >
                   {org.menus.map(row => (
                     <tr key={row.id}>
                       <td>
@@ -393,9 +396,7 @@ export function CustomerPortalOpsPage() {
                       <td>{row.is_active ? t("portalOps.active") : t("portalOps.inactive")}</td>
                     </tr>
                   ))}
-                </tbody>
-              </table>
-            </div>
+            </ListTable>
           </>
         )}
         {orgPanelOpen ? renderOrgPanel() : null}
@@ -416,43 +417,41 @@ export function CustomerPortalOpsPage() {
       </header>
       {error ? <p role="alert">{error}</p> : null}
       {notice ? <p role="status">{notice}</p> : null}
-      {loading ? <p role="status">{t("portalOps.loading")}</p> : (
-        <div className="portal-ops-table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>{t("portalOps.orgName")}</th>
-                <th>{t("portalOps.admins")}</th>
-                <th>{t("portalOps.members")}</th>
-                <th>{t("portalOps.menus")}</th>
-                <th>{t("portalOps.status")}</th>
-                <th />
+        <ListTable
+          className="panel"
+          loading={loading}
+          loadingLabel={t("portalOps.loading")}
+          skeletonColumns={6}
+          onRefresh={loadOrgs}
+          header={<tr>
+              <th>{t("portalOps.orgName")}</th>
+              <th>{t("portalOps.admins")}</th>
+              <th>{t("portalOps.members")}</th>
+              <th>{t("portalOps.menus")}</th>
+              <th>{t("portalOps.status")}</th>
+              <th className="table-actions-cell">{t("orders.columns.actions")}</th>
+            </tr>}
+        >
+            {!orgs.length ? <tr><td colSpan={6}>{error ? <Button variant="outline" onClick={() => void loadOrgs()}>{t("portal.retry")}</Button> : t("portalOps.noOrgs")}</td></tr> : null}
+            {orgs.map(row => (
+              <tr key={row.id}>
+                <td>
+                  <Link to={`/settings/customer-portal/${row.id}`}>{row.name}</Link>
+                </td>
+                <td>{row.admin_count}</td>
+                <td>{row.member_count}</td>
+                <td>{row.menu_count}</td>
+                <td>{row.is_active ? t("portalOps.active") : t("portalOps.inactive")}</td>
+                <td className="table-actions-cell">
+                  {canEdit ? (
+                    <Button type="button" variant="ghost" size="icon" onClick={() => openEditOrg(row)} aria-label={t("portalOps.editOrg")}>
+                      <Pencil />
+                    </Button>
+                  ) : null}
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              {orgs.map(row => (
-                <tr key={row.id}>
-                  <td>
-                    <Link to={`/settings/customer-portal/${row.id}`}>{row.name}</Link>
-                  </td>
-                  <td>{row.admin_count}</td>
-                  <td>{row.member_count}</td>
-                  <td>{row.menu_count}</td>
-                  <td>{row.is_active ? t("portalOps.active") : t("portalOps.inactive")}</td>
-                  <td>
-                    {canEdit ? (
-                      <Button type="button" variant="ghost" size="icon" onClick={() => openEditOrg(row)} aria-label={t("portalOps.editOrg")}>
-                        <Pencil />
-                      </Button>
-                    ) : null}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          {!orgs.length ? <p>{t("portalOps.noOrgs")}</p> : null}
-        </div>
-      )}
+            ))}
+        </ListTable>
       {orgPanelOpen ? renderOrgPanel() : null}
     </section>
   );
