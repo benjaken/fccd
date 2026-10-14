@@ -60,11 +60,13 @@ export function FilterableSelect({
   onChange,
   searchPlaceholder,
   emptyLabel,
+  searchable = false,
   ...selectProps
 }: Omit<SelectHTMLAttributes<HTMLSelectElement>, "children"> & {
   children: ReactNode;
   searchPlaceholder?: string;
   emptyLabel?: string;
+  searchable?: boolean;
 }) {
   const { t } = useTranslation();
   const rootRef = useRef<HTMLDivElement>(null);
@@ -102,7 +104,7 @@ export function FilterableSelect({
     setQuery("");
   };
 
-  if (options.length <= 10) {
+  if (!searchable && options.length <= 10) {
     return (
       <select
         {...selectProps}

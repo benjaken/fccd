@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, expect, it, vi } from "vitest";
 import { CustomerPortalMealCalendarPage } from "@/components/settings/CustomerPortalMealCalendarPage";
@@ -57,9 +58,15 @@ it("shows which group customer ordered which meals", async () => {
   expect(screen.getByText("×2")).toBeInTheDocument();
   expect(screen.getByText("例湯")).toBeInTheDocument();
   expect(screen.getByText("中環總部")).toBeInTheDocument();
-  fireEvent.change(screen.getByLabelText("團體客戶"), { target: { value: "org-b" } });
+  fireEvent.click(screen.getByRole("button", { name: "關閉" }));
+  const user = userEvent.setup();
+  await user.click(await screen.findByRole("combobox", { name: "團體客戶" }));
+  await user.type(screen.getByRole("combobox", { name: "搜尋選項" }), "李氏");
+  await user.click(screen.getByRole("option", { name: "李氏公司" }));
+  expect(screen.getByRole("combobox", { name: "團體客戶" })).toHaveTextContent("李氏公司");
+  fireEvent.click(screen.getByRole("button", { name: new RegExp(today) }));
+  expect(await screen.findByRole("heading", { name: "李氏公司" })).toBeInTheDocument();
   expect(screen.queryByRole("heading", { name: "恒隆集團" })).not.toBeInTheDocument();
-  expect(screen.getByRole("heading", { name: "李氏公司" })).toBeInTheDocument();
   expect(screen.getByText("魚香茄子")).toBeInTheDocument();
 });
 

@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { CalendarDays, ChevronLeft, ChevronRight, RefreshCw } from "lucide-react";
 import { useCurrentPageAccess } from "@/auth/use-page-access";
 import { Button } from "@/components/ui/button";
+import { FilterableSelect } from "@/components/ui/filterable-select";
 import { SidePanel } from "@/components/ui/side-panel";
 import {
   listGroupCalendar,
@@ -79,7 +80,7 @@ export function CustomerPortalMealCalendarPage() {
           setBlackouts(calendar?.blackouts ?? []);
         }
       })
-      .catch(() => {
+      .catch((error: unknown) => {
         if (!cancelled) setError(t("mealCalendar.loadError"));
       })
       .finally(() => {
@@ -171,8 +172,9 @@ export function CustomerPortalMealCalendarPage() {
           <p>{t("mealCalendar.description")}</p>
         </div>
         <label className="meal-calendar-filter">
-          {t("mealCalendar.organization")}
-          <select
+          <span>{t("mealCalendar.organization")}</span>
+          <FilterableSelect
+            searchable
             value={organizationId}
             onChange={(event) => setOrganizationId(event.target.value)}
           >
@@ -180,7 +182,7 @@ export function CustomerPortalMealCalendarPage() {
             {organizations.map((org) => (
               <option key={org.id} value={org.id}>{org.name}</option>
             ))}
-          </select>
+          </FilterableSelect>
         </label>
       </header>
 

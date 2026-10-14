@@ -67,14 +67,15 @@
   gap: 8px 12px;
 }
 
-.meal-calendar-filter select {
+.meal-calendar-filter .filterable-select {
+  width: 14rem;
+}
+
+.meal-calendar-filter .multi-select-trigger {
+  height: 36px;
   min-height: 36px;
-  min-width: 12rem;
-  border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--card);
-  color: var(--foreground);
-  padding: 0 10px;
 }
 
 .meal-calendar-day-list {
