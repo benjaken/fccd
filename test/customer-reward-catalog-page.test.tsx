@@ -1,0 +1,80 @@
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
+import { beforeEach, expect, it, vi } from "vitest";
+import { CustomerPortalRewardCatalogPage } from "@/components/settings/CustomerPortalRewardCatalogPage";
+const mocks = vi.hoisted(() => ({ catalog: vi.fn(), page: vi.fn(), save: vi.fn(), link: vi.fn(), edit: true }));
+vi.mock("@/auth/use-page-access", () => ({ useCurrentPageAccess: () => ({ canAccess: () => mocks.edit }) }));
+vi.mock("@/lib/customer-reward-catalog", () => ({ listRewardCatalogOps: mocks.catalog, fetchRewardRedemptionPage: mocks.page, upsertRewardCatalogItem: mocks.save, fulfillRewardRedemption: vi.fn() }));
+vi.mock("@/lib/shopify-customer-bridge", () => ({ linkShopifyCustomer: mocks.link }));
+vi.mock("@/lib/supabase", () => ({ supabase: { from: () => ({ select: () => ({ eq: () => ({ order: async () => ({ data: [], error: null }) }) }) }) } }));
+beforeEach(() => { mocks.edit = true; mocks.catalog.mockReset().mockResolvedValue([]); mocks.page.mockReset().mockResolvedValue({ rows: [], total: 0, page: 1 }); mocks.save.mockReset().mockResolvedValue("id"); });
+const mount = () => render(<MemoryRouter><CustomerPortalRewardCatalogPage /></MemoryRouter>);
+const openEditor = async () => { fireEvent.click(await screen.findByRole("button", { name: "新增兌換項目" })); return within(await screen.findByRole("dialog")); };
+it("does not misrepresent failed data as an empty catalog, and retries", async () => {
+  mocks.catalog.mockRejectedValueOnce(new Error("unavailable")); mount();
+  await screen.findByRole("alert"); expect(screen.queryByText("尚未設定兌換項目。")).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "兌換目錄" }));
+  const catalog = await screen.findByRole("dialog");
+  expect(within(catalog).getByText("操作未完成，請重試。")).toBeInTheDocument();
+  expect(within(catalog).queryByText("尚未設定兌換項目。")).not.toBeInTheDocument();
+  fireEvent.click(within(catalog).getByRole("button", { name: "關閉" }));
+  fireEvent.click(screen.getByRole("button", { name: "重試" }));
+  await waitFor(() => expect(screen.queryByRole("alert")).not.toBeInTheDocument());
+  fireEvent.click(screen.getByRole("button", { name: "兌換目錄" }));
+  expect(await screen.findByText("尚未設定兌換項目。")).toBeInTheDocument();
+});
+it("validates points and preserves the form when saving fails", async () => {
+  mount(); const editor = await openEditor();
+  fireEvent.change(editor.getByLabelText("名稱"), { target: { value: "  Gift  " } });
+  fireEvent.change(editor.getByLabelText("所需積分"), { target: { value: "1.5" } });
+  fireEvent.submit(editor.getByLabelText("名稱").closest("form")!);
+  expect(await screen.findByRole("alert")).toBeInTheDocument(); expect(mocks.save).not.toHaveBeenCalled();
+  fireEvent.change(editor.getByLabelText("所需積分"), { target: { value: "100" } });
+  mocks.save.mockRejectedValueOnce(new Error("unavailable"));
+  fireEvent.submit(editor.getByLabelText("名稱").closest("form")!);
+  await waitFor(() => expect(mocks.save).toHaveBeenCalledWith(expect.objectContaining({ name: "Gift", points: 100 })));
+  expect(editor.getByLabelText("名稱")).toHaveValue("  Gift  ");
+});
+it("prevents duplicate saves and closes the editor after success", async () => {
+  let finish!: (value: string) => void; mocks.save.mockImplementation(() => new Promise<string>(resolve => { finish = resolve; }));
+  mount(); const editor = await openEditor();
+  fireEvent.change(editor.getByLabelText("名稱"), { target: { value: "Gift" } });
+  fireEvent.click(editor.getByRole("button", { name: "新增兌換項目" }));
+  expect(editor.getByRole("button", { name: "新增兌換項目" })).toBeDisabled();
+  finish("id"); expect(await screen.findByRole("status")).toHaveTextContent("已儲存兌換項目。");
+  await waitFor(() => expect(screen.queryByLabelText("名稱")).not.toBeInTheDocument());
+});
+it("allows canceling an edit and hides management controls for read-only users", async () => {
+  mocks.catalog.mockResolvedValue([{ id: "item", name: "Gift", kind: "gift", points_cost: 20, stock: 0, description: "", is_active: false }]);
+  const view = mount();
+  fireEvent.click(await screen.findByRole("button", { name: "兌換目錄" }));
+  fireEvent.click(await screen.findByRole("button", { name: "編輯" }));
+  expect(screen.getByLabelText("名稱")).toHaveValue("Gift");
+  fireEvent.click(screen.getByRole("button", { name: "取消編輯" }));
+  await waitFor(() => expect(screen.queryByLabelText("名稱")).not.toBeInTheDocument());
+  view.unmount(); mocks.edit = false; mount();
+  fireEvent.click(await screen.findByRole("button", { name: "兌換目錄" }));
+  expect(await screen.findByText("Gift")).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "新增兌換項目" })).not.toBeInTheDocument();
+  expect(screen.queryByLabelText("名稱")).not.toBeInTheDocument();
+  expect(screen.queryByText("Shopify 客戶對應")).not.toBeInTheDocument();
+});
+it("keeps manual vouchers available without a Shopify store", async () => {
+  mount(); const editor = await openEditor();
+  fireEvent.change(editor.getByLabelText("名稱"), { target: { value: "Manual voucher" } });
+  fireEvent.change(editor.getByLabelText("類型"), { target: { value: "voucher" } });
+  fireEvent.change(editor.getByLabelText("面額（HK$）"), { target: { value: "50" } });
+  fireEvent.submit(editor.getByLabelText("名稱").closest("form")!);
+  await waitFor(() => expect(mocks.save).toHaveBeenCalledWith(expect.objectContaining({ kind: "voucher", voucherAmount: 50, storeId: null })));
+});
+
+it("offers retry when refreshing fails after a successful save", async () => {
+  mount(); const editor = await openEditor();
+  mocks.page.mockRejectedValueOnce(new Error("unavailable"));
+  fireEvent.change(editor.getByLabelText("名稱"), { target: { value: "Gift" } });
+  fireEvent.click(editor.getByRole("button", { name: "新增兌換項目" }));
+  await screen.findByRole("alert"); expect(screen.getByRole("button", { name: "重試" })).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "重試" }));
+  await waitFor(() => expect(screen.queryByRole("alert")).not.toBeInTheDocument());
+  expect(mocks.save).toHaveBeenCalledTimes(1);
+});
