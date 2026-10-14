@@ -1,6 +1,6 @@
 import { type FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ArrowRight, Calculator, Plus, RotateCcw, Search } from "lucide-react";
+import { ArrowRight, Plus, RotateCcw, Search } from "lucide-react";
 import { useCurrentPageAccess } from "@/auth/use-page-access";
 import { Button } from "@/components/ui/button";
 import { ListTable } from "@/components/ui/list-table";
@@ -10,7 +10,7 @@ import { createRewardRule, listRewardRules, recordFoodRefund, rewardRuleThreshol
 import "@/components/customer-portal.css";
 import "./customer-reward-rules.css";
 
-type Panel = "version" | "refund" | "estimate" | "view" | null;
+type Panel = "version" | "refund" | "view" | null;
 const EXAMPLE_SPEND = 2500;
 
 function errorKey(error: unknown) {
@@ -56,7 +56,6 @@ export function CustomerPortalRewardRulesPage() {
   const [rate, setRate] = useState("25");
   const [effectiveAt, setEffectiveAt] = useState(() => hongKongInput(new Date()));
   const [versionQuery, setVersionQuery] = useState("");
-  const [sample, setSample] = useState(String(EXAMPLE_SPEND));
   const [viewing, setViewing] = useState<RewardRuleVersion | null>(null);
   const [orderQuery, setOrderQuery] = useState("");
   const [orderMenuOpen, setOrderMenuOpen] = useState(false);
@@ -102,8 +101,6 @@ export function CustomerPortalRewardRulesPage() {
   const activeRate = active?.hkd_per_point ?? null;
   const examplePoints = earnedPoints(EXAMPLE_SPEND, activeRate);
   const exampleShare = EXAMPLE_SPEND > 0 ? new Intl.NumberFormat(i18n.language, { maximumFractionDigits: 1 }).format((examplePoints / EXAMPLE_SPEND) * 100) : "0";
-  const sampleSpend = Number(sample);
-  const samplePoints = earnedPoints(sampleSpend, activeRate);
   const runningDays = active ? Math.floor((Date.now() - new Date(active.effective_at).getTime()) / 86_400_000) : 0;
   const filtered = useMemo(() => {
     const term = versionQuery.trim().toLowerCase();
@@ -114,7 +111,6 @@ export function CustomerPortalRewardRulesPage() {
     setFormError("");
     if (next === "version") { setRate(String(activeRate ?? 25)); setEffectiveAt(hongKongInput(new Date())); }
     if (next === "refund") { setOrderQuery(""); setOrderMatches([]); setOrderSearchState("idle"); setOrderMenuOpen(false); setSelectedOrder(null); setRefundFood(""); }
-    if (next === "estimate") setSample(String(EXAMPLE_SPEND));
     setPanel(next);
   }
   function openVersion(rule: RewardRuleVersion) {
@@ -124,7 +120,7 @@ export function CustomerPortalRewardRulesPage() {
   }
   async function submit(event: FormEvent) {
     event.preventDefault();
-    if (busy || !canEdit || panel === "estimate" || panel === "view") return;
+    if (busy || !canEdit || panel === "view") return;
     setFormError("");
     setNotice("");
     let action: () => Promise<unknown>;
@@ -156,7 +152,7 @@ export function CustomerPortalRewardRulesPage() {
       setBusy(false);
     }
   }
-  const title = panel === "version" ? "createVersion" : panel === "estimate" ? "calculator" : panel === "view" ? "versionDetail" : "refundTitle";
+  const title = panel === "version" ? "createVersion" : panel === "view" ? "versionDetail" : "refundTitle";
   return <section className="reward-rules-page">
     <header className="reward-rules-heading">
       <div>
@@ -165,7 +161,6 @@ export function CustomerPortalRewardRulesPage() {
       </div>
       <div className="reward-rules-actions">
         {active && activeRate !== null ? <span className="reward-rule-status" data-status={activeRate === 0 ? "scheduled" : "active"}>{activeRate === 0 ? text("earningPaused") : text("healthy")}</span> : null}
-        <Button variant="outline" onClick={() => open("estimate")} disabled={loading || invalid || !active}><Calculator size={18} />{text("calculator")}</Button>
         {canEdit ? <Button onClick={() => open("version")} disabled={loading || invalid || Boolean(error)}><Plus size={18} />{text("createVersion")}</Button> : null}
       </div>
     </header>
@@ -230,18 +225,14 @@ export function CustomerPortalRewardRulesPage() {
         </section>
       </aside>
     </div>
-    <SidePanel open={panel !== null} className={panel === "refund" ? "reward-refund-panel" : undefined} title={text(title)} description={panel === "version" ? text("effectiveAtHint") : panel === "estimate" ? text("calculatorHint") : panel === "refund" ? text("refundSummary") : undefined} onClose={() => { if (!busy) setPanel(null); }} closeLabel={text("close")}>
+    <SidePanel open={panel !== null} className={panel === "refund" ? "reward-refund-panel" : undefined} title={text(title)} description={panel === "version" ? text("effectiveAtHint") : panel === "refund" ? text("refundSummary") : undefined} onClose={() => { if (!busy) setPanel(null); }} closeLabel={text("close")}>
       {panel === "view" && viewing ? <dl className="reward-version-detail">
         <div><dt>{text("versionLabel")}</dt><dd>{versionLabel(viewing.effective_at)}</dd></div>
         <div><dt>{text("hkdPerPoint")}</dt><dd>{viewing.hkd_per_point === null ? "—" : viewing.hkd_per_point === 0 ? text("earningPaused") : amount(viewing.hkd_per_point)}</dd></div>
         <div><dt>{text("effectiveAt")}</dt><dd>{when(viewing.effective_at)} · {text("hkTime")}</dd></div>
         <div><dt>{text("createdAt")}</dt><dd>{when(viewing.created_at)}</dd></div>
         <div><dt>{text("status")}</dt><dd>{text(ruleStatus(viewing))}</dd></div>
-      </dl> : panel === "estimate" ? <form className="portal-ops-form reward-rule-form" onSubmit={event => event.preventDefault()}>
-        <label>{text("foodSample")}<input aria-label={text("foodSample")} type="number" min={0.01} step="0.01" value={sample} onChange={event => setSample(event.target.value)} /></label>
-        <p className="reward-estimate" role="status">{!Number.isFinite(sampleSpend) || sampleSpend <= 0 ? text("estimateEmpty") : activeRate === 0 ? text("pausedDescription") : t("portalRewardRules.examplePoints", { points: amount(samplePoints) })}</p>
-        <div className="reward-rule-form-actions"><Button variant="outline" type="button" onClick={() => setPanel(null)}>{text("close")}</Button></div>
-      </form> : <form className="portal-ops-form reward-rule-form" onSubmit={submit}>
+      </dl> : <form className="portal-ops-form reward-rule-form" onSubmit={submit}>
         {formError ? <p role="alert" className="reward-rule-form-error">{formError}</p> : null}
         {panel === "version" ? <>
           <label>{text("hkdPerPoint")}<input aria-label={text("hkdPerPoint")} type="number" min={0} max={100000} step="0.0001" value={rate} onChange={event => setRate(event.target.value)} required /><small>{text("hkdPerPointHint")}</small></label>

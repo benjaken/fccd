@@ -41,13 +41,6 @@ it("creates a rule with Hong Kong time and retains an unsuccessful form",async()
   expect(await within(dialog).findByRole("alert")).toHaveTextContent("此生效時間已有規則版本");
   expect(within(dialog).getByRole("spinbutton")).toHaveValue(25);
 });
-it("estimates points from the active threshold",async()=>{
-  render(<CustomerPortalRewardRulesPage/>);await screen.findByText("每 HK$25 餐費，賺取 1 分");
-  fireEvent.click(screen.getByRole("button",{name:"積分試算"}));
-  const dialog=screen.getByRole("dialog");
-  fireEvent.change(within(dialog).getByLabelText("餐費（HK$）"),{target:{value:"100"}});
-  expect(within(dialog).getByRole("status")).toHaveTextContent("+ 4 分");
-});
 it("opens a read-only version and filters the history",async()=>{
   render(<CustomerPortalRewardRulesPage/>);await screen.findByText("每 HK$25 餐費，賺取 1 分");
   fireEvent.click(screen.getByRole("button",{name:"查看"}));
@@ -76,5 +69,5 @@ it("keeps the rule readable without edit permissions",async()=>{
   expect(await screen.findByText("每 HK$25 餐費，賺取 1 分")).toBeInTheDocument();
   expect(screen.queryByRole("button",{name:"新增規則版本"})).not.toBeInTheDocument();
   expect(screen.queryByRole("button",{name:"記錄退款"})).not.toBeInTheDocument();
-  expect(screen.getByRole("button",{name:"積分試算"})).toBeInTheDocument();
+  expect(screen.queryByRole("button",{name:"積分試算"})).not.toBeInTheDocument();
 });

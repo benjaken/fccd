@@ -28,11 +28,10 @@
 .reward-rule-search input{width:100%;min-height:40px;border:0;background:transparent;color:var(--foreground);font:inherit}
 .reward-rule-search input:focus-visible{outline:2px solid var(--ring);outline-offset:4px}
 .reward-rule-code{font-variant-numeric:tabular-nums;font-weight:650}
-.reward-version-detail,.reward-estimate{display:grid;gap:14px;margin:8px 0 0}
+.reward-version-detail{display:grid;gap:14px;margin:8px 0 0}
 .reward-version-detail div{display:grid;gap:4px}
 .reward-version-detail dt{font-size:13px;color:var(--muted-foreground)}
 .reward-version-detail dd{margin:0;font-variant-numeric:tabular-nums}
-.reward-estimate{font-size:28px;font-weight:700;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
 .reward-rule-status{display:inline-flex;align-items:center;padding:3px 9px;border-radius:6px;font-size:12px;line-height:1.6;white-space:nowrap;background:var(--muted);color:var(--muted-foreground)}
 .reward-rule-status[data-status=active]{background:color-mix(in srgb,var(--primary) 12%,var(--card));color:var(--primary)}
 .reward-rule-history-hint{margin:8px 0 20px;line-height:1.7}
