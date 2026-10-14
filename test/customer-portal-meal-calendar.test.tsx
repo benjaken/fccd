@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, expect, it, vi } from "vitest";
@@ -52,6 +52,8 @@ beforeEach(() => {
 it("shows which group customer ordered which meals", async () => {
   render(<MemoryRouter><CustomerPortalMealCalendarPage /></MemoryRouter>);
   expect(screen.queryByRole("heading", { level: 1 })).not.toBeInTheDocument();
+  const toolbar = screen.getByRole("button", { name: "今天" }).closest("header")!;
+  expect(within(toolbar).getByRole("combobox", { name: "VIP 客戶" })).toBeInTheDocument();
   expect(await screen.findByRole("button", { name: `恒隆集團 · ${mealSummary(first.lines)}` })).toBeInTheDocument();
   fireEvent.click(screen.getByRole("button", { name: new RegExp(today) }));
   expect(await screen.findByRole("heading", { name: "恒隆集團" })).toBeInTheDocument();

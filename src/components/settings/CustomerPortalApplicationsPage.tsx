@@ -1,7 +1,9 @@
+import { TablePagination } from "@/components/ui/table-pagination";
 import { FormEvent, useCallback, useEffect, useRef, useState, type DragEvent } from "react";
 import { useTranslation } from "react-i18next";
-import { ChevronLeft, ChevronRight, ClipboardList, Pencil, Plus, RefreshCw } from "lucide-react";
+import { ClipboardList, Pencil, Plus, RefreshCw, ShieldCheck } from "lucide-react";
 import { useCurrentPageAccess } from "@/auth/use-page-access";
+import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ListSearchBar } from "@/components/ui/list-search-bar";
 import { ListTable } from "@/components/ui/list-table";
@@ -9,6 +11,7 @@ import { SidePanel } from "@/components/ui/side-panel";
 import { Switch } from "@/components/ui/switch";
 import { useDeferredFilter } from "@/lib/use-deferred-filter";
 import "@/components/customer-portal.css";
+import "./customer-br-applications.css";
 import { supabase } from "@/lib/supabase";
 import { listPortalOpsOrgs, upsertPortalOpsOrg, type OpsOrgListItem } from "@/lib/customer-portal-ops";
 import {
@@ -301,26 +304,24 @@ export function CustomerPortalApplicationsPage() {
   const visibleTo = Math.min(page * pageSize, total);
   const filteredEmpty = Boolean(search || status);
   return (
-    <section className="orders-page customer-portal-ops">
+    <section className="orders-page customer-portal-ops customer-br-applications">
       <div className="portal-ops-list-intro">
-        <header className="page-heading orders-heading">
+
+        {notice ? <p className="br-success-notice" role="status">{notice}</p> : null}
+        <div className="portal-br-policy" aria-labelledby="br-policy-heading">
+          <ShieldCheck className="br-policy-icon" aria-hidden="true" />
           <div>
-            <h1>{t("navigation.customerPortalApplications")}</h1>
-            <p>{t("portalApplications.description")}</p>
-          </div>
-        </header>
-        <div className="portal-br-policy">
-          <div>
-            {notice ? <p role="status">{notice}</p> : null}
+            <h2 id="br-policy-heading">{t("portalApplications.policyTitle")}</h2>
             <p>
               {policy
                 ? t("portalApplications.policyActive", { days: policy.reminder_lead_days, block: t(policy.block_new_orders_when_expired ? "portalApplications.blockYes" : "portalApplications.blockNo") })
                 : t("portalApplications.policyUnpublished")}
-              {" "}{t("portalApplications.reminderNotSent")}
             </p>
+            <p className="br-policy-hint">{t("portalApplications.reminderNotSent")}</p>
           </div>
           {canEdit ? (
-            <Button type="button" onClick={openPolicy}>
+            <Button type="button" variant="outline" onClick={openPolicy}>
+              <Pencil aria-hidden="true" />
               {policy ? t("portalApplications.editPolicy") : t("portalApplications.publishPolicy")}
             </Button>
           ) : null}
@@ -358,7 +359,7 @@ export function CustomerPortalApplicationsPage() {
             actions={canEdit ? (
               <>
                 <Button type="button" onClick={() => setCreateOpen(true)}><Plus /> {t("portalApplications.createCompany")}</Button>
-                <Button type="button" variant="outline" onClick={() => setRenewOpen(true)}>{t("portalApplications.renew")}</Button>
+                <Button type="button" variant="outline" onClick={() => setRenewOpen(true)}><RefreshCw aria-hidden="true" />{t("portalApplications.renew")}</Button>
               </>
             ) : undefined}
           />
@@ -370,12 +371,13 @@ export function CustomerPortalApplicationsPage() {
             <Button variant="outline" onClick={() => void load()}><RefreshCw />{t("portal.retry")}</Button>
           </div>
         ) : !loading && rows.length === 0 ? (
-          <div className="orders-state">
-            <ClipboardList />
+          <div className="orders-state br-applications-empty">
+            <ClipboardList aria-hidden="true" />
             <div>
               <strong>{filteredEmpty ? t("portalApplications.noMatches") : t("portalApplications.empty")}</strong>
               <span>{filteredEmpty ? t("portalApplications.noMatchesDescription") : t("portalApplications.emptyDescription")}</span>
             </div>
+            {canEdit && !filteredEmpty ? <Button type="button" variant="outline" onClick={() => setCreateOpen(true)}><Plus aria-hidden="true" />{t("portalApplications.createCompanyTitle")}</Button> : null}
           </div>
         ) : (
           <ListTable
@@ -403,20 +405,16 @@ export function CustomerPortalApplicationsPage() {
             ))}
           </ListTable>
         )}
-        <footer className="orders-pagination">
-          <span>{t("settings.pagination", { from: visibleFrom, to: visibleTo, total })}</span>
-          <div>
-            <Button variant="outline" size="icon" disabled={loading || page <= 1} onClick={() => setPage(current => Math.max(1, current - 1))} aria-label={t("settings.previous")}><ChevronLeft /></Button>
-            <strong>{page} / {totalPages}</strong>
-            <Button variant="outline" size="icon" disabled={loading || page >= totalPages} onClick={() => setPage(current => Math.min(totalPages, current + 1))} aria-label={t("settings.next")}><ChevronRight /></Button>
-          </div>
-        </footer>
+        <TablePagination summary={t("settings.pagination", { from: visibleFrom, to: visibleTo, total })} page={page} totalPages={totalPages} loading={loading}
+ onPrevious={() => setPage(Math.max(1, page - 1))} onNext={() => setPage(Math.min(totalPages, page + 1))}
+ onPageChange={setPage} previousLabel={t("settings.previous")} nextLabel={t("settings.next")}
+ pageLabel={t("orders.pageOf")} jumpLabel={t("orders.jumpToPage")} />
       </article>
-      <SidePanel open={policyOpen} title={t("portalApplications.policyTitle")} description={t("portalApplications.reminderNotSent")} onClose={() => setPolicyOpen(false)} closeLabel={t("portalApplications.close")}>
-        <form className="portal-ops-form" onSubmit={event => void publishPolicy(event)}>
+      <SidePanel open={policyOpen} title={t("portalApplications.policyTitle")} description={t("portalApplications.reminderNotSent")} onClose={() => setPolicyOpen(false)} closeLabel={t("portalApplications.close")} footer={<><Button type="button" variant="outline" onClick={() => setPolicyOpen(false)}>{t("portalApplications.close")}</Button><Button type="submit" form="portal-policy-form" disabled={busy}>{t("portalApplications.publishPolicy")}</Button></>}>
+        <form id="portal-policy-form" className="portal-ops-form" onSubmit={event => void publishPolicy(event)}>
           <label>
             {t("portalApplications.reminderDays")}
-            <input type="number" min={1} max={365} value={reminderDays} onChange={event => setReminderDays(event.target.value)} required />
+            <Input type="number" min={1} max={365} value={reminderDays} onChange={event => setReminderDays(event.target.value)} required />
           </label>
           <label className="portal-ops-switch">
             <span>{t("portalApplications.blockOrders")}</span>
@@ -424,41 +422,33 @@ export function CustomerPortalApplicationsPage() {
           </label>
           <label>
             {t("portalApplications.reason")}
-            <input value={policyReason} onChange={event => setPolicyReason(event.target.value)} required maxLength={500} />
+            <Input value={policyReason} onChange={event => setPolicyReason(event.target.value)} required maxLength={500} />
           </label>
-          <div className="portal-ops-actions">
-            <Button type="submit" disabled={busy}>{t("portalApplications.publishPolicy")}</Button>
-            <Button type="button" variant="outline" onClick={() => setPolicyOpen(false)}>{t("portalApplications.close")}</Button>
-          </div>
         </form>
       </SidePanel>
-      <SidePanel open={createOpen} title={t("portalApplications.createCompanyTitle")} onClose={() => setCreateOpen(false)} closeLabel={t("portalApplications.close")}>
-        <form className="portal-ops-form" onSubmit={event => void createCompany(event)}>
+      <SidePanel open={createOpen} title={t("portalApplications.createCompanyTitle")} onClose={() => setCreateOpen(false)} closeLabel={t("portalApplications.close")} footer={<><Button type="button" variant="outline" onClick={() => setCreateOpen(false)}>{t("portalApplications.close")}</Button><Button type="submit" form="portal-create-company-form" disabled={busy}>{t("portalApplications.createCompany")}</Button></>}>
+        <form id="portal-create-company-form" className="portal-ops-form" onSubmit={event => void createCompany(event)}>
           <label>
             {t("portalApplications.companyName")}
-            <input value={createName} onChange={event => setCreateName(event.target.value)} required maxLength={120} />
+            <Input value={createName} onChange={event => setCreateName(event.target.value)} required maxLength={120} />
           </label>
           <label>
             {t("portalApplications.brNumber")}
-            <input value={createBr} onChange={event => setCreateBr(event.target.value)} required pattern="[A-Za-z0-9-]{4,40}" />
+            <Input value={createBr} onChange={event => setCreateBr(event.target.value)} required pattern="[A-Za-z0-9-]{4,40}" />
           </label>
           <label>
             {t("portalApplications.expiresOn")}
-            <input type="date" value={createExpires} onChange={event => setCreateExpires(event.target.value)} required />
+            <Input type="date" value={createExpires} onChange={event => setCreateExpires(event.target.value)} required />
           </label>
           <BrAttachmentField file={createFile} onChange={setCreateFile} />
           <label>
             {t("portalApplications.reason")}
-            <input value={createReason} onChange={event => setCreateReason(event.target.value)} required maxLength={500} />
+            <Input value={createReason} onChange={event => setCreateReason(event.target.value)} required maxLength={500} />
           </label>
-          <div className="portal-ops-actions">
-            <Button type="submit" disabled={busy}>{t("portalApplications.createCompany")}</Button>
-            <Button type="button" variant="outline" onClick={() => setCreateOpen(false)}>{t("portalApplications.close")}</Button>
-          </div>
         </form>
       </SidePanel>
-      <SidePanel open={renewOpen} title={t("portalApplications.renewTitle")} onClose={() => setRenewOpen(false)} closeLabel={t("portalApplications.close")}>
-        <form className="portal-ops-form" onSubmit={event => void renew(event)}>
+      <SidePanel open={renewOpen} title={t("portalApplications.renewTitle")} onClose={() => setRenewOpen(false)} closeLabel={t("portalApplications.close")} footer={<><Button type="button" variant="outline" onClick={() => setRenewOpen(false)}>{t("portalApplications.close")}</Button><Button type="submit" form="portal-renew-br-form" disabled={busy}>{t("portalApplications.renew")}</Button></>}>
+        <form id="portal-renew-br-form" className="portal-ops-form" onSubmit={event => void renew(event)}>
           <label>
             {t("portalApplications.organization")}
             <select value={renewOrgId} onChange={event => setRenewOrgId(event.target.value)} required>
@@ -468,26 +458,22 @@ export function CustomerPortalApplicationsPage() {
           </label>
           <label>
             {t("portalApplications.brNumber")}
-            <input value={renewBr} onChange={event => setRenewBr(event.target.value)} required pattern="[A-Za-z0-9-]{4,40}" />
+            <Input value={renewBr} onChange={event => setRenewBr(event.target.value)} required pattern="[A-Za-z0-9-]{4,40}" />
           </label>
           <label>
             {t("portalApplications.expiresOn")}
-            <input type="date" value={renewExpires} onChange={event => setRenewExpires(event.target.value)} required />
+            <Input type="date" value={renewExpires} onChange={event => setRenewExpires(event.target.value)} required />
           </label>
           <BrAttachmentField file={renewFile} onChange={setRenewFile} />
           <label>
             {t("portalApplications.reason")}
-            <input value={renewReason} onChange={event => setRenewReason(event.target.value)} required maxLength={500} />
+            <Input value={renewReason} onChange={event => setRenewReason(event.target.value)} required maxLength={500} />
           </label>
-          <div className="portal-ops-actions">
-            <Button type="submit" disabled={busy}>{t("portalApplications.renew")}</Button>
-            <Button type="button" variant="outline" onClick={() => setRenewOpen(false)}>{t("portalApplications.close")}</Button>
-          </div>
         </form>
       </SidePanel>
-      <SidePanel open={Boolean(detail)} title={detail?.company_name ?? ""} onClose={() => setDetail(null)} closeLabel={t("portalApplications.close")}>
+      <SidePanel open={Boolean(detail)} title={detail?.company_name ?? ""} onClose={() => setDetail(null)} closeLabel={t("portalApplications.close")} footer={canEdit && detail?.status === "pending_review" ? <><Button type="button" variant="outline" disabled={busy} onClick={event => void review(event, "rejected")}>{t("portalApplications.reject")}</Button><Button type="button" variant="outline" disabled={busy} onClick={event => void review(event, "needs_info")}>{t("portalApplications.needsInfo")}</Button><Button type="submit" form="portal-application-review-form" disabled={busy}>{t("portalApplications.approve")}</Button></> : undefined}>
         {detail ? (
-          <form className="portal-ops-form" onSubmit={event => void review(event, "approved")}>
+          <form id="portal-application-review-form" className="portal-ops-form" onSubmit={event => void review(event, "approved")}>
             <dl className="portal-ops-definition">
               <dt>{t("portalApplications.status")}</dt>
               <dd>{t(`portalApplications.statusValue.${detail.status}`)}</dd>
@@ -506,7 +492,7 @@ export function CustomerPortalApplicationsPage() {
             {detail.review_reason ? <p>{detail.review_reason}</p> : null}
             {canEdit && detail.status === "pending_review" ? (
               <>
-                <label>{t("portalApplications.reason")}<input value={reason} onChange={event => setReason(event.target.value)} required maxLength={500} /></label>
+                <label>{t("portalApplications.reason")}<Input value={reason} onChange={event => setReason(event.target.value)} required maxLength={500} /></label>
                 <label>{t("portalApplications.cycle")}
                   <select value={cycle} onChange={event => setCycle(event.target.value as SettlementCycle)}>
                     <option value="weekly">{t("portalApplications.cycleWeekly")}</option>
@@ -514,12 +500,7 @@ export function CustomerPortalApplicationsPage() {
                     <option value="monthly">{t("portalApplications.cycleMonthly")}</option>
                   </select>
                 </label>
-                <label>{t("portalApplications.adminEmail")}<input type="email" value={adminEmail} onChange={event => setAdminEmail(event.target.value)} /></label>
-                <div className="portal-ops-actions">
-                  <Button type="submit" disabled={busy}>{t("portalApplications.approve")}</Button>
-                  <Button type="button" variant="outline" disabled={busy} onClick={event => void review(event, "needs_info")}>{t("portalApplications.needsInfo")}</Button>
-                  <Button type="button" variant="outline" disabled={busy} onClick={event => void review(event, "rejected")}>{t("portalApplications.reject")}</Button>
-                </div>
+                <label>{t("portalApplications.adminEmail")}<Input type="email" value={adminEmail} onChange={event => setAdminEmail(event.target.value)} /></label>
               </>
             ) : null}
           </form>

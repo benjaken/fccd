@@ -186,21 +186,20 @@ export function CustomerPortalMealCalendarPage() {
             </Button>
           </div>
           <h2 className="kitchen-calendar-month">{monthTitle}</h2>
-          <div className="kitchen-calendar-toolbar-spacer" aria-hidden="true" />
+          <label className="meal-calendar-filter">
+            <span>{t("mealCalendar.organization")}</span>
+            <FilterableSelect
+              searchable
+              value={organizationId}
+              onChange={(event) => setOrganizationId(event.target.value)}
+            >
+              <option value="">{t("mealCalendar.allOrganizations")}</option>
+              {organizations.map((org) => (
+                <option key={org.id} value={org.id}>{org.name}</option>
+              ))}
+            </FilterableSelect>
+          </label>
         </header>
-        <label className="meal-calendar-filter">
-          <span>{t("mealCalendar.organization")}</span>
-          <FilterableSelect
-            searchable
-            value={organizationId}
-            onChange={(event) => setOrganizationId(event.target.value)}
-          >
-            <option value="">{t("mealCalendar.allOrganizations")}</option>
-            {organizations.map((org) => (
-              <option key={org.id} value={org.id}>{org.name}</option>
-            ))}
-          </FilterableSelect>
-        </label>
         {error ? (
           <div className="orders-state orders-state-error" role="alert">
             <CalendarDays />
@@ -288,6 +287,10 @@ export function CustomerPortalMealCalendarPage() {
         description={selectedBlackout ? t("mealCalendar.closedHint", { name: selectedBlackout.name }) : t("mealCalendar.dayCount", { count: selectedOpenings.length })}
         closeLabel={t("mealCalendar.close")}
         half
+        footer={canEdit ? <>
+          {selectedBlackout ? <Button type="button" variant="outline" disabled={busy} onClick={() => void clearHoliday()}>{t("mealCalendar.clearHoliday")}</Button> : null}
+          <Button type="submit" form="meal-calendar-holiday-form" disabled={busy}>{busy ? t("mealCalendar.saving") : t("mealCalendar.saveHoliday")}</Button>
+        </> : undefined}
       >
         {notice ? <p role="status">{notice}</p> : null}
         {formError ? <p role="alert">{formError}</p> : null}
@@ -306,15 +309,11 @@ export function CustomerPortalMealCalendarPage() {
             </ul>
           )}
           {canEdit ? (
-            <form className="meal-calendar-holiday" onSubmit={(event) => void saveHoliday(event)}>
+            <form id="meal-calendar-holiday-form" className="meal-calendar-holiday" onSubmit={(event) => void saveHoliday(event)}>
               <label>
                 {t("mealCalendar.holidayName")}
                 <Input value={holidayName} maxLength={80} placeholder={t("mealCalendar.holidayPlaceholder")} onChange={(event) => setHolidayName(event.target.value)} />
               </label>
-              <div>
-                <Button type="submit" disabled={busy}>{busy ? t("mealCalendar.saving") : t("mealCalendar.saveHoliday")}</Button>
-                {selectedBlackout ? <Button type="button" variant="outline" disabled={busy} onClick={() => void clearHoliday()}>{t("mealCalendar.clearHoliday")}</Button> : null}
-              </div>
             </form>
           ) : null}
         </section>

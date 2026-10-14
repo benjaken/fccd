@@ -4,6 +4,11 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Building2, Pencil, Plus, RefreshCw, Settings, Trash2 } from "lucide-react";
 import { useCurrentPageAccess } from "@/auth/use-page-access";
+import { PageSkeleton } from "@/components/ui/page-skeleton";
+import { FilterableSelect } from "@/components/ui/filterable-select";
+import { DateRangePicker } from "@/components/ui/date-range-picker";
+import { DateTimePicker } from "@/components/ui/date-time-picker";
+import { TimePicker } from "@/components/ui/time-picker";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ListSearchBar } from "@/components/ui/list-search-bar";
@@ -61,6 +66,7 @@ export function CustomerPortalOpsPage() {
   const navigate = useNavigate();
   const { orgId, menuId } = useParams<{ orgId?: string; menuId?: string }>();
   const [orgs, setOrgs] = useState<OpsOrgListItem[]>([]);
+  const [adminPanelOpen, setAdminPanelOpen] = useState(false);
   const [org, setOrg] = useState<OpsOrgDetail | null>(null);
   const [menu, setMenu] = useState<OpsMenuDetail | null>(null);
   const [channels, setChannels] = useState<OpsChannel[]>([]);
@@ -208,6 +214,7 @@ export function CustomerPortalOpsPage() {
     await run(async () => {
       await assignPortalOpsAdmin(orgId, adminEmail.trim());
       setAdminEmail("");
+      setAdminPanelOpen(false);
       await loadOrg(orgId);
     }, "adminAssigned");
   }
@@ -260,7 +267,7 @@ export function CustomerPortalOpsPage() {
     event.preventDefault();
     if (!orgId) return;
     const cutoffAt = fromLocalInput(menuForm.cutoffAt);
-    if (!cutoffAt || !menuForm.deliveryDate || !menuForm.validUntil || menuForm.validUntil < menuForm.deliveryDate) {
+    if (!menuForm.deliveryTime || !cutoffAt || !menuForm.deliveryDate || !menuForm.validUntil || menuForm.validUntil < menuForm.deliveryDate) {
       setError(t("portalOps.invalidMenu"));
       return;
     }
@@ -342,14 +349,37 @@ export function CustomerPortalOpsPage() {
     );
   }
 
-  if (orgId && org) {
+  if (menuId) {
     return (
       <section className="ingredients-page customer-portal-ops">
         <header className="page-heading ingredients-heading">
           <div>
+            <Button asChild variant="outline">
+              <Link to={`/settings/customer-portal/${orgId}`}>{t("portalOps.backToOrg")}</Link>
+            </Button>
+          </div>
+        </header>
+        {error ? (
+          <div className="orders-state orders-state-error" role="alert">
+            <Building2 />
+            <div><strong>{error}</strong></div>
+            <Button variant="outline" onClick={() => void loadMenu(menuId)}><RefreshCw />{t("portal.retry")}</Button>
+          </div>
+        ) : (
+          <PageSkeleton variant="detail" label={t("portalOps.loading")} />
+        )}
+      </section>
+    );
+  }
+
+  if (orgId && org) {
+    return (
+      <section className="ingredients-page customer-portal-ops portal-org-detail">
+        <header className="portal-org-toolbar">
+          <div>
             <p><Link to="/settings/customer-portal">{t("portalOps.backToList")}</Link></p>
-            <h1>{org.name}</h1>
-            <p>{org.is_active ? t("portalOps.active") : t("portalOps.inactive")}{org.is_vip ? ` · ${t("portalOps.vip")}` : ""}</p>
+            <strong className="portal-org-name">{org.name}</strong>
+            <span className={org.is_active ? "status-badge green" : "status-badge neutral"}>{org.is_active ? t("portalOps.active") : t("portalOps.inactive")}{org.is_vip ? ` · ${t("portalOps.vip")}` : ""}</span>
           </div>
           {canEdit ? (
             <div className="portal-ops-actions">
@@ -360,12 +390,11 @@ export function CustomerPortalOpsPage() {
         </header>
         {error ? <p role="alert">{error}</p> : null}
         {notice ? <p role="status">{notice}</p> : null}
-        {loading ? <p role="status">{t("portalOps.loading")}</p> : (
-          <>
-            <section className="portal-ops-section">
-            <h2>{t("portalOps.members")}</h2>
+        {loading ? <PageSkeleton variant="detail" label={t("portalOps.loading")} /> : (
+          <div className="portal-org-sections">
+            <section className="panel portal-org-members"><header className="panel-header"><h2>{t("portalOps.members")}</h2>{canEdit ? <Button variant="outline" size="sm" onClick={() => { setAdminEmail(""); setError(""); setAdminPanelOpen(true); }}>{t("portalOps.assignAdmin")}</Button> : null}</header>
             <ListTable
-              className="panel"
+              className="portal-org-table"
               loading={loading}
               loadingLabel={t("portalOps.loading")}
               skeletonColumns={3}
@@ -385,25 +414,10 @@ export function CustomerPortalOpsPage() {
                     </tr>
                   ))}
             </ListTable>
-            {canEdit ? (
-              <form className="portal-ops-inline-form" onSubmit={event => void submitAdmin(event)}>
-                <label>
-                  {t("portalOps.assignAdmin")}
-                  <Input
-                    required
-                    type="email"
-                    value={adminEmail}
-                    onChange={event => setAdminEmail(event.target.value)}
-                    placeholder={t("portalOps.adminEmailPlaceholder")}
-                  />
-                </label>
-                <Button disabled={busy}>{t("portalOps.assignAdmin")}</Button>
-              </form>
-            ) : null}
+
             </section>
 
-            <section className="portal-ops-section">
-            <h2>{t("portalOps.menus")}</h2>
+            <section className="panel portal-org-menus"><header className="panel-header"><h2>{t("portalOps.menus")}</h2></header>
             {org.menus.length === 0 ? (
               <div className="portal-ops-empty">
                 <strong>{t("portalOps.noMenus")}</strong>
@@ -411,7 +425,7 @@ export function CustomerPortalOpsPage() {
               </div>
             ) : (
             <ListTable
-              className="panel"
+              className="portal-org-table"
               loading={loading}
               loadingLabel={t("portalOps.loading")}
               skeletonColumns={7}
@@ -445,10 +459,49 @@ export function CustomerPortalOpsPage() {
             </ListTable>
             )}
             </section>
-          </>
+          </div>
         )}
+        <SidePanel open={adminPanelOpen} onClose={() => { if (!busy) setAdminPanelOpen(false); }} title={t("portalOps.assignAdmin")} closeLabel={t("portalOps.close")} footer={<Button type="submit" form="portal-assign-admin" disabled={busy}>{t("portalOps.assignAdmin")}</Button>}>
+          {error ? <p role="alert">{error}</p> : null}
+                      {canEdit ? (
+              <form id="portal-assign-admin" className="portal-ops-form" onSubmit={event => void submitAdmin(event)}>
+                <label>
+                  {t("portalOps.assignAdmin")}
+                  <Input
+                    required
+                    type="email"
+                    value={adminEmail}
+                    onChange={event => setAdminEmail(event.target.value)}
+                    placeholder={t("portalOps.adminEmailPlaceholder")}
+                  />
+                </label>
+
+              </form>
+            ) : null}
+        </SidePanel>
         {orgPanelOpen ? renderOrgPanel() : null}
         {menuPanelOpen ? renderMenuPanel() : null}
+      </section>
+    );
+  }
+
+  if (orgId) {
+    return (
+      <section className="ingredients-page customer-portal-ops portal-org-detail">
+        <header className="portal-org-toolbar">
+          <div>
+            <p><Link to="/settings/customer-portal">{t("portalOps.backToList")}</Link></p>
+          </div>
+        </header>
+        {error ? (
+          <div className="orders-state orders-state-error" role="alert">
+            <Building2 />
+            <div><strong>{error}</strong></div>
+            <Button variant="outline" onClick={() => void loadOrg(orgId)}><RefreshCw />{t("portal.retry")}</Button>
+          </div>
+        ) : (
+          <PageSkeleton variant="detail" label={t("portalOps.loading")} />
+        )}
       </section>
     );
   }
@@ -563,26 +616,20 @@ export function CustomerPortalOpsPage() {
   function renderOrgPanel() {
     return (
       <SidePanel
+        half
         open={orgPanelOpen}
-        onClose={() => setOrgPanelOpen(false)}
+        onClose={() => { if (!busy) setOrgPanelOpen(false); }}
         title={editingOrgId ? t("portalOps.editOrg") : t("portalOps.createOrg")}
         closeLabel={t("portalOps.close")}
-        footer={<Button type="submit" form="portal-org-form" disabled={busy || !canEdit}>{t("portalOps.save")}</Button>}
+        className="portal-editor-panel" footer={<><Button variant="outline" disabled={busy} onClick={() => setOrgPanelOpen(false)}>{t("portalOps.close")}</Button><Button type="submit" form="portal-org-form" disabled={busy || !canEdit} aria-busy={busy}>{t("portalOps.save")}</Button></>}
       >
-        <form id="portal-org-form" className="portal-ops-form" onSubmit={event => void submitOrg(event)}>
-          <label>
-            {t("portalOps.orgName")}
-            <Input required value={orgName} onChange={event => setOrgName(event.target.value)} />
-          </label>
-          <label className="portal-ops-switch">
-            <span>{t("portalOps.vip")}</span>
-            <Switch checked={orgVip} onCheckedChange={setOrgVip} aria-describedby="portal-org-vip-hint" />
-          </label>
-          <p id="portal-org-vip-hint">{t("portalOps.vipHint")}</p>
-          <label className="portal-ops-switch">
-            <span>{t("portalOps.active")}</span>
-            <Switch checked={orgActive} onCheckedChange={setOrgActive} />
-          </label>
+        {error ? <p className="portal-ops-alert" role="alert">{error}</p> : null}
+        <form id="portal-org-form" className="portal-ops-form portal-editor-form" onSubmit={event => void submitOrg(event)}>
+          <label>{t("portalOps.orgName")}<Input required disabled={busy} value={orgName} onChange={event => setOrgName(event.target.value)} /></label>
+          <fieldset className="portal-editor-section"><legend>{t("portalOps.formSettings")}</legend>
+            <div className="portal-editor-setting"><label className="portal-ops-switch"><span>{t("portalOps.vip")}</span><Switch disabled={busy} checked={orgVip} onCheckedChange={setOrgVip} aria-describedby="portal-org-vip-hint" /></label><p id="portal-org-vip-hint">{t("portalOps.vipHint")}</p></div>
+            <div className="portal-editor-setting"><label className="portal-ops-switch"><span>{t("portalOps.active")}</span><Switch disabled={busy} checked={orgActive} onCheckedChange={setOrgActive} /></label></div>
+          </fieldset>
         </form>
       </SidePanel>
     );
@@ -592,71 +639,32 @@ export function CustomerPortalOpsPage() {
     return (
       <SidePanel
         open={menuPanelOpen}
-        onClose={() => setMenuPanelOpen(false)}
+        onClose={() => { if (!busy) setMenuPanelOpen(false); }}
         title={menu ? t("portalOps.editMenu") : t("portalOps.createMenu")}
         closeLabel={t("portalOps.close")}
-        extraWide
-        footer={<Button type="submit" form="portal-menu-form" disabled={busy || !canEdit || !menuForm.channelId}>{t("portalOps.save")}</Button>}
+        half
+        className="portal-editor-panel"
+        footer={<><Button variant="outline" disabled={busy} onClick={() => setMenuPanelOpen(false)}>{t("portalOps.close")}</Button><Button type="submit" form="portal-menu-form" disabled={busy || !canEdit || !menuForm.channelId} aria-busy={busy}>{t("portalOps.save")}</Button></>}
       >
-        <form id="portal-menu-form" className="portal-ops-form" onSubmit={event => void submitMenu(event)}>
-          <div className="portal-ops-fields">
-          <label>
-            {t("portalOps.menuName")}
-            <Input required value={menuForm.name} onChange={event => setMenuForm({ ...menuForm, name: event.target.value })} />
-          </label>
-          <label>
-            {t("portalOps.brand")}
-            <select
-              required
-              value={menuForm.channelId}
-              disabled={Boolean(menu)}
-              onChange={event => void onChannelChange(event.target.value)}
-            >
-              <option value="">{t("portalOps.chooseBrand")}</option>
-              {channels.map(channel => (
-                <option key={channel.id} value={channel.id}>{channel.name}</option>
-              ))}
-            </select>
-          </label>
-          <div className="portal-ops-period">
-            <label>
-              {t("portalOps.periodStart")}
-              <Input required type="date" value={menuForm.deliveryDate} onChange={event => setMenuForm({ ...menuForm, deliveryDate: event.target.value })} />
-            </label>
-            <label>
-              {t("portalOps.periodEnd")}
-              <Input required type="date" min={menuForm.deliveryDate || undefined} value={menuForm.validUntil} onChange={event => setMenuForm({ ...menuForm, validUntil: event.target.value })} />
-            </label>
-          </div>
-          <small className="portal-ops-span">{t("portalOps.periodHint")}</small>
-          <label>
-            {t("portalOps.deliveryTime")}
-            <Input required value={menuForm.deliveryTime} onChange={event => setMenuForm({ ...menuForm, deliveryTime: event.target.value })} />
-          </label>
-          <label>
-            {t("portalOps.cutoff")}
-            <Input required type="datetime-local" value={menuForm.cutoffAt} onChange={event => setMenuForm({ ...menuForm, cutoffAt: event.target.value })} />
-          </label>
-          <label>
-            {t("portalOps.fee")}
-            <Input required type="number" min={0} step="0.01" value={menuForm.shippingFee} onChange={event => setMenuForm({ ...menuForm, shippingFee: event.target.value })} />
-          </label>
-          <label className="portal-ops-switch">
-            <span>{t("portalOps.active")}</span>
-            <Switch checked={menuForm.isActive} onCheckedChange={value => setMenuForm({ ...menuForm, isActive: value })} />
-          </label>
-          </div>
-
-          <h3>{t("portalOps.items")}</h3>
-          <div className="portal-ops-item-add">
-            <select value={productId} onChange={event => setProductId(event.target.value)}>
-              <option value="">{t("portalOps.chooseProduct")}</option>
-              {products.map(product => (
-                <option key={product.id} value={product.id}>{product.name}</option>
-              ))}
-            </select>
-            <Button type="button" variant="outline" onClick={addMenuItem}>{t("portalOps.addItem")}</Button>
-          </div>
+        {error ? <p className="portal-ops-alert" role="alert">{error}</p> : null}
+        <form id="portal-menu-form" className="portal-ops-form portal-editor-form" onSubmit={event => void submitMenu(event)}>
+          <fieldset className="portal-editor-section"><legend>{t("portalOps.formBasics")}</legend>
+            <div className="portal-editor-grid">
+              <label>{t("portalOps.menuName")}<Input required disabled={busy} value={menuForm.name} onChange={event => setMenuForm({ ...menuForm, name: event.target.value })} /></label>
+              <label>{t("portalOps.brand")}<FilterableSelect searchable aria-label={t("portalOps.brand")} required disabled={busy || Boolean(menu)} value={menuForm.channelId} onChange={event => void onChannelChange(event.target.value)}><option value="">{t("portalOps.chooseBrand")}</option>{channels.map(channel => <option key={channel.id} value={channel.id}>{channel.name}</option>)}</FilterableSelect></label>
+            </div>
+          </fieldset>
+          <fieldset className="portal-editor-section"><legend>{t("portalOps.formDelivery")}</legend>
+            <DateRangePicker startId="portal-menu-start" endId="portal-menu-end" startValue={menuForm.deliveryDate} endValue={menuForm.validUntil} startLabel={t("portalOps.periodStart")} endLabel={t("portalOps.periodEnd")} disabled={busy} onStartChange={value => setMenuForm(current => ({ ...current, deliveryDate: value }))} onEndChange={value => setMenuForm(current => ({ ...current, validUntil: value }))} />
+            <p className="portal-editor-hint">{t("portalOps.periodHint")}</p>
+            <div className="portal-editor-grid"><TimePicker id="portal-menu-time" label={t("portalOps.deliveryTime")} value={menuForm.deliveryTime} disabled={busy} onChange={value => setMenuForm(current => ({ ...current, deliveryTime: value }))} /><DateTimePicker id="portal-menu-cutoff" label={t("portalOps.cutoff")} required disabled={busy} value={menuForm.cutoffAt} onChange={value => setMenuForm(current => ({ ...current, cutoffAt: value }))} /></div>
+          </fieldset>
+          <fieldset className="portal-editor-section"><legend>{t("portalOps.formSettings")}</legend><div className="portal-editor-grid">
+            <label>{t("portalOps.fee")}<Input required disabled={busy} type="number" min={0} step="0.01" value={menuForm.shippingFee} onChange={event => setMenuForm({ ...menuForm, shippingFee: event.target.value })} /></label>
+            <label className="portal-ops-switch portal-editor-setting"><span>{t("portalOps.active")}</span><Switch disabled={busy} checked={menuForm.isActive} onCheckedChange={value => setMenuForm({ ...menuForm, isActive: value })} /></label>
+          </div></fieldset>
+          <fieldset className="portal-editor-section"><legend>{t("portalOps.items")}</legend>
+          <div className="portal-ops-item-add"><FilterableSelect searchable aria-label={t("portalOps.chooseProduct")} disabled={busy} value={productId} onChange={event => setProductId(event.target.value)}><option value="">{t("portalOps.chooseProduct")}</option>{products.map(product => <option key={product.id} value={product.id}>{product.name}</option>)}</FilterableSelect><Button type="button" variant="outline" disabled={busy || !productId} onClick={addMenuItem}>{t("portalOps.addItem")}</Button></div>
           {menuItems.map(item => (
             <div className="portal-ops-item-row" key={item.product_id}>
               <strong className="portal-ops-item-name">{item.name}</strong>
@@ -693,6 +701,7 @@ export function CustomerPortalOpsPage() {
               </Button>
             </div>
           ))}
+          </fieldset>
         </form>
       </SidePanel>
     );

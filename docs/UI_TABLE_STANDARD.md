@@ -131,3 +131,12 @@ lists.
   table.
 - Reports, dashboard jobs, role permissions, and detail inline tables wrap
   `PullToRefresh` around the same table scroller.
+
+### Company BR application context
+
+Keep the BR expiry policy above the application list as a compact, labelled
+section with separate policy and email-delivery explanation lines. Its edit
+action opens the existing side panel. The empty application state uses a
+vertical icon, message and outline add-company action; hide that action for
+read-only users and filtered results. Preserve the toolbar primary action,
+fixed pagination, loading skeleton and error recovery.

@@ -30,8 +30,12 @@ this file in the same change set.
 
 ## 1. Page layout (all authenticated pages)
 
-客戶積分規則頁保留全寬 shell；內容採主欄規則橫額與版本紀錄、輔欄退款入口。此頁不放假期或營業日設定。
-所有編輯操作使用共享 SidePanel，退款面板加寬並以搜索選擇訂單。手機改單欄。時間明示 Asia/Hong_Kong，零門檻顯示暫停賺分；
+客戶訂購營運、公司 BR 申請、訂餐日曆、互動飯盒與積分兌換採列表與操作優先：頁名與說明由導航提供，頁面不另設標題區，搜尋、篩選及主要操作緊接列表。訂餐日曆的團體客戶選擇與月份導覽放在同一工具列，窄螢幕篩選獨佔一行。互動飯盒 VIP 週期設定透過既有 SidePanel 開啟；客戶積分規則的佈局保持原有安排。這些頁面使用既有 Input、Button、ListTable、TablePagination 及 SidePanel，不新增替代控制組件。
+
+客戶積分規則頁保留全寬 shell；內容採規則橫額與版本紀錄。此頁不放假期或營業日設定。
+積分規則資料載入期間，使用對應規則橫額、三項說明、版本表格的整頁骨架屏；沿用共享骨架樣式及減少動態偏好，以 `aria-busy` 和本地化狀態文字標示載入，資料就緒後才顯示版本數及操作。
+綠色橫額內的骨架使用主色混合 18% 卡片色，保持柔和綠色；其他區域沿用共享骨架顏色。
+所有規則編輯操作使用共享 SidePanel；退款統一於訂單功能處理，此頁不提供記錄退款入口。手機改單欄。時間明示 Asia/Hong_Kong，零門檻顯示暫停賺分；
 缺少門檻或未開通的 API 顯示可恢復的狀態，不得呈現 NaN 或猜測賺分門檻。
 
 Main content must use the full available width inside the shell. Do **not**
@@ -230,3 +234,17 @@ Automated coverage: `test/i18n-placeholders.test.ts` rejects English-prose
 - [`../README.md`](../README.md) — local setup and preview env vars
 
 積分兌換管理頁使用有標籤的雙欄表單及獨立目錄，窄螢幕改為單欄；Shopify 客戶對應以可展開區域呈現。載入失敗保留重試，不能顯示成空目錄；提交及處理兌換期間鎖定相應操作，編輯可以取消。
+
+
+機構詳情頁以機構識別與操作工具列開頭，餐單為主欄、成員為輔欄；1440px 以下改單欄。列表採既有 ListTable 並與 panel header 共用單一外框，不嵌套卡片。指定管理員透過共享 SidePanel 編輯，成功後關閉，失敗保留輸入。此頁不新增泛用頁面標題或說明。
+
+
+機構與餐單編輯沿用 SidePanel；表單以 fieldset/legend 分組，基本資料、供餐安排、設定與餐點分區，手機單欄。供餐範圍使用 DateRangePicker，時間使用 TimePicker/DateTimePicker，品牌與產品使用 FilterableSelect。底部提供關閉及儲存；儲存時禁止關閉，失敗在面板內顯示錯誤。
+
+
+機構與餐單編輯面板使用共享 SidePanel 的 half variant：桌面 50vw，手機全寬。表單雙欄對齊並統一控制高度為 40px；截單日期與時間可收縮，餐點列保留名稱、單價、數量與刪除操作，手機將名稱獨佔一行。
+
+
+客戶介紹內容使用共享 RichTextEditor（粗體、斜體、底線、項目與編號清單），編輯面板桌面半寬、手機全寬。內容儲存為清理過的 HTML，客戶端使用相同 allowlist 顯示；舊純文字仍保留換行。
+
+飯盒餐單頁（`CustomerPortalLunchboxPage`）建立／編輯須使用 `SidePanel half`，桌面 50vw、`max-width: 767px` 時 100vw。餐單資料、配送設定及餐點以 `fieldset`／`legend` 分組；產品、單價、數量須有可見標籤，手機單欄。空列表為具編輯權限者提供建立餐單 CTA；VIP 週期與餐單勾選器使用獨立 SidePanel。頁面特例樣式放在 `src/components/settings/customer-lunchbox.css`，沿用既有 tokens、Button、Input 與 ListTable。

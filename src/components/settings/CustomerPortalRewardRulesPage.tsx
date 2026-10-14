@@ -1,17 +1,18 @@
 import { type FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ArrowRight, Plus, RotateCcw } from "lucide-react";
+import { Plus } from "lucide-react";
 import { useCurrentPageAccess } from "@/auth/use-page-access";
 import { Button } from "@/components/ui/button";
 import { ListTable } from "@/components/ui/list-table";
 import { SearchField } from "@/components/ui/search-field";
 import { SidePanel } from "@/components/ui/side-panel";
-import { createRewardRule, listRewardRules, recordFoodRefund, rewardRuleThreshold, searchRefundOrders,
-  type RefundOrderMatch, type RewardRuleVersion } from "@/lib/customer-portal-reward-rules-ops";
+import { createRewardRule, listRewardRules, rewardRuleThreshold,
+  type RewardRuleVersion } from "@/lib/customer-portal-reward-rules-ops";
 import "@/components/customer-portal.css";
 import "./customer-reward-rules.css";
+import { CustomerRewardRulesSkeleton } from "./CustomerRewardRulesSkeleton";
 
-type Panel = "version" | "refund" | "view" | null;
+type Panel = "version" | "view" | null;
 const EXAMPLE_SPEND = 2500;
 
 function errorKey(error: unknown) {
@@ -19,7 +20,6 @@ function errorKey(error: unknown) {
   if (message.includes("page_access_required")) return "accessDenied";
   if (message.includes("duplicate_effective_at")) return "duplicateEffectiveAt";
   if (message.includes("invalid_reward_rule")) return "invalidRewardRule";
-  if (message.includes("invalid_food_refund")) return "invalidRefund";
   if (message.includes("Could not find the function") || message.includes("schema cache")) return "serviceUnavailable";
   return "operationFailed";
 }
@@ -58,12 +58,6 @@ export function CustomerPortalRewardRulesPage() {
   const [effectiveAt, setEffectiveAt] = useState(() => hongKongInput(new Date()));
   const [versionQuery, setVersionQuery] = useState("");
   const [viewing, setViewing] = useState<RewardRuleVersion | null>(null);
-  const [orderQuery, setOrderQuery] = useState("");
-  const [orderMenuOpen, setOrderMenuOpen] = useState(false);
-  const [orderMatches, setOrderMatches] = useState<RefundOrderMatch[]>([]);
-  const [orderSearchState, setOrderSearchState] = useState<"idle" | "loading" | "error">("idle");
-  const [selectedOrder, setSelectedOrder] = useState<RefundOrderMatch | null>(null);
-  const [refundFood, setRefundFood] = useState("");
   const [formError, setFormError] = useState("");
   const text = (key: string) => t(`portalRewardRules.${key}`);
   const when = (value: string) => {
@@ -71,7 +65,6 @@ export function CustomerPortalRewardRulesPage() {
     return Number.isNaN(date.getTime()) ? "—" : new Intl.DateTimeFormat(i18n.language, { timeZone: "Asia/Hong_Kong", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(date);
   };
   const amount = (value: number) => new Intl.NumberFormat(i18n.language, { maximumFractionDigits: 4 }).format(value);
-  const money = (value: number | null) => value === null || Number.isNaN(Number(value)) ? "—" : new Intl.NumberFormat(i18n.language, { style: "currency", currency: "HKD", currencyDisplay: "narrowSymbol" }).format(Number(value));
   const load = useCallback(async () => {
     setLoading(true);
     setError("");
@@ -86,17 +79,6 @@ export function CustomerPortalRewardRulesPage() {
     }
   }, [t]);
   useEffect(() => { void load(); }, [load]);
-  useEffect(() => {
-    if (panel !== "refund") return;
-    const term = orderQuery.trim();
-    if (term.length < 2) { setOrderMatches([]); setOrderSearchState("idle"); return; }
-    let cancelled = false;
-    const timer = window.setTimeout(() => {
-      setOrderSearchState("loading");
-      searchRefundOrders(term).then(rows => { if (!cancelled) { setOrderMatches(rows); setOrderSearchState("idle"); } }).catch(() => { if (!cancelled) { setOrderMatches([]); setOrderSearchState("error"); } });
-    }, 250);
-    return () => { cancelled = true; window.clearTimeout(timer); };
-  }, [orderQuery, panel]);
   const active = rules.find(rule => rule.is_active);
   const invalid = rules.some(rule => rule.hkd_per_point === null);
   const activeRate = active?.hkd_per_point ?? null;
@@ -111,7 +93,6 @@ export function CustomerPortalRewardRulesPage() {
   function open(next: Panel) {
     setFormError("");
     if (next === "version") { setRate(String(activeRate ?? 25)); setEffectiveAt(hongKongInput(new Date())); }
-    if (next === "refund") { setOrderQuery(""); setOrderMatches([]); setOrderSearchState("idle"); setOrderMenuOpen(false); setSelectedOrder(null); setRefundFood(""); }
     setPanel(next);
   }
   function openVersion(rule: RewardRuleVersion) {
@@ -132,19 +113,11 @@ export function CustomerPortalRewardRulesPage() {
       if (threshold === null || !effectiveAt || Number.isNaN(date.getTime())) { setFormError(text("invalidRewardRule")); return; }
       action = () => createRewardRule(threshold, date.toISOString());
       success = "saved";
-    } else if (panel === "refund") {
-      const food = Number(refundFood);
-      if (!selectedOrder || !Number.isFinite(food) || food <= 0 || Math.abs(food * 100 - Math.round(food * 100)) > 0.000001) { setFormError(text("invalidRefund")); return; }
-      action = () => recordFoodRefund(selectedOrder.id, food);
-      success = "refundSaved";
     } else return;
     setBusy(true);
     try {
       await action();
       setPanel(null);
-      setRefundFood("");
-      setOrderQuery("");
-      setSelectedOrder(null);
       setNotice(text(success));
       await load();
     } catch (reason) {
@@ -153,7 +126,8 @@ export function CustomerPortalRewardRulesPage() {
       setBusy(false);
     }
   }
-  const title = panel === "version" ? "createVersion" : panel === "view" ? "versionDetail" : "refundTitle";
+  const title = panel === "version" ? "createVersion" : "versionDetail";
+  if (loading) return <CustomerRewardRulesSkeleton label={text("loading")} canEdit={canEdit} />;
   return <section className="reward-rules-page">
     {error ? <div className="reward-rules-message" role="alert"><span>{error}</span><Button variant="outline" onClick={() => void load()}>{t("portal.retry")}</Button></div> : null}
     {invalid ? <div className="reward-rules-message" role="alert"><span>{text("dataUpdateRequired")}</span><Button variant="outline" onClick={() => void load()}>{t("portal.retry")}</Button></div> : null}
@@ -190,13 +164,6 @@ export function CustomerPortalRewardRulesPage() {
             <article><h3>{text("limitTitle")}</h3><p>{text("limitBody")}</p></article>
           </div>
         </section>
-        <section className="reward-rule-refund">
-          <div>
-            <h2><RotateCcw size={18} />{text("refundTitle")}</h2>
-            <p>{text("refundSummary")}</p>
-          </div>
-          {canEdit ? <Button variant="outline" onClick={() => open("refund")}>{text("recordRefund")}<ArrowRight size={16} /></Button> : null}
-        </section>
         <section className="reward-rule-history" aria-label={text("history")}>
           <div className="reward-rule-section-heading"><h2>{text("history")}</h2><span>{t("portalRewardRules.versionCount", { count: rules.length })}</span></div>
           <div className="reward-rule-history-tools">
@@ -220,41 +187,19 @@ export function CustomerPortalRewardRulesPage() {
         </section>
       </div>
     </div>
-    <SidePanel open={panel !== null} className={panel === "refund" ? "reward-refund-panel" : undefined} title={text(title)} description={panel === "version" ? text("effectiveAtHint") : panel === "refund" ? text("refundSummary") : undefined} onClose={() => { if (!busy) setPanel(null); }} closeLabel={text("close")}>
+    <SidePanel open={panel !== null} title={text(title)} description={panel === "version" ? text("effectiveAtHint") : undefined} onClose={() => { if (!busy) setPanel(null); }} closeLabel={text("close")} footer={panel === "version" ? <><Button variant="outline" type="button" disabled={busy} onClick={() => setPanel(null)}>{text("close")}</Button><Button type="submit" form="reward-rule-form" disabled={busy}>{busy ? text("saving") : text("save")}</Button></> : undefined}>
       {panel === "view" && viewing ? <dl className="reward-version-detail">
         <div><dt>{text("versionLabel")}</dt><dd>{versionLabel(viewing.effective_at)}</dd></div>
         <div><dt>{text("hkdPerPoint")}</dt><dd>{viewing.hkd_per_point === null ? "—" : viewing.hkd_per_point === 0 ? text("earningPaused") : amount(viewing.hkd_per_point)}</dd></div>
         <div><dt>{text("effectiveAt")}</dt><dd>{when(viewing.effective_at)} · {text("hkTime")}</dd></div>
         <div><dt>{text("createdAt")}</dt><dd>{when(viewing.created_at)}</dd></div>
         <div><dt>{text("status")}</dt><dd>{text(ruleStatus(viewing))}</dd></div>
-      </dl> : <form className="portal-ops-form reward-rule-form" onSubmit={submit}>
+      </dl> : <form id="reward-rule-form" className="portal-ops-form reward-rule-form" onSubmit={submit}>
         {formError ? <p role="alert" className="reward-rule-form-error">{formError}</p> : null}
         {panel === "version" ? <>
           <label>{text("hkdPerPoint")}<input aria-label={text("hkdPerPoint")} type="number" min={0} max={100000} step="0.0001" value={rate} onChange={event => setRate(event.target.value)} required /><small>{text("hkdPerPointHint")}</small></label>
           <label>{text("effectiveAt")}<input aria-label={text("effectiveAt")} type="datetime-local" value={effectiveAt} onChange={event => setEffectiveAt(event.target.value)} required /><small>{text("hkTime")}</small></label>
-        </> : panel === "refund" ? <>
-          <div className="reward-order-field">
-            <label>{text("refundOrder")}<span className="reward-order-combo"><input aria-label={text("refundOrder")} role="combobox" aria-expanded={orderMenuOpen && orderQuery.trim().length >= 2} aria-controls="reward-order-menu" aria-autocomplete="list" value={orderQuery} onFocus={() => setOrderMenuOpen(true)} onChange={event => { setOrderQuery(event.target.value); setOrderMenuOpen(true); setSelectedOrder(null); }} onKeyDown={event => { if (event.key === "Escape") setOrderMenuOpen(false); }} placeholder={text("refundOrderPlaceholder")} autoComplete="off" />
-            {orderMenuOpen && orderQuery.trim().length >= 2 ? <div id="reward-order-menu" className="reward-order-menu">
-              {orderSearchState === "loading" ? <p role="status">{text("searchingOrders")}</p> : null}
-              {orderSearchState === "error" ? <p role="alert">{text("orderSearchFailed")}</p> : null}
-              {orderMatches.length ? <ul role="listbox" aria-label={text("refundOrder")}>{orderMatches.map(order => <li key={order.id}><button type="button" role="option" aria-selected={selectedOrder?.id === order.id} onClick={() => { setSelectedOrder(order); setOrderQuery(order.order_number || ""); setOrderMenuOpen(false); }}><strong>{order.order_number || "—"}</strong><span>{[order.customer_name, order.company_name].filter(Boolean).join(" · ") || "—"}</span></button></li>)}</ul> : orderSearchState === "idle" ? <p className="reward-order-empty">{text("noOrderMatches")}</p> : null}
-            </div> : null}</span></label>
-            <small>{text("selectOrderHint")}</small>
-          </div>
-          {selectedOrder ? <section className="reward-order-detail" aria-live="polite"><h3>{selectedOrder.order_number || "—"}</h3><dl>
-            <div><dt>{text("orderCustomer")}</dt><dd>{selectedOrder.customer_name || "—"}</dd></div>
-            {selectedOrder.company_name ? <div><dt>{text("orderCompany")}</dt><dd>{selectedOrder.company_name}</dd></div> : null}
-            <div><dt>{text("orderPhone")}</dt><dd>{selectedOrder.phone || "—"}</dd></div>
-            <div><dt>{text("orderDelivery")}</dt><dd>{selectedOrder.delivery_at ? when(selectedOrder.delivery_at) : "—"}</dd></div>
-            <div><dt>{text("orderStatus")}</dt><dd>{selectedOrder.delivery_status || "—"}</dd></div>
-            <div><dt>{text("orderFood")}</dt><dd>{money(selectedOrder.food_amount)}</dd></div>
-            <div><dt>{text("orderTotal")}</dt><dd>{money(selectedOrder.grand_total)}</dd></div>
-            <div><dt>{text("orderOutstanding")}</dt><dd>{money(selectedOrder.outstanding)}</dd></div>
-          </dl></section> : null}
-          <label>{text("refundFood")}<input type="number" min="0.01" step="0.01" value={refundFood} onChange={event => setRefundFood(event.target.value)} placeholder={text("refundFoodPlaceholder")} required /></label>
         </> : null}
-        {panel === "version" || panel === "refund" ? <div className="reward-rule-form-actions"><Button type="submit" disabled={busy}>{busy ? text("saving") : text(panel === "version" ? "save" : "recordRefund")}</Button><Button variant="outline" type="button" disabled={busy} onClick={() => setPanel(null)}>{text("close")}</Button></div> : null}
       </form>}
     </SidePanel>
   </section>;

@@ -1,0 +1,29 @@
+/* BR review surface: compact policy context, task controls and a guided empty state. */
+.customer-br-applications .portal-ops-list-intro { gap: 12px; }
+.customer-br-applications .portal-br-policy {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 16px;
+  padding: 20px 24px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+.customer-br-applications .br-policy-icon { color: var(--primary); align-self: start; margin-top: 2px; }
+.customer-br-applications .portal-br-policy h2 { margin: 0 0 6px; font-size: 15px; font-weight: 650; line-height: 1.5; }
+.customer-br-applications .portal-br-policy p { color: var(--foreground); font-size: 14px; }
+.customer-br-applications .portal-br-policy .br-policy-hint { margin-top: 6px; color: var(--muted-foreground); font-size: 13px; }
+.customer-br-applications .portal-br-policy > button { background: var(--card); }
+.customer-br-applications .br-success-notice { color: var(--primary); font-size: 14px; }
+.customer-br-applications .br-applications-empty { flex-direction: column; gap: 20px; text-align: center; padding: 48px 24px; }
+.customer-br-applications .br-applications-empty > svg { width: 40px; height: 40px; color: var(--primary); stroke-width: 1.5; }
+.customer-br-applications .br-applications-empty > div { display: grid; gap: 8px; max-width: 44ch; }
+.customer-br-applications .br-applications-empty strong { font-size: 18px; font-weight: 650; line-height: 1.5; }
+.customer-br-applications .br-applications-empty span { line-height: 1.6; color: var(--muted-foreground); }
+@media (max-width: 720px) {
+  .customer-br-applications .portal-br-policy { grid-template-columns: 20px minmax(0, 1fr); gap: 12px; padding: 16px; }
+  .customer-br-applications .br-policy-icon { width: 20px; height: 20px; }
+  .customer-br-applications .portal-br-policy > button { grid-column: 2; justify-self: start; }
+  .customer-br-applications .br-applications-empty { padding: 32px 16px; }
+}

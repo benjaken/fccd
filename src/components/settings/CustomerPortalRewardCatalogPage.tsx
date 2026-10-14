@@ -1,6 +1,7 @@
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useCurrentPageAccess } from "@/auth/use-page-access";
+import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
 import { ListTable } from "@/components/ui/list-table";
@@ -104,47 +105,43 @@ export function CustomerPortalRewardCatalogPage() {
   }
 
   return <section className="reward-admin">
-    <div className="reward-admin-actions">
+    <header className="page-heading"><div className="reward-admin-actions">
       {canEdit ? <Button type="button" onClick={openCreate}>{t("portalRewardCatalog.create")}</Button> : null}
       <Button type="button" variant="outline" onClick={() => setPanel("catalog")}>{t("portalRewardCatalog.items")}</Button>
       {canEdit ? <Button type="button" variant="outline" onClick={() => { setActionError(""); setPanel("link"); }}>{t("portalVoucher.linkTitle")}</Button> : null}
-    </div>
+    </div></header>
     {error ? <div className="reward-admin-error" role="alert">{error} <Button variant="outline" disabled={loading} onClick={() => void load().catch(reason => setError(t(failure(reason))))}>{t("portal.retry")}</Button></div> : null}
     {actionError && panel !== "editor" && panel !== "link" ? <p className="reward-admin-error" role="alert">{actionError}</p> : null}
     {notice ? <p className="reward-admin-notice" role="status">{notice}</p> : null}
-    {canEdit ? <SidePanel wide open={panel === "editor"} title={editing ? t("portalRewardCatalog.edit") : t("portalRewardCatalog.create")} onClose={() => { if (!saving) { resetEditor(); setPanel(null); } }} closeLabel={t("portalOps.close")}>
-      <form className="reward-admin-form reward-admin-panel-form" onSubmit={event => void save(event)}>
+    {canEdit ? <SidePanel wide open={panel === "editor"} title={editing ? t("portalRewardCatalog.edit") : t("portalRewardCatalog.create")} onClose={() => { if (!saving) { resetEditor(); setPanel(null); } }} closeLabel={t("portalOps.close")} footer={<>{editing ? <Button type="button" variant="outline" disabled={saving} onClick={() => { resetEditor(); setPanel(null); }}>{t("portalRewardAdmin.cancelEdit")}</Button> : null}<Button type="submit" form="catalog-editor-form" disabled={saving} aria-busy={saving}>{editing ? t("portalRewardCatalog.save") : t("portalRewardCatalog.create")}</Button></>}>
+      <form id="catalog-editor-form" className="reward-admin-form reward-admin-panel-form" onSubmit={event => void save(event)}>
       {actionError ? <p className="reward-admin-error" role="alert">{actionError}</p> : null}
-      <div className="reward-admin-field"><label htmlFor="catalog-name">{t("portalRewardCatalog.name")}</label><input id="catalog-name" value={name} onChange={event => setName(event.target.value)} required /></div>
+      <div className="reward-admin-field"><label htmlFor="catalog-name">{t("portalRewardCatalog.name")}</label><Input id="catalog-name" value={name} onChange={event => setName(event.target.value)} required /></div>
       <div className="reward-admin-field"><label htmlFor="catalog-kind">{t("portalRewardCatalog.kind")}</label><select id="catalog-kind" value={kind} onChange={event => setKind(event.target.value === "voucher" ? "voucher" : "gift")}>
         <option value="gift">{t("portalRewardCatalog.gift")}</option>
         <option value="voucher">{t("portalRewardCatalog.voucher")}</option>
       </select></div>
-      <div className="reward-admin-field"><label htmlFor="catalog-points">{t("portalRewardCatalog.points")}</label><input id="catalog-points" type="number" min="1" step="1" inputMode="numeric" value={points} onChange={event => setPoints(event.target.value)} required /></div>
-      <div className="reward-admin-field"><label htmlFor="catalog-stock">{t("portalRewardCatalog.stock")}</label><input id="catalog-stock" type="number" min="0" step="1" inputMode="numeric" value={stock} onChange={event => setStock(event.target.value)} required /></div>
+      <div className="reward-admin-field"><label htmlFor="catalog-points">{t("portalRewardCatalog.points")}</label><Input id="catalog-points" type="number" min="1" step="1" inputMode="numeric" value={points} onChange={event => setPoints(event.target.value)} required /></div>
+      <div className="reward-admin-field"><label htmlFor="catalog-stock">{t("portalRewardCatalog.stock")}</label><Input id="catalog-stock" type="number" min="0" step="1" inputMode="numeric" value={stock} onChange={event => setStock(event.target.value)} required /></div>
       {kind === "voucher" ? <>
         {storeError ? <p role="alert">{t("portalRewardAdmin.storeFailed")} <Button type="button" variant="outline" onClick={loadStores}>{t("portal.retry")}</Button></p> : null}
-        <div className="reward-admin-field"><label htmlFor="catalog-amount">{t("portalVoucher.amount")}</label><input id="catalog-amount" required type="number" min="0.01" step="0.01" inputMode="decimal" value={amount} onChange={event => setAmount(event.target.value)} /></div>
+        <div className="reward-admin-field"><label htmlFor="catalog-amount">{t("portalVoucher.amount")}</label><Input id="catalog-amount" required type="number" min="0.01" step="0.01" inputMode="decimal" value={amount} onChange={event => setAmount(event.target.value)} /></div>
         <div className="reward-admin-field"><label htmlFor="catalog-store">{t("portalVoucher.store")}</label><select id="catalog-store" value={storeId} onChange={event => setStoreId(event.target.value)}>
           <option value="">{t("portalVoucher.noStore")}</option>
           {stores.map(store => <option key={store.id} value={store.id}>{store.shop_domain}</option>)}
         </select></div>
-        <div className="reward-admin-field"><label htmlFor="catalog-days">{t("portalVoucher.validDays")}</label><input id="catalog-days" required type="number" min="1" step="1" inputMode="numeric" value={validDays} onChange={event => setValidDays(event.target.value)} /></div>
+        <div className="reward-admin-field"><label htmlFor="catalog-days">{t("portalVoucher.validDays")}</label><Input id="catalog-days" required type="number" min="1" step="1" inputMode="numeric" value={validDays} onChange={event => setValidDays(event.target.value)} /></div>
       </> : null}
       <div className="reward-admin-field"><label htmlFor="catalog-description">{t("portalRewardCatalog.description")}</label><textarea id="catalog-description" value={description} onChange={event => setDescription(event.target.value)} /></div>
       <label className="reward-admin-checkbox"><input type="checkbox" checked={active} onChange={event => setActive(event.target.checked)} /> {t("portalRewardCatalog.active")}</label>
-      <div className="reward-admin-form-actions">
-        <Button type="submit" disabled={saving} aria-busy={saving}>{editing ? t("portalRewardCatalog.save") : t("portalRewardCatalog.create")}</Button>
-        {editing ? <Button type="button" variant="outline" disabled={saving} onClick={() => { resetEditor(); setPanel(null); }}>{t("portalRewardAdmin.cancelEdit")}</Button> : null}
-      </div>
     </form></SidePanel> : null}
     <SidePanel wide open={panel === "catalog"} title={t("portalRewardCatalog.items")} onClose={() => setPanel(null)} closeLabel={t("portalOps.close")}>
     <section className="reward-admin-catalog">
     {loading ? <PageSkeleton label={t("portalCatalog.loading")} variant="profile" compact /> : error ? <p>{t("portalRewardCatalog.failed")}</p> : items.length ? items.map(item => <article className="reward-admin-item" key={item.id}><div><h3>{item.name}</h3><p>{t(item.kind === "gift" ? "portalRewardCatalog.gift" : "portalRewardCatalog.voucher")} · {item.points_cost} · {t("portalRewardCatalog.stock")} {item.stock} · {t(item.is_active ? "portalRewardCatalog.active" : "portalRewardCatalog.inactive")}</p><p>{item.description}</p>{item.voucher_amount_hkd ? <p>HK$ {Number(item.voucher_amount_hkd).toFixed(2)}</p> : null}</div>{canEdit ? <Button variant="outline" disabled={saving} onClick={() => openEdit(item)}>{t("portalRewardCatalog.edit")}</Button> : null}</article>) : <div className="reward-admin-empty">{t("portalRewardCatalog.empty")}</div>}
     </section>
     </SidePanel>
-    {canEdit ? <SidePanel wide open={panel === "link"} title={t("portalVoucher.linkTitle")} description={t("portalVoucher.linkIntro")} onClose={() => { if (!linking) setPanel(null); }} closeLabel={t("portalOps.close")}>
-      <form className="reward-admin-form reward-admin-panel-form" onSubmit={event => {
+    {canEdit ? <SidePanel wide open={panel === "link"} title={t("portalVoucher.linkTitle")} description={t("portalVoucher.linkIntro")} onClose={() => { if (!linking) setPanel(null); }} closeLabel={t("portalOps.close")} footer={<Button type="submit" form="catalog-link-form" disabled={linking || !stores.length || storeError} aria-busy={linking}>{t("portalVoucher.link")}</Button>}>
+      <form id="catalog-link-form" className="reward-admin-form reward-admin-panel-form" onSubmit={event => {
       event.preventDefault();
       setActionError(""); setNotice("");
       if (linking) return;
@@ -160,13 +157,12 @@ export function CustomerPortalRewardCatalogPage() {
         <option value="user">{t("portalVoucher.user")}</option>
         <option value="organization">{t("portalVoucher.organization")}</option>
       </select></div>
-      <div className="reward-admin-field"><label htmlFor="link-owner">{t("portalVoucher.ownerId")}</label><input id="link-owner" value={ownerId} onChange={event => setOwnerId(event.target.value)} required /></div>
+      <div className="reward-admin-field"><label htmlFor="link-owner">{t("portalVoucher.ownerId")}</label><Input id="link-owner" value={ownerId} onChange={event => setOwnerId(event.target.value)} required /></div>
       <div className="reward-admin-field"><label htmlFor="link-store">{t("portalVoucher.store")}</label><select id="link-store" value={linkStoreId} onChange={event => setLinkStoreId(event.target.value)} required>
         <option value="">{t("portalRewardAdmin.storePlaceholder")}</option>
         {stores.map(store => <option key={store.id} value={store.id}>{store.shop_domain}</option>)}
       </select></div>
-      <div className="reward-admin-field"><label htmlFor="link-customer">{t("portalVoucher.customerId")}</label><input id="link-customer" value={customerId} onChange={event => setCustomerId(event.target.value)} required /></div>
-      <div className="reward-admin-form-actions"><Button type="submit" disabled={linking || !stores.length || storeError} aria-busy={linking}>{t("portalVoucher.link")}</Button></div>
+      <div className="reward-admin-field"><label htmlFor="link-customer">{t("portalVoucher.customerId")}</label><Input id="link-customer" value={customerId} onChange={event => setCustomerId(event.target.value)} required /></div>
     </form></SidePanel> : null}
     <section className="panel reward-admin-records">
     <h2>{t("portalRewardCatalog.redemptions")}</h2>

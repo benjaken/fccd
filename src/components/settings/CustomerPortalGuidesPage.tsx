@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { FilePenLine, Pencil, RefreshCw } from "lucide-react";
 import { useCurrentPageAccess } from "@/auth/use-page-access";
 import { Button } from "@/components/ui/button";
+import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { Input } from "@/components/ui/input";
 import { ListTable } from "@/components/ui/list-table";
 import { SidePanel } from "@/components/ui/side-panel";
@@ -52,7 +53,7 @@ export function CustomerPortalGuidesPage() {
 
   async function submit(event: FormEvent) {
     event.preventDefault();
-    if (!editing) return;
+    if (!editing || saving) return;
     const nextTitle = title.trim();
     if (!nextTitle || nextTitle.length > 40 || body.length > 8000) {
       setError(t("portalGuides.invalid"));
@@ -117,21 +118,23 @@ export function CustomerPortalGuidesPage() {
         )}
       </div>
       <SidePanel
+        half
         open={Boolean(editing)}
         onClose={() => { if (!saving) setEditing(null); }}
         title={t("portalGuides.edit")}
         closeLabel={t("portal.closeMenu")}
         footer={<Button type="submit" form="portal-guide-form" disabled={saving}>{t("portal.save")}</Button>}
       >
+        {error ? <p role="alert">{error}</p> : null}
         <form id="portal-guide-form" className="portal-guide-form" onSubmit={event => void submit(event)}>
           <label>
             {t("portalGuides.titleField")}
             <Input value={title} maxLength={40} onChange={event => setTitle(event.target.value)} />
           </label>
-          <label>
-            {t("portalGuides.body")}
-            <textarea value={body} maxLength={8000} rows={14} onChange={event => setBody(event.target.value)} />
-          </label>
+          <div className="portal-guide-content-field">
+            <span>{t("portalGuides.body")}</span>
+            <RichTextEditor value={body} onChange={setBody} label={t("portalGuides.body")} disabled={saving} />
+          </div>
           <label className="portal-guide-publish">
             <Switch checked={published} onCheckedChange={setPublished} />
             {t("portalGuides.published")}

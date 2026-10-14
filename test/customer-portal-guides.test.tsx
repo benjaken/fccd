@@ -25,10 +25,13 @@ describe("customer guide editor", () => {
     expect(screen.getByText("已隱藏")).toBeInTheDocument();
     fireEvent.click(screen.getAllByRole("button", { name: "編輯" })[0]);
     fireEvent.change(screen.getByLabelText("標題"), { target: { value: "關於食品頻道" } });
-    fireEvent.change(screen.getByLabelText("內容"), { target: { value: "新內容" } });
+    const editor = screen.getByRole("textbox", { name: "內容" });
+    expect(screen.getByRole("toolbar", { name: "文字格式" })).toBeInTheDocument();
+    editor.innerHTML = "<p><strong>新內容</strong></p>";
+    fireEvent.input(editor);
     fireEvent.click(screen.getByRole("button", { name: "儲存" }));
     await waitFor(() => expect(supabase.rpc).toHaveBeenCalledWith("customer_portal_ops_save_guide", {
-      p_slug: "about", p_title: "關於食品頻道", p_body: "新內容", p_published: true,
+      p_slug: "about", p_title: "關於食品頻道", p_body: "<p><strong>新內容</strong></p>", p_published: true,
     }));
     expect(await screen.findByRole("status")).toHaveTextContent("已儲存。");
     expect(screen.getByText("關於食品頻道")).toBeInTheDocument();

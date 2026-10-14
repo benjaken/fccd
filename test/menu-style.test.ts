@@ -47,6 +47,7 @@ describe("menu styles", () => {
       "accountingFollowUp",
       "reports",
       "promotion",
+      "customerOperations",
       "settings",
     ]);
     const catering = businessSidebarNav("catering", "orders");
@@ -260,6 +261,28 @@ describe("menu styles", () => {
     ).toBe(true);
   });
 
+  it("keeps customer operations pages in their own top-level section", () => {
+    expect(businessSidebarNav("customerOperations", "").map((item) => item.key)).toEqual([
+      "customerPortalOps",
+      "customerPortalApplications",
+      "customerPortalGuides",
+      "customerPortalRewardRules",
+      "customerPortalMealCalendar",
+      "customerPortalLunchbox",
+      "customerPortalRewardCatalog",
+    ]);
+    expect(businessSidebarNav("customerOperations", "")[0]?.to).toBe(
+      "/settings/customer-portal?nav=customerOperations",
+    );
+    expect(
+      businessSectionFromLocation("/settings/customer-portal/calendar", "?nav=settings"),
+    ).toBe("customerOperations");
+    expect(
+      businessSectionFromLocation("/settings/customer-portal/reward-rules", ""),
+    ).toBe("customerOperations");
+  });
+
+
   it("keeps accounting follow-up as soft links to existing report pages", () => {
     const accounting = businessSidebarNav("accountingFollowUp", "cateringData");
     expect(accounting.map((item) => item.key)).toEqual([
@@ -326,6 +349,7 @@ describe("menu styles", () => {
       "accountingFollowUp",
       "reports",
       "promotion",
+      "customerOperations",
       "settings",
     ]);
 

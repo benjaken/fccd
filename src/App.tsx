@@ -792,7 +792,7 @@ function OperationsShell() {
           sidebarCollapsed && "sidebar-is-collapsed",
         )}
       >
-        <aside className="sidebar">
+        <aside className={cn("sidebar", location.pathname.startsWith("/settings/customer-portal") && "customer-operations-sidebar")}>
           <nav aria-label="Secondary">
             {sideItems.map((item) => (
               <Fragment key={`${item.key}-${item.to}`}>
@@ -2375,6 +2375,7 @@ const BUSINESS_MENU_LABELS: Record<string, [string, string]> = {
   reports: ["報表", "Reports"],
   settings: ["系統設定", "System Settings"],
   promotion: ["推廣設定", "Promotion Settings"],
+  customerOperations: ["客戶營運", "Customer Operations"],
   orders: ["訂單", "Orders"],
   allQuotes: ["報價單", "Quotes"],
   cateringQuotes: ["所有報價", "All Quotes"],

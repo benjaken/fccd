@@ -1657,7 +1657,7 @@ button.sidebar-link {
 }
 
 .page-transition
-  > :has(> .page-heading):not(.customer-faq-page):not(:has(> .page-heading button)):not(
+  > :has(> .page-heading):not(.customer-faq-page):not(.meal-order-calendar):not(.reward-admin):not(.customer-portal-ops):not(:has(> .page-heading button)):not(
     :has(> .page-heading a)
   ):not(:has(> .page-heading input)):not(:has(> .page-heading select)):not(
     :has(> .page-heading textarea)

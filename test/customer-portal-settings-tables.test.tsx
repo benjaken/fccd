@@ -59,7 +59,7 @@ describe.each(pages)("$Component.name shared table", ({ Component, load, columns
     load.mockResolvedValue([]);
     render(<MemoryRouter><Component /></MemoryRouter>);
     if (emptyInTable) {
-      expect(await within(screen.getByRole("table")).findByText(empty)).toBeInTheDocument();
+      await waitFor(() => expect(within(screen.getByRole("table")).getByText(empty)).toBeInTheDocument());
     } else {
       expect(await screen.findByText(empty)).toBeInTheDocument();
       expect(screen.queryByRole("table")).not.toBeInTheDocument();
@@ -118,6 +118,21 @@ it("edits the published BR policy from a side panel", async () => {
   const dialog = await screen.findByRole("dialog");
   expect(within(dialog).getByRole("heading", { name: "BR 到期政策" })).toBeInTheDocument();
   expect(within(dialog).getByRole("spinbutton", { name: "提前提醒日數" })).toHaveValue(30);
+});
+
+it("offers a working create action in the BR empty state", async () => {
+  render(<MemoryRouter><CustomerPortalApplicationsPage /></MemoryRouter>);
+  await screen.findByText("目前沒有公司申請。");
+  expect(screen.getByRole("heading", { name: "BR 到期政策" })).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "新增公司 BR" }));
+  expect(within(await screen.findByRole("dialog")).getByRole("textbox", { name: "公司名稱" })).toBeInTheDocument();
+});
+
+it("hides the BR empty-state create action for read-only users", async () => {
+  mocks.canEdit = false;
+  render(<MemoryRouter><CustomerPortalApplicationsPage /></MemoryRouter>);
+  await screen.findByText("目前沒有公司申請。");
+  expect(screen.queryByRole("button", { name: "新增公司 BR" })).not.toBeInTheDocument();
 });
 
 it("opens a side panel to add a company BR", async () => {

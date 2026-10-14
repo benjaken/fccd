@@ -190,6 +190,7 @@ i18n.addResourceBundle("en", "translation", { portalApplications: {
 }}, true, true);
 i18n.addResourceBundle("zh-HK", "translation", { lunchboxOps: {
   title:"互動飯盒", description:"用內部產品設定可售飯盒、價格、數量、送貨日及截單時間。客戶提交後進入報價單。",
+  menuDetails:"餐單資料", deliverySettings:"送貨與截單安排", selectMenus:"選擇餐單",
   back:"返回客戶訂購營運", create:"新增飯盒餐單", edit:"編輯飯盒餐單", close:"關閉", save:"儲存", saved:"已儲存飯盒餐單。",
   operationFailed:"操作未完成，請重試。", invalidMenu:"請核對餐單名稱、品牌、送貨及截單。", invalidItems:"請核對產品、價格及數量。",
   empty:"尚未設定互動飯盒。", name:"餐單名稱", brand:"品牌", chooseBrand:"選擇品牌", delivery:"送貨", deliveryDate:"送貨日期", deliveryTime:"送貨時間", cutoff:"截單時間", fee:"運費",
@@ -197,6 +198,7 @@ i18n.addResourceBundle("zh-HK", "translation", { lunchboxOps: {
 }}, true, true);
 i18n.addResourceBundle("en", "translation", { lunchboxOps: {
   title:"Lunchboxes", description:"Publish internal products, prices, quantities, delivery dates and cutoffs. Customer submissions become quotes.",
+  menuDetails:"Menu details", deliverySettings:"Delivery and cutoff", selectMenus:"Select menus",
   back:"Back to customer ordering ops", create:"New lunchbox menu", edit:"Edit lunchbox menu", close:"Close", save:"Save", saved:"Lunchbox menu saved.",
   operationFailed:"Could not complete the action. Please retry.", invalidMenu:"Check the menu name, brand, delivery and cutoff.", invalidItems:"Check each product, price and quantity.",
   empty:"No lunchbox menus yet.", name:"Menu name", brand:"Brand", chooseBrand:"Choose a brand", delivery:"Delivery", deliveryDate:"Delivery date", deliveryTime:"Delivery time", cutoff:"Cutoff", fee:"Delivery fee",
@@ -454,3 +456,6 @@ i18n.addResourceBundle("en", "translation", { portalGuides: {
   operationFailed: "Could not complete the action. Please retry.",
   invalid: "Use a title of 1 to 40 characters, and keep the content within 8000 characters.",
 }}, true, true);
+
+i18n.addResourceBundle("zh-HK", "translation", { richText: { formatting: "文字格式", bold: "粗體", italic: "斜體", underline: "底線", bulletList: "項目清單", numberedList: "編號清單" } }, true, true);
+i18n.addResourceBundle("en-GB", "translation", { richText: { formatting: "Text formatting", bold: "Bold", italic: "Italic", underline: "Underline", bulletList: "Bullet list", numberedList: "Numbered list" } }, true, true);

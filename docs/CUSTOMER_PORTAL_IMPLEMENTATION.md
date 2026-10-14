@@ -6,6 +6,20 @@
 
 ### Review fixes (2026-10-14)
 
+The reward-rule settings page uses a compact current-rule summary and version
+history, with holidays and refunds in shared side panels. Missing/legacy
+`points_per_hkd` payloads are shown as requiring a data update; they are never
+converted into a fabricated HKD threshold. Zero explicitly means earning paused.
+All displayed and entered effective times use Hong Kong time. Holiday load
+failures remain visible, including to read-only staff.
+
+The develop frontend resolves to `mxiueauyylnpwlxrvgbo`; the linked production
+project is `vignxasvlxqnyvuhtjlu`. A read-only check on 2026-10-14 found develop
+still returning the old reward-rule contract. Apply the preceding earning-model
+migrations before `20261014190000_customer_reward_rules_contract.sql`; its guard
+prevents repairing only the editor while the actual award function uses old
+points-per-HKD rules. This UI change does not deploy those migrations.
+
 The next review adds `20261014180000_customer_portal_review_permissions.sql`,
 `20261014181000_customer_reward_redemption_pages.sql`,
 `20261014182000_shopify_voucher_worker_recovery.sql`, and

@@ -1,3 +1,4 @@
+import { richTextHtml } from "@/lib/rich-text";
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -24,7 +25,7 @@ export function CustomerGuidePage() {
   return (
     <section className="portal-guide">
       <h1>{guide.title}</h1>
-      {guide.body.trim() ? <div className="portal-guide-body">{guide.body}</div> : <p>{t("portalGuides.emptyBody")}</p>}
+      {guide.body.trim() ? <div className="portal-guide-body" dangerouslySetInnerHTML={{ __html: richTextHtml(guide.body) }} /> : <p>{t("portalGuides.emptyBody")}</p>}
     </section>
   );
 }

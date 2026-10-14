@@ -72,6 +72,20 @@ describe("business notification reminders", () => {
     expect(migration).toContain("quote_close_reason = 'delivery_date_passed'");
   });
 
+  it("clears due reminders once their due date or delivery time has passed", () => {
+    const migration = readFileSync(
+      path.resolve(
+        process.cwd(),
+        "supabase/migrations/20261014250000_resolve_past_due_reminders.sql",
+      ),
+      "utf8",
+    );
+    expect(migration).toContain("create or replace function public.refresh_due_notifications");
+    expect(migration).toContain("(o.delivery_at at time zone 'Asia/Hong_Kong')::date < v_today");
+    expect(migration).toContain("d.delivery_at is not null and d.delivery_at < p_now");
+    expect(migration).toContain("select public.refresh_due_notifications();");
+  });
+
   it("normalizes every order-related notification to an entity detail route", () => {
     const migration = readFileSync(
       path.resolve(
