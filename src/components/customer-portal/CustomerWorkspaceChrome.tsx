@@ -22,6 +22,9 @@ function CustomerPortalDrawer({
   navItems,
   canSwitch,
   personal,
+  organizations = [],
+  activeOrganizationId,
+  onSelectOrganization,
   loggingOut,
   onClose,
   onLogout,
@@ -32,6 +35,9 @@ function CustomerPortalDrawer({
   navItems: CustomerPortalNavItem[];
   canSwitch: boolean;
   personal: boolean;
+  organizations?: Array<{ id: string; name: string }>;
+  activeOrganizationId?: string;
+  onSelectOrganization?: (organizationId: string) => void;
   loggingOut?: boolean;
   onClose: () => void;
   onLogout: () => void;
@@ -59,6 +65,14 @@ function CustomerPortalDrawer({
         ) : (
           <p className="customer-portal-drawer-mode-label">{t(mode === "personal" ? "portal.personalCustomer" : "portal.organizationCustomer")}</p>
         )}
+        {organizations.length > 1 && !personal ? (
+          <label>
+            {t("portal.switchOrganization")}
+            <select aria-label={t("portal.switchOrganization")} value={activeOrganizationId ?? organizations[0]?.id ?? ""} onChange={event => onSelectOrganization?.(event.target.value)}>
+              {organizations.map(organization => <option key={organization.id} value={organization.id}>{organization.name}</option>)}
+            </select>
+          </label>
+        ) : null}
         {personal && !canSwitch ? (
           <nav aria-label={t("portalApply.title")}>
             <Link to="/customer/apply" onClick={onClose}>{t("portalApply.title")}</Link>
@@ -101,6 +115,9 @@ export function CustomerWorkspaceHeader({
   navItems = [],
   canSwitch = false,
   personal = mode === "personal",
+  organizations = [],
+  activeOrganizationId,
+  onSelectOrganization,
   loggingOut,
   onLogout,
 }: {
@@ -110,6 +127,9 @@ export function CustomerWorkspaceHeader({
   navItems?: CustomerPortalNavItem[];
   canSwitch?: boolean;
   personal?: boolean;
+  organizations?: Array<{ id: string; name: string }>;
+  activeOrganizationId?: string;
+  onSelectOrganization?: (organizationId: string) => void;
   loggingOut?: boolean;
   onLogout: () => void;
 }) {
@@ -129,6 +149,11 @@ export function CustomerWorkspaceHeader({
           <div className="portal-workspace-title">
             <strong>{heading}</strong>
             {desktopTitle && <strong className="portal-workspace-desktop-title">{desktopTitle}</strong>}
+            {organizations.length > 1 && !personal ? (
+              <select aria-label={t("portal.switchOrganization")} value={activeOrganizationId ?? organizations[0]?.id ?? ""} onChange={event => onSelectOrganization?.(event.target.value)}>
+                {organizations.map(organization => <option key={organization.id} value={organization.id}>{organization.name}</option>)}
+              </select>
+            ) : null}
           </div>
         </div>
       </header>
@@ -139,6 +164,9 @@ export function CustomerWorkspaceHeader({
         navItems={navItems}
         canSwitch={canSwitch}
         personal={personal}
+        organizations={organizations}
+        activeOrganizationId={activeOrganizationId}
+        onSelectOrganization={onSelectOrganization}
         loggingOut={loggingOut}
         onClose={() => setOpen(false)}
         onLogout={onLogout}

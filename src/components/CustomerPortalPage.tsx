@@ -128,7 +128,7 @@ function useCustomerPortalController(load: typeof fetchPortal, onMembershipChang
 
 export type CustomerPortalController = ReturnType<typeof useCustomerPortalController>;
 
-export function CustomerPortalPage({ load = fetchPortal, loginIntro, canSwitch = false, onMembershipChanged }: { load?: typeof fetchPortal; loginIntro?: ReactNode; canSwitch?: boolean; onMembershipChanged?: () => void }) {
+export function CustomerPortalPage({ load = fetchPortal, loginIntro, canSwitch = false, organizations = [], activeOrganizationId, onSelectOrganization, onMembershipChanged }: { load?: typeof fetchPortal; loginIntro?: ReactNode; canSwitch?: boolean; organizations?: Array<{ id: string; name: string }>; activeOrganizationId?: string; onSelectOrganization?: (organizationId: string) => void; onMembershipChanged?: () => void }) {
   const portal = useCustomerPortalController(load,onMembershipChanged);
   const {t, setParams, loggedIn, authLoading, data, setQuantities, busy, error, notice, financialDocument, setFinancialDocument, inviteToken, refresh, run, setPage, setData, setInviteLink} = portal;
   const navItems = useMemo(() => nav
@@ -150,7 +150,7 @@ export function CustomerPortalPage({ load = fetchPortal, loginIntro, canSwitch =
     });
   }
   return <main className={`customer-portal${!loggedIn ? " portal-auth-shell" : ""}`}>
-    {loggedIn&&<CustomerWorkspaceHeader title={data?.organization.name} mode="organization" canSwitch={canSwitch} personal={false} navItems={data ? navItems : []} loggingOut={busy} onLogout={() => void logout()} />}
+    {loggedIn&&<CustomerWorkspaceHeader title={data?.organization.name} mode="organization" canSwitch={canSwitch} personal={false} organizations={organizations} activeOrganizationId={activeOrganizationId} onSelectOrganization={onSelectOrganization} navItems={data ? navItems : []} loggingOut={busy} onLogout={() => void logout()} />}
     {loggedIn&&<>{error&&data&&<p role="alert" className="portal-error">{error}</p>}{notice&&<p role="status" className="portal-notice">{notice}</p>}</>}
     {financialDocument&&<ReceiptPreview order={financialDocument.order} documentKind={financialDocument.kind} printReceipt={printPdf} onClose={()=>setFinancialDocument(null)}/>}
     {authLoading?<p role="status">{t("portal.loading")}</p>:!loggedIn?<CustomerOtpLogin mode="organization" modeSelector={loginIntro} />:<>

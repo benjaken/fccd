@@ -48,6 +48,8 @@ export async function archivePortalAddress(id: string) {
   await rpc<void>("customer_portal_archive_address", { p_id: id });
   requestShopifyCustomerSync("sync_mine");
 }
+export const selectPortalOrganization = (organizationId: string) =>
+  rpc<void>("customer_portal_select_organization", { p_organization_id: organizationId });
 export const savePortalTemplate = (name: string, items: Array<{ product_id: string; quantity: number }>) =>
   rpc<string>("customer_portal_save_template", { p_name: name, p_items: items });
 export const updatePortalTemplate = (id: string, name: string, items: Array<{ product_id: string; quantity: number }>) =>

@@ -83,6 +83,18 @@ describe("shared OTP customer entry",()=>{
     expect(screen.getAllByRole("button",{name:"登出"}).length).toBeGreaterThan(0);
     fireEvent.click(screen.getByRole("button",{name:"重試"}));await screen.findByRole("heading",{name:"你好！"});
   });
+  it("switches the active organization without mixing it with the personal workspace", async () => {
+    mocks.getSession.mockResolvedValue({ data: { session: { user: { id: "user" } } } });
+    mocks.rpc.mockImplementation(async (name: string) => {
+      if (name === "customer_portal_identities") return { data: { personal: true, organization: true, activeOrganizationId: "org-a", organizationName: "甲公司", organizations: [{ id: "org-a", name: "甲公司", role: "admin" }, { id: "org-b", name: "乙公司", role: "member" }] }, error: null };
+      if (name === "customer_portal_select_organization") return { data: null, error: null };
+      return { data: null, error: { message: "customer_membership_required" } };
+    });
+    mount("/customer");
+    const [select] = await screen.findAllByRole("combobox", { name: "切換企業" });
+    fireEvent.change(select, { target: { value: "org-b" } });
+    await waitFor(() => expect(mocks.rpc).toHaveBeenCalledWith("customer_portal_select_organization", { p_organization_id: "org-b" }));
+  });
   it("keeps invitation links on the organization OTP flow",async()=>{
     mount("/customer?mode=personal&invite=invitation-token");await screen.findByLabelText("電郵");
     expect(screen.queryByRole("navigation",{name:"客戶登入方式"})).not.toBeInTheDocument();

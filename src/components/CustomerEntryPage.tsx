@@ -35,7 +35,7 @@ export function CustomerEntryPage() {
     });
     return () => { active = false; data.subscription.unsubscribe(); };
   }, []);
-  const [identities, setIdentities] = useState<{userId:string; organization:boolean} | null>(null);
+  const [identities, setIdentities] = useState<{ userId: string; organization: boolean; organizations: Array<{ id: string; name: string }>; activeOrganizationId?: string } | null>(null);
   const [identityError, setIdentityError] = useState("");
   const [identityVersion, setIdentityVersion] = useState(0);
   const [loggingOut, setLoggingOut] = useState(false);
@@ -53,7 +53,10 @@ export function CustomerEntryPage() {
       if (!data || data.personal !== true || typeof data.organization !== "boolean") {
         setIdentityError(t("portal.loadFailed")); return;
       }
-      setIdentities({userId,organization:data.organization});
+      const organizations = Array.isArray(data.organizations)
+        ? data.organizations.filter((row: { id?: unknown; name?: unknown }) => typeof row?.id === "string" && typeof row?.name === "string")
+        : [];
+      setIdentities({ userId, organization: data.organization, organizations, activeOrganizationId: typeof data.activeOrganizationId === "string" ? data.activeOrganizationId : undefined });
     }).catch(() => { if(active) setIdentityError(t("portal.loadFailed")); });
     return () => { active = false; };
   }, [userId,identityVersion,requestedPersonal,t]);
@@ -87,5 +90,5 @@ export function CustomerEntryPage() {
     if (identities.organization) return <Navigate to="/customer" replace />;
     return <CustomerOrganizationApplicationPage loggingOut={loggingOut} onLogout={() => void signOut()} />;
   }
-  return personal ? <CustomerPersonalWorkspace key={`personal-${userId}`} canSwitch={Boolean(canSwitch)} loggingOut={loggingOut} onLogout={() => void signOut()} /> : <CustomerPortalPage key={`organization-${userId}`} canSwitch={canSwitch} onMembershipChanged={canSwitch?()=>setIdentityVersion(value=>value+1):undefined} />;
+  return personal ? <CustomerPersonalWorkspace key={`personal-${userId}`} canSwitch={Boolean(canSwitch)} loggingOut={loggingOut} onLogout={() => void signOut()} /> : <CustomerPortalPage key={`organization-${userId}-${identities.activeOrganizationId ?? ""}`} canSwitch={canSwitch} organizations={identities.organizations} activeOrganizationId={identities.activeOrganizationId} onSelectOrganization={id => { void supabase.rpc("customer_portal_select_organization", { p_organization_id: id }).then(({ error }) => { if (error) setIdentityError(t("portal.operationFailed")); else setIdentityVersion(value => value + 1); }); }} onMembershipChanged={canSwitch?()=>setIdentityVersion(value=>value+1):undefined} />;
 }

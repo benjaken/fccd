@@ -240,3 +240,5 @@ i18n.addResourceBundle("en", "translation", { portalVoucher: {
   linkTitle:"Shopify customer link", linkIntro:"Link a personal or company account to an existing store customer before addresses sync both ways. Voucher codes are then limited to that customer.",
   ownerType:"Account", user:"Personal user", organization:"Company", ownerId:"User or company ID", customerId:"Shopify customer ID", link:"Save link", linked:"Shopify customer link saved.",
 }}, true, true);
+i18n.addResourceBundle("zh-HK", "translation", { portal: { switchOrganization: "切換企業" } }, true, true);
+i18n.addResourceBundle("en", "translation", { portal: { switchOrganization: "Switch organization" } }, true, true);
