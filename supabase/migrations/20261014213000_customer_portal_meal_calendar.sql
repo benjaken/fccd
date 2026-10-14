@@ -12,8 +12,8 @@ begin
       select
         live.id as order_id,
         live.order_number,
-        org.id as organization_id,
-        org.name as organization_name,
+        coalesce(org.id::text, 'company:' || btrim(live.company_name_snapshot)) as organization_id,
+        coalesce(org.name, btrim(live.company_name_snapshot)) as organization_name,
         (timezone('Asia/Hong_Kong', live.delivery_at))::date as service_date,
         live.delivery_time,
         live.delivery_status,
@@ -28,22 +28,24 @@ begin
           from order_lines l
           where l.order_id = live.id and not l.is_void
         ), '[]'::jsonb) as lines
-      from customer_portal_orders po
-      join customer_organizations org on org.id = po.organization_id
-      join orders linked on linked.id = po.order_id
-      left join lateral (
-        select n.id from orders n
-        where n.source_quote_id = linked.id
-          and n.document_type = 'order'
-          and n.archived_at is null
-        order by n.created_at desc
-        limit 1
-      ) converted on true
-      join orders live on live.id = coalesce(converted.id, linked.id)
+      from orders live
+      left join customer_portal_orders po on po.order_id = live.id
+      left join customer_portal_orders quoted on quoted.order_id = live.source_quote_id
+      left join customer_organizations org on org.id = coalesce(po.organization_id, quoted.organization_id)
       left join channels c on c.id = live.channel_id
       where live.archived_at is null
         and live.delivery_at is not null
         and (timezone('Asia/Hong_Kong', live.delivery_at))::date between p_from and p_to
+        and not exists (
+          select 1 from orders newer
+          where newer.source_quote_id = live.id
+            and newer.document_type = 'order'
+            and newer.archived_at is null
+        )
+        and (
+          org.id is not null
+          or nullif(btrim(live.company_name_snapshot), '') is not null
+        )
     ) x
   ), '[]'::jsonb);
 end $$;

@@ -3,6 +3,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { CalendarDays, ChevronLeft, ChevronRight, RefreshCw } from "lucide-react";
 import { useCurrentPageAccess } from "@/auth/use-page-access";
+import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { FilterableSelect } from "@/components/ui/filterable-select";
 import { SidePanel } from "@/components/ui/side-panel";
@@ -171,19 +172,7 @@ export function CustomerPortalMealCalendarPage() {
           <h1>{t("mealCalendar.title")}</h1>
           <p>{t("mealCalendar.description")}</p>
         </div>
-        <label className="meal-calendar-filter">
-          <span>{t("mealCalendar.organization")}</span>
-          <FilterableSelect
-            searchable
-            value={organizationId}
-            onChange={(event) => setOrganizationId(event.target.value)}
-          >
-            <option value="">{t("mealCalendar.allOrganizations")}</option>
-            {organizations.map((org) => (
-              <option key={org.id} value={org.id}>{org.name}</option>
-            ))}
-          </FilterableSelect>
-        </label>
+
       </header>
 
       <article className="panel kitchen-calendar-panel">
@@ -205,7 +194,19 @@ export function CustomerPortalMealCalendarPage() {
             </Button>
           </div>
           <h2 className="kitchen-calendar-month">{monthTitle}</h2>
-          <div className="kitchen-calendar-toolbar-spacer" aria-hidden="true" />
+          <label className="meal-calendar-filter">
+          <span>{t("mealCalendar.organization")}</span>
+          <FilterableSelect
+            searchable
+            value={organizationId}
+            onChange={(event) => setOrganizationId(event.target.value)}
+          >
+            <option value="">{t("mealCalendar.allOrganizations")}</option>
+            {organizations.map((org) => (
+              <option key={org.id} value={org.id}>{org.name}</option>
+            ))}
+          </FilterableSelect>
+        </label>
         </header>
         {error ? (
           <div className="orders-state orders-state-error" role="alert">
@@ -315,7 +316,7 @@ export function CustomerPortalMealCalendarPage() {
             <form className="meal-calendar-holiday" onSubmit={(event) => void saveHoliday(event)}>
               <label>
                 {t("mealCalendar.holidayName")}
-                <input value={holidayName} maxLength={80} placeholder={t("mealCalendar.holidayPlaceholder")} onChange={(event) => setHolidayName(event.target.value)} />
+                <Input value={holidayName} maxLength={80} placeholder={t("mealCalendar.holidayPlaceholder")} onChange={(event) => setHolidayName(event.target.value)} />
               </label>
               <div>
                 <Button type="submit" disabled={busy}>{busy ? t("mealCalendar.saving") : t("mealCalendar.saveHoliday")}</Button>
@@ -345,7 +346,7 @@ export function CustomerPortalMealCalendarPage() {
                 {order.lines.map((line, index) => (
                   <li key={`${order.order_id}-${index}`}>
                     <span>{line.name}</span>
-                    <span>×{formatMealQuantity(line.quantity)}</span>
+                    {line.quantity === null || line.quantity === undefined ? null : <span>×{formatMealQuantity(line.quantity)}</span>}
                   </li>
                 ))}
               </ul>

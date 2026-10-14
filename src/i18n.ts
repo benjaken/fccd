@@ -651,7 +651,7 @@ const resources = {
         customerPortalApplications: "公司 BR 申請",
         customerPortalRewardRules: "客戶積分規則",
         customerPortalLunchbox: "互動飯盒",
-        customerPortalMealCalendar: "團體日曆",
+        customerPortalMealCalendar: "訂餐日曆",
         customerPortalRewardCatalog: "積分兌換",
         attachments: "附件列表",
         supplierCostCategories: "供應商費用類別",
