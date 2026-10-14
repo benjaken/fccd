@@ -155,10 +155,6 @@ export function CustomerPortalRewardRulesPage() {
   const title = panel === "version" ? "createVersion" : panel === "view" ? "versionDetail" : "refundTitle";
   return <section className="reward-rules-page">
     <header className="reward-rules-heading">
-      <div>
-        <h1>{t("navigation.customerPortalRewardRules")}</h1>
-        <p>{text("pageIntro")}</p>
-      </div>
       <div className="reward-rules-actions">
         {active && activeRate !== null ? <span className="reward-rule-status" data-status={activeRate === 0 ? "scheduled" : "active"}>{activeRate === 0 ? text("earningPaused") : text("healthy")}</span> : null}
         {canEdit ? <Button onClick={() => open("version")} disabled={loading || invalid || Boolean(error)}><Plus size={18} />{text("createVersion")}</Button> : null}
@@ -195,6 +191,13 @@ export function CustomerPortalRewardRulesPage() {
             <article><h3>{text("limitTitle")}</h3><p>{text("limitBody")}</p></article>
           </div>
         </section>
+        <section className="reward-rule-refund">
+          <div>
+            <h2><RotateCcw size={18} />{text("refundTitle")}</h2>
+            <p>{text("refundSummary")}</p>
+          </div>
+          {canEdit ? <Button variant="outline" onClick={() => open("refund")}>{text("recordRefund")}<ArrowRight size={16} /></Button> : null}
+        </section>
         <section className="reward-rule-history" aria-label={text("history")}>
           <div className="reward-rule-section-heading"><h2>{text("history")}</h2><span>{t("portalRewardRules.versionCount", { count: rules.length })}</span></div>
           <div className="reward-rule-history-tools">
@@ -217,13 +220,6 @@ export function CustomerPortalRewardRulesPage() {
           </ListTable>
         </section>
       </div>
-      <aside className="reward-rules-aside">
-        <section className="reward-rule-refund">
-          <h2><RotateCcw size={18} />{text("refundTitle")}</h2>
-          <p>{text("refundSummary")}</p>
-          {canEdit ? <Button variant="outline" onClick={() => open("refund")}>{text("recordRefund")}<ArrowRight size={16} /></Button> : null}
-        </section>
-      </aside>
     </div>
     <SidePanel open={panel !== null} className={panel === "refund" ? "reward-refund-panel" : undefined} title={text(title)} description={panel === "version" ? text("effectiveAtHint") : panel === "refund" ? text("refundSummary") : undefined} onClose={() => { if (!busy) setPanel(null); }} closeLabel={text("close")}>
       {panel === "view" && viewing ? <dl className="reward-version-detail">
