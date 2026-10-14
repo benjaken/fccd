@@ -129,10 +129,19 @@ export function planAddressReconciliation(input: {
 }
 
 export function toMailingAddress(input: { recipient: string; phone: string; address: string }) {
+  const recipient=input.recipient.trim();
+  const phone=input.phone.trim();
+  const address=input.address.trim().replace(/\s+/g," ");
+  const split=address.length>255 ? address.lastIndexOf(" ",255) : -1;
+  const address1=split>0 ? address.slice(0,split) : address;
+  const address2=split>0 ? address.slice(split+1) : "";
+  // Fail before changing Shopify if this shape cannot round-trip without data loss.
+  if (recipient.length>100 || phone.length>40 || address1.length>255 || address2.length>255) throw new Error("address_requires_manual_sync");
   return {
-    firstName: input.recipient.trim().slice(0, 100),
-    address1: input.address.trim().slice(0, 255),
-    phone: input.phone.trim().slice(0, 40),
+    firstName: recipient,
+    address1,
+    ...(address2 ? { address2 } : {}),
+    phone,
     city: "Hong Kong",
     countryCode: "HK",
   };
