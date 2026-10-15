@@ -608,6 +608,9 @@ function OperationsShell() {
   const pageKey = useMemo(() => location.pathname.replaceAll("/", "-"), [
     location.pathname,
   ]);
+  const rewardCatalogPath =
+    location.pathname === "/settings/customer-portal/rewards" ||
+    location.pathname.startsWith("/settings/customer-portal/rewards/");
 
   const switchLanguage = () => {
     void i18n.changeLanguage(i18n.language === "en" ? "zh-HK" : "en");
@@ -815,13 +818,14 @@ function OperationsShell() {
 
         <main className="main-content">
           <div className="page-transition" key={pageKey}>
-            {pageAccess.loading ? (
+            {pageAccess.loading && !rewardCatalogPath ? (
               <PageSkeleton label={t("settings.loadingPermissions")} />
             ) : recoveringInitialPath &&
+              !pageAccess.loading &&
               !pageAccess.canAccess(currentPageKey) &&
               firstAccessiblePath ? (
               <Navigate to={firstAccessiblePath} replace />
-            ) : !pageAccess.canAccess(currentPageKey) ? (
+            ) : !pageAccess.loading && !pageAccess.canAccess(currentPageKey) ? (
               <SettingsAccessDenied />
             ) : (
               <Routes>
@@ -1673,6 +1677,7 @@ function OperationsShell() {
               <Route
                 path="/settings/customer-portal/rewards"
                 element={
+                  pageAccess.loading ||
                   pageAccess.canAccess("settings.customer_portal") ? (
                     <CustomerPortalRewardCatalogPage />
                   ) : (
