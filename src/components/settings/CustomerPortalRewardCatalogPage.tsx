@@ -5,7 +5,6 @@ import { useCurrentPageAccess } from "@/auth/use-page-access";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
-import { PageSkeleton } from "@/components/ui/page-skeleton";
 import { ListTable } from "@/components/ui/list-table";
 import { SidePanel } from "@/components/ui/side-panel";
 import { TablePagination } from "@/components/ui/table-pagination";
@@ -341,8 +340,7 @@ export function CustomerPortalRewardCatalogPage() {
     </form></SidePanel> : null}
     <section className="panel reward-admin-catalog-table">
       <h2>{t("portalRewardCatalog.items")}</h2>
-      {loading && !items.length ? <PageSkeleton label={t("portalCatalog.loading")} variant="profile" compact /> : null}
-      <ListTable loading={loading && !items.length} loadingLabel={t("portalCatalog.loading")} skeletonColumns={6} onRefresh={() => load().catch(reason => setError(t(failure(reason))))}
+      <ListTable loading={loading && !items.length} loadingLabel={t("portalCatalog.loading")} skeletonColumns={7} onRefresh={() => load().catch(reason => setError(t(failure(reason))))}
         header={<tr><th>{t("portalRewardCatalog.image")}</th><th>{t("portalRewardCatalog.name")}</th><th>{t("portalRewardCatalog.kind")}</th><th>{t("portalRewardCatalog.points")}</th><th>{t("portalRewardCatalog.stock")}</th><th>{t("portalRewardCatalog.active")}</th><th>{t("orders.columns.actions")}</th></tr>}>
         {items.map(item => <tr key={item.id}>
           <td>{previews[item.id] ? <button type="button" className="reward-admin-table-thumb-button" aria-label={t("portalRewardCatalog.previewImage", { name: item.name })} onClick={() => setLightbox({ url: previews[item.id], name: item.name })}><img className="reward-admin-table-thumb" src={previews[item.id]} alt="" /></button> : <span className="reward-admin-table-thumb is-empty" aria-hidden="true" />}</td>
