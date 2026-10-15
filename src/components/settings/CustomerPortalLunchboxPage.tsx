@@ -197,7 +197,7 @@ export function CustomerPortalLunchboxPage() {
                 <td>{menu.items.length}</td>
                 <td>{menu.is_active ? t("lunchboxOps.active") : t("lunchboxOps.inactive")}</td>
                 <td className="table-actions-cell">
-                  {canEdit ? <Button type="button" variant="outline" onClick={() => startEdit(menu)}>{t("lunchboxOps.edit")}</Button> : null}
+                  {canEdit ? <Button type="button" variant="outline" onClick={() => startEdit(menu)}>{t("lunchboxOps.editAction")}</Button> : null}
                 </td>
               </tr>
             ))}

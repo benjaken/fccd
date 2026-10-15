@@ -288,13 +288,13 @@ i18n.addResourceBundle("zh-HK", "translation", { lunchboxOps: {
   vipTitle: "VIP 訂飯週期", vipIntro: "把多日飯盒餐單放進同一個週期。週期截單後不能再批量下單，每一天仍是獨立報價單。",
   vipName: "週期名稱", vipSave: "發布週期", vipSaved: "已發布 VIP 訂飯週期。", vipInvalid: "請填週期名稱、截單時間，並至少選擇一日餐單。",
   vipDays: "{{count}} 日", vipNoMenus: "先建立至少一個有效餐單，才能放進週期。", failed: "操作未完成，請重試。",
-  loading: "載入中…", emptyDescription: "建立餐單後會顯示在這裡。", listTitle: "餐單目錄",
+  loading: "載入中…", emptyDescription: "建立餐單後會顯示在這裡。", listTitle: "餐單目錄", editAction: "編輯",
 }}, true, true);
 i18n.addResourceBundle("en", "translation", { lunchboxOps: {
   vipTitle: "VIP lunch cycle", vipIntro: "Group several lunchbox days into one cycle. After the cycle cutoff, bulk ordering closes. Each day remains its own quote.",
   vipName: "Cycle name", vipSave: "Publish cycle", vipSaved: "VIP lunch cycle published.", vipInvalid: "Enter a cycle name, a cutoff and at least one day.",
   vipDays: "{{count}} days", vipNoMenus: "Create at least one active menu before adding it to a cycle.", failed: "The action could not be completed. Please retry.",
-  loading: "Loading…", emptyDescription: "Menus you create will appear here.", listTitle: "Menu catalog",
+  loading: "Loading…", emptyDescription: "Menus you create will appear here.", listTitle: "Menu catalog", editAction: "Edit",
 }}, true, true);
 i18n.addResourceBundle("zh-HK", "translation", { portal: {
   exportOrders: "匯出訂單", exported: "已下載訂單。",
