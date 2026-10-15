@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { fetchAccountOrderFeedback, openOrderFeedback, submitAccountOrderFeedback, submitOrderFeedback, type OrderFeedback } from "@/lib/customer-order-feedback";
 import "@/lib/customer-portal-i18n";
+import "./order-feedback.css";
 
 function messageKey(error: unknown) {
   const text = error instanceof Error ? error.message : typeof error === "object" && error && "message" in error ? String(error.message) : "";
@@ -60,6 +61,6 @@ export function AccountOrderFeedback({ orderId, showEmptyState = false }: { orde
   }, [orderId, t, attempt]);
   if (error) return <section><h1>{t("portalFeedback.title")}</h1><p role="alert">{error}</p><Button variant="outline" onClick={() => setAttempt(value => value + 1)}>{t("portalFeedback.retry")}</Button></section>;
   if (view === undefined) return <p role="status">{t("portalFeedback.loading")}</p>;
-  if (!view) return showEmptyState ? <section className="personal-empty" role="status"><h1>{t("portalFeedback.emptyTitle")}</h1><p>{t("portalFeedback.emptyDescription")}</p></section> : null;
+  if (!view) return showEmptyState ? <section className="personal-feedback-empty" role="status"><img src="/assets/customer-personal/feedback-empty.png" alt="" width={240} height={220} /><h1>{t("portalFeedback.emptyTitle")}</h1><p>{t("portalFeedback.emptyDescription")}</p></section> : null;
   return <OrderFeedbackCard view={view} onSubmit={async comment => setView(await submitAccountOrderFeedback(orderId, comment))} />;
 }

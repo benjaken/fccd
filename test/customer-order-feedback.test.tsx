@@ -7,6 +7,14 @@ vi.mock("@/lib/customer-order-feedback", () => ({ fetchAccountOrderFeedback: moc
 const view: OrderFeedback = { order_number: "B-1550", delivery_at: null, submitted: false, comment: null };
 beforeEach(() => vi.resetAllMocks());
 describe("account order feedback", () => {
+  it("shows a decorative feedback illustration only for the empty state", async () => {
+    mocks.fetch.mockResolvedValue(null);
+    const { container } = render(<AccountOrderFeedback orderId="one" showEmptyState />);
+    await screen.findByRole("heading", { name: "暫未能填寫訂單意見" });
+    const image = container.querySelector("img");
+    expect(image).toHaveAttribute("src", "/assets/customer-personal/feedback-empty.png");
+    expect(image).toHaveAttribute("alt", "");
+  });
   it("preserves the feedback form and submitted comment", async () => {
     mocks.fetch.mockResolvedValue(view);
     mocks.submit.mockResolvedValue({ ...view, submitted: true, comment: "Good service" });

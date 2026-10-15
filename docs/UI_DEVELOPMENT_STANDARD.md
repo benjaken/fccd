@@ -252,3 +252,5 @@ Automated coverage: `test/i18n-placeholders.test.ts` rejects English-prose
 個人訂單意見頁：獨立路由固定提供返回訂單紀錄的連結；無可填寫資料時顯示空狀態說明，載入失敗提供重試，頁首顯示訂單意見。機構訂單詳情內嵌意見維持原有顯示規則。
 
 訂單意見頁返回入口沿用 self-service-back，以品牌綠色左箭嘴加「返回訂單列表」文字呈現，無按鈕底色和外框。
+
+訂單意見空狀態使用 feedback-empty.png 的淡綠立體意見卡插圖，圖片、標題和說明置中排列；保留上方文字返回入口。插圖為裝飾用途，空 alt 避免重複朗讀。
