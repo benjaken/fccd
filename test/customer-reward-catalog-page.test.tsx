@@ -71,7 +71,7 @@ it("allows canceling an edit and hides management controls for read-only users",
   fireEvent.click(await screen.findByRole("button", { name: "兌換目錄" }));
   fireEvent.click(await screen.findByRole("button", { name: "編輯" }));
   expect(screen.getByLabelText("名稱")).toHaveValue("Gift");
-  fireEvent.click(screen.getByRole("button", { name: "取消編輯" }));
+  fireEvent.click(screen.getByRole("button", { name: "取消" }));
   await waitFor(() => expect(screen.queryByLabelText("名稱")).not.toBeInTheDocument());
   view.unmount(); mocks.edit = false; mount();
   fireEvent.click(await screen.findByRole("button", { name: "兌換目錄" }));
@@ -104,7 +104,7 @@ it("uploads or generates a catalog image and saves the object path", async () =>
   mount(); const editor = await openEditor();
   fireEvent.change(editor.getByLabelText("名稱"), { target: { value: "Gift" } });
   const file = new File(["img"], "bag.png", { type: "image/png" });
-  fireEvent.change(editor.getByLabelText("上傳圖片"), { target: { files: [file] } });
+  fireEvent.change(editor.getByLabelText("選擇圖片"), { target: { files: [file] } });
   await waitFor(() => expect(mocks.upload).toHaveBeenCalledWith(file));
   fireEvent.click(editor.getByRole("button", { name: "新增兌換項目" }));
   await waitFor(() => expect(mocks.save).toHaveBeenCalledWith(expect.objectContaining({ imageObjectPath: "user/img.png" })));

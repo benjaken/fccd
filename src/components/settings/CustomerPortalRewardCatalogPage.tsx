@@ -171,12 +171,13 @@ export function CustomerPortalRewardCatalogPage() {
   async function save(event: FormEvent) {
     event.preventDefault();
     setActionError(""); setNotice("");
+    const detail = description.slice(0, 500);
     if (!name.trim() || !Number.isSafeInteger(Number(points)) || Number(points) <= 0 || !Number.isSafeInteger(Number(stock)) || Number(stock) < 0 || (kind === "voucher" && (Number(amount) <= 0 || !Number.isFinite(Number(amount)) || !Number.isSafeInteger(Number(validDays)) || Number(validDays) <= 0))) { setActionError(t("portalRewardCatalog.invalid")); return; }
     if (saving || imageBusy) return;
     setSaving(true);
     try {
       await upsertRewardCatalogItem({
-        id: editing, name: name.trim(), kind, points: Number(points), description, stock: Number(stock), active,
+        id: editing, name: name.trim(), kind, points: Number(points), description: detail, stock: Number(stock), active,
         voucherAmount: amount ? Number(amount) : null, storeId: storeId || null, validDays: Number(validDays) || 365,
         imageObjectPath: imagePath,
       });
@@ -186,6 +187,7 @@ export function CustomerPortalRewardCatalogPage() {
   }
 
   const editorBusy = saving || imageBusy;
+  const closeEditor = () => { if (!editorBusy) { resetEditor(); setPanel(null); } };
 
   return <section className="reward-admin">
     <header className="page-heading"><div className="reward-admin-actions">
@@ -196,69 +198,105 @@ export function CustomerPortalRewardCatalogPage() {
     {error ? <div className="reward-admin-error" role="alert">{error} <Button variant="outline" disabled={loading} onClick={() => void load().catch(reason => setError(t(failure(reason))))}>{t("portal.retry")}</Button></div> : null}
     {actionError && panel !== "editor" && panel !== "link" ? <p className="reward-admin-error" role="alert">{actionError}</p> : null}
     {notice ? <p className="reward-admin-notice" role="status">{notice}</p> : null}
-    {canEdit ? <SidePanel wide open={panel === "editor"} title={editing ? t("portalRewardCatalog.edit") : t("portalRewardCatalog.create")} onClose={() => { if (!editorBusy) { resetEditor(); setPanel(null); } }} closeLabel={t("portalOps.close")} footer={<>{editing ? <Button type="button" variant="outline" disabled={editorBusy} onClick={() => { resetEditor(); setPanel(null); }}>{t("portalRewardAdmin.cancelEdit")}</Button> : null}<Button type="submit" form="catalog-editor-form" disabled={editorBusy} aria-busy={saving}>{editing ? t("portalRewardCatalog.save") : t("portalRewardCatalog.create")}</Button></>}>
-      <form id="catalog-editor-form" className="reward-admin-form reward-admin-panel-form" onSubmit={event => void save(event)}>
-      {actionError ? <p className="reward-admin-error" role="alert">{actionError}</p> : null}
-      <div className="reward-admin-field"><label htmlFor="catalog-name">{t("portalRewardCatalog.name")}</label><Input id="catalog-name" value={name} onChange={event => setName(event.target.value)} required /></div>
-      <div className="reward-admin-field"><label htmlFor="catalog-kind">{t("portalRewardCatalog.kind")}</label><select id="catalog-kind" value={kind} onChange={event => setKind(event.target.value === "voucher" ? "voucher" : "gift")}>
-        <option value="gift">{t("portalRewardCatalog.gift")}</option>
-        <option value="voucher">{t("portalRewardCatalog.voucher")}</option>
-      </select></div>
-      <div className="reward-admin-field"><label htmlFor="catalog-points">{t("portalRewardCatalog.points")}</label><Input id="catalog-points" type="number" min="1" step="1" inputMode="numeric" value={points} onChange={event => setPoints(event.target.value)} required /></div>
-      <div className="reward-admin-field"><label htmlFor="catalog-stock">{t("portalRewardCatalog.stock")}</label><Input id="catalog-stock" type="number" min="0" step="1" inputMode="numeric" value={stock} onChange={event => setStock(event.target.value)} required /></div>
-      {kind === "voucher" ? <>
-        {storeError ? <p role="alert">{t("portalRewardAdmin.storeFailed")} <Button type="button" variant="outline" onClick={loadStores}>{t("portal.retry")}</Button></p> : null}
-        <div className="reward-admin-field"><label htmlFor="catalog-amount">{t("portalVoucher.amount")}</label><Input id="catalog-amount" required type="number" min="0.01" step="0.01" inputMode="decimal" value={amount} onChange={event => setAmount(event.target.value)} /></div>
-        <div className="reward-admin-field"><label htmlFor="catalog-store">{t("portalVoucher.store")}</label><select id="catalog-store" value={storeId} onChange={event => setStoreId(event.target.value)}>
-          <option value="">{t("portalVoucher.noStore")}</option>
-          {stores.map(store => <option key={store.id} value={store.id}>{store.shop_domain}</option>)}
-        </select></div>
-        <div className="reward-admin-field"><label htmlFor="catalog-days">{t("portalVoucher.validDays")}</label><Input id="catalog-days" required type="number" min="1" step="1" inputMode="numeric" value={validDays} onChange={event => setValidDays(event.target.value)} /></div>
-      </> : null}
-      <div className="reward-admin-field reward-admin-image-field">
-        <span className="reward-admin-image-label" id="catalog-image-label">{t("portalRewardCatalog.image")}</span>
-        <p>{t("portalRewardCatalog.imageHint")}</p>
-        {imagePreview ? <img className="reward-admin-image-preview" src={imagePreview} alt="" /> : null}
-        {imagePath ? <div className="reward-admin-image-actions"><Button type="button" variant="outline" disabled={editorBusy} onClick={() => { setImagePath(null); setImagePreview(""); }}>{t("portalRewardCatalog.removeImage")}</Button></div> : null}
-        <div className="reward-admin-image-tabs" role="tablist" aria-labelledby="catalog-image-label">
-          <button type="button" role="tab" aria-selected={imageTab === "upload"} className={imageTab === "upload" ? "is-active" : undefined} disabled={editorBusy} onClick={() => setImageTab("upload")}>{t("portalRewardCatalog.imageTabUpload")}</button>
-          <button type="button" role="tab" aria-selected={imageTab === "ai"} className={imageTab === "ai" ? "is-active" : undefined} disabled={editorBusy} onClick={openAiTab}>{t("portalRewardCatalog.imageTabAi")}</button>
+    {canEdit ? <SidePanel half open={panel === "editor"} title={editing ? t("portalRewardCatalog.edit") : t("portalRewardCatalog.create")} onClose={closeEditor} closeLabel={t("portalOps.close")} footer={
+      <div className="reward-admin-editor-footer">
+        <label className="reward-admin-checkbox"><input type="checkbox" form="catalog-editor-form" checked={active} onChange={event => setActive(event.target.checked)} /> {t("portalRewardCatalog.active")}</label>
+        <div className="reward-admin-editor-footer-actions">
+          <Button type="button" variant="outline" disabled={editorBusy} onClick={closeEditor}>{t("portalRewardCatalog.cancel")}</Button>
+          <Button type="submit" form="catalog-editor-form" disabled={editorBusy} aria-busy={saving}>{editing ? t("portalRewardCatalog.save") : t("portalRewardCatalog.create")}</Button>
         </div>
-        {imageTab === "upload" ? <div role="tabpanel" className="reward-admin-image-panel">
-          <label className="reward-admin-drop">
-            <span
-              className={dragOver ? "reward-admin-drop-target is-over" : "reward-admin-drop-target"}
-              onDragEnter={allowDrop}
-              onDragOver={allowDrop}
-              onDragLeave={(event) => {
-                event.preventDefault();
-                if (event.currentTarget.contains(event.relatedTarget as Node | null)) return;
-                setDragOver(false);
-              }}
-              onDrop={(event) => {
-                event.preventDefault();
-                setDragOver(false);
-                void onUpload(event.dataTransfer.files?.[0]);
-              }}
-            >
-              <strong>{t("portalRewardCatalog.imageDrop")}</strong>
-              <small>{t("portalRewardCatalog.imageDropHint")}</small>
-            </span>
-            <input id="catalog-image" type="file" accept="image/jpeg,image/png,image/webp" disabled={editorBusy} aria-label={t("portalRewardCatalog.uploadImage")} onChange={event => { void onUpload(event.target.files?.[0]); event.target.value = ""; }} />
-          </label>
-        </div> : <div role="tabpanel" className="reward-admin-image-panel">
-          <p>{t("portalRewardCatalog.imagePromptHint")}</p>
-          <div className="reward-admin-field"><label htmlFor="catalog-prize-name">{t("portalRewardCatalog.prizeName")}</label><Input id="catalog-prize-name" value={aiPrizeName} disabled={editorBusy} onChange={event => { const prize = event.target.value; setAiPrizeName(prize); syncAiPrompt(prize); }} /></div>
-          <div className="reward-admin-field"><label htmlFor="catalog-image-prompt">{t("portalRewardCatalog.imagePrompt")}</label><textarea id="catalog-image-prompt" value={aiPrompt} disabled={editorBusy} rows={4} onChange={event => setAiPrompt(event.target.value)} /></div>
-          <div className="reward-admin-image-actions">
-            <Button type="button" variant="outline" disabled={editorBusy || !aiPrizeName.trim()} aria-busy={imageBusy} onClick={() => void onGenerate()}>
-              {imageBusy ? t("portalRewardCatalog.generatingImage") : t("portalRewardCatalog.generateImage")}
-            </Button>
-          </div>
-        </div>}
       </div>
-      <div className="reward-admin-field"><label htmlFor="catalog-description">{t("portalRewardCatalog.description")}</label><textarea id="catalog-description" value={description} onChange={event => setDescription(event.target.value)} /></div>
-      <label className="reward-admin-checkbox"><input type="checkbox" checked={active} onChange={event => setActive(event.target.checked)} /> {t("portalRewardCatalog.active")}</label>
+    }>
+      <form id="catalog-editor-form" className="reward-admin-editor" onSubmit={event => void save(event)}>
+      {actionError ? <p className="reward-admin-error" role="alert">{actionError}</p> : null}
+
+      <section className="reward-admin-section">
+        <h3 className="reward-admin-section-title">{t("portalRewardCatalog.sectionBasics")}</h3>
+        <div className="reward-admin-section-body reward-admin-section-grid">
+          <div className="reward-admin-field"><label htmlFor="catalog-name">{t("portalRewardCatalog.name")}</label><Input id="catalog-name" value={name} onChange={event => setName(event.target.value)} required /></div>
+          <div className="reward-admin-field"><label htmlFor="catalog-kind">{t("portalRewardCatalog.kind")}</label><select id="catalog-kind" value={kind} onChange={event => setKind(event.target.value === "voucher" ? "voucher" : "gift")}>
+            <option value="gift">{t("portalRewardCatalog.gift")}</option>
+            <option value="voucher">{t("portalRewardCatalog.voucher")}</option>
+          </select></div>
+          <div className="reward-admin-field"><label htmlFor="catalog-points">{t("portalRewardCatalog.points")}</label><Input id="catalog-points" type="number" min="1" step="1" inputMode="numeric" value={points} onChange={event => setPoints(event.target.value)} required /></div>
+          <div className="reward-admin-field"><label htmlFor="catalog-stock">{t("portalRewardCatalog.stock")}</label><Input id="catalog-stock" type="number" min="0" step="1" inputMode="numeric" value={stock} onChange={event => setStock(event.target.value)} required /></div>
+          {kind === "voucher" ? <>
+            <div className="reward-admin-field"><label htmlFor="catalog-amount">{t("portalVoucher.amount")}</label><Input id="catalog-amount" required type="number" min="0.01" step="0.01" inputMode="decimal" value={amount} onChange={event => setAmount(event.target.value)} /></div>
+            <div className="reward-admin-field"><label htmlFor="catalog-days">{t("portalVoucher.validDays")}</label><Input id="catalog-days" required type="number" min="1" step="1" inputMode="numeric" value={validDays} onChange={event => setValidDays(event.target.value)} /></div>
+          </> : null}
+        </div>
+      </section>
+
+      {kind === "voucher" ? <section className="reward-admin-section">
+        <h3 className="reward-admin-section-title">{t("portalRewardCatalog.sectionStore")}</h3>
+        <div className="reward-admin-section-body">
+          {storeError ? <p role="alert">{t("portalRewardAdmin.storeFailed")} <Button type="button" variant="outline" onClick={loadStores}>{t("portal.retry")}</Button></p> : null}
+          <div className="reward-admin-field"><label htmlFor="catalog-store">{t("portalVoucher.store")}</label><select id="catalog-store" value={storeId} onChange={event => setStoreId(event.target.value)}>
+            <option value="">{t("portalVoucher.noStore")}</option>
+            {stores.map(store => <option key={store.id} value={store.id}>{store.shop_domain}</option>)}
+          </select></div>
+        </div>
+      </section> : null}
+
+      <section className="reward-admin-section" aria-labelledby="catalog-image-label">
+        <h3 className="reward-admin-section-title" id="catalog-image-label">{t("portalRewardCatalog.sectionImage")}</h3>
+        <div className="reward-admin-section-body">
+          <p className="reward-admin-section-note">{t("portalRewardCatalog.imageHint")}</p>
+          <div className="reward-admin-image-media">
+            <div className="reward-admin-image-controls">
+              <div className="reward-admin-image-tabs" role="tablist" aria-labelledby="catalog-image-label">
+                <button type="button" role="tab" aria-selected={imageTab === "upload"} className={imageTab === "upload" ? "is-active" : undefined} disabled={editorBusy} onClick={() => setImageTab("upload")}>{t("portalRewardCatalog.imageTabUpload")}</button>
+                <button type="button" role="tab" aria-selected={imageTab === "ai"} className={imageTab === "ai" ? "is-active" : undefined} disabled={editorBusy} onClick={openAiTab}>{t("portalRewardCatalog.imageTabAi")}</button>
+              </div>
+              {imageTab === "upload" ? <div role="tabpanel" className="reward-admin-image-panel">
+                <label className="reward-admin-drop">
+                  <span
+                    className={dragOver ? "reward-admin-drop-target is-over" : "reward-admin-drop-target"}
+                    onDragEnter={allowDrop}
+                    onDragOver={allowDrop}
+                    onDragLeave={(event) => {
+                      event.preventDefault();
+                      if (event.currentTarget.contains(event.relatedTarget as Node | null)) return;
+                      setDragOver(false);
+                    }}
+                    onDrop={(event) => {
+                      event.preventDefault();
+                      setDragOver(false);
+                      void onUpload(event.dataTransfer.files?.[0]);
+                    }}
+                  >
+                    <strong>{t("portalRewardCatalog.imageDrop")}</strong>
+                    <small>{t("portalRewardCatalog.imageDropHint")}</small>
+                  </span>
+                  <input id="catalog-image" type="file" accept="image/jpeg,image/png,image/webp" disabled={editorBusy} aria-label={t("portalRewardCatalog.uploadImage")} onChange={event => { void onUpload(event.target.files?.[0]); event.target.value = ""; }} />
+                </label>
+              </div> : <div role="tabpanel" className="reward-admin-image-panel">
+                <p className="reward-admin-section-note">{t("portalRewardCatalog.imagePromptHint")}</p>
+                <div className="reward-admin-field"><label htmlFor="catalog-prize-name">{t("portalRewardCatalog.prizeName")}</label><Input id="catalog-prize-name" value={aiPrizeName} disabled={editorBusy} onChange={event => { const prize = event.target.value; setAiPrizeName(prize); syncAiPrompt(prize); }} /></div>
+                <div className="reward-admin-field"><label htmlFor="catalog-image-prompt">{t("portalRewardCatalog.imagePrompt")}</label><textarea id="catalog-image-prompt" value={aiPrompt} disabled={editorBusy} rows={4} onChange={event => setAiPrompt(event.target.value)} /></div>
+                <Button type="button" variant="outline" className="reward-admin-ai-button" disabled={editorBusy || !aiPrizeName.trim()} aria-busy={imageBusy} onClick={() => void onGenerate()}>
+                  {imageBusy ? t("portalRewardCatalog.generatingImage") : t("portalRewardCatalog.generateImage")}
+                </Button>
+              </div>}
+            </div>
+            <div className="reward-admin-image-preview-wrap">
+              {imagePreview ? <img className="reward-admin-image-preview" src={imagePreview} alt="" /> : <div className="reward-admin-image-preview-empty">{t("portalRewardCatalog.imageDrop")}</div>}
+              {imagePath ? <Button type="button" variant="outline" disabled={editorBusy} onClick={() => { setImagePath(null); setImagePreview(""); }}>{t("portalRewardCatalog.removeImage")}</Button> : null}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="reward-admin-section">
+        <h3 className="reward-admin-section-title">{t("portalRewardCatalog.sectionDescription")}</h3>
+        <div className="reward-admin-section-body">
+          <div className="reward-admin-field reward-admin-description">
+            <label htmlFor="catalog-description">{t("portalRewardCatalog.description")}</label>
+            <textarea id="catalog-description" value={description} maxLength={500} onChange={event => setDescription(event.target.value)} />
+            <span className="reward-admin-description-count">{t("portalRewardCatalog.descriptionCount", { count: description.length })}</span>
+          </div>
+        </div>
+      </section>
     </form></SidePanel> : null}
     <SidePanel wide open={panel === "catalog"} title={t("portalRewardCatalog.items")} onClose={() => setPanel(null)} closeLabel={t("portalOps.close")}>
     <section className="reward-admin-catalog">
