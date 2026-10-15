@@ -5,6 +5,7 @@ import { useNavigate, useParams } from "react-router-dom";
 
 import { useAuth } from "@/auth/AuthProvider";
 import { Button } from "@/components/ui/button";
+import { CornerNotice } from "@/components/ui/corner-notice";
 import { FilterableSelect } from "@/components/ui/filterable-select";
 import { SidePanel } from "@/components/ui/side-panel";
 import { hongKongDateValue } from "@/lib/restaurant-daily-sales";
@@ -483,7 +484,7 @@ export function ShopOrderPage() {
         </section>
 
         {error ? <p className="products-state-error" role="alert">{error}</p> : null}
-        {message ? <p className="shop-order-success" role="status">{message}</p> : null}
+        {message ? <CornerNotice message={message} onDismiss={() => setMessage("")} /> : null}
         {externalDispatches.length ? (
           <section className="shop-order-dispatches" aria-labelledby="shop-order-dispatch-title">
             <header><MessageSquareText /><div><h2 id="shop-order-dispatch-title">{t("shopOrdering.dispatchTitle")}</h2><p>{t("shopOrdering.dispatchDescription")}</p></div></header>

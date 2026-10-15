@@ -1,17 +1,17 @@
 import { FormEvent, useCallback, useEffect, useState } from "react";
-import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Plus, RefreshCw, UtensilsCrossed } from "lucide-react";
 import { useCurrentPageAccess } from "@/auth/use-page-access";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ListTable } from "@/components/ui/list-table";
+import { CornerNotice } from "@/components/ui/corner-notice";
 import { SidePanel } from "@/components/ui/side-panel";
 import { Switch } from "@/components/ui/switch";
 import { listPortalOpsChannels, listPortalOpsProducts, type OpsChannel, type OpsProduct } from "@/lib/customer-portal-ops";
 import { listLunchboxes, listVipCycles, replaceLunchboxItems, setVipCycleMenus, upsertLunchbox, upsertVipCycle, type LunchboxOpsMenu, type VipCycle } from "@/lib/customer-lunchbox-ops";
-import { cn } from "@/lib/utils";
 import "@/components/customer-portal.css";
+import "./customer-portal-reward-catalog.css";
 import "./customer-lunchbox.css";
 import "@/lib/customer-portal-i18n";
 
@@ -155,46 +155,30 @@ export function CustomerPortalLunchboxPage() {
   const activeMenus = menus.filter(menu => menu.is_active);
 
   return (
-    <section className="orders-page customer-portal-ops lunchbox-ops-page">
-      <div className="portal-ops-list-intro">
-        <header className="page-heading orders-heading">
-          <div>
-            <p><Link className="portal-ops-org-link" to="/settings/customer-portal">{t("lunchboxOps.back")}</Link></p>
+    <section className="reward-admin lunchbox-ops-page customer-portal-ops">
+      <header className="page-heading">
+        <div className="reward-admin-actions">
+          {canEdit ? <Button type="button" onClick={startCreate}>{t("lunchboxOps.create")}</Button> : null}
+          {canEdit ? <Button type="button" variant="outline" onClick={() => setCycleOpen(true)}>{t("lunchboxOps.vipTitle")}</Button> : null}
+        </div>
+      </header>
+      {notice ? <CornerNotice message={notice} onDismiss={() => setNotice("")} /> : null}
+      {error && !loadFailed ? <p className="reward-admin-error" role="alert">{error}</p> : null}
 
-
-          </div>
-          {canEdit ? <div className="portal-ops-actions"><Button type="button" variant="outline" onClick={() => setCycleOpen(true)}>{t("lunchboxOps.vipTitle")}</Button><Button type="button" onClick={startCreate}><Plus /> {t("lunchboxOps.create")}</Button></div> : null}
-        </header>
-        {notice ? <p className="portal-ops-notice" role="status">{notice}</p> : null}
-        {error && !loadFailed ? <p className="portal-ops-alert" role="alert">{error}</p> : null}
-      </div>
-      <div className="portal-ops-scroll">
+      <section className="panel reward-admin-catalog-table">
+        <h2>{t("lunchboxOps.listTitle")}</h2>
         {loadFailed ? (
-          <div className="panel">
-            <div className="orders-state orders-state-error" role="alert">
-              <UtensilsCrossed />
-              <div><strong>{error}</strong></div>
-              <Button variant="outline" onClick={() => void load()}><RefreshCw />{t("portal.retry")}</Button>
-            </div>
-          </div>
-        ) : !loading && menus.length === 0 ? (
-          <div className="panel">
-            <div className="orders-state lunchbox-empty">
-              <UtensilsCrossed />
-              <div>
-                <strong>{t("lunchboxOps.empty")}</strong>
-                <span>{t("lunchboxOps.emptyDescription")}</span>
-                {canEdit ? <Button type="button" onClick={startCreate}><Plus />{t("lunchboxOps.create")}</Button> : null}
-              </div>
-            </div>
+          <div className="reward-admin-empty lunchbox-empty" role="alert">
+            <UtensilsCrossed />
+            <div><strong>{error}</strong></div>
+            <Button variant="outline" onClick={() => void load()}><RefreshCw />{t("portal.retry")}</Button>
           </div>
         ) : (
           <ListTable
-            className="panel"
-            loading={loading}
+            loading={loading && !menus.length}
             loadingLabel={t("lunchboxOps.loading")}
-            skeletonColumns={5}
-            skeletonRows={4}
+            skeletonColumns={6}
+            skeletonRows={8}
             onRefresh={load}
             header={<tr>
               <th>{t("lunchboxOps.name")}</th>
@@ -202,67 +186,67 @@ export function CustomerPortalLunchboxPage() {
               <th>{t("lunchboxOps.delivery")}</th>
               <th>{t("lunchboxOps.items")}</th>
               <th>{t("lunchboxOps.status")}</th>
+              <th>{t("orders.columns.actions")}</th>
             </tr>}
           >
             {menus.map(menu => (
               <tr key={menu.id}>
-                <td>
-                  {canEdit ? <button type="button" className="linkish" onClick={() => startEdit(menu)}>{menu.name}</button> : menu.name}
-                </td>
+                <td><div className="reward-admin-table-name">{menu.name}</div></td>
                 <td>{menu.brand}</td>
                 <td>{menu.delivery_date} {menu.delivery_time}</td>
                 <td>{menu.items.length}</td>
-                <td>
-                  <span className={cn("status-badge", menu.is_active ? "green" : "neutral")}>
-                    {menu.is_active ? t("lunchboxOps.active") : t("lunchboxOps.inactive")}
-                  </span>
+                <td>{menu.is_active ? t("lunchboxOps.active") : t("lunchboxOps.inactive")}</td>
+                <td className="table-actions-cell">
+                  {canEdit ? <Button type="button" variant="outline" onClick={() => startEdit(menu)}>{t("lunchboxOps.edit")}</Button> : null}
                 </td>
               </tr>
             ))}
+            {!menus.length ? <tr><td colSpan={6}>{t("lunchboxOps.empty")}</td></tr> : null}
           </ListTable>
         )}
-        {canEdit && !loading ? (
-          <SidePanel className="lunchbox-cycle-panel" open={cycleOpen} onClose={() => { if (!saving) setCycleOpen(false); }} title={t("lunchboxOps.vipTitle")} description={t("lunchboxOps.vipIntro")} closeLabel={t("lunchboxOps.close")} footer={<Button type="submit" form="vip-cycle-form" disabled={saving} aria-busy={saving}>{t("lunchboxOps.vipSave")}</Button>}>
-          {error ? <p className="portal-ops-alert" role="alert">{error}</p> : null}
+      </section>
 
-            <form id="vip-cycle-form" className="portal-ops-form" onSubmit={event => void publishCycle(event)}>
-              {cycles.length ? (
-                <ul className="portal-ops-cycles">
-                  {cycles.map(cycle => (
-                    <li key={cycle.id}>
-                      <strong>{cycle.name}</strong>
-                      <span>{formatCutoff(cycle.cutoff_at)} · {t("lunchboxOps.vipDays", { count: cycle.menu_ids.length })}</span>
-                    </li>
-                  ))}
-                </ul>
-              ) : null}
-              <div className="portal-ops-fields">
-                <label htmlFor="vip-cycle-name">
-                  {t("lunchboxOps.vipName")}
-                  <Input id="vip-cycle-name" value={cycleName} onChange={event => setCycleName(event.target.value)} />
+      {canEdit ? (
+        <SidePanel className="lunchbox-cycle-panel" open={cycleOpen} onClose={() => { if (!saving) setCycleOpen(false); }} title={t("lunchboxOps.vipTitle")} description={t("lunchboxOps.vipIntro")} closeLabel={t("lunchboxOps.close")} footer={<Button type="submit" form="vip-cycle-form" disabled={saving} aria-busy={saving}>{t("lunchboxOps.vipSave")}</Button>}>
+          {error ? <p className="portal-ops-alert" role="alert">{error}</p> : null}
+          <form id="vip-cycle-form" className="portal-ops-form" onSubmit={event => void publishCycle(event)}>
+            {cycles.length ? (
+              <ul className="portal-ops-cycles">
+                {cycles.map(cycle => (
+                  <li key={cycle.id}>
+                    <strong>{cycle.name}</strong>
+                    <span>{formatCutoff(cycle.cutoff_at)} · {t("lunchboxOps.vipDays", { count: cycle.menu_ids.length })}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+            <div className="portal-ops-fields">
+              <label htmlFor="vip-cycle-name">
+                {t("lunchboxOps.vipName")}
+                <Input id="vip-cycle-name" value={cycleName} onChange={event => setCycleName(event.target.value)} />
+              </label>
+              <label htmlFor="vip-cycle-cutoff">
+                {t("lunchboxOps.cutoff")}
+                <Input id="vip-cycle-cutoff" type="datetime-local" value={cycleCutoff} onChange={event => setCycleCutoff(event.target.value)} />
+              </label>
+            </div>
+            <fieldset className="lunchbox-form-section portal-ops-menu-picker">
+              <legend>{t("lunchboxOps.selectMenus")}</legend>
+              {activeMenus.length ? activeMenus.map(menu => (
+                <label className="portal-ops-check" key={menu.id}>
+                  <input
+                    type="checkbox"
+                    checked={cycleMenus.includes(menu.id)}
+                    onChange={() => setCycleMenus(current => current.includes(menu.id) ? current.filter(id => id !== menu.id) : [...current, menu.id])}
+                  />
+                  <span>{menu.delivery_date} · {menu.name}</span>
                 </label>
-                <label htmlFor="vip-cycle-cutoff">
-                  {t("lunchboxOps.cutoff")}
-                  <Input id="vip-cycle-cutoff" type="datetime-local" value={cycleCutoff} onChange={event => setCycleCutoff(event.target.value)} />
-                </label>
-              </div>
-              <fieldset className="lunchbox-form-section portal-ops-menu-picker">
-                <legend>{t("lunchboxOps.selectMenus")}</legend>
-                {activeMenus.length ? activeMenus.map(menu => (
-                  <label className="portal-ops-check" key={menu.id}>
-                    <input
-                      type="checkbox"
-                      checked={cycleMenus.includes(menu.id)}
-                      onChange={() => setCycleMenus(current => current.includes(menu.id) ? current.filter(id => id !== menu.id) : [...current, menu.id])}
-                    />
-                    <span>{menu.delivery_date} · {menu.name}</span>
-                  </label>
-                )) : <p>{t("lunchboxOps.vipNoMenus")}</p>}
-              </fieldset>
-            </form>
-          </SidePanel>
-        ) : null}
-      </div>
+              )) : <p>{t("lunchboxOps.vipNoMenus")}</p>}
+            </fieldset>
+          </form>
+        </SidePanel>
+      ) : null}
+
       <SidePanel half className="lunchbox-editor-panel" open={open} onClose={() => { if (!saving) setOpen(false); }} title={editing ? t("lunchboxOps.edit") : t("lunchboxOps.create")} closeLabel={t("lunchboxOps.close")} footer={<Button type="submit" form="lunchbox-menu-form" disabled={saving} aria-busy={saving}>{t("lunchboxOps.save")}</Button>}>
         <form id="lunchbox-menu-form" className="portal-ops-form lunchbox-editor-form" onSubmit={event => void submit(event)}>
           {error ? <p className="portal-ops-alert" role="alert">{error}</p> : null}

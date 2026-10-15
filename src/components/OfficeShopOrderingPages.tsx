@@ -23,7 +23,7 @@ import {
 import { useCurrentPageAccess } from "@/auth/use-page-access";
 import { Button } from "@/components/ui/button";
 import { FilterableSelect } from "@/components/ui/filterable-select";
-import { AlertDialog } from "@/components/ui/alert-dialog";
+import { CornerNotice } from "@/components/ui/corner-notice";
 import { OperationalListState } from "@/components/ui/operational-list-state";
 import { RestaurantSettingsListTable } from "@/components/ui/restaurant-settings-list-table";
 import { SidePanel } from "@/components/ui/side-panel";
@@ -417,7 +417,7 @@ export function OfficeShopReviewDrawerPage() {
   const [quantities, setQuantities] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
-  const [message, setMessage] = useState("");
+  const [message, setMessage] = useState<{ text: string; tone: "success" | "error" } | null>(null);
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(() => {
@@ -431,18 +431,18 @@ export function OfficeShopReviewDrawerPage() {
 
   const openReview = (row: ShopOrderRequest) => {
     setSelected(row);
-    setMessage("");
+    setMessage(null);
     setQuantities(Object.fromEntries(row.lines.map((line) => [line.id, String(line.quantity)])));
   };
 
   const save = async (row: ShopOrderRequest) => {
     const lines = row.lines.map((line) => ({ id: line.id, quantity: Number(quantities[line.id]) }));
     if (lines.some((line) => !Number.isFinite(line.quantity) || line.quantity <= 0)) {
-      setMessage(t("shopOrdering.quantityInvalid"));
+      setMessage({ text: t("shopOrdering.quantityInvalid"), tone: "error" });
       return false;
     }
     setBusy(true);
-    setMessage("");
+    setMessage(null);
     try {
       await updateShopOrderLines(row.id, lines);
       setRows((current) => current.map((item) => item.id === row.id ? {
@@ -451,10 +451,10 @@ export function OfficeShopReviewDrawerPage() {
         lines: item.lines.map((line) => ({ ...line, quantity: lines.find((value) => value.id === line.id)?.quantity ?? line.quantity })),
       } : item));
       setSelected((current) => current?.id === row.id ? { ...current, status: "reviewed" } : current);
-      setMessage(t("shopOrdering.reviewSaved"));
+      setMessage({ text: t("shopOrdering.reviewSaved"), tone: "success" });
       return true;
     } catch {
-      setMessage(t("shopOrdering.reviewSaveError"));
+      setMessage({ text: t("shopOrdering.reviewSaveError"), tone: "error" });
       return false;
     } finally {
       setBusy(false);
@@ -469,7 +469,7 @@ export function OfficeShopReviewDrawerPage() {
       setRows((current) => current.filter((item) => item.id !== row.id));
       setSelected(null);
     } catch {
-      setMessage(t("shopOrdering.sendFactoryError"));
+      setMessage({ text: t("shopOrdering.sendFactoryError"), tone: "error" });
     } finally {
       setBusy(false);
     }
@@ -513,7 +513,7 @@ export function OfficeShopReviewDrawerPage() {
       >
         {selected ? <div className="office-shop-review-detail">
           <dl><div><dt>{t("shopOrdering.restaurant")}</dt><dd>{selected.restaurantName ?? "—"}</dd></div><div><dt>{t("shopOrdering.columns.status")}</dt><dd><ShopStatus status={selected.status} /></dd></div>{selected.note ? <div><dt>{t("shopOrdering.note")}</dt><dd>{selected.note}</dd></div> : null}</dl>
-          {message ? <p className="office-shop-review-message" role="status">{message}</p> : null}
+          {message ? <CornerNotice message={message.text} tone={message.tone} onDismiss={() => setMessage(null)} /> : null}
           <div className="table-wrap operational-table-wrap"><table><thead><tr><th>{t("shopOrdering.item")}</th><th>{t("shopOrdering.unit")}</th><th>{t("shopOrdering.quantity")}</th></tr></thead><tbody>{selected.lines.map((line) => <tr key={line.id}><td><strong>{line.name}</strong>{line.sku ? <small>{line.sku}</small> : null}</td><td>{line.unit}</td><td><input aria-label={t("shopOrdering.editQuantity", { item: line.name })} type="number" min="0.01" step="any" value={quantities[line.id] ?? ""} onChange={(event) => setQuantities((current) => ({ ...current, [line.id]: event.target.value }))} /></td></tr>)}</tbody></table></div>
         </div> : <OperationalListState icon={ClipboardList} title={t("shopOrdering.emptyReview")} />}
       </SidePanel>
@@ -1014,15 +1014,7 @@ export function OfficeShopReviewPage() {
         </div>
       </header>
 
-      <AlertDialog
-        open={Boolean(message)}
-        title={t("common.notifications")}
-        message={message?.text ?? ""}
-        tone={message?.tone}
-        confirmLabel={t("common.confirm")}
-        closeLabel={t("common.close")}
-        onClose={() => setMessage(null)}
-      />
+      {message ? <CornerNotice message={message.text} tone={message.tone} onDismiss={() => setMessage(null)} /> : null}
 
       <nav className="order-editor-steps" aria-label={t("shopOrdering.reviewTitle")}>
         {([

@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ListSearchBar } from "@/components/ui/list-search-bar";
 import { ListTable } from "@/components/ui/list-table";
+import { CornerNotice } from "@/components/ui/corner-notice";
 import { SidePanel } from "@/components/ui/side-panel";
 import { Switch } from "@/components/ui/switch";
 import { useDeferredFilter } from "@/lib/use-deferred-filter";
@@ -319,7 +320,7 @@ export function CustomerPortalOpsPage() {
           </div>
         </header>
         {error ? <p role="alert">{error}</p> : null}
-        {notice ? <p role="status">{notice}</p> : null}
+        {notice ? <CornerNotice message={notice} onDismiss={() => setNotice("")} /> : null}
         {loading ? <p role="status">{t("portalOps.loading")}</p> : (
           <ListTable
             className="panel"
@@ -389,7 +390,7 @@ export function CustomerPortalOpsPage() {
           ) : null}
         </header>
         {error ? <p role="alert">{error}</p> : null}
-        {notice ? <p role="status">{notice}</p> : null}
+        {notice ? <CornerNotice message={notice} onDismiss={() => setNotice("")} /> : null}
         {loading ? <PageSkeleton variant="detail" label={t("portalOps.loading")} /> : (
           <div className="portal-org-sections">
             <section className="panel portal-org-members"><header className="panel-header"><h2>{t("portalOps.members")}</h2>{canEdit ? <Button variant="outline" size="sm" onClick={() => { setAdminEmail(""); setError(""); setAdminPanelOpen(true); }}>{t("portalOps.assignAdmin")}</Button> : null}</header>
@@ -511,7 +512,7 @@ export function CustomerPortalOpsPage() {
     <section className="orders-page customer-portal-ops">
       <div className="portal-ops-list-intro">
 
-        {notice ? <p role="status">{notice}</p> : null}
+        {notice ? <CornerNotice message={notice} onDismiss={() => setNotice("")} /> : null}
       </div>
       <article className="panel orders-panel">
         <header className="orders-toolbar">

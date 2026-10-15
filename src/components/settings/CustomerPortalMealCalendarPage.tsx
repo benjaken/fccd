@@ -6,6 +6,7 @@ import { useCurrentPageAccess } from "@/auth/use-page-access";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { FilterableSelect } from "@/components/ui/filterable-select";
+import { CornerNotice } from "@/components/ui/corner-notice";
 import { SidePanel } from "@/components/ui/side-panel";
 import {
   listGroupCalendar,
@@ -167,6 +168,7 @@ export function CustomerPortalMealCalendarPage() {
 
   return (
     <section className="kitchen-calendar-page meal-order-calendar">
+      {notice ? <CornerNotice message={notice} onDismiss={() => setNotice("")} /> : null}
       <article className="panel kitchen-calendar-panel">
         <header className="kitchen-calendar-toolbar">
           <div className="kitchen-calendar-nav">
@@ -292,7 +294,6 @@ export function CustomerPortalMealCalendarPage() {
           <Button type="submit" form="meal-calendar-holiday-form" disabled={busy}>{busy ? t("mealCalendar.saving") : t("mealCalendar.saveHoliday")}</Button>
         </> : undefined}
       >
-        {notice ? <p role="status">{notice}</p> : null}
         {formError ? <p role="alert">{formError}</p> : null}
         <section className="meal-calendar-openings">
           <h3>{t("mealCalendar.openings")}</h3>

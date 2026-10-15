@@ -3,6 +3,7 @@ import { Link, Navigate, Route, Routes, useLocation, useParams } from "react-rou
 import { useTranslation } from "react-i18next";
 import { ArrowUpRight, CalendarDays, ClipboardList, Gift, Link2, ShoppingCart } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { CornerNotice } from "@/components/ui/corner-notice";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
 import { CustomerSelfServicePage } from "@/components/CustomerSelfServicePage";
 import { CustomerWorkspaceHeader, CustomerPortalAccessState } from "@/components/customer-portal/CustomerWorkspaceChrome";
@@ -258,7 +259,7 @@ export function CustomerPersonalWorkspace({ canSwitch, loggingOut, onLogout }: {
   if (!session || sessionError) return frame(<CustomerPortalAccessState error={sessionError || t("personal.loadFailed")} busy={false} onRetry={() => setVersion(v => v + 1)} />);
   return frame(<div className="personal-content">
     {dataError && <div className="personal-data-error"><p role="alert">{dataError}</p><Button variant="outline" onClick={() => setVersion(v => v + 1)}>{t("personal.retry")}</Button></div>}
-    {operationError && <p role="alert" className="portal-error">{operationError}</p>}{notice && <p role="status" className="portal-notice">{notice}</p>}
+    {operationError && <p role="alert" className="portal-error">{operationError}</p>}{notice && <CornerNotice message={notice} onDismiss={() => setNotice("")} />}
     <PersonalContext.Provider value={{ data, session, refresh, busy, run }}><Routes>
       <Route index element={<PersonalHomePage />} />
       <Route path="personal" element={location.search.includes("addonCheckout=") ? <CustomerSelfServicePage routeBase={base} listPath={`${base}/orders`} loginPath="/customer?mode=personal" restore={fetchPersonalOtpSession} logout={logoutPersonalOtpSession} otpOnly embedded /> : <PersonalHomePage />} />

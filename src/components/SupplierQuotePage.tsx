@@ -19,13 +19,13 @@ import {
   Sparkles,
   TrendingUp,
   Upload,
-  X,
 } from "lucide-react";
 
 import { MonthlyTrendChart } from "@/components/reports/MonthlyTrendChart";
 import { SupplierQuotePdfPreview } from "@/components/SupplierQuotePdfPreview";
 import { FilterableSelect } from "@/components/ui/filterable-select";
 import { Button } from "@/components/ui/button";
+import { CornerNotice } from "@/components/ui/corner-notice";
 import { Modal } from "@/components/ui/modal";
 import { SearchSelect } from "@/components/ui/search-select";
 import { SidePanel } from "@/components/ui/side-panel";
@@ -893,7 +893,6 @@ export function SupplierQuotePage({
 
   const showNotice = (message: string) => {
     setNotice(message);
-    window.setTimeout(() => setNotice(null), 3600);
   };
 
   const stageNewSupplier = (name: string) => {
@@ -1317,13 +1316,7 @@ export function SupplierQuotePage({
 
   return (
     <div className="space-y-5 pb-10">
-      {notice ? (
-        <div className="fixed right-5 top-20 z-50 flex max-w-md items-start gap-3 rounded-xl border border-emerald-200 bg-white px-4 py-3 text-sm shadow-xl" role="status">
-          <Check className="mt-0.5 size-4 text-emerald-600" />
-          <span>{notice}</span>
-          <button type="button" className="ml-auto text-slate-400" onClick={() => setNotice(null)} aria-label="關閉提示"><X className="size-4" /></button>
-        </div>
-      ) : null}
+      {notice ? <CornerNotice message={notice} onDismiss={() => setNotice(null)} /> : null}
 
       <section className="page-heading">
         <div>

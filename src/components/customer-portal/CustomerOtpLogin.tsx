@@ -2,6 +2,7 @@ import { useState, type FormEvent, type ReactNode } from "react";
 import { Mail, ShieldCheck, Send } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
+import { CornerNotice } from "@/components/ui/corner-notice";
 import { supabase } from "@/lib/supabase";
 import { FOOD_CHANNEL_CATERING_LOGO_PATH } from "@/lib/brand-logo";
 import "@/lib/customer-portal-i18n";
@@ -67,7 +68,7 @@ export function CustomerOtpLogin({ modeSelector, mode, onVerified }: {
             value={token} onChange={e => setToken(e.target.value.replace(/\D/g, "").slice(0, 8))} placeholder={t("portal.otpPlaceholder")} autoFocus />
         </label>}
         {error && <p className="customer-login-error" role="alert">{error}</p>}
-        {notice && <p className="customer-login-notice" role="status">{notice}</p>}
+        {notice ? <CornerNotice message={notice} onDismiss={() => setNotice("")} /> : null}
         <Button type="submit" disabled={busy || (sentEmail ? !/^\d{8}$/.test(token) : !email.trim())}>
           {sentEmail ? <ShieldCheck /> : <Send />}{busy ? t("portal.loading") : t(sentEmail ? "portal.otpVerify" : "portal.otpSend")}
         </Button>

@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { MailPlus, RefreshCw, UsersRound } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { CornerNotice } from "@/components/ui/corner-notice";
 import { ListSearchBar } from "@/components/ui/list-search-bar";
 import { ListTable } from "@/components/ui/list-table";
 import { Switch } from "@/components/ui/switch";
@@ -254,8 +255,8 @@ export function CompanyEmployeesPage({
           </ListTable>
         )}
 
-        {inviteMessage ? <div className="auth-message auth-success" role="status">{inviteMessage}</div> : null}
-        {inviteError ? <div className="auth-message auth-error" role="alert">{inviteError}</div> : null}
+        {inviteMessage ? <CornerNotice message={inviteMessage} onDismiss={() => setInviteMessage(null)} /> : null}
+        {inviteError ? <CornerNotice message={inviteError} tone="error" onDismiss={() => setInviteError(null)} /> : null}
 
         <TablePagination
           summary={t("settings.pagination", { from, to, total })}

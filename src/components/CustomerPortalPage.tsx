@@ -3,6 +3,7 @@ import { Navigate, Outlet, Route, Routes, useMatch, useNavigate, useOutletContex
 import { useTranslation } from "react-i18next";
 import { Globe, Coins, Users, MapPin, ReceiptText, Home, UserRound, Building2, UtensilsCrossed, Truck } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { CornerNotice } from "@/components/ui/corner-notice";
 import { supabase } from "@/lib/supabase";
 import { fetchPortal, acceptPortalInvite, submitPortalOrder, portalCart, portalPermissions, fetchPortalEvidence, defaultMenuServiceDate, hongKongToday, menuValidUntil, type PaymentEvidence, type PortalPermission, type PortalSnapshot, type PortalMenu } from "@/lib/customer-portal";
 import { listPortalOrderBlackouts, type OrderBlackout } from "@/lib/customer-portal-calendar-ops";
@@ -152,7 +153,7 @@ function useCustomerPortalController(load: typeof fetchPortal, onMembershipChang
       requestId.current=null;setQuantities({});setPage("orders");await refresh();},t("portal.orderCreated"));
   }
 
-  return {t,params,setParams,loggedIn,authLoading,email,setEmail,data,page,menu,quantities,setQuantities,serviceDate,setServiceDate,blackouts,addressId,setAddressId,busy,error,setError,notice,inviteLink,inviteEmail,setInviteEmail,receiptOrder,setReceiptOrder,receiptFile,setReceiptFile,receiptAmount,setReceiptAmount,evidence,setEvidence,financialDocument,setFinancialDocument,address,setAddress,requestId,inviteToken,refresh,run,chooseMenu,applyTemplate,cart,checkout,setPage,setData,setInviteLink};
+  return {t,params,setParams,loggedIn,authLoading,email,setEmail,data,page,menu,quantities,setQuantities,serviceDate,setServiceDate,blackouts,addressId,setAddressId,busy,error,setError,notice,setNotice,inviteLink,inviteEmail,setInviteEmail,receiptOrder,setReceiptOrder,receiptFile,setReceiptFile,receiptAmount,setReceiptAmount,evidence,setEvidence,financialDocument,setFinancialDocument,address,setAddress,requestId,inviteToken,refresh,run,chooseMenu,applyTemplate,cart,checkout,setPage,setData,setInviteLink};
 }
 
 export type CustomerPortalController = ReturnType<typeof useCustomerPortalController>;
@@ -173,7 +174,7 @@ function PortalTeamGate({ children }: { children: ReactNode }) {
 export function CustomerPortalPage({ load = fetchPortal, loginIntro, canSwitch = false, organizations = [], activeOrganizationId, onSelectOrganization, onMembershipChanged }: { load?: typeof fetchPortal; loginIntro?: ReactNode; canSwitch?: boolean; organizations?: Array<{ id: string; name: string }>; activeOrganizationId?: string; onSelectOrganization?: (organizationId: string) => void; onMembershipChanged?: () => void }) {
   const portal = useCustomerPortalController(load,onMembershipChanged,activeOrganizationId);
   const onGuide = Boolean(useMatch("/customer/guides/:slug"));
-  const {t, setParams, loggedIn, authLoading, data, setQuantities, busy, error, notice, financialDocument, setFinancialDocument, inviteToken, refresh, run, setPage, setData, setInviteLink} = portal;
+  const {t, setParams, loggedIn, authLoading, data, setQuantities, busy, error, notice, setNotice, financialDocument, setFinancialDocument, inviteToken, refresh, run, setPage, setData, setInviteLink} = portal;
   const permissions = portalPermissions(data);
   const navItems = useMemo(() => {
     const items = nav
@@ -205,7 +206,7 @@ export function CustomerPortalPage({ load = fetchPortal, loginIntro, canSwitch =
   }
   return <main className={`customer-portal${!loggedIn ? " portal-auth-shell" : ""}`}>
     {loggedIn&&<CustomerWorkspaceHeader title={data?.organization.name} mode="organization" canSwitch={canSwitch} personal={false} organizations={organizations} activeOrganizationId={activeOrganizationId} onSelectOrganization={onSelectOrganization} navItems={data ? navItems : []} loggingOut={busy} onLogout={() => void logout()} />}
-    {loggedIn&&<>{error&&data&&<p role="alert" className="portal-error">{error}</p>}{notice&&<p role="status" className="portal-notice">{notice}</p>}</>}
+    {loggedIn&&<>{error&&data&&<p role="alert" className="portal-error">{error}</p>}{notice&&<CornerNotice message={notice} onDismiss={() => setNotice("")} />}</>}
     {financialDocument&&<ReceiptPreview order={financialDocument.order} documentKind={financialDocument.kind} printReceipt={printPdf} onClose={()=>setFinancialDocument(null)}/>}
     {authLoading?<p role="status">{t("portal.loading")}</p>:!loggedIn?<CustomerOtpLogin mode="organization" modeSelector={loginIntro} />:<>
       {inviteToken&&<section><h2>{t("portal.invitation")}</h2><Button disabled={busy} onClick={()=>void run(async()=>{await acceptPortalInvite(inviteToken);setParams({});await refresh();onMembershipChanged?.();},t("portal.joined"))}>{t("portal.acceptInvite")}</Button></section>}

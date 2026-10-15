@@ -5,6 +5,7 @@ import { Link, useParams } from "react-router-dom";
 
 import { FilterableSelect } from "@/components/ui/filterable-select";
 import { Button } from "@/components/ui/button";
+import { CornerNotice } from "@/components/ui/corner-notice";
 import { ListTable } from "@/components/ui/list-table";
 import {
   approveShopifyCatalogDraft,
@@ -233,7 +234,7 @@ export function ShopifyPendingProductDetailPage({ canManage = false }: { canMana
         <div><Link className="back-link" to="/products/shopify-pending"><ArrowLeft />{t("shopifyCatalog.back")}</Link><span className="eyebrow">{detail.storeDomain}</span><div className="shopify-detail-title-row"><h1>{detail.title}</h1><a className="shopify-product-admin-link" href={shopUrl} target="_blank" rel="noreferrer" aria-label={t("shopifyCatalog.openShopify")} title={t("shopifyCatalog.openShopify")}><ShoppingBag aria-hidden="true" /><strong aria-hidden="true">S</strong></a></div><p>{t(`shopifyCatalog.types.${detail.catalogType}`)} · #{detail.shopifyProductId}</p></div>
       </header>
       {error ? <div className="products-state products-state-error" role="alert"><AlertTriangle />{error}</div> : null}
-      {approved ? <div className="shopify-success" role="status"><CheckCircle2 />{t("shopifyCatalog.approved")}</div> : null}
+      {approved ? <CornerNotice message={t("shopifyCatalog.approved")} onDismiss={() => setApproved(false)} /> : null}
       <DatabaseComparison detail={detail} />
       {canManage ? <article className="panel shopify-material-mapping-panel"><header><div><h2>{t("shopifyCatalog.materials.title")}</h2><p>{t("shopifyCatalog.materials.description")}</p></div></header><div className="shopify-material-grid">{(["ingredient", "packing"] as const).map((kind) => <MaterialMappingCard key={kind} kind={kind} options={materialOptions[kind]} selected={selectedMaterials.filter((item) => item.kind === kind)} disabled={materialsLoading || approving || blocked} onAdd={(item) => setSelectedMaterials((current) => [...current, item])} onRemove={(ingredientId) => setSelectedMaterials((current) => current.filter((item) => item.ingredientId !== ingredientId))} />)}</div></article> : null}
       <div className="shopify-detail-grid">

@@ -155,7 +155,7 @@ describe("OfficeShopReviewPage", () => {
       }));
     });
     expect(screen.getAllByText("Reviewed").length).toBeGreaterThan(0);
-    await user.click(screen.getByRole("button", { name: "Confirm" }));
+    expect(await screen.findByRole("status")).toHaveTextContent("Order approved and ready to send to the factory.");
     expect(screen.getByRole("button", { name: "Send to factory" })).toBeInTheDocument();
   });
 
@@ -166,7 +166,7 @@ describe("OfficeShopReviewPage", () => {
     await screen.findByRole("heading", { name: request.requestNo });
     await user.click(screen.getByRole("button", { name: "Return for changes" }));
 
-    expect(screen.getByRole("alertdialog")).toHaveTextContent("Enter a reason before returning the order.");
+    expect(screen.getByRole("alert")).toHaveTextContent("Enter a reason before returning the order.");
     expect(shopOrders.reviewShopOrder).not.toHaveBeenCalled();
   });
 
@@ -229,8 +229,7 @@ describe("OfficeShopReviewPage", () => {
     await user.click(screen.getByRole("button", { name: "Send to factory" }));
 
     await waitFor(() => expect(shopOrders.sendShopOrderToFactory).toHaveBeenCalledWith(request.id));
-    expect(screen.getByRole("alertdialog")).toHaveTextContent("Sent to the factory and shipment record created.");
-    await user.click(screen.getByRole("button", { name: "Confirm" }));
+    expect(await screen.findByRole("status")).toHaveTextContent("Sent to the factory and shipment record created.");
     expect(screen.getByRole("heading", { name: request.requestNo })).toBeInTheDocument();
     expect(screen.getAllByText("In transit").length).toBeGreaterThan(0);
   });

@@ -269,12 +269,6 @@
   font-weight: 750;
 }
 
-.self-service-addon-note.is-success {
-  border-color: #9bd3ad;
-  background: #edf9f1;
-  color: #176b38;
-}
-
 .self-service-detail-actions {
   display: flex;
   align-items: baseline;

@@ -58,7 +58,6 @@
 .reward-rule-holidays li span{color:var(--muted-foreground)}
 .reward-rule-unavailable>.ui-button{margin-top:18px}
 .reward-rules-message{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 20px;border:1px solid var(--border);border-radius:10px;background:var(--muted);line-height:1.7}
-.reward-rules-notice{margin:0;color:var(--primary);line-height:1.7}
 .reward-rule-form{padding-top:8px}
 .reward-rule-form label{display:grid;gap:8px}
 .reward-rule-form input{width:100%;min-height:44px;padding:10px 12px;border:1px solid var(--input);border-radius:8px;background:var(--background);color:var(--foreground);font:inherit}

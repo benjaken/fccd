@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { History, PackageCheck } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { CornerNotice } from "@/components/ui/corner-notice";
 import { Input } from "@/components/ui/input";
 import { OperationalListState } from "@/components/ui/operational-list-state";
 import { TKO_RESTAURANT_ID } from "@/lib/shop-orders";
@@ -101,8 +102,8 @@ export function ShopReceivePage() {
         </div>
       </header>
       <article className="panel ingredients-panel shop-receive-pending">
-        {message ? <p>{message}</p> : null}
-        {error ? <p>{error}</p> : null}
+        {message ? <CornerNotice message={message} onDismiss={() => setMessage("")} /> : null}
+        {error ? <p role="alert">{error}</p> : null}
         {pending.length === 0 && !error ? (
           <OperationalListState
             icon={PackageCheck}

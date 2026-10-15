@@ -15,7 +15,6 @@
 .customer-br-applications .portal-br-policy p { color: var(--foreground); font-size: 14px; }
 .customer-br-applications .portal-br-policy .br-policy-hint { margin-top: 6px; color: var(--muted-foreground); font-size: 13px; }
 .customer-br-applications .portal-br-policy > button { background: var(--card); }
-.customer-br-applications .br-success-notice { color: var(--primary); font-size: 14px; }
 .customer-br-applications .br-applications-empty { flex-direction: column; gap: 20px; text-align: center; padding: 48px 24px; }
 .customer-br-applications .br-applications-empty > svg { width: 40px; height: 40px; color: var(--primary); stroke-width: 1.5; }
 .customer-br-applications .br-applications-empty > div { display: grid; gap: 8px; max-width: 44ch; }

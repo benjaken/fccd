@@ -32,6 +32,7 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { CornerNotice } from "@/components/ui/corner-notice";
 import { CustomerPortalAccessState } from "@/components/customer-portal/CustomerWorkspaceChrome";
 import { SidePanel } from "@/components/ui/side-panel";
 import { PdfAutoResizeTextarea } from "@/components/PdfAutoResizeTextarea";
@@ -539,7 +540,7 @@ function AddonPanel({
   </SidePanel>;
 }
 
-function DetailView({ session, order, onBack, onLogout, printReceipt, loadAddonOptions, paymentNotice, embedded = false }: { session: CustomerSelfServiceSession; order: CustomerSelfServiceOrderDetail; onBack: () => void; onLogout: () => void; printReceipt: PrintReceiptFn; loadAddonOptions: AddonOptionsFn; paymentNotice?: string; embedded?: boolean }) {
+function DetailView({ session, order, onBack, onLogout, printReceipt, loadAddonOptions, embedded = false }: { session: CustomerSelfServiceSession; order: CustomerSelfServiceOrderDetail; onBack: () => void; onLogout: () => void; printReceipt: PrintReceiptFn; loadAddonOptions: AddonOptionsFn; embedded?: boolean }) {
   const Container = embedded ? "div" : "main";
   const [receiptOpen, setReceiptOpen] = useState(false);
   const [addonOpen, setAddonOpen] = useState(false);
@@ -566,7 +567,6 @@ function DetailView({ session, order, onBack, onLogout, printReceipt, loadAddonO
           {order.payments.length ? <Button onClick={() => setReceiptOpen(true)}><ReceiptText />預覽並下載收據</Button> : null}
         </div>
       </section>
-      {paymentNotice ? <div className="self-service-addon-note is-success">{paymentNotice}</div> : null}
       {addonOptions && !addonOptions.canAddOn ? <div className="self-service-addon-note">{addonReason(addonOptions)}</div> : null}
       <section className="self-service-content-card">
         <header><div><span>訂單內容</span><h2>{order.lines.length} 項食品</h2></div><strong>{money(order.grandTotal, order.currency)}</strong></header>
@@ -713,6 +713,9 @@ export function CustomerSelfServicePage({
   if (!session) return <LoginView login={login} onLogin={setSession} loginIntro={loginIntro} />;
   if (detailError) return <main className="self-service-loading"><p role="alert">{detailError}</p><Button onClick={() => { setDetailError(""); navigate(listPath); }}>返回訂單列表</Button></main>;
   if (loading) return <main className="self-service-loading"><LoaderCircle className="self-service-spin" /><span>正在載入訂單…</span></main>;
-  if (detail) return <DetailView session={session} order={detail} onBack={() => navigate(listPath)} onLogout={() => void leave()} printReceipt={printReceipt} loadAddonOptions={demoMode ? loadDemoAddonOptions : loadAddonOptions} paymentNotice={paymentNotice} embedded={embedded} />;
+  if (detail) return <>
+    {paymentNotice ? <CornerNotice message={paymentNotice} onDismiss={() => setPaymentNotice("")} /> : null}
+    <DetailView session={session} order={detail} onBack={() => navigate(listPath)} onLogout={() => void leave()} printReceipt={printReceipt} loadAddonOptions={demoMode ? loadDemoAddonOptions : loadAddonOptions} embedded={embedded} />
+  </>;
   return <OrdersView session={session} onSelect={(order) => void selectOrder(order)} onLogout={() => void leave()} embedded={embedded} />;
 }

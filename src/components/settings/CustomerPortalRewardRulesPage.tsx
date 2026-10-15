@@ -5,6 +5,7 @@ import { useCurrentPageAccess } from "@/auth/use-page-access";
 import { Button } from "@/components/ui/button";
 import { ListTable } from "@/components/ui/list-table";
 import { SearchField } from "@/components/ui/search-field";
+import { CornerNotice } from "@/components/ui/corner-notice";
 import { SidePanel } from "@/components/ui/side-panel";
 import { createRewardRule, listRewardRules, rewardRuleThreshold,
   type RewardRuleVersion } from "@/lib/customer-portal-reward-rules-ops";
@@ -131,7 +132,7 @@ export function CustomerPortalRewardRulesPage() {
   return <section className="reward-rules-page">
     {error ? <div className="reward-rules-message" role="alert"><span>{error}</span><Button variant="outline" onClick={() => void load()}>{t("portal.retry")}</Button></div> : null}
     {invalid ? <div className="reward-rules-message" role="alert"><span>{text("dataUpdateRequired")}</span><Button variant="outline" onClick={() => void load()}>{t("portal.retry")}</Button></div> : null}
-    {notice ? <p className="reward-rules-notice" role="status">{notice}</p> : null}
+    {notice ? <CornerNotice message={notice} onDismiss={() => setNotice("")} /> : null}
     <div className="reward-rules-layout">
       <div className="reward-rules-main">
         <section className="reward-rule-current" aria-label={text("currentRule")}>

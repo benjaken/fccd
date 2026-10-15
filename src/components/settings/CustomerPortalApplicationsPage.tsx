@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ListSearchBar } from "@/components/ui/list-search-bar";
 import { ListTable } from "@/components/ui/list-table";
+import { CornerNotice } from "@/components/ui/corner-notice";
 import { SidePanel } from "@/components/ui/side-panel";
 import { Switch } from "@/components/ui/switch";
 import { useDeferredFilter } from "@/lib/use-deferred-filter";
@@ -307,7 +308,7 @@ export function CustomerPortalApplicationsPage() {
     <section className="orders-page customer-portal-ops customer-br-applications">
       <div className="portal-ops-list-intro">
 
-        {notice ? <p className="br-success-notice" role="status">{notice}</p> : null}
+        {notice ? <CornerNotice message={notice} onDismiss={() => setNotice("")} /> : null}
         <div className="portal-br-policy" aria-labelledby="br-policy-heading">
           <ShieldCheck className="br-policy-icon" aria-hidden="true" />
           <div>

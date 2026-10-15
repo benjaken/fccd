@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { CustomerWorkspaceHeader } from "@/components/customer-portal/CustomerWorkspaceChrome";
 import { Button } from "@/components/ui/button";
+import { CornerNotice } from "@/components/ui/corner-notice";
 import { supabase } from "@/lib/supabase";
 import {
   currentOrganizationApplication,
@@ -127,7 +128,7 @@ export function CustomerOrganizationApplicationPage({ loggingOut, onLogout }: { 
         <p>{t("portalApply.description")}</p>
         {loading ? <p role="status">{t("portal.loading")}</p> : null}
         {error ? <p role="alert">{error}</p> : null}
-        {notice ? <p role="status">{notice}</p> : null}
+        {notice ? <CornerNotice message={notice} onDismiss={() => setNotice("")} /> : null}
         {application ? <p role="status">{t(`portalApply.status.${application.status}`)}{application.review_reason ? ` — ${application.review_reason}` : ""}</p> : null}
         {application?.status === "approved" ? <p>{t("portalApply.approvedHint")}</p> : null}
         {!loading && !locked ? (

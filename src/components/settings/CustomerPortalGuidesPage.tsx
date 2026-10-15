@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { Input } from "@/components/ui/input";
 import { ListTable } from "@/components/ui/list-table";
+import { CornerNotice } from "@/components/ui/corner-notice";
 import { SidePanel } from "@/components/ui/side-panel";
 import { Switch } from "@/components/ui/switch";
 import { fetchPortalGuideDrafts, savePortalGuide, type PortalGuide } from "@/lib/customer-portal-guides";
@@ -81,7 +82,7 @@ export function CustomerPortalGuidesPage() {
             <p>{t("portalGuides.description")}</p>
           </div>
         </header>
-        {notice ? <p className="portal-ops-notice" role="status">{notice}</p> : null}
+        {notice ? <CornerNotice message={notice} onDismiss={() => setNotice("")} /> : null}
         {error && !loadFailed ? <p className="portal-ops-alert" role="alert">{error}</p> : null}
       </div>
       <div className="portal-ops-scroll">

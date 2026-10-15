@@ -22,7 +22,6 @@
 .customer-login-card>button:disabled{opacity:.45}
 .customer-login-card small{text-align:center;color:#7b887f;line-height:1.6}
 .customer-login-card .customer-login-error{margin:0;color:#b42318;font-size:14px;line-height:1.6}
-.customer-login-card .customer-login-notice{margin:0;color:var(--login-green);font-size:14px;line-height:1.6}
 .customer-login-actions{display:flex;justify-content:center;gap:12px;flex-wrap:wrap}
 .customer-login-actions button{color:var(--login-green)}
 @media(max-width:520px){.customer-login-shell{padding:28px 16px}.customer-login-wrap{gap:24px}.customer-login-branding{grid-template-columns:120px minmax(0,1fr);gap:16px}.customer-login-heading h1{font-size:24px}.customer-login-card{padding:24px}.customer-login-logo{height:56px}}
