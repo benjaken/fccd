@@ -5,6 +5,22 @@ import { portalRpc } from "@/lib/customer-portal-rpc";
 export const REWARD_CATALOG_IMAGE_BUCKET = "customer-reward-catalog";
 const IMAGE_MAX_BYTES = 5 * 1024 * 1024;
 const IMAGE_EXT = /^(jpg|jpeg|png|webp)$/i;
+const PROMPT_MAX = 500;
+
+/** Studio product-catalog look with soft anime rendering — matches current Grok outputs. */
+export function buildRewardCatalogImagePrompt(input: { name?: string; description?: string } = {}) {
+  const name = input.name?.trim() ?? "";
+  const description = input.description?.trim() ?? "";
+  return [
+    "Product photo for a food-service loyalty reward catalog,",
+    "soft anime illustration style with clean cel-shaded highlights,",
+    "same composition as a commercial catalog shot:",
+    "clean studio lighting, centered subject, plain soft background,",
+    "no text, no watermark, no logo, no extra props.",
+    name ? `Prize item: ${name}.` : "",
+    description ? `Details: ${description}.` : "",
+  ].filter(Boolean).join(" ").slice(0, PROMPT_MAX);
+}
 
 export type RewardCatalogItem = {
   id: string;

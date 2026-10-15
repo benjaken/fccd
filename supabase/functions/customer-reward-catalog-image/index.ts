@@ -55,9 +55,12 @@ function buildPrompt(body: { name?: string; description?: string; prompt?: strin
   const name = typeof body.name === "string" ? body.name.trim() : "";
   const description = typeof body.description === "string" ? body.description.trim() : "";
   const parts = [
-    "Product photo for a food-service loyalty reward catalog.",
-    "Clean studio lighting, centered subject, plain soft background, no text, no watermark, no logo.",
-    name ? `Item name: ${name}.` : "",
+    "Product photo for a food-service loyalty reward catalog,",
+    "soft anime illustration style with clean cel-shaded highlights,",
+    "same composition as a commercial catalog shot:",
+    "clean studio lighting, centered subject, plain soft background,",
+    "no text, no watermark, no logo, no extra props.",
+    name ? `Prize item: ${name}.` : "",
     description ? `Details: ${description}.` : "",
   ].filter(Boolean);
   return parts.join(" ").slice(0, MAX_PROMPT);

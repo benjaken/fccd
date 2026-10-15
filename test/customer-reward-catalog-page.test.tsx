@@ -8,6 +8,8 @@ const mocks = vi.hoisted(() => ({
 }));
 vi.mock("@/auth/use-page-access", () => ({ useCurrentPageAccess: () => ({ canAccess: () => mocks.edit }) }));
 vi.mock("@/lib/customer-reward-catalog", () => ({
+  buildRewardCatalogImagePrompt: ({ name = "", description = "" }: { name?: string; description?: string }) =>
+    `soft anime catalog prompt Prize item: ${name}. ${description}`.trim(),
   listRewardCatalogOps: mocks.catalog,
   fetchRewardRedemptionPage: mocks.page,
   upsertRewardCatalogItem: mocks.save,
@@ -102,7 +104,7 @@ it("uploads or generates a catalog image and saves the object path", async () =>
   mount(); const editor = await openEditor();
   fireEvent.change(editor.getByLabelText("名稱"), { target: { value: "Gift" } });
   const file = new File(["img"], "bag.png", { type: "image/png" });
-  fireEvent.change(editor.getByLabelText("圖片"), { target: { files: [file] } });
+  fireEvent.change(editor.getByLabelText("上傳圖片"), { target: { files: [file] } });
   await waitFor(() => expect(mocks.upload).toHaveBeenCalledWith(file));
   fireEvent.click(editor.getByRole("button", { name: "新增兌換項目" }));
   await waitFor(() => expect(mocks.save).toHaveBeenCalledWith(expect.objectContaining({ imageObjectPath: "user/img.png" })));
@@ -111,8 +113,14 @@ it("uploads or generates a catalog image and saves the object path", async () =>
   fireEvent.click(await screen.findByRole("button", { name: "新增兌換項目" }));
   const next = within(await screen.findByRole("dialog"));
   fireEvent.change(next.getByLabelText("名稱"), { target: { value: "AI Gift" } });
+  fireEvent.click(next.getByRole("tab", { name: "AI 生成" }));
+  expect(next.getByLabelText("獎品名稱")).toHaveValue("AI Gift");
+  expect((next.getByLabelText("提示詞") as HTMLTextAreaElement).value).toContain("soft anime");
   fireEvent.click(next.getByRole("button", { name: "AI 生成圖片" }));
-  await waitFor(() => expect(mocks.generate).toHaveBeenCalledWith({ name: "AI Gift", description: "" }));
+  await waitFor(() => expect(mocks.generate).toHaveBeenCalledWith(expect.objectContaining({
+    name: "AI Gift",
+    prompt: expect.stringContaining("AI Gift"),
+  })));
   fireEvent.click(next.getByRole("button", { name: "新增兌換項目" }));
   await waitFor(() => expect(mocks.save).toHaveBeenCalledWith(expect.objectContaining({ imageObjectPath: "user/ai/img.png" })));
 });
