@@ -99,6 +99,8 @@ import {
 } from "@/components/FactoryWarehousePages";
 import { DriverDeliveryPage } from "@/components/DriverDeliveryPage";
 import { CustomerSelfServicePage } from "@/components/CustomerSelfServicePage";
+import { CustomerEntryPage } from "@/components/CustomerEntryPage";
+import { CustomerPaymentReviewPage } from "@/components/CustomerPaymentReviewPage";
 import { RawMeatInventoryCalcPage } from "@/components/RawMeatInventoryCalcPage";
 import { SpiceUsagePage } from "@/components/SpiceUsagePage";
 import { SeasoningCostSettingsPage } from "@/components/SeasoningCostSettingsPage";
@@ -160,6 +162,17 @@ import { AttachmentsListPage } from "@/components/settings/AttachmentsListPage";
 import { CompanyEmployeesPage } from "@/components/settings/CompanyEmployeesPage";
 import { DictionariesPage } from "@/components/settings/DictionariesPage";
 import { CustomerFaqPage } from "@/components/settings/CustomerFaqPage";
+import { CustomerPortalLunchboxPage } from "@/components/settings/CustomerPortalLunchboxPage";
+import { CustomerPortalMealCalendarPage } from "@/components/settings/CustomerPortalMealCalendarPage";
+import { CustomerPortalOpsPage } from "@/components/settings/CustomerPortalOpsPage";
+import {
+  CustomerPortalRewardCatalogPage,
+  CustomerPortalRewardCatalogSkeleton,
+} from "@/components/settings/CustomerPortalRewardCatalogPage";
+import { CustomerPortalApplicationsPage } from "@/components/settings/CustomerPortalApplicationsPage";
+import { CustomerPortalGuidesPage } from "@/components/settings/CustomerPortalGuidesPage";
+import { CustomerPortalRewardRulesPage } from "@/components/settings/CustomerPortalRewardRulesPage";
+import "@/lib/customer-portal-i18n";
 import { DeliveryDistrictsPage } from "@/components/settings/DeliveryDistrictsPage";
 import { LoginLogsListPage } from "@/components/settings/LoginLogsListPage";
 import { NotificationSettingsPage } from "@/components/settings/NotificationSettingsPage";
@@ -598,6 +611,9 @@ function OperationsShell() {
   const pageKey = useMemo(() => location.pathname.replaceAll("/", "-"), [
     location.pathname,
   ]);
+  const rewardCatalogPath =
+    location.pathname === "/settings/customer-portal/rewards" ||
+    location.pathname.startsWith("/settings/customer-portal/rewards/");
 
   const switchLanguage = () => {
     void i18n.changeLanguage(i18n.language === "en" ? "zh-HK" : "en");
@@ -782,9 +798,15 @@ function OperationsShell() {
           sidebarCollapsed && "sidebar-is-collapsed",
         )}
       >
-        <aside className="sidebar">
-          <nav aria-label="Secondary">
-            {sideItems.map((item) => (
+        <aside className={cn("sidebar", location.pathname.startsWith("/settings/customer-portal") && "customer-operations-sidebar")}>
+          <nav aria-label="Secondary" aria-busy={pageAccess.loading || undefined}>
+            {pageAccess.loading
+              ? Array.from({ length: 7 }, (_, index) => (
+                  <div className="sidebar-link sidebar-link-skeleton" key={`sidebar-skeleton-${index}`} aria-hidden="true">
+                    <span className="page-skeleton-bone sidebar-link-skeleton-bone" />
+                  </div>
+                ))
+              : sideItems.map((item) => (
               <Fragment key={`${item.key}-${item.to}`}>
                 {renderSidebarItem(item)}
               </Fragment>
@@ -806,7 +828,11 @@ function OperationsShell() {
         <main className="main-content">
           <div className="page-transition" key={pageKey}>
             {pageAccess.loading ? (
-              <PageSkeleton label={t("settings.loadingPermissions")} />
+              rewardCatalogPath ? (
+                <CustomerPortalRewardCatalogSkeleton label={t("portalCatalog.loading")} />
+              ) : (
+                <PageSkeleton label={t("settings.loadingPermissions")} />
+              )
             ) : recoveringInitialPath &&
               !pageAccess.canAccess(currentPageKey) &&
               firstAccessiblePath ? (
@@ -1621,6 +1647,96 @@ function OperationsShell() {
                 }
               />
               <Route
+                path="/settings/customer-portal"
+                element={
+                  pageAccess.canAccess("settings.customer_portal") ? (
+                    <CustomerPortalOpsPage />
+                  ) : (
+                    <SettingsAccessDenied />
+                  )
+                }
+              />
+              <Route
+                path="/settings/customer-portal/applications"
+                element={
+                  pageAccess.canAccess("settings.customer_portal") ? (
+                    <CustomerPortalApplicationsPage />
+                  ) : (
+                    <SettingsAccessDenied />
+                  )
+                }
+              />
+              <Route
+                path="/settings/customer-portal/guides"
+                element={
+                  pageAccess.canAccess("settings.customer_portal") ? (
+                    <CustomerPortalGuidesPage />
+                  ) : (
+                    <SettingsAccessDenied />
+                  )
+                }
+              />
+              <Route
+                path="/settings/customer-portal/reward-rules"
+                element={
+                  pageAccess.canAccess("settings.customer_portal.reward_rules") ? (
+                    <CustomerPortalRewardRulesPage />
+                  ) : (
+                    <SettingsAccessDenied />
+                  )
+                }
+              />
+              <Route
+                path="/settings/customer-portal/rewards"
+                element={
+                  pageAccess.canAccess("settings.customer_portal") ? (
+                    <CustomerPortalRewardCatalogPage />
+                  ) : (
+                    <SettingsAccessDenied />
+                  )
+                }
+              />
+              <Route
+                path="/settings/customer-portal/calendar"
+                element={
+                  pageAccess.canAccess("settings.customer_portal") ? (
+                    <CustomerPortalMealCalendarPage />
+                  ) : (
+                    <SettingsAccessDenied />
+                  )
+                }
+              />
+              <Route
+                path="/settings/customer-portal/lunchbox"
+                element={
+                  pageAccess.canAccess("settings.customer_portal") ? (
+                    <CustomerPortalLunchboxPage />
+                  ) : (
+                    <SettingsAccessDenied />
+                  )
+                }
+              />
+              <Route
+                path="/settings/customer-portal/:orgId"
+                element={
+                  pageAccess.canAccess("settings.customer_portal") ? (
+                    <CustomerPortalOpsPage />
+                  ) : (
+                    <SettingsAccessDenied />
+                  )
+                }
+              />
+              <Route
+                path="/settings/customer-portal/:orgId/menus/:menuId"
+                element={
+                  pageAccess.canAccess("settings.customer_portal") ? (
+                    <CustomerPortalOpsPage />
+                  ) : (
+                    <SettingsAccessDenied />
+                  )
+                }
+              />
+              <Route
                 path="/settings/attachments"
                 element={
                   pageAccess.canAccess("settings.attachments") ? (
@@ -2275,6 +2391,7 @@ const BUSINESS_MENU_LABELS: Record<string, [string, string]> = {
   reports: ["報表", "Reports"],
   settings: ["系統設定", "System Settings"],
   promotion: ["推廣設定", "Promotion Settings"],
+  customerOperations: ["客戶營運", "Customer Operations"],
   orders: ["訂單", "Orders"],
   allQuotes: ["報價單", "Quotes"],
   cateringQuotes: ["所有報價", "All Quotes"],
@@ -2626,17 +2743,6 @@ function DriverDeliveryWorkspace() {
   );
 }
 
-function CustomerWorkspace() {
-  return (
-    <ProtectedWorkspace
-      permissionKey="workspace.customer.portal"
-      fallbackPermissionKey="workspace.customer"
-    >
-      <WorkspaceStandalonePage workspaceKey="customer" icon={Users} />
-    </ProtectedWorkspace>
-  );
-}
-
 function AuthGate() {
   const { session, loading, profileLoading } = useAuth();
 
@@ -2730,12 +2836,11 @@ function App() {
       <Route path="/quote-inquiry/:formId" element={<PublicEnquiryFormPage />} />
       <Route path="/self_service_search" element={<CustomerSelfServicePage />} />
       <Route path="/self_service_search/:orderId" element={<CustomerSelfServicePage />} />
+      <Route path="/customer-payment-review" element={<CustomerPaymentReviewPage />} />
       <Route
         path="/customer/*"
         element={
-          <AuthProvider>
-            <CustomerWorkspace />
-          </AuthProvider>
+          <CustomerEntryPage />
         }
       />
       <Route

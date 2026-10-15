@@ -55,6 +55,7 @@ type FormRow = {
   internal_name: string;
   public_title: string;
   public_description: string | null;
+  page_html?: string | null;
   submit_label: string;
   slug: string;
   is_default: boolean;
@@ -139,6 +140,7 @@ function mapForm(row: FormRow): EnquiryFormDefinition {
     internalName: row.internal_name,
     publicTitle: row.public_title,
     publicDescription: row.public_description || "",
+    pageHtml: row.page_html || "",
     submitLabel: row.submit_label,
     slug: row.slug,
     isDefault: row.is_default,
@@ -234,6 +236,7 @@ export async function saveEnquiryForm(form: EnquiryFormDefinition) {
     internal_name: form.internalName.trim(),
     public_title: form.publicTitle.trim(),
     public_description: form.publicDescription,
+    page_html: form.pageHtml,
     submit_label: form.submitLabel.trim() || "Submit",
     slug: form.slug.trim(),
     is_default: form.isDefault,
@@ -267,6 +270,7 @@ export async function createEnquiryForm(input: {
     internal_name: input.internalName.trim() || "未命名表單",
     public_title: input.publicTitle.trim() || input.internalName.trim() || "未命名表單",
     public_description: "",
+    page_html: "",
     submit_label: "Submit",
     slug,
     is_default: false,
@@ -287,6 +291,7 @@ export async function duplicateEnquiryForm(id: string): Promise<string> {
     internal_name: `${source.internalName} 複製`,
     public_title: source.publicTitle,
     public_description: source.publicDescription,
+    page_html: source.pageHtml,
     submit_label: source.submitLabel,
     slug: `${source.slug}-${nextId.slice(0, 6)}`,
     is_default: false,

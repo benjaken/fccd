@@ -5,10 +5,11 @@ import {
   useState,
   type FormEvent,
   type RefObject,
+  type ReactNode,
 } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
-import { useNavigate, useParams } from "react-router-dom";
+import { useMatch, useNavigate, useParams } from "react-router-dom";
 import {
   ArrowLeft,
   CalendarDays,
@@ -31,6 +32,8 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { CornerNotice } from "@/components/ui/corner-notice";
+import { CustomerPortalAccessState } from "@/components/customer-portal/CustomerWorkspaceChrome";
 import { SidePanel } from "@/components/ui/side-panel";
 import { PdfAutoResizeTextarea } from "@/components/PdfAutoResizeTextarea";
 import {
@@ -221,7 +224,7 @@ function BrandLogo({ detail }: { detail?: CustomerSelfServiceOrderDetail | null 
   );
 }
 
-function LoginView({ onLogin, login }: { onLogin: (value: CustomerSelfServiceSession) => void; login: LoginFn }) {
+function LoginView({ onLogin, login, loginIntro }: { onLogin: (value: CustomerSelfServiceSession) => void; login: LoginFn; loginIntro?: ReactNode }) {
   const { t } = useTranslation();
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
@@ -239,11 +242,14 @@ function LoginView({ onLogin, login }: { onLogin: (value: CustomerSelfServiceSes
   return (
     <main className="self-service-login-shell">
       <section className="self-service-login-wrap" aria-labelledby="self-service-title">
-        <BrandLogo />
-        <div className="self-service-login-heading">
-          <span>客戶自助服務</span>
-          <h1 id="self-service-title">查詢你的到會訂單</h1>
+        <div className="self-service-login-branding">
+          <BrandLogo />
+          <div className="self-service-login-heading">
+            <span>客戶自助服務</span>
+            <h1 id="self-service-title">查詢你的到會訂單</h1>
+          </div>
         </div>
+        {loginIntro}
         <form className="self-service-login-card" onSubmit={submit}>
           <label htmlFor="self-service-phone"><span><Phone />電話號碼</span>
             <input id="self-service-phone" inputMode="tel" autoComplete="tel" value={phone} onChange={(event) => setPhone(event.target.value)} placeholder={t("customerSelfService.phonePlaceholder")} autoFocus />
@@ -267,7 +273,7 @@ function PortalHeader({ session, onLogout, detail }: { session: CustomerSelfServ
     <header className="self-service-header">
       <BrandLogo detail={detail} />
       <div className="self-service-account">
-        <span><Phone />{session.maskedPhone}</span>
+        {session.maskedPhone&&<span><Phone />{session.maskedPhone}</span>}
         <span><Mail />{session.maskedEmail}</span>
         <Button variant="outline" size="sm" onClick={onLogout}><LogOut />離開</Button>
       </div>
@@ -275,10 +281,11 @@ function PortalHeader({ session, onLogout, detail }: { session: CustomerSelfServ
   );
 }
 
-function OrdersView({ session, onSelect, onLogout }: { session: CustomerSelfServiceSession; onSelect: (order: CustomerSelfServiceOrderSummary) => void; onLogout: () => void }) {
+function OrdersView({ session, onSelect, onLogout, embedded = false }: { session: CustomerSelfServiceSession; onSelect: (order: CustomerSelfServiceOrderSummary) => void; onLogout: () => void; embedded?: boolean }) {
+  const Container = embedded ? "div" : "main";
   return (
-    <main className="self-service-shell">
-      <PortalHeader session={session} onLogout={onLogout} />
+    <Container className="self-service-shell">
+      {!embedded && <PortalHeader session={session} onLogout={onLogout} />}
       <section className="self-service-list-intro">
         <span>你的訂單</span>
         <h1>訂單列表</h1>
@@ -295,7 +302,7 @@ function OrdersView({ session, onSelect, onLogout }: { session: CustomerSelfServ
           </button>
         ))}
       </section>
-    </main>
+    </Container>
   );
 }
 
@@ -308,7 +315,7 @@ function StatusBadges({ order }: { order: CustomerSelfServiceOrderDetail }) {
   </div>;
 }
 
-function ReceiptDocument({ order, documentRef, scale = 1 }: { order: CustomerSelfServiceOrderDetail; documentRef?: RefObject<HTMLDivElement | null>; scale?: number }) {
+function ReceiptDocument({ order, documentRef, scale = 1, documentKind = "receipt" }: { order: CustomerSelfServiceOrderDetail; documentRef?: RefObject<HTMLDivElement | null>; scale?: number; documentKind?: "receipt" | "invoice" }) {
   const subtotal = order.lines.reduce((total, line) => total + customerOrderLineTotal(line), 0);
   const shippingFee = customerOrderShippingFee(order, subtotal);
   const discount = customerOrderDiscount(order);
@@ -322,12 +329,12 @@ function ReceiptDocument({ order, documentRef, scale = 1 }: { order: CustomerSel
       ? `Overpaid: ${receiptMoney(Math.abs(order.outstanding), true)}`
       : "Payment Status: Paid";
   return (
-    <div className="quote-pdf-sheet receipt-pdf-sheet self-service-receipt-document" ref={documentRef} aria-label="唯讀收據 PDF" style={{ transform: `scale(${scale})`, transformOrigin: "top left" }}>
+    <div className="quote-pdf-sheet receipt-pdf-sheet self-service-receipt-document" ref={documentRef} aria-label={documentKind === "invoice" ? "唯讀發票 PDF" : "唯讀收據 PDF"} style={{ transform: `scale(${scale})`, transformOrigin: "top left" }}>
       <header className="receipt-pdf-letterhead">
         <img src={getDocumentLogoPath(...brandValues)} alt={getBrandLogoAlt(...brandValues)} />
         <div className="receipt-pdf-document-heading">
-          <h1>RECEIPT</h1>
-          <input aria-label="收據編號" readOnly tabIndex={-1} value={`REC/${order.orderNumber}`} />
+          <h1>{documentKind === "invoice" ? "INVOICE" : "RECEIPT"}</h1>
+          <input aria-label={documentKind === "invoice" ? "發票編號" : "收據編號"} readOnly tabIndex={-1} value={`${documentKind === "invoice" ? "INV" : "REC"}/${order.orderNumber}`} />
         </div>
       </header>
 
@@ -400,7 +407,8 @@ function ReceiptDocument({ order, documentRef, scale = 1 }: { order: CustomerSel
   );
 }
 
-function ReceiptPreview({ order, onClose, printReceipt }: { order: CustomerSelfServiceOrderDetail; onClose: () => void; printReceipt: PrintReceiptFn }) {
+export function ReceiptPreview({ order, onClose, printReceipt, documentKind = "receipt" }: { order: CustomerSelfServiceOrderDetail; onClose: () => void; printReceipt: PrintReceiptFn; documentKind?: "receipt" | "invoice" }) {
+  const documentName = documentKind === "invoice" ? "發票" : "收據";
   const documentRef = useRef<HTMLDivElement>(null);
   const previewRef = useRef<HTMLDivElement>(null);
   const [previewSize, setPreviewSize] = useState<{ width: number; height: number; scale: number } | null>(null);
@@ -433,7 +441,7 @@ function ReceiptPreview({ order, onClose, printReceipt }: { order: CustomerSelfS
   const printDocument = typeof document !== "undefined"
     ? createPortal(
         <div className="self-service-receipt-print-root" data-testid="self-service-receipt-print-root" aria-hidden="true">
-          <ReceiptDocument order={order} />
+          <ReceiptDocument order={order} documentKind={documentKind} />
         </div>,
         document.body,
       )
@@ -444,18 +452,18 @@ function ReceiptPreview({ order, onClose, printReceipt }: { order: CustomerSelfS
     <div className="self-service-receipt-layer" role="dialog" aria-modal="true" aria-labelledby="receipt-preview-title">
       <button className="self-service-receipt-scrim" onClick={onClose} aria-label="關閉收據預覽" />
       <article className="self-service-receipt-modal">
-        <header><div><span>PDF 預覽</span><h2 id="receipt-preview-title">收據 {order.orderNumber}</h2></div><Button variant="ghost" size="icon" onClick={onClose} aria-label="關閉"><X /></Button></header>
+        <header><div><span>PDF 預覽</span><h2 id="receipt-preview-title">{documentName} {order.orderNumber}</h2></div><Button variant="ghost" size="icon" onClick={onClose} aria-label="關閉"><X /></Button></header>
         <div className="self-service-receipt-preview" ref={previewRef}>
           <div
             className="self-service-receipt-stage"
             style={previewSize ? { width: previewSize.width, height: previewSize.height } : undefined}
           >
-            <ReceiptDocument order={order} documentRef={documentRef} scale={previewSize?.scale ?? 1} />
+            <ReceiptDocument order={order} documentRef={documentRef} scale={previewSize?.scale ?? 1} documentKind={documentKind} />
           </div>
         </div>
         <footer>
           <span><Check />使用瀏覽器列印並可另存為 PDF</span>
-          <Button variant="outline" onClick={() => printReceipt("收據", `REC/${order.orderNumber}`)}><Download />下載收據</Button>
+          <Button variant="outline" onClick={() => printReceipt(documentName, `${documentKind === "invoice" ? "INV" : "REC"}/${order.orderNumber}`)}><Download />下載{documentName}</Button>
         </footer>
       </article>
     </div>
@@ -532,7 +540,8 @@ function AddonPanel({
   </SidePanel>;
 }
 
-function DetailView({ session, order, onBack, onLogout, printReceipt, loadAddonOptions, paymentNotice }: { session: CustomerSelfServiceSession; order: CustomerSelfServiceOrderDetail; onBack: () => void; onLogout: () => void; printReceipt: PrintReceiptFn; loadAddonOptions: AddonOptionsFn; paymentNotice?: string }) {
+function DetailView({ session, order, onBack, onLogout, printReceipt, loadAddonOptions, embedded = false }: { session: CustomerSelfServiceSession; order: CustomerSelfServiceOrderDetail; onBack: () => void; onLogout: () => void; printReceipt: PrintReceiptFn; loadAddonOptions: AddonOptionsFn; embedded?: boolean }) {
+  const Container = embedded ? "div" : "main";
   const [receiptOpen, setReceiptOpen] = useState(false);
   const [addonOpen, setAddonOpen] = useState(false);
   const [addonOptions, setAddonOptions] = useState<CustomerSelfServiceAddonOptions | null>(null);
@@ -547,8 +556,8 @@ function DetailView({ session, order, onBack, onLogout, printReceipt, loadAddonO
     return () => { active = false; };
   }, [loadAddonOptions, order.id, session.token]);
   return (
-    <main className="self-service-shell self-service-detail-shell">
-      <PortalHeader session={session} onLogout={onLogout} detail={order} />
+    <Container className="self-service-shell self-service-detail-shell">
+      {!embedded && <PortalHeader session={session} onLogout={onLogout} detail={order} />}
       <button type="button" className="self-service-back" onClick={onBack}><ArrowLeft />返回訂單列表</button>
       <section className="self-service-detail-title">
         <div><span>訂單</span><h1>{order.orderNumber}</h1></div>
@@ -558,7 +567,6 @@ function DetailView({ session, order, onBack, onLogout, printReceipt, loadAddonO
           {order.payments.length ? <Button onClick={() => setReceiptOpen(true)}><ReceiptText />預覽並下載收據</Button> : null}
         </div>
       </section>
-      {paymentNotice ? <div className="self-service-addon-note is-success">{paymentNotice}</div> : null}
       {addonOptions && !addonOptions.canAddOn ? <div className="self-service-addon-note">{addonReason(addonOptions)}</div> : null}
       <section className="self-service-content-card">
         <header><div><span>訂單內容</span><h2>{order.lines.length} 項食品</h2></div><strong>{money(order.grandTotal, order.currency)}</strong></header>
@@ -590,7 +598,7 @@ function DetailView({ session, order, onBack, onLogout, printReceipt, loadAddonO
       </section>
       {receiptOpen ? <ReceiptPreview order={order} printReceipt={printReceipt} onClose={() => setReceiptOpen(false)} /> : null}
       {addonOpen && addonOptions ? <AddonPanel open session={session} order={order} options={addonOptions} onClose={() => setAddonOpen(false)} /> : null}
-    </main>
+    </Container>
   );
 }
 
@@ -601,9 +609,17 @@ export function CustomerSelfServicePage({
   loadAddonOptions = fetchCustomerSelfServiceAddonOptions,
   logout = logoutCustomerSelfService,
   printReceipt = printPdf,
-}: { login?: LoginFn; restore?: RestoreFn; loadDetail?: DetailFn; loadAddonOptions?: AddonOptionsFn; logout?: LogoutFn; printReceipt?: PrintReceiptFn }) {
+  routeBase = "/self_service_search",
+  loginPath = routeBase,
+  loginIntro,
+  otpOnly = false,
+  embedded = false,
+  listPath = routeBase,
+}: { login?: LoginFn; restore?: RestoreFn; loadDetail?: DetailFn; loadAddonOptions?: AddonOptionsFn; logout?: LogoutFn; printReceipt?: PrintReceiptFn; routeBase?: string; loginPath?: string; loginIntro?: ReactNode; otpOnly?: boolean; embedded?: boolean; listPath?: string }) {
   const navigate = useNavigate();
-  const { orderId = "" } = useParams<{ orderId?: string }>();
+  const params = useParams<{ orderId?: string }>();
+  const detailMatch = useMatch(`${routeBase}/:orderId`);
+  const orderId = detailMatch?.params.orderId ?? params.orderId ?? "";
   const demoMode = import.meta.env.DEV
     && typeof window !== "undefined"
     && new URLSearchParams(window.location.search).get("demo") === "1";
@@ -620,7 +636,11 @@ export function CustomerSelfServicePage({
       setLoading(false);
       return;
     }
-    restore().then(setSession).finally(() => setLoading(false));
+    let active = true;
+    restore().then(value => { if (active) setSession(value); })
+      .catch(() => { if (active) setDetailError("暫時無法載入訂單，請重新查詢。"); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
   }, [demoMode, restore]);
 
   useEffect(() => {
@@ -665,29 +685,37 @@ export function CustomerSelfServicePage({
     void captureCustomerAddonPaypalCheckout(session.token, checkoutId)
       .then((result) => {
         if (result.orderId) {
-          navigate(`/self_service_search/${encodeURIComponent(result.orderId)}`, { replace: true });
+          navigate(`${routeBase}/${encodeURIComponent(result.orderId)}`, { replace: true });
         }
         setPaymentNotice("PayPal 付款成功，加單項目已加入訂單。");
       })
       .catch(() => setDetailError("PayPal 付款狀態暫時未能確認，請稍後重新查詢訂單；請勿重複付款。"))
       .finally(() => { cleanup(); setLoading(false); });
-  }, [demoMode, navigate, session]);
+  }, [demoMode, navigate, routeBase, session]);
 
   function selectOrder(order: CustomerSelfServiceOrderSummary) {
     if (!session) return;
-    navigate(`/self_service_search/${encodeURIComponent(order.id)}`);
+    navigate(`${routeBase}/${encodeURIComponent(order.id)}`);
   }
 
   async function leave() {
-    if (session) await logout(session.token).catch(() => undefined);
+    if (session) {
+      try { await logout(session.token); }
+      catch { setDetailError("登出未完成，請重試。"); return; }
+    }
     setDetail(null); setSession(null);
-    navigate("/self_service_search", { replace: true });
+    navigate(loginPath, { replace: true });
   }
 
+  if (loading && !session && otpOnly) return <CustomerPortalAccessState error="" busy={false} onRetry={()=>{}} />;
   if (loading && !session) return <main className="self-service-loading"><LoaderCircle className="self-service-spin" /><span>正在載入客戶自助服務…</span></main>;
-  if (!session) return <LoginView login={login} onLogin={setSession} />;
-  if (detailError) return <main className="self-service-loading"><p role="alert">{detailError}</p><Button onClick={() => { setDetailError(""); navigate("/self_service_search"); }}>返回訂單列表</Button></main>;
+  if (!session && otpOnly) return <CustomerPortalAccessState error={detailError || "暫時無法載入訂單，請重新查詢。"} busy={loading} onRetry={() => {setLoading(true);setDetailError("");void restore().then(setSession).catch(()=>setDetailError("暫時無法載入訂單，請重新查詢。")).finally(()=>setLoading(false));}} />;
+  if (!session) return <LoginView login={login} onLogin={setSession} loginIntro={loginIntro} />;
+  if (detailError) return <main className="self-service-loading"><p role="alert">{detailError}</p><Button onClick={() => { setDetailError(""); navigate(listPath); }}>返回訂單列表</Button></main>;
   if (loading) return <main className="self-service-loading"><LoaderCircle className="self-service-spin" /><span>正在載入訂單…</span></main>;
-  if (detail) return <DetailView session={session} order={detail} onBack={() => navigate("/self_service_search")} onLogout={() => void leave()} printReceipt={printReceipt} loadAddonOptions={demoMode ? loadDemoAddonOptions : loadAddonOptions} paymentNotice={paymentNotice} />;
-  return <OrdersView session={session} onSelect={(order) => void selectOrder(order)} onLogout={() => void leave()} />;
+  if (detail) return <>
+    {paymentNotice ? <CornerNotice message={paymentNotice} onDismiss={() => setPaymentNotice("")} /> : null}
+    <DetailView session={session} order={detail} onBack={() => navigate(listPath)} onLogout={() => void leave()} printReceipt={printReceipt} loadAddonOptions={demoMode ? loadDemoAddonOptions : loadAddonOptions} embedded={embedded} />
+  </>;
+  return <OrdersView session={session} onSelect={(order) => void selectOrder(order)} onLogout={() => void leave()} embedded={embedded} />;
 }

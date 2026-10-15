@@ -9,6 +9,7 @@ import {
   getBrandContactEmail,
   getDocumentLogoPath,
   getBrandLogoAlt,
+  getStorefrontLogoPath,
 } from "@/lib/brand-logo";
 
 describe("brand logo selection", () => {
@@ -43,6 +44,15 @@ describe("brand logo selection", () => {
     expect(getDocumentLogoPath("福滿樓")).toBe(FC_CUISINE_LOGO_PATH);
     expect(getDocumentLogoPath("FC Cuisine")).toBe(FC_CUISINE_LOGO_PATH);
     expect(getBrandLogoAlt("福滿樓")).toBe("FC Cuisine 福滿樓");
+  });
+
+  it("uses a storefront logo only for the matching brand", () => {
+    expect(getStorefrontLogoPath("Catering", "foodchannels-catering.myshopify.com")).toBe(FOOD_CHANNEL_CATERING_LOGO_PATH);
+    expect(getStorefrontLogoPath("HK lunch box", "hklunchbox.myshopify.com")).toBe(HK_LUNCH_BOX_LOGO_PATH);
+    expect(getStorefrontLogoPath("HK Party Food", "hk-party-food.myshopify.com")).toBe(HK_PARTY_FOOD_LOGO_PATH);
+    expect(getStorefrontLogoPath("Kitchen", "foodchannels-kitchen.myshopify.com")).toBe(FOOD_CHANNEL_KITCHEN_LOGO_PATH);
+    expect(getStorefrontLogoPath("Express", "foodchannels-express.myshopify.com")).toBeNull();
+    expect(getStorefrontLogoPath("Brand menu", "brand.myshopify.com")).toBeNull();
   });
 
   it("uses the configured brand email before the brand fallback", () => {

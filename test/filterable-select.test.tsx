@@ -24,6 +24,15 @@ function Example() {
   );
 }
 
+function ForcedSearchExample() {
+  return (
+    <FilterableSelect searchable aria-label="團體客戶" defaultValue="">
+      <option value="">全部團體客戶</option>
+      <option value="org-a">恒隆集團</option>
+    </FilterableSelect>
+  );
+}
+
 function ShortExample() {
   return (
     <FilterableSelect aria-label="狀態" defaultValue="active">
@@ -34,6 +43,18 @@ function ShortExample() {
 }
 
 describe("FilterableSelect", () => {
+  it("can search a short list when search is required", async () => {
+    await i18n.changeLanguage("zh-HK");
+    const user = userEvent.setup();
+    render(<ForcedSearchExample />);
+
+    await user.click(screen.getByRole("combobox", { name: "團體客戶" }));
+    await user.type(screen.getByRole("combobox", { name: "搜尋選項" }), "恒隆");
+    const listbox = screen.getByRole("listbox");
+    expect(within(listbox).getByRole("option", { name: "恒隆集團" })).toBeInTheDocument();
+    expect(within(listbox).queryByRole("option", { name: "全部團體客戶" })).not.toBeInTheDocument();
+  });
+
   it("keeps lists with ten or fewer options as a normal select", () => {
     render(<ShortExample />);
 

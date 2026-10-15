@@ -40,6 +40,30 @@
 }
 
 .enquiry-public-card > p,
+.enquiry-page-html,
+.enquiry-html-preview {
+  margin: 0;
+  color: #415348;
+  line-height: 1.7;
+}
+
+.enquiry-page-html :is(h2, h3),
+.enquiry-html-preview :is(h2, h3) {
+  margin: 0.6rem 0 0.2rem;
+  color: #17251d;
+}
+
+.enquiry-page-html :is(p, ul, ol),
+.enquiry-html-preview :is(p, ul, ol) {
+  margin: 0.35rem 0;
+}
+
+.enquiry-html-preview {
+  border: 1px solid #d7e3db;
+  border-radius: 12px;
+  padding: 12px;
+  background: #fff;
+}
 .enquiry-form-hint {
   color: #65736a;
   font-size: 0.95rem;

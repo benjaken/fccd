@@ -31,6 +31,22 @@ describe("Primary navigation section matching", () => {
     expect(businessSidebarNav("promotion", "").map((item) => item.key))
       .toEqual(secondaryNav.promotion.map((item) => item.key));
   });
+  it("moves customer operations pages into their own top-level section", () => {
+    expect(secondaryNav.customerOperations).toHaveLength(7);
+    for (const item of secondaryNav.customerOperations) {
+      expect(sectionFromPath(item.to)).toBe("customerOperations");
+      expect(businessSectionFromLocation(item.to, "?nav=settings")).toBe(
+        "customerOperations",
+      );
+      expect(secondaryNav.promotion.some((promo) => promo.to === item.to)).toBe(false);
+    }
+    expect(businessSidebarNav("customerOperations", "").map((item) => item.key))
+      .toEqual(secondaryNav.customerOperations.map((item) => item.key));
+    expect(primaryNav.find((item) => item.key === "customerOperations")).toMatchObject({
+      to: "/settings/customer-portal",
+      permissionKey: "customer_operations",
+    });
+  });
   it("keeps only one sidebar group expanded at each level", () => {
     expect(
       sidebarAccordionExpansion(
@@ -213,6 +229,10 @@ describe("Primary navigation section matching", () => {
     ["/settings/dictionaries", "promotion"],
     ["/settings/districts", "promotion"],
     ["/settings/customer-faq", "promotion"],
+    ["/settings/customer-portal", "customerOperations"],
+    ["/settings/customer-portal/calendar", "customerOperations"],
+    ["/settings/customer-portal/reward-rules", "customerOperations"],
+    ["/settings/customer-portal/org-1/menus/menu-1", "customerOperations"],
     ["/settings/order-lists", "settings"],
     ["/settings/attachments", "promotion"],
     ["/orders/settings/order-list-tips", "orders"],

@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { CornerNotice } from "@/components/ui/corner-notice";
 import { FilterableSelect } from "@/components/ui/filterable-select";
 import { RestaurantSettingsListTable } from "@/components/ui/restaurant-settings-list-table";
 import { SidePanel } from "@/components/ui/side-panel";
@@ -207,7 +208,7 @@ export function FactoryWarehouseReceiptsPage() {
 
   return (
     <section className="inventory-records-page">
-      {message ? <Feedback tone="success">{message}</Feedback> : null}
+      {message ? <CornerNotice message={message} onDismiss={() => setMessage("")} /> : null}
       {loadError ? <Feedback tone="error">{loadError}</Feedback> : null}
       {!loadError ? <RestaurantSettingsListTable
         loading={loading}

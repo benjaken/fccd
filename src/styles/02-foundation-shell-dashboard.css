@@ -609,9 +609,8 @@ button {
 .shopify-comparison-table td { max-width: 28rem; vertical-align: top; white-space: normal; overflow-wrap: anywhere; }
 .shopify-comparison-table th { position: sticky; z-index: 1; top: 0; }
 .shopify-comparison-same td { color: var(--muted-foreground); }
-.shopify-blockers, .shopify-success { display: flex; gap: .65rem; border-radius: .65rem; padding: .8rem; }
+.shopify-blockers { display: flex; gap: .65rem; border-radius: .65rem; padding: .8rem; }
 .shopify-blockers { background: #fff7ed; color: #9a3412; }
-.shopify-success { background: #ecfdf5; color: #166534; }
 .shopify-review-panel .shopify-blockers { margin: 1rem 1.1rem 0; }
 .shopify-review-readiness { display: flex; align-items: flex-start; gap: .6rem; margin: 1rem 1.1rem 0; border: 1px solid #bbf7d0; border-radius: .65rem; padding: .75rem .8rem; background: #f0fdf4; color: #166534; }
 .shopify-review-readiness svg { width: 1.1rem; height: 1.1rem; flex: 0 0 auto; margin-top: .1rem; }
@@ -1301,6 +1300,24 @@ body:has(.side-panel-root) .shell-body.sidebar-is-collapsed .sidebar {
   white-space: nowrap;
 }
 
+.sidebar-link-skeleton {
+  pointer-events: none;
+}
+
+.sidebar-link-skeleton-bone {
+  display: block;
+  width: 72%;
+  height: 14px;
+  border-radius: 999px;
+}
+
+.sidebar-link-skeleton:nth-child(2) .sidebar-link-skeleton-bone { width: 58%; }
+.sidebar-link-skeleton:nth-child(3) .sidebar-link-skeleton-bone { width: 66%; }
+.sidebar-link-skeleton:nth-child(4) .sidebar-link-skeleton-bone { width: 48%; }
+.sidebar-link-skeleton:nth-child(5) .sidebar-link-skeleton-bone { width: 70%; }
+.sidebar-link-skeleton:nth-child(6) .sidebar-link-skeleton-bone { width: 54%; }
+.sidebar-link-skeleton:nth-child(7) .sidebar-link-skeleton-bone { width: 62%; }
+
 button.sidebar-link {
   width: 100%;
   border: 0;
@@ -1657,7 +1674,7 @@ button.sidebar-link {
 }
 
 .page-transition
-  > :has(> .page-heading):not(.customer-faq-page):not(:has(> .page-heading button)):not(
+  > :has(> .page-heading):not(.customer-faq-page):not(.meal-order-calendar):not(.reward-admin):not(.customer-portal-ops):not(:has(> .page-heading button)):not(
     :has(> .page-heading a)
   ):not(:has(> .page-heading input)):not(:has(> .page-heading select)):not(
     :has(> .page-heading textarea)

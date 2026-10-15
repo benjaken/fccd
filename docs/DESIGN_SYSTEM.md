@@ -1,5 +1,7 @@
 # FCCD Design System
 
+客戶積分規則載入使用與內容佈局對應的整頁骨架屏，沿用 `page-skeleton-bone` 和 `TableSkeletonRows`，保留版本表頭；`aria-busy` 配合本地化載入提示，載入完成後顯示資料及操作。綠色橫額內的骨架使用主色混合 18% 卡片色，避免白色佔位及過深的墨綠色。
+
 FCCD（**Food Channel Catering Delivery**）自有設計規範：以 **shadcn/ui（New York + CSS variables + CVA）** 為元件與 token 基礎，
 吸收 **Ant Design** 的企業後台密度、操作層級、回饋與資料展示節奏，再疊加本專案已拍板的
 品牌與營運規則。
@@ -25,6 +27,19 @@ FCCD（**Food Channel Catering Delivery**）自有設計規範：以 **shadcn/ui
 ---
 
 ## 1. 設計原則
+
+客戶積分規則頁以目前規則橫額、計費說明及版本紀錄為主欄，退款入口為輔欄；手機依序排列。此頁不放假期或營業日設定。
+新增版本、假期與退款使用共用 SidePanel，避免長表單常駐擠壓紀錄。退款先搜索訂單再選擇，訂單資料在加寬的側邊欄內展開。
+版本表保留 ListTable 載入、重試與橫向捲動，按內容高度呈現，避免少量規則撐成整頁空白。
+缺少有效門檻時顯示資料待更新，不能以預設數字或 NaN 代替。
+
+客戶登入採用截圖確認的自助服務風格：480px 內容區、實際 Food Channels Catering Logo、淺綠背景及獨立白色表單卡片，輸入框及主要按鈕至少 48px 高。Logo 與小標題／主標題水平並排，手機縮小 Logo 與字級，保持橫排而不溢出。
+
+共用入口 `/customer` 在品牌標題下方提供個人／機構模式連結；選中項為綠底白字，至少 44px 點擊高度。兩種身份共用電郵 OTP 表單，支援發碼、8 位驗證、重發、更換電郵及具體錯誤。Light 依參考畫面配色，Dark 使用語意主題 tokens；舊相容入口保留原有查單功能。
+
+登入後的機構頁使用同一 Food Channels Catering SVG Logo，頁首左側顯示身份及機構名稱，右上角放一組身份切換及登出；手機操作區可換行並靠右。資料載入失敗以圖示、標題、說明及重試按鈕組成狀態卡片，手機維持完整可讀且不橫向溢出。
+
+個人 OTP 工作區共用此頁首及狀態卡片。登入前不顯示身份切換，登入後只有服務端核實兩種身份可用才顯示切換；隱藏不能取代後端的成員及訂單權限檢查。
 
 1. **Operational clarity（營運清晰）**  
    先讓廚師、文員、司機、財務看懂狀態與下一步，再談裝飾。借 Ant Design 的「確定／清晰」。
@@ -135,6 +150,10 @@ Active 導航（側欄、工作區 soft link、migration tab）必須是**淡綠
 | `icon` | 40×40 | 僅圖示按鈕 |
 
 同一工具列內尺寸必須一致。
+
+個人客戶工作區沿用 `CustomerWorkspaceHeader` 的手機選單；PC 使用下述置中 shell。`CustomerPersonalWorkspace` 提供共用的訂單摘要列和再訂購確認控制；各頁以同一 controller 取得已驗證的個人 session、資料及提交狀態。個人主頁先呈現下一張訂單，餐牌及新訂購連至配置的 Shopify 店舖。未開通積分與未連接地址同步使用明確文字狀態，不顯示示範餘額或無效操作。
+
+個人 Portal 的 PC 版（768px 起）使用最高 820px 的置中 shell。頂部 76px 綠色標題列使用 `--personal-header-bg: #116b59`／`--personal-header-fg: #fff`，內容底色為 `--personal-surface: #f3f6f4`；左側選單、當頁標題置中。手機維持既有 Logo 頁首與抽屜。機構頁面及其他工作區維持原有頁首。
 
 ### 2.6 動效 Motion
 
@@ -372,3 +391,24 @@ Active 導航（側欄、工作區 soft link、migration tab）必須是**淡綠
 3. 相關測試與實作
 
 審核時以「是否符合本設計系統 + 表格標準 + PRD UX」為準。
+
+積分兌換管理頁使用有標籤的雙欄表單及獨立目錄，窄螢幕改為單欄；Shopify 客戶對應以可展開區域呈現。載入失敗保留重試，不能顯示成空目錄；提交及處理兌換期間鎖定相應操作，編輯可以取消。
+
+
+## Customer operations layouts
+
+The five operations pages use navigation-provided page names without repeated page titles, compact list toolbars and the existing Input, Button, ListTable, TablePagination and SidePanel components. The meal calendar groups customer filtering with month navigation, wrapping the filter into a separate row on narrow screens. Lunchbox VIP cycle configuration opens in SidePanel, leaving menus as the main list. The customer reward rules page retains its current composition. Scoped styling lives in `src/components/settings/customer-operations-layout.css`; the existing App sidebar renderer remains the navigation source.
+
+飯盒餐單建立／編輯使用共用 `SidePanel half`：桌面佔視窗一半（50vw），767px 以下全寬。表單以餐單資料、配送設定及餐點三組 `fieldset`／`legend` 呈現；每個餐點保留可見的產品、單價、數量標籤，手機改為單欄。空餐單列表提供建立餐單主操作（需編輯權限）；VIP 週期的餐單勾選器留在獨立 SidePanel。此頁沿用 FCCD tokens 與共用控制項，局部佈局由 `customer-lunchbox.css` 管理。
+
+
+機構詳情頁以機構識別與操作工具列開頭，餐單為主欄、成員為輔欄；1440px 以下改單欄。列表採既有 ListTable 並與 panel header 共用單一外框，不嵌套卡片。指定管理員透過共享 SidePanel 編輯，成功後關閉，失敗保留輸入。此頁不新增泛用頁面標題或說明。
+
+
+機構與餐單編輯沿用 SidePanel；表單以 fieldset/legend 分組，基本資料、供餐安排、設定與餐點分區，手機單欄。供餐範圍使用 DateRangePicker，時間使用 TimePicker/DateTimePicker，品牌與產品使用 FilterableSelect。底部提供關閉及儲存；儲存時禁止關閉，失敗在面板內顯示錯誤。
+
+
+機構與餐單編輯面板使用共享 SidePanel 的 half variant：桌面 50vw，手機全寬。表單雙欄對齊並統一控制高度為 40px；截單日期與時間可收縮，餐點列保留名稱、單價、數量與刪除操作，手機將名稱獨佔一行。
+
+
+客戶介紹內容使用共享 RichTextEditor（粗體、斜體、底線、項目與編號清單），編輯面板桌面半寬、手機全寬。內容儲存為清理過的 HTML，客戶端使用相同 allowlist 顯示；舊純文字仍保留換行。

@@ -4,6 +4,7 @@ import { useParams } from "react-router-dom";
 import { EnquiryFormFields } from "@/components/EnquiryFormFields";
 import { Button } from "@/components/ui/button";
 import { FOOD_CHANNEL_CATERING_LOGO_PATH } from "@/lib/brand-logo";
+import { sanitizeEnquiryHtml } from "@/lib/enquiry-page-html";
 import {
   emptyAnswers,
   enquiryQuestionElementId,
@@ -149,7 +150,8 @@ export function PublicEnquiryFormPage() {
             <img className="enquiry-public-logo" src={FOOD_CHANNEL_CATERING_LOGO_PATH} alt="Food Channel Catering" />
             <header>
               <h1>{form.publicTitle}</h1>
-              {form.publicDescription ? <p>{form.publicDescription}</p> : null}
+              {form.pageHtml ? <div className="enquiry-page-html" dangerouslySetInnerHTML={{ __html: sanitizeEnquiryHtml(form.pageHtml) }} /> : null}
+              {!form.pageHtml && form.publicDescription ? <p>{form.publicDescription}</p> : null}
             </header>
             <div className="sr-only" aria-hidden="true">
               <label>

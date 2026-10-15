@@ -44,6 +44,13 @@
   text-align: center;
 }
 
+.self-service-login-branding{display:grid;grid-template-columns:180px minmax(0,1fr);align-items:center;gap:20px}
+.self-service-login-branding .self-service-logo{width:100%;height:68px;max-width:none}
+.self-service-login-branding .self-service-login-heading{text-align:left}
+.self-service-login-branding .self-service-login-heading h1{font-size:28px;line-height:1.2}
+@media(max-width:520px){.self-service-login-branding{grid-template-columns:120px minmax(0,1fr);gap:16px}.self-service-login-branding .self-service-logo{height:56px}.self-service-login-branding .self-service-login-heading h1{font-size:24px}}
+@media(max-width:360px){.self-service-login-branding{grid-template-columns:96px minmax(0,1fr);gap:12px}.self-service-login-branding .self-service-login-heading h1{font-size:20px}}
+
 .self-service-login-heading > span,
 .self-service-list-intro > span,
 .self-service-detail-title > div > span,
@@ -260,12 +267,6 @@
   text-align: center;
   font-size: 14px;
   font-weight: 750;
-}
-
-.self-service-addon-note.is-success {
-  border-color: #9bd3ad;
-  background: #edf9f1;
-  color: #176b38;
 }
 
 .self-service-detail-actions {

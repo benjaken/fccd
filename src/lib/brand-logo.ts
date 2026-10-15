@@ -8,6 +8,20 @@ const LUNCH_BOX_PATTERN = /(?:lunch\s*box|lunchbox|hklunchbox|飯盒|\bfcbq\d*)/
 const PARTY_FOOD_PATTERN = /(?:party\s*food|partyfood|hkpartyfood|\bfcpq\d*)/i;
 const KITCHEN_PATTERN = /(?:food\s*channel(?:s)?\s*kitchen|\bfck\b|中央廚房|kitchen|\bfckq\d*)/i;
 const CUISINE_PATTERN = /(?:福滿樓|fc\s*cuisine|cuisine)/i;
+const CATERING_PATTERN = /(?:\bcatering\b|foodchannels-catering)/i;
+
+/** Logo for a storefront menu card. Unknown brands return null so they are not shown with another brand's mark. */
+export function getStorefrontLogoPath(
+  ...values: Array<string | null | undefined>
+): string | null {
+  const brandText = values.filter(Boolean).join(" ");
+  if (LUNCH_BOX_PATTERN.test(brandText)) return HK_LUNCH_BOX_LOGO_PATH;
+  if (PARTY_FOOD_PATTERN.test(brandText)) return HK_PARTY_FOOD_LOGO_PATH;
+  if (CUISINE_PATTERN.test(brandText)) return FC_CUISINE_LOGO_PATH;
+  if (KITCHEN_PATTERN.test(brandText)) return FOOD_CHANNEL_KITCHEN_LOGO_PATH;
+  if (CATERING_PATTERN.test(brandText)) return FOOD_CHANNEL_CATERING_LOGO_PATH;
+  return null;
+}
 
 type BrandKind = "catering" | "lunch-box" | "party-food" | "kitchen" | "cuisine";
 

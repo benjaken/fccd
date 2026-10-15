@@ -1,0 +1,741 @@
+import { TablePagination } from "@/components/ui/table-pagination";
+import { FormEvent, useCallback, useEffect, useState } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
+import { Building2, Pencil, Plus, RefreshCw, Settings, Trash2 } from "lucide-react";
+import { useCurrentPageAccess } from "@/auth/use-page-access";
+import { PageSkeleton } from "@/components/ui/page-skeleton";
+import { FilterableSelect } from "@/components/ui/filterable-select";
+import { DateRangePicker } from "@/components/ui/date-range-picker";
+import { DateTimePicker } from "@/components/ui/date-time-picker";
+import { TimePicker } from "@/components/ui/time-picker";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { ListSearchBar } from "@/components/ui/list-search-bar";
+import { ListTable } from "@/components/ui/list-table";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { CornerNotice } from "@/components/ui/corner-notice";
+import { SidePanel } from "@/components/ui/side-panel";
+import { Switch } from "@/components/ui/switch";
+import { useDeferredFilter } from "@/lib/use-deferred-filter";
+import "@/components/customer-portal.css";
+import {
+  assignPortalOpsAdmin,
+  getPortalOpsMenu,
+  formatMenuPeriod,
+  getPortalOpsOrg,
+  listPortalOpsChannels,
+  deletePortalOpsOrg,
+  listPortalOpsOrgs,
+  listPortalOpsProducts,
+  replacePortalOpsMenuItems,
+  upsertPortalOpsMenu,
+  upsertPortalOpsOrg,
+  type OpsChannel,
+  type OpsMenuDetail,
+  type OpsMenuItem,
+  type OpsOrgDetail,
+  type OpsOrgListItem,
+  type OpsProduct,
+} from "@/lib/customer-portal-ops";
+
+function errorText(error: unknown) {
+  if (!error || typeof error !== "object") return "operationFailed";
+  const message = "message" in error ? String((error as { message?: string }).message ?? "") : "";
+  if (message.includes("page_access_required")) return "accessDenied";
+  if (message.includes("user_not_found")) return "userNotFound";
+  if (message.includes("membership_conflict")) return "membershipConflict";
+  if (message.includes("invalid_email")) return "invalidEmail";
+  if (message.includes("invalid_menu_items") || message.includes("invalid_menu")) return "invalidMenu";
+  if (message.includes("in_use")) return "inUse";
+  return "operationFailed";
+}
+
+function toLocalInput(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+function fromLocalInput(value: string) {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "" : date.toISOString();
+}
+
+export function CustomerPortalOpsPage() {
+  const { t } = useTranslation();
+  const access = useCurrentPageAccess();
+  const canEdit = access.canAccess("settings.customer_portal.edit");
+  const navigate = useNavigate();
+  const { orgId, menuId } = useParams<{ orgId?: string; menuId?: string }>();
+  const [orgs, setOrgs] = useState<OpsOrgListItem[]>([]);
+  const [adminPanelOpen, setAdminPanelOpen] = useState(false);
+  const [org, setOrg] = useState<OpsOrgDetail | null>(null);
+  const [menu, setMenu] = useState<OpsMenuDetail | null>(null);
+  const [channels, setChannels] = useState<OpsChannel[]>([]);
+  const [products, setProducts] = useState<OpsProduct[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [orgPanelOpen, setOrgPanelOpen] = useState(false);
+  const [orgName, setOrgName] = useState("");
+  const [orgActive, setOrgActive] = useState(true);
+  const [orgVip, setOrgVip] = useState(false);
+  const [editingOrgId, setEditingOrgId] = useState<string | null>(null);
+  const [adminEmail, setAdminEmail] = useState("");
+  const [menuPanelOpen, setMenuPanelOpen] = useState(false);
+  const [menuForm, setMenuForm] = useState({
+    name: "",
+    channelId: "",
+    deliveryDate: "",
+    validUntil: "",
+    deliveryTime: "12:00",
+    cutoffAt: "",
+    shippingFee: "0",
+    isActive: true,
+  });
+  const [menuItems, setMenuItems] = useState<OpsMenuItem[]>([]);
+  const [productId, setProductId] = useState("");
+  const [draftSearch, setDraftSearch] = useState("");
+  const [search, setSearch] = useState("");
+  const [status, setStatus] = useState<"" | "active" | "inactive">("");
+  const [page, setPage] = useState(1);
+  const [pendingDelete, setPendingDelete] = useState<OpsOrgListItem | null>(null);
+  const statusFilter = useDeferredFilter(status, (value: "" | "active" | "inactive") => {
+    setPage(1);
+    setStatus(value);
+  });
+  const pageSize = 15;
+  const filteredOrgs = orgs.filter((row) => {
+    const matchesName = row.name.toLocaleLowerCase().includes(search.toLocaleLowerCase());
+    const matchesStatus = status === "" || (status === "active" ? row.is_active : !row.is_active);
+    return matchesName && matchesStatus;
+  });
+  const orgTotalPages = Math.max(1, Math.ceil(filteredOrgs.length / pageSize));
+  const orgPage = Math.min(page, orgTotalPages);
+  const visibleOrgs = filteredOrgs.slice((orgPage - 1) * pageSize, orgPage * pageSize);
+  const orgFrom = filteredOrgs.length === 0 ? 0 : (orgPage - 1) * pageSize + 1;
+  const orgTo = Math.min(orgPage * pageSize, filteredOrgs.length);
+
+  const loadOrgs = useCallback(async () => {
+    setLoading(true); setError("");
+    try {
+      setOrgs(await listPortalOpsOrgs());
+      setChannels(await listPortalOpsChannels());
+    } catch (err) {
+      setError(t(`portalOps.${errorText(err)}`));
+    } finally {
+      setLoading(false);
+    }
+  }, [t]);
+
+  const loadOrg = useCallback(async (id: string) => {
+    setLoading(true); setError("");
+    try {
+      setOrg(await getPortalOpsOrg(id));
+      setChannels(await listPortalOpsChannels());
+    } catch (err) {
+      setError(t(`portalOps.${errorText(err)}`));
+      setOrg(null);
+    } finally {
+      setLoading(false);
+    }
+  }, [t]);
+
+  const loadMenu = useCallback(async (id: string) => {
+    setLoading(true); setError("");
+    try {
+      const detail = await getPortalOpsMenu(id);
+      setMenu(detail);
+      setMenuItems(detail.items);
+      setProducts(await listPortalOpsProducts(detail.channel_id));
+      setMenuForm({
+        name: detail.name,
+        channelId: detail.channel_id,
+        deliveryDate: detail.delivery_date,
+        validUntil: detail.valid_until || detail.delivery_date,
+        deliveryTime: detail.delivery_time,
+        cutoffAt: toLocalInput(detail.cutoff_at),
+        shippingFee: String(detail.shipping_fee),
+        isActive: detail.is_active,
+      });
+    } catch (err) {
+      setError(t(`portalOps.${errorText(err)}`));
+      setMenu(null);
+    } finally {
+      setLoading(false);
+    }
+  }, [t]);
+
+  useEffect(() => {
+    if (menuId) void loadMenu(menuId);
+    else if (orgId) void loadOrg(orgId);
+    else void loadOrgs();
+  }, [orgId, menuId, loadOrgs, loadOrg, loadMenu]);
+
+  async function run(action: () => Promise<void>, successKey: string) {
+    if (busy) return;
+    setBusy(true); setError(""); setNotice("");
+    try {
+      await action();
+      setNotice(t(`portalOps.${successKey}`));
+    } catch (err) {
+      setError(t(`portalOps.${errorText(err)}`));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function openCreateOrg() {
+    setEditingOrgId(null); setOrgName(""); setOrgActive(true); setOrgVip(false); setOrgPanelOpen(true);
+  }
+  function openEditOrg(row: OpsOrgListItem | OpsOrgDetail) {
+    setEditingOrgId(row.id); setOrgName(row.name); setOrgActive(row.is_active); setOrgVip(row.is_vip); setOrgPanelOpen(true);
+  }
+
+  async function submitOrg(event: FormEvent) {
+    event.preventDefault();
+    await run(async () => {
+      const id = await upsertPortalOpsOrg({
+        id: editingOrgId,
+        name: orgName.trim(),
+        isActive: orgActive,
+        isVip: orgVip,
+      });
+      setOrgPanelOpen(false);
+      if (orgId) await loadOrg(id);
+      else {
+        await loadOrgs();
+        navigate(`/settings/customer-portal/${id}`);
+      }
+    }, "saved");
+  }
+
+  async function submitAdmin(event: FormEvent) {
+    event.preventDefault();
+    if (!orgId) return;
+    await run(async () => {
+      await assignPortalOpsAdmin(orgId, adminEmail.trim());
+      setAdminEmail("");
+      setAdminPanelOpen(false);
+      await loadOrg(orgId);
+    }, "adminAssigned");
+  }
+
+  function openCreateMenu() {
+    setMenu(null);
+    setMenuItems([]);
+    setMenuForm({
+      name: "",
+      channelId: channels[0]?.id ?? "",
+      deliveryDate: "",
+      validUntil: "",
+      deliveryTime: "12:00",
+      cutoffAt: "",
+      shippingFee: "0",
+      isActive: true,
+    });
+    setMenuPanelOpen(true);
+    if (channels[0]?.id) void listPortalOpsProducts(channels[0].id).then(setProducts);
+  }
+
+  async function openEditMenu(id: string) {
+    navigate(`/settings/customer-portal/${orgId}/menus/${id}`);
+  }
+
+  async function onChannelChange(channelId: string) {
+    setMenuForm(current => ({ ...current, channelId }));
+    setMenuItems([]);
+    setProductId("");
+    setProducts(channelId ? await listPortalOpsProducts(channelId) : []);
+  }
+
+  function addMenuItem() {
+    const product = products.find(row => row.id === productId);
+    if (!product || menuItems.some(row => row.product_id === product.id)) return;
+    setMenuItems(current => [
+      ...current,
+      {
+        product_id: product.id,
+        name: product.name,
+        sku: product.sku,
+        unit_price: Number(product.price ?? 0),
+        available_quantity: 0,
+      },
+    ]);
+    setProductId("");
+  }
+
+  async function submitMenu(event: FormEvent) {
+    event.preventDefault();
+    if (!orgId) return;
+    const cutoffAt = fromLocalInput(menuForm.cutoffAt);
+    if (!menuForm.deliveryTime || !cutoffAt || !menuForm.deliveryDate || !menuForm.validUntil || menuForm.validUntil < menuForm.deliveryDate) {
+      setError(t("portalOps.invalidMenu"));
+      return;
+    }
+    await run(async () => {
+      const id = await upsertPortalOpsMenu({
+        id: menu?.id ?? null,
+        orgId,
+        channelId: menuForm.channelId,
+        name: menuForm.name.trim(),
+        deliveryDate: menuForm.deliveryDate,
+        validUntil: menuForm.validUntil,
+        deliveryTime: menuForm.deliveryTime.trim(),
+        cutoffAt,
+        shippingFee: Number(menuForm.shippingFee) || 0,
+        isActive: menuForm.isActive,
+      });
+      await replacePortalOpsMenuItems(
+        id,
+        menuItems.map(item => ({
+          product_id: item.product_id,
+          unit_price: Number(item.unit_price),
+          available_quantity: Number(item.available_quantity),
+        })),
+      );
+      setMenuPanelOpen(false);
+      setMenu(null);
+      navigate(`/settings/customer-portal/${orgId}`);
+      await loadOrg(orgId);
+    }, "saved");
+  }
+
+  if (menuId && menu) {
+    return (
+      <section className="ingredients-page customer-portal-ops">
+        <header className="page-heading ingredients-heading">
+          <div>
+            <h1>{menu.name}</h1>
+            <p>{menu.brand} · {formatMenuPeriod(menu)} · {menu.delivery_time}</p>
+          </div>
+          <div className="portal-ops-actions">
+            <Button asChild variant="outline">
+              <Link to={`/settings/customer-portal/${menu.organization_id}`}>{t("portalOps.backToOrg")}</Link>
+            </Button>
+            {canEdit ? (
+              <Button onClick={() => { setMenuPanelOpen(true); }}>
+                <Pencil /> {t("portalOps.editMenu")}
+              </Button>
+            ) : null}
+          </div>
+        </header>
+        {error ? <p role="alert">{error}</p> : null}
+        {notice ? <CornerNotice message={notice} onDismiss={() => setNotice("")} /> : null}
+        {loading ? <p role="status">{t("portalOps.loading")}</p> : (
+          <ListTable
+            className="panel"
+            loading={loading}
+            loadingLabel={t("portalOps.loading")}
+            skeletonColumns={4}
+            onRefresh={() => loadMenu(menuId!)}
+            header={<tr>
+                  <th>{t("portalOps.product")}</th>
+                  <th>{t("portalOps.sku")}</th>
+                  <th>{t("portalOps.unitPrice")}</th>
+                  <th>{t("portalOps.stock")}</th>
+                </tr>}
+          >
+                {menu.items.map(item => (
+                  <tr key={item.product_id}>
+                    <td>{item.name}</td>
+                    <td>{item.sku || "—"}</td>
+                    <td>{Number(item.unit_price).toFixed(2)}</td>
+                    <td>{item.available_quantity}</td>
+                  </tr>
+                ))}
+          </ListTable>
+        )}
+        {menuPanelOpen ? renderMenuPanel() : null}
+      </section>
+    );
+  }
+
+  if (menuId) {
+    return (
+      <section className="ingredients-page customer-portal-ops">
+        <header className="page-heading ingredients-heading">
+          <div>
+            <Button asChild variant="outline">
+              <Link to={`/settings/customer-portal/${orgId}`}>{t("portalOps.backToOrg")}</Link>
+            </Button>
+          </div>
+        </header>
+        {error ? (
+          <div className="orders-state orders-state-error" role="alert">
+            <Building2 />
+            <div><strong>{error}</strong></div>
+            <Button variant="outline" onClick={() => void loadMenu(menuId)}><RefreshCw />{t("portal.retry")}</Button>
+          </div>
+        ) : (
+          <PageSkeleton variant="detail" label={t("portalOps.loading")} />
+        )}
+      </section>
+    );
+  }
+
+  if (orgId && org) {
+    return (
+      <section className="ingredients-page customer-portal-ops portal-org-detail">
+        <header className="portal-org-toolbar">
+          <div>
+            <p><Link to="/settings/customer-portal">{t("portalOps.backToList")}</Link></p>
+            <strong className="portal-org-name">{org.name}</strong>
+            <span className={org.is_active ? "status-badge green" : "status-badge neutral"}>{org.is_active ? t("portalOps.active") : t("portalOps.inactive")}{org.is_vip ? ` · ${t("portalOps.vip")}` : ""}</span>
+          </div>
+          {canEdit ? (
+            <div className="portal-ops-actions">
+              <Button variant="outline" onClick={() => openEditOrg(org)}><Pencil /> {t("portalOps.editOrg")}</Button>
+              <Button onClick={openCreateMenu}><Plus /> {t("portalOps.createMenu")}</Button>
+            </div>
+          ) : null}
+        </header>
+        {error ? <p role="alert">{error}</p> : null}
+        {notice ? <CornerNotice message={notice} onDismiss={() => setNotice("")} /> : null}
+        {loading ? <PageSkeleton variant="detail" label={t("portalOps.loading")} /> : (
+          <div className="portal-org-sections">
+            <section className="panel portal-org-members"><header className="panel-header"><h2>{t("portalOps.members")}</h2>{canEdit ? <Button variant="outline" size="sm" onClick={() => { setAdminEmail(""); setError(""); setAdminPanelOpen(true); }}>{t("portalOps.assignAdmin")}</Button> : null}</header>
+            <ListTable
+              className="portal-org-table"
+              loading={loading}
+              loadingLabel={t("portalOps.loading")}
+              skeletonColumns={3}
+              skeletonRows={3}
+              onRefresh={() => loadOrg(orgId!)}
+              header={<tr>
+                    <th>{t("portalOps.email")}</th>
+                    <th>{t("portalOps.role")}</th>
+                    <th>{t("portalOps.status")}</th>
+                  </tr>}
+            >
+                  {org.members.map(member => (
+                    <tr key={member.user_id}>
+                      <td>{member.email}</td>
+                      <td>{t(`portalOps.roles.${member.role}`, { defaultValue: member.role })}</td>
+                      <td>{member.is_active ? t("portalOps.active") : t("portalOps.inactive")}</td>
+                    </tr>
+                  ))}
+            </ListTable>
+
+            </section>
+
+            <section className="panel portal-org-menus"><header className="panel-header"><h2>{t("portalOps.menus")}</h2></header>
+            {org.menus.length === 0 ? (
+              <div className="portal-ops-empty">
+                <strong>{t("portalOps.noMenus")}</strong>
+                <span>{t("portalOps.noMenusDescription")}</span>
+              </div>
+            ) : (
+            <ListTable
+              className="portal-org-table"
+              loading={loading}
+              loadingLabel={t("portalOps.loading")}
+              skeletonColumns={7}
+              skeletonRows={4}
+              onRefresh={() => loadOrg(orgId!)}
+              header={<tr>
+                    <th>{t("portalOps.menuName")}</th>
+                    <th>{t("portalOps.brand")}</th>
+                    <th>{t("portalOps.delivery")}</th>
+                    <th>{t("portalOps.cutoff")}</th>
+                    <th>{t("portalOps.fee")}</th>
+                    <th>{t("portalOps.items")}</th>
+                    <th>{t("portalOps.status")}</th>
+                  </tr>}
+            >
+                  {org.menus.map(row => (
+                    <tr key={row.id}>
+                      <td>
+                        <button type="button" className="linkish" onClick={() => void openEditMenu(row.id)}>
+                          {row.name}
+                        </button>
+                      </td>
+                      <td>{row.brand}</td>
+                      <td>{formatMenuPeriod(row)} {row.delivery_time}</td>
+                      <td>{new Date(row.cutoff_at).toLocaleString()}</td>
+                      <td>{Number(row.shipping_fee).toFixed(2)}</td>
+                      <td>{row.item_count}</td>
+                      <td>{row.is_active ? t("portalOps.active") : t("portalOps.inactive")}</td>
+                    </tr>
+                  ))}
+            </ListTable>
+            )}
+            </section>
+          </div>
+        )}
+        <SidePanel open={adminPanelOpen} onClose={() => { if (!busy) setAdminPanelOpen(false); }} title={t("portalOps.assignAdmin")} closeLabel={t("portalOps.close")} footer={<Button type="submit" form="portal-assign-admin" disabled={busy}>{t("portalOps.assignAdmin")}</Button>}>
+          {error ? <p role="alert">{error}</p> : null}
+                      {canEdit ? (
+              <form id="portal-assign-admin" className="portal-ops-form" onSubmit={event => void submitAdmin(event)}>
+                <label>
+                  {t("portalOps.assignAdmin")}
+                  <Input
+                    required
+                    type="email"
+                    value={adminEmail}
+                    onChange={event => setAdminEmail(event.target.value)}
+                    placeholder={t("portalOps.adminEmailPlaceholder")}
+                  />
+                </label>
+
+              </form>
+            ) : null}
+        </SidePanel>
+        {orgPanelOpen ? renderOrgPanel() : null}
+        {menuPanelOpen ? renderMenuPanel() : null}
+      </section>
+    );
+  }
+
+  if (orgId) {
+    return (
+      <section className="ingredients-page customer-portal-ops portal-org-detail">
+        <header className="portal-org-toolbar">
+          <div>
+            <p><Link to="/settings/customer-portal">{t("portalOps.backToList")}</Link></p>
+          </div>
+        </header>
+        {error ? (
+          <div className="orders-state orders-state-error" role="alert">
+            <Building2 />
+            <div><strong>{error}</strong></div>
+            <Button variant="outline" onClick={() => void loadOrg(orgId)}><RefreshCw />{t("portal.retry")}</Button>
+          </div>
+        ) : (
+          <PageSkeleton variant="detail" label={t("portalOps.loading")} />
+        )}
+      </section>
+    );
+  }
+
+  const filteredEmpty = Boolean(search || status);
+  return (
+    <section className="orders-page customer-portal-ops has-no-visible-heading">
+      {notice ? <CornerNotice message={notice} onDismiss={() => setNotice("")} /> : null}
+      <article className="panel orders-panel">
+        <header className="orders-toolbar">
+          <ListSearchBar
+            id="customer-portal-org-search"
+            value={draftSearch}
+            onChange={setDraftSearch}
+            onSubmit={() => {
+              setPage(1);
+              setSearch(draftSearch.trim());
+            }}
+            label={t("portalOps.search")}
+            placeholder={t("portalOps.searchPlaceholder")}
+            filtersActive={Boolean(status)}
+            onConfirmFilters={statusFilter.confirm}
+            onDismissFilters={statusFilter.revert}
+            filters={
+              <label className="orders-status-filter">
+                <span>{t("portalOps.statusFilter")}</span>
+                <select
+                  value={statusFilter.value}
+                  onChange={(event) => statusFilter.setValue(event.target.value as "" | "active" | "inactive")}
+                >
+                  <option value="">{t("portalOps.allStatuses")}</option>
+                  <option value="active">{t("portalOps.active")}</option>
+                  <option value="inactive">{t("portalOps.inactive")}</option>
+                </select>
+              </label>
+            }
+            actions={canEdit ? (
+              <Button type="button" onClick={openCreateOrg}><Plus /> {t("portalOps.createOrg")}</Button>
+            ) : undefined}
+          />
+        </header>
+        {error ? (
+          <div className="orders-state orders-state-error" role="alert">
+            <Building2 />
+            <div>
+              <strong>{error}</strong>
+            </div>
+            <Button variant="outline" onClick={() => void loadOrgs()}><RefreshCw />{t("portal.retry")}</Button>
+          </div>
+        ) : !loading && visibleOrgs.length === 0 ? (
+          <div className="orders-state">
+            <Building2 />
+            <div>
+              <strong>{filteredEmpty ? t("portalOps.noMatches") : t("portalOps.noOrgs")}</strong>
+              <span>{filteredEmpty ? t("portalOps.noMatchesDescription") : t("portalOps.noOrgsDescription")}</span>
+            </div>
+          </div>
+        ) : (
+          <ListTable
+            className="orders-table-wrap"
+            loading={loading}
+            loadingLabel={t("portalOps.loading")}
+            skeletonColumns={6}
+            onRefresh={loadOrgs}
+            header={<tr>
+              <th>{t("portalOps.orgName")}</th>
+              <th>{t("portalOps.admins")}</th>
+              <th>{t("portalOps.members")}</th>
+              <th>{t("portalOps.menus")}</th>
+              <th>{t("portalOps.status")}</th>
+              <th className="table-actions-cell">{t("orders.columns.actions")}</th>
+            </tr>}
+          >
+            {visibleOrgs.map(row => (
+              <tr key={row.id}>
+                <td>
+                  <Link className="portal-ops-org-link" to={`/settings/customer-portal/${row.id}`}>{row.name}</Link>
+                  {row.is_vip ? <span> · {t("portalOps.vip")}</span> : null}
+                </td>
+                <td>{row.admin_count}</td>
+                <td>{row.member_count}</td>
+                <td>{row.menu_count}</td>
+                <td>{row.is_active ? t("portalOps.active") : t("portalOps.inactive")}</td>
+                <td className="table-actions-cell">
+                  <div className="order-row-actions">
+                    <Link to={`/settings/customer-portal/${row.id}`} aria-label={t("portalOps.manage")} title={t("portalOps.manage")}>
+                      <Settings />
+                    </Link>
+                    {canEdit ? (
+                      <button type="button" onClick={() => openEditOrg(row)} aria-label={t("portalOps.editOrg")} title={t("portalOps.editOrg")}>
+                        <Pencil />
+                      </button>
+                    ) : null}
+                    {canEdit ? (
+                      <button type="button" className="is-row-delete" disabled={busy} onClick={() => setPendingDelete(row)} aria-label={t("portalOps.delete")} title={t("portalOps.delete")}>
+                        <Trash2 aria-hidden="true" />
+                      </button>
+                    ) : null}
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </ListTable>
+        )}
+        <TablePagination summary={t("settings.pagination", { from: orgFrom, to: orgTo, total: filteredOrgs.length })} page={orgPage} totalPages={orgTotalPages} loading={loading}
+ onPrevious={() => setPage(Math.max(1, orgPage - 1))} onNext={() => setPage(Math.min(orgTotalPages, orgPage + 1))}
+ onPageChange={setPage} previousLabel={t("settings.previous")} nextLabel={t("settings.next")}
+        pageLabel={t("orders.pageOf")} jumpLabel={t("orders.jumpToPage")} />
+      </article>
+      <ConfirmDialog
+        open={Boolean(pendingDelete)}
+        title={t("portalOps.deleteTitle", { name: pendingDelete?.name ?? "" })}
+        description={t("portalOps.deleteDescription")}
+        confirmLabel={t("portalOps.delete")}
+        cancelLabel={t("common.cancel")}
+        closeLabel={t("portalOps.close")}
+        variant="destructive"
+        busy={busy}
+        onCancel={() => { if (!busy) setPendingDelete(null); }}
+        onConfirm={() => {
+          if (!pendingDelete || busy) return;
+          const target = pendingDelete;
+          setBusy(true);
+          setError("");
+          void deletePortalOpsOrg(target.id)
+            .then(() => {
+              setOrgs(current => current.filter(row => row.id !== target.id));
+              setNotice(t("portalOps.deleted"));
+              setPendingDelete(null);
+            })
+            .catch(err => setError(t(`portalOps.${errorText(err)}`)))
+            .finally(() => setBusy(false));
+        }}
+      />
+      {orgPanelOpen ? renderOrgPanel() : null}
+    </section>
+  );
+
+  function renderOrgPanel() {
+    return (
+      <SidePanel
+        half
+        open={orgPanelOpen}
+        onClose={() => { if (!busy) setOrgPanelOpen(false); }}
+        title={editingOrgId ? t("portalOps.editOrg") : t("portalOps.createOrg")}
+        closeLabel={t("portalOps.close")}
+        className="portal-editor-panel" footer={<><Button variant="outline" disabled={busy} onClick={() => setOrgPanelOpen(false)}>{t("portalOps.close")}</Button><Button type="submit" form="portal-org-form" disabled={busy || !canEdit} aria-busy={busy}>{t("portalOps.save")}</Button></>}
+      >
+        {error ? <p className="portal-ops-alert" role="alert">{error}</p> : null}
+        <form id="portal-org-form" className="portal-ops-form portal-editor-form" onSubmit={event => void submitOrg(event)}>
+          <label>{t("portalOps.orgName")}<Input required disabled={busy} value={orgName} onChange={event => setOrgName(event.target.value)} /></label>
+          <fieldset className="portal-editor-section"><legend>{t("portalOps.formSettings")}</legend>
+            <div className="portal-editor-setting"><label className="portal-ops-switch"><span>{t("portalOps.vip")}</span><Switch disabled={busy} checked={orgVip} onCheckedChange={setOrgVip} aria-describedby="portal-org-vip-hint" /></label><p id="portal-org-vip-hint">{t("portalOps.vipHint")}</p></div>
+            <div className="portal-editor-setting"><label className="portal-ops-switch"><span>{t("portalOps.active")}</span><Switch disabled={busy} checked={orgActive} onCheckedChange={setOrgActive} /></label></div>
+          </fieldset>
+        </form>
+      </SidePanel>
+    );
+  }
+
+  function renderMenuPanel() {
+    return (
+      <SidePanel
+        open={menuPanelOpen}
+        onClose={() => { if (!busy) setMenuPanelOpen(false); }}
+        title={menu ? t("portalOps.editMenu") : t("portalOps.createMenu")}
+        closeLabel={t("portalOps.close")}
+        half
+        className="portal-editor-panel"
+        footer={<><Button variant="outline" disabled={busy} onClick={() => setMenuPanelOpen(false)}>{t("portalOps.close")}</Button><Button type="submit" form="portal-menu-form" disabled={busy || !canEdit || !menuForm.channelId} aria-busy={busy}>{t("portalOps.save")}</Button></>}
+      >
+        {error ? <p className="portal-ops-alert" role="alert">{error}</p> : null}
+        <form id="portal-menu-form" className="portal-ops-form portal-editor-form" onSubmit={event => void submitMenu(event)}>
+          <fieldset className="portal-editor-section"><legend>{t("portalOps.formBasics")}</legend>
+            <div className="portal-editor-grid">
+              <label>{t("portalOps.menuName")}<Input required disabled={busy} value={menuForm.name} onChange={event => setMenuForm({ ...menuForm, name: event.target.value })} /></label>
+              <label>{t("portalOps.brand")}<FilterableSelect searchable aria-label={t("portalOps.brand")} required disabled={busy || Boolean(menu)} value={menuForm.channelId} onChange={event => void onChannelChange(event.target.value)}><option value="">{t("portalOps.chooseBrand")}</option>{channels.map(channel => <option key={channel.id} value={channel.id}>{channel.name}</option>)}</FilterableSelect></label>
+            </div>
+          </fieldset>
+          <fieldset className="portal-editor-section"><legend>{t("portalOps.formDelivery")}</legend>
+            <DateRangePicker startId="portal-menu-start" endId="portal-menu-end" startValue={menuForm.deliveryDate} endValue={menuForm.validUntil} startLabel={t("portalOps.periodStart")} endLabel={t("portalOps.periodEnd")} disabled={busy} onStartChange={value => setMenuForm(current => ({ ...current, deliveryDate: value }))} onEndChange={value => setMenuForm(current => ({ ...current, validUntil: value }))} />
+            <p className="portal-editor-hint">{t("portalOps.periodHint")}</p>
+            <div className="portal-editor-grid"><TimePicker id="portal-menu-time" label={t("portalOps.deliveryTime")} value={menuForm.deliveryTime} disabled={busy} onChange={value => setMenuForm(current => ({ ...current, deliveryTime: value }))} /><DateTimePicker id="portal-menu-cutoff" label={t("portalOps.cutoff")} required disabled={busy} value={menuForm.cutoffAt} onChange={value => setMenuForm(current => ({ ...current, cutoffAt: value }))} /></div>
+          </fieldset>
+          <fieldset className="portal-editor-section"><legend>{t("portalOps.formSettings")}</legend><div className="portal-editor-grid">
+            <label>{t("portalOps.fee")}<Input required disabled={busy} type="number" min={0} step="0.01" value={menuForm.shippingFee} onChange={event => setMenuForm({ ...menuForm, shippingFee: event.target.value })} /></label>
+            <label className="portal-ops-switch portal-editor-setting"><span>{t("portalOps.active")}</span><Switch disabled={busy} checked={menuForm.isActive} onCheckedChange={value => setMenuForm({ ...menuForm, isActive: value })} /></label>
+          </div></fieldset>
+          <fieldset className="portal-editor-section"><legend>{t("portalOps.items")}</legend>
+          <div className="portal-ops-item-add"><FilterableSelect searchable aria-label={t("portalOps.chooseProduct")} disabled={busy} value={productId} onChange={event => setProductId(event.target.value)}><option value="">{t("portalOps.chooseProduct")}</option>{products.map(product => <option key={product.id} value={product.id}>{product.name}</option>)}</FilterableSelect><Button type="button" variant="outline" disabled={busy || !productId} onClick={addMenuItem}>{t("portalOps.addItem")}</Button></div>
+          {menuItems.map(item => (
+            <div className="portal-ops-item-row" key={item.product_id}>
+              <strong className="portal-ops-item-name">{item.name}</strong>
+              <label>
+                {t("portalOps.unitPrice")}
+                <Input
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  value={item.unit_price}
+                  onChange={event => setMenuItems(current => current.map(row =>
+                    row.product_id === item.product_id ? { ...row, unit_price: Number(event.target.value) } : row))}
+                />
+              </label>
+              <label>
+                {t("portalOps.stock")}
+                <Input
+                  type="number"
+                  min={0}
+                  step={1}
+                  value={item.available_quantity}
+                  onChange={event => setMenuItems(current => current.map(row =>
+                    row.product_id === item.product_id ? { ...row, available_quantity: Number(event.target.value) } : row))}
+                />
+              </label>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                aria-label={t("portalOps.removeItem")}
+                onClick={() => setMenuItems(current => current.filter(row => row.product_id !== item.product_id))}
+              >
+                <Trash2 />
+              </Button>
+            </div>
+          ))}
+          </fieldset>
+        </form>
+      </SidePanel>
+    );
+  }
+}

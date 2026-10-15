@@ -12,11 +12,13 @@ import {
   CircleDollarSign,
   ClipboardCheck,
   ClipboardList,
+  Coins,
   Factory,
   FileArchive,
   FileImage,
   FilePenLine,
   FileText,
+  Gift,
   HandCoins,
   Handshake,
   History,
@@ -27,6 +29,7 @@ import {
   Mail,
   MapPinned,
   MessageCircleMore,
+  Building2,
   Package,
   PackageCheck,
   PackagePlus,
@@ -114,6 +117,12 @@ export const primaryNav: NavItem[] = [
   { key: "reports", to: "/reports", icon: ChartNoAxesCombined },
   { key: "promotion", to: "/promotion", icon: Tags, permissionKey: "promotion" },
   {
+    key: "customerOperations",
+    to: "/settings/customer-portal",
+    icon: Building2,
+    permissionKey: "customer_operations",
+  },
+  {
     key: "settings",
     to: "/settings",
     icon: Settings,
@@ -134,6 +143,7 @@ export const businessPrimaryNav: NavItem[] = [
   { key: "accountingFollowUp", to: "/reports/kitchen?nav=accounting.cateringData", icon: Calculator },
   { key: "reports", to: "/reports?nav=reports", icon: ChartNoAxesCombined, permissionKey: "reports" },
   { key: "promotion", to: "/promotion?nav=promotion", icon: Tags, permissionKey: "promotion" },
+  { key: "customerOperations", to: "/settings/customer-portal?nav=customerOperations", icon: Building2, permissionKey: "customer_operations" },
   { key: "settings", to: "/settings?nav=settings", icon: Settings, permissionKey: "settings" },
 ];
 
@@ -721,6 +731,50 @@ export const secondaryNav: Record<string, NavItem[]> = {
       permissionKey: "settings.login_logs",
     },
   ],
+  customerOperations: [
+    {
+      key: "customerPortalOps",
+      to: "/settings/customer-portal",
+      icon: Building2,
+      permissionKey: "settings.customer_portal",
+    },
+    {
+      key: "customerPortalApplications",
+      to: "/settings/customer-portal/applications",
+      icon: FileText,
+      permissionKey: "settings.customer_portal",
+    },
+    {
+      key: "customerPortalGuides",
+      to: "/settings/customer-portal/guides",
+      icon: FilePenLine,
+      permissionKey: "settings.customer_portal",
+    },
+    {
+      key: "customerPortalRewardRules",
+      to: "/settings/customer-portal/reward-rules",
+      icon: Coins,
+      permissionKey: "settings.customer_portal.reward_rules",
+    },
+    {
+      key: "customerPortalMealCalendar",
+      to: "/settings/customer-portal/calendar",
+      icon: CalendarDays,
+      permissionKey: "settings.customer_portal",
+    },
+    {
+      key: "customerPortalLunchbox",
+      to: "/settings/customer-portal/lunchbox",
+      icon: ClipboardList,
+      permissionKey: "settings.customer_portal",
+    },
+    {
+      key: "customerPortalRewardCatalog",
+      to: "/settings/customer-portal/rewards",
+      icon: Gift,
+      permissionKey: "settings.customer_portal",
+    },
+  ],
   promotion: [
     {
       key: "watiEmailLogs",
@@ -771,7 +825,10 @@ function appendNavContext(item: NavItem, context: string): NavItem {
 }
 
 export function businessSectionFromLocation(pathname: string, search: string) {
-  if (sectionFromPath(pathname) === "promotion") return "promotion";
+  const pathSection = sectionFromPath(pathname);
+  if (pathSection === "promotion" || pathSection === "customerOperations") {
+    return pathSection;
+  }
   const context = new URLSearchParams(search).get("nav") || "";
   if (context.startsWith("follow-up.")) return "followUp";
   if (context.startsWith("accounting.")) return "accountingFollowUp";
@@ -1045,7 +1102,7 @@ export function businessSidebarNav(
       );
     });
   }
-  if (section === "settings" || section === "promotion") {
+  if (section === "settings" || section === "promotion" || section === "customerOperations") {
     return secondaryNav[section].map((item) => appendNavContext(item, section));
   }
   return [];
@@ -1150,6 +1207,12 @@ export const SECTION_CHILD_KEYS: Record<string, string[]> = {
     "settings.customer_faq.edit",
     "settings.attachments",
   ],
+  customer_operations: [
+    "settings.customer_portal",
+    "settings.customer_portal.edit",
+    "settings.customer_portal.reward_rules",
+    "settings.customer_portal.reward_rules.edit",
+  ],
 };
 
 export const workspaceLinks: Array<{
@@ -1179,7 +1242,7 @@ export const workspaceLinks: Array<{
   },
   {
     key: "customer",
-    to: "/self_service_search",
+    to: "/customer",
     icon: Users,
     permissionKey: "workspace.customer",
   },
@@ -1245,6 +1308,13 @@ export function accessiblePrimaryNavigationPath(
 }
 
 export function sectionFromPath(pathname: string) {
+  if (
+    secondaryNav.customerOperations.some(
+      (item) => pathname === item.to || pathname.startsWith(`${item.to}/`),
+    )
+  ) {
+    return "customerOperations";
+  }
   if (secondaryNav.promotion.some((item) => pathname === item.to || pathname.startsWith(`${item.to}/`))) {
     return "promotion";
   }

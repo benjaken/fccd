@@ -16,6 +16,7 @@ export type CustomerSelfServiceSession = {
   expiresAt: string;
   maskedPhone: string;
   maskedEmail: string;
+  needsPhone?: boolean;
   orders: CustomerSelfServiceOrderSummary[];
 };
 
@@ -197,8 +198,10 @@ export async function createCustomerAddonPaypalCheckout(
   orderId: string,
   items: Array<{ productId: string; quantity: number }>,
 ) {
+  const returnPath = window.location.pathname === "/customer/personal" || window.location.pathname.startsWith("/customer/personal/")
+    ? "/customer/personal" : "/self_service_search";
   const { data, error } = await supabase.functions.invoke("customer-addon-paypal", {
-    body: { action: "create", sessionToken: token, orderId, items, origin: window.location.origin },
+    body: { action: "create", sessionToken: token, orderId, items, origin: window.location.origin, returnPath },
   });
   if (error) throw error;
   if (!data?.approvalUrl || !data?.checkoutId) throw new Error(data?.error || "paypal_create_failed");

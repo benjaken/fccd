@@ -62,6 +62,22 @@ describe("public enquiry form page", () => {
     expect(rpcMock).toHaveBeenCalledWith("get_published_enquiry_form", { p_slug: null });
   });
 
+  it("renders the page html for that enquiry form and ignores scripts", async () => {
+    rpcMock.mockResolvedValueOnce({
+      data: { ...publishedForm, page_html: "<h2>本週到會</h2><script>alert(1)</script>" },
+      error: null,
+    });
+    render(
+      <MemoryRouter initialEntries={["/quote-inquiry"]}>
+        <Routes>
+          <Route path="/quote-inquiry" element={<PublicEnquiryFormPage />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+    expect(await screen.findByRole("heading", { name: "本週到會" })).toBeInTheDocument();
+    expect(document.querySelector("script")).toBeNull();
+  });
+
   it("loads a published form by id in the public URL", async () => {
     rpcMock.mockResolvedValueOnce({ data: publishedForm, error: null });
     render(

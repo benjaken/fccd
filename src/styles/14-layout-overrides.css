@@ -1099,15 +1099,6 @@
   color: var(--muted-foreground);
 }
 
-.shop-order-success {
-  margin: 0;
-  padding: 10px 12px;
-  border-radius: 9px;
-  color: #285248;
-  background: #e7f2ed;
-  font-weight: 700;
-}
-
 .shop-order-dispatches {
   display: grid;
   gap: 8px;
@@ -2024,8 +2015,7 @@
 
   .restaurant-workspace-body .shop-order-fixed-fields,
   .restaurant-workspace-body .shop-order-dispatches,
-  .restaurant-workspace-body .shop-order-form > .products-state-error,
-  .restaurant-workspace-body .shop-order-form > .shop-order-success {
+  .restaurant-workspace-body .shop-order-form > .products-state-error {
     flex: 0 0 auto;
   }
 
@@ -2089,8 +2079,7 @@
   place-items: center;
 }
 
-.office-shop-inline-error,
-.office-shop-review-message {
+.office-shop-inline-error {
   margin: 0;
   padding: 11px 14px;
   border: 1px solid color-mix(in oklch, var(--destructive) 35%, var(--border));

@@ -1,6 +1,7 @@
 import type { RealtimeChannel } from "@supabase/supabase-js";
 
 import { supabase } from "@/lib/supabase";
+import { usesDevelopSupabase } from "@/lib/supabase-env";
 
 export type NotificationPriority = "normal" | "important" | "urgent";
 export type NotificationCategory = "information" | "action";
@@ -72,6 +73,17 @@ function mapNotification(row: NotificationRow): BusinessNotification {
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
+}
+
+/** Develop shares stale operational alerts, so the inbox stays closed until opened. */
+export function notificationPanelAutoOpens(
+  items: BusinessNotification[],
+  env: object = import.meta.env,
+): boolean {
+  if (usesDevelopSupabase(env)) return false;
+  return items.some(
+    (item) => item.priority === "urgent" && item.eventType !== "order_reconciliation_urgent",
+  );
 }
 
 export async function refreshDueNotifications(): Promise<void> {

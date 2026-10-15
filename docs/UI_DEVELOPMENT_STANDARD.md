@@ -8,6 +8,16 @@ layout, theme, status colors, and preview sign-in.
 
 ## 0. Product name
 
+個人客戶 `/customer/personal` 使用主頁、最新餐牌、即時訂購、付款單據、訂單、積分、地址、個人資料的路由選單。主頁優先呈現下一張訂單、再訂購及品牌餐牌；資料頁不提供密碼，聯絡電話不觸發訂單配對。PC 使用最高 820px 的置中 shell，768px 起啟用，頂部為綠色標題列與置中頁名；手機維持既有 Logo 頁首與抽屜選單。載入採用 `PageSkeleton`，未接通 Shopify 地址及個人積分顯示明確未開通狀態。Logo 沿用 `/assets/fc-catering-logo.svg`，不另做標誌。
+
+客戶公開登入頁使用同一個 480px 內容區：Logo 與兩行標題並排於頂部，其下是個人／機構切換、登入說明及獨立白色表單卡片。兩種身份均使用電郵及 8 位 OTP；訊息顯示於表單內。舊電話／電郵查單只保留在相容入口，內部員工登入不變。
+
+`/customer` 的模式連結以 `aria-current="page"` 標示目前身份，操作區最少 44px 高並支援鍵盤焦點。登入使用同一 Auth 身份；工作區資料及購物車按個人／機構隔離，機構授權由服務端核實。
+
+未登入頁面不顯示身份切換；登入後僅在服務端確認兩種身份均可用時顯示。個人頁面與機構頁面共用 Logo 頁首、右上角操作區及載入／錯誤卡片，既有訂單內容按身份保留各自權限。
+
+機構頁首使用現有 `/assets/fc-catering-logo.svg`，左側為 Logo 及身份／機構名稱，右上角為身份切換及登出；不再顯示下方切換列。手機容許右側操作區換行並保持靠右。載入／錯誤狀態使用獨立卡片，錯誤訊息保留 `role="alert"`，重試及登出操作保持原有授權。
+
 - Short name: **FCCD**
 - Full name: **Food Channel Catering Delivery**
 - UI brand tokens live under `brand.name` / `brand.system` / `brand.fullName` in
@@ -20,8 +30,18 @@ this file in the same change set.
 
 ## 1. Page layout (all authenticated pages)
 
+客戶訂購營運、公司 BR 申請、訂餐日曆、活動飯盒與積分兌換採列表與操作優先：頁名與說明由導航提供，頁面不另設標題區，搜尋、篩選及主要操作緊接列表。訂餐日曆的團體客戶選擇與月份導覽放在同一工具列，窄螢幕篩選獨佔一行。活動飯盒 VIP 週期設定透過既有 SidePanel 開啟；客戶積分規則的佈局保持原有安排。這些頁面使用既有 Input、Button、ListTable、TablePagination 及 SidePanel，不新增替代控制組件。
+
+客戶積分規則頁保留全寬 shell；內容採規則橫額與版本紀錄。此頁不放假期或營業日設定。
+積分規則資料載入期間，使用對應規則橫額、三項說明、版本表格的整頁骨架屏；沿用共享骨架樣式及減少動態偏好，以 `aria-busy` 和本地化狀態文字標示載入，資料就緒後才顯示版本數及操作。
+綠色橫額內的骨架使用主色混合 18% 卡片色，保持柔和綠色；其他區域沿用共享骨架顏色。
+所有規則編輯操作使用共享 SidePanel；退款統一於訂單功能處理，此頁不提供記錄退款入口。手機改單欄。時間明示 Asia/Hong_Kong，零門檻顯示暫停賺分；
+缺少門檻或未開通的 API 顯示可恢復的狀態，不得呈現 NaN 或猜測賺分門檻。
+
 Main content must use the full available width inside the shell. Do **not**
 reintroduce a centered `max-width` (for example `1600px`) on page shells.
+
+User-approved exception (2026-10-13): the personal customer Portal uses the original desktop shell from 768px: a centered column up to 820px, a 76px green title bar with the menu on the left and the current page title centered. Mobile keeps the existing logo header and drawer. This exception applies only to `.personal-workspace`; organization and operational pages retain the full-width rule.
 
 | Shell | Rule |
 |---|---|
@@ -212,3 +232,19 @@ Automated coverage: `test/i18n-placeholders.test.ts` rejects English-prose
   access / RLS completion
 - [`../CONTRIBUTING.md`](../CONTRIBUTING.md) — branch, test, and merge workflow
 - [`../README.md`](../README.md) — local setup and preview env vars
+
+積分兌換管理頁使用有標籤的雙欄表單及獨立目錄，窄螢幕改為單欄；Shopify 客戶對應以可展開區域呈現。載入失敗保留重試，不能顯示成空目錄；提交及處理兌換期間鎖定相應操作，編輯可以取消。
+
+
+機構詳情頁以機構識別與操作工具列開頭，餐單為主欄、成員為輔欄；1440px 以下改單欄。列表採既有 ListTable 並與 panel header 共用單一外框，不嵌套卡片。指定管理員透過共享 SidePanel 編輯，成功後關閉，失敗保留輸入。此頁不新增泛用頁面標題或說明。
+
+
+機構與餐單編輯沿用 SidePanel；表單以 fieldset/legend 分組，基本資料、供餐安排、設定與餐點分區，手機單欄。供餐範圍使用 DateRangePicker，時間使用 TimePicker/DateTimePicker，品牌與產品使用 FilterableSelect。底部提供關閉及儲存；儲存時禁止關閉，失敗在面板內顯示錯誤。
+
+
+機構與餐單編輯面板使用共享 SidePanel 的 half variant：桌面 50vw，手機全寬。表單雙欄對齊並統一控制高度為 40px；截單日期與時間可收縮，餐點列保留名稱、單價、數量與刪除操作，手機將名稱獨佔一行。
+
+
+客戶介紹內容使用共享 RichTextEditor（粗體、斜體、底線、項目與編號清單），編輯面板桌面半寬、手機全寬。內容儲存為清理過的 HTML，客戶端使用相同 allowlist 顯示；舊純文字仍保留換行。
+
+飯盒餐單頁（`CustomerPortalLunchboxPage`）建立／編輯須使用 `SidePanel half`，桌面 50vw、`max-width: 767px` 時 100vw。餐單資料、配送設定及餐點以 `fieldset`／`legend` 分組；產品、單價、數量須有可見標籤，手機單欄。空列表為具編輯權限者提供建立餐單 CTA；VIP 週期與餐單勾選器使用獨立 SidePanel。頁面特例樣式放在 `src/components/settings/customer-lunchbox.css`，沿用既有 tokens、Button、Input 與 ListTable。

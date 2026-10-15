@@ -5,6 +5,7 @@ import {
   paypalRequest,
   safePublicOrigin,
 } from "../_shared/paypal.ts";
+import { customerReturnPath } from "../_shared/customer-return-path.ts";
 
 type CreateBody = {
   action: "create";
@@ -12,6 +13,7 @@ type CreateBody = {
   orderId?: string;
   items?: Array<{ productId: string; quantity: number }>;
   origin?: string;
+  returnPath?: string;
 };
 type CaptureBody = {
   action: "capture" | "cancel";
@@ -59,8 +61,9 @@ Deno.serve(async (request) => {
         checkoutId: string; requestId: string; amount: number; currency: string; orderNumber: string;
       };
       const origin = safePublicOrigin(request, body.origin);
-      const returnUrl = `${origin}/self_service_search?paypal=return&addonCheckout=${encodeURIComponent(checkout.checkoutId)}`;
-      const cancelUrl = `${origin}/self_service_search?paypal=cancel&addonCheckout=${encodeURIComponent(checkout.checkoutId)}`;
+      const path = customerReturnPath(body.returnPath);
+      const returnUrl = `${origin}${path}?paypal=return&addonCheckout=${encodeURIComponent(checkout.checkoutId)}`;
+      const cancelUrl = `${origin}${path}?paypal=cancel&addonCheckout=${encodeURIComponent(checkout.checkoutId)}`;
       const { response, payload } = await paypalRequest(
         "/v2/checkout/orders",
         {

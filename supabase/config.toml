@@ -1,3 +1,15 @@
+[auth.email]
+# Match the confirmed customer OTP requirement. Hosted Auth must be configured separately.
+otp_length = 8
+
+[auth.email.template.magic_link]
+subject = "FCCD 登入驗證碼"
+content_path = "./supabase/templates/customer-otp.html"
+
+[auth.email.template.confirmation]
+subject = "FCCD 電郵驗證碼"
+content_path = "./supabase/templates/customer-otp.html"
+
 [functions.bubble-scan]
 verify_jwt = false
 
@@ -55,6 +67,9 @@ verify_jwt = false
 [functions.report-ai-interpret]
 verify_jwt = false
 
+[functions.customer-reward-catalog-image]
+verify_jwt = false
+
 [functions.translate-address]
 verify_jwt = false
 
@@ -76,6 +91,12 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.inventory-email-notifications]
+verify_jwt = false
+
+[functions.customer-evidence-email]
+verify_jwt = false
+
+[functions.customer-order-feedback-email]
 verify_jwt = false
 
 [functions.send-enquiry-notifications]
@@ -109,5 +130,8 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.wati-customer-service-backfill]
+verify_jwt = false
+
+[functions.shopify-customer-bridge]
 verify_jwt = false
 

@@ -511,6 +511,12 @@ export function FactoryOrderJobView({
             <span>{t("factoryBoard.assignmentSuccess")}</span>
           </p>
         ) : null}
+        {printSuccess ? (
+          <p className="factory-job-notification is-success" role="status">
+            <CheckCircle2 aria-hidden="true" />
+            <span>{printSuccess}</span>
+          </p>
+        ) : null}
       </div>
       <div className="factory-order-main">
         <div className="factory-order-summary">
@@ -969,12 +975,6 @@ export function FactoryOrderJobView({
               {printError ? (
                 <p className="factory-label-print-error" role="alert">
                   {t("factoryBoard.labelPrintError")}
-                </p>
-              ) : null}
-              {printSuccess ? (
-                <p className="factory-label-print-success" role="status">
-                  <CheckCircle2 aria-hidden="true" />
-                  {printSuccess}
                 </p>
               ) : null}
               <div className="factory-label-actions">

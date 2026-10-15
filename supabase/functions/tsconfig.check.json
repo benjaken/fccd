@@ -23,6 +23,7 @@
     "_shared/paypal.ts",
     "send-daily-sales-report/index.ts",
     "inventory-email-notifications/index.ts",
+    "customer-evidence-email/index.ts",
     "wati-order-notifications/index.ts",
     "_shared/customer-service-intents.ts",
     "_shared/customer-service-replies.ts",
