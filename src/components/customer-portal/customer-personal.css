@@ -42,24 +42,50 @@
 .personal-mode-switch{display:grid;gap:6px;margin-top:12px}
 .personal-mode-switch a{display:flex;align-items:center;min-height:40px;padding:0 12px;border-radius:10px;color:#eef6f2;background:rgba(255,255,255,.08);text-decoration:none}
 .customer-portal.personal-workspace .portal-access-state{width:auto;margin:24px 16px;border:0;background:transparent;text-align:left;justify-items:start}
-.personal-hero{display:grid;gap:16px;padding:20px;border-radius:20px;background:#fff;box-shadow:0 10px 28px rgba(18,56,47,.06)}
-.personal-hero h1{margin:0 0 8px;color:var(--personal-ink);font-size:clamp(28px,4vw,40px);line-height:1.2;letter-spacing:-.03em;text-wrap:balance}
-.personal-hero p{margin:0 0 18px;max-width:42ch;color:var(--personal-muted);font-size:16px;line-height:1.6}
-.personal-hero .bg-primary{min-height:44px;border-radius:999px;background:var(--personal-green)}
+.personal-home{display:grid;gap:14px}
+.personal-hero{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(128px,.85fr);gap:4px;align-items:center;padding:18px 4px 12px 18px;border-radius:22px;background:#e8f6f0;overflow:hidden}
+.personal-hero h1{margin:0 0 8px;color:#1f6b4a;font-size:32px;line-height:1.15;font-weight:750}
+.personal-hero p{margin:0 0 14px;max-width:22ch;color:#5c6f68;font-size:14px;line-height:1.55}
+.personal-hero-bowl{display:block;width:100%;max-height:168px;object-fit:cover;object-position:center top}
 .personal-hero-art svg{display:block;width:100%;height:auto;border-radius:18px}
-.personal-shortcuts{display:grid;gap:12px;margin-top:16px}
-.personal-shortcuts article,.personal-panel,.personal-points-banner{padding:16px;border-radius:16px;background:#fff;box-shadow:0 8px 24px rgba(18,56,47,.05)}
-.personal-shortcuts h2,.personal-panel h2,.personal-points-banner h2{margin:8px 0;color:var(--personal-ink);font-size:16px}
-.personal-shortcuts p,.personal-panel p,.personal-points-banner p{margin:0;color:var(--personal-muted);line-height:1.5}
-.personal-shortcuts strong{display:block;margin:4px 0;font-size:20px}
-.personal-shortcuts a,.personal-section-heading a,.personal-menu-card em,.personal-points-banner a,.personal-orders-table a{color:var(--personal-green);font-weight:700;text-decoration:none}
+.personal-pill{display:inline-flex;align-items:center;gap:2px;width:fit-content;min-height:36px;padding:0 14px;border-radius:999px;background:#146b4f;color:#fff;font-size:14px;font-weight:700;text-decoration:none}
+.personal-pill.is-ghost{background:#fff;color:#146b4f;border:1px solid #d5e6dc}
+.personal-quick{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.personal-quick-card{display:grid;justify-items:center;align-content:center;gap:8px;min-height:104px;padding:12px 4px;border-radius:16px;background:#fff;color:var(--personal-ink);box-shadow:0 8px 20px rgba(18,56,47,.05);text-align:center;text-decoration:none;font-size:13px;font-weight:650;line-height:1.3}
+.personal-quick-card:focus-visible,.personal-pill:focus-visible,.personal-menu-card:focus-visible,.personal-recent-row a:focus-visible{outline:2px solid var(--personal-green);outline-offset:2px}
+.personal-quick-icon{display:grid;place-items:center;width:42px;height:42px;border-radius:12px;background:#e7f6ee;color:#1f7a45}
+.personal-quick-card>span:last-child{display:inline-flex;align-items:center}
+.personal-status{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.personal-next-card,.personal-points-card{display:grid;grid-template-columns:minmax(0,1fr) 76px;gap:4px;align-items:end;min-height:156px;padding:14px 8px 12px 14px;border-radius:18px}
+.personal-next-card{background:#fff8ee}
+.personal-points-card{background:#e8f6f0}
+.personal-status-copy{display:grid;align-content:start;gap:8px;min-width:0}
+.personal-status-copy h2{display:flex;align-items:center;gap:6px;margin:0;color:#1f6b4a;font-size:14px;font-weight:700}
+.personal-status-icon{display:grid;place-items:center;flex:0 0 auto;width:26px;height:26px;border-radius:8px;background:#f4e7c4;color:#1f7a45}
+.personal-status-icon.is-star{border-radius:50%;background:#dff3e6}
+.personal-status-copy p{margin:0;color:#5c6f68;font-size:13px;line-height:1.45}
+.personal-status-copy a:not(.personal-pill){color:#1f7a45;font-weight:750;text-decoration:none}
+.personal-status-copy strong{font-size:32px;line-height:1;font-weight:750;color:#163028}
+.personal-next-card>img,.personal-points-card>img{width:76px;height:76px;object-fit:contain}
+.personal-panel{padding:14px 14px 8px;border-radius:18px;background:#fff;box-shadow:0 8px 20px rgba(18,56,47,.05)}
+.personal-section-heading h2{display:flex;align-items:center;gap:8px;margin:0;color:#1f6b4a;font-size:16px}
+.personal-section-heading h2 svg,.personal-section-heading a{color:#1f7a45}
+.personal-section-heading a{display:inline-flex;align-items:center;font-size:14px;font-weight:700;text-decoration:none}
+.personal-recent-list{display:grid;margin-top:4px}
+.personal-recent-row{display:grid;grid-template-columns:52px minmax(0,1fr) auto auto;gap:10px;align-items:center;padding:12px 0;border-top:1px solid #eef3f0}
+.personal-recent-row img{width:52px;height:52px;border-radius:12px;object-fit:cover}
+.personal-recent-row a{color:#1f7a45;font-weight:750;text-decoration:none}
+.personal-recent-row p{margin:2px 0 0;color:#6b7c76;font-size:13px}
+.personal-recent-row>svg{color:#9aa8a2}
 .personal-shortcut-icon{display:grid;place-items:center;width:36px;height:36px;border-radius:10px;background:#e8f5ee;color:var(--personal-green)}
 .personal-panel{margin-top:16px}
 .personal-section-heading{display:flex;align-items:center;justify-content:space-between;gap:12px}
-.personal-menu-scroller{display:grid;grid-auto-flow:column;grid-auto-columns:220px;gap:12px;margin-top:12px;overflow-x:auto;padding-bottom:4px}
-.personal-menu-card{display:grid;gap:6px;color:inherit;text-decoration:none}
-.personal-menu-visual{display:grid;place-items:center;height:120px;border-radius:14px;background:#e7f3ea;color:var(--personal-green);font-size:32px;font-weight:750}
-.personal-menu-card em{display:inline-flex;align-items:center;gap:4px;font-style:normal}
+.personal-menu-scroller{display:grid;grid-auto-flow:column;grid-auto-columns:148px;gap:12px;margin-top:12px;overflow-x:auto;padding-bottom:6px}
+.personal-menu-card{display:grid;gap:4px;color:inherit;text-decoration:none}
+.personal-home-logo{display:grid;place-items:center;height:108px;padding:12px;overflow:hidden;border-radius:16px;background:#f4f7f5;color:var(--personal-green);font-size:28px;font-weight:750}
+.personal-home-logo img{display:block;max-width:100%;max-height:72px;object-fit:contain}
+.personal-menu-card strong{font-size:14px;line-height:1.3}
+.personal-menu-card>span:not(.personal-home-logo){color:#6b7c76;font-size:12px;line-height:1.4}
 .personal-table-wrap{overflow-x:auto;margin-top:8px}
 .personal-orders-table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
 .personal-orders-table th,.personal-orders-table td{padding:12px 8px;border-bottom:1px solid #e6eeea;text-align:left;vertical-align:middle}
@@ -79,8 +105,21 @@
 .personal-order-info p{display:flex;align-items:center;gap:8px}.personal-order-row>strong{font-size:20px;font-variant-numeric:tabular-nums}
 .personal-order-status{display:flex;flex-wrap:wrap;gap:8px;font-size:13px}.personal-order-status span,.personal-default{padding:4px 8px;background:var(--secondary);border-radius:6px;color:var(--secondary-foreground)}
 .personal-empty{padding:20px 0;color:var(--personal-muted);line-height:1.7}
-.personal-store-list{margin:20px 0}.personal-store-link{display:flex;align-items:center;justify-content:space-between;gap:24px;padding:20px 0;border-bottom:1px solid var(--border);text-decoration:none}
-.personal-store-link>div{display:grid;gap:8px}.personal-store-link strong{font-size:22px;color:var(--personal-ink)}.personal-store-link span{display:flex;align-items:center;gap:8px;color:var(--personal-muted)}
+.personal-menus{padding:22px 16px 20px;border-radius:22px;background:#fff;box-shadow:0 10px 28px rgba(18,56,47,.06)}
+.personal-menus h1{margin:0 0 8px;color:var(--personal-ink);font-size:28px;line-height:1.2;letter-spacing:-.03em;text-wrap:balance}
+.personal-menus>p{margin:0;max-width:36rem;color:#3e524b;font-size:14px;line-height:1.6}
+.personal-menu-list{display:grid;gap:12px;margin:18px 0 0;padding:0;list-style:none}
+.personal-menu-row{display:grid;grid-template-columns:72px minmax(0,1fr) auto;gap:12px;align-items:center;min-height:96px;padding:12px;border-radius:16px;background:#fff;color:inherit;text-decoration:none;box-shadow:0 8px 22px rgba(18,56,47,.08)}
+.personal-menu-row:hover{box-shadow:0 12px 28px rgba(18,56,47,.12)}
+.personal-menu-row:focus-visible{outline:2px solid var(--personal-green);outline-offset:3px}
+.personal-menu-logo{display:grid;place-items:center;width:72px;height:72px;overflow:hidden;border-radius:14px;background:#f4f7f5;color:var(--personal-green);font-size:22px;font-weight:750}
+.personal-menu-logo img{display:block;width:100%;height:100%;object-fit:contain;padding:8px}
+.personal-menu-copy{display:grid;gap:2px;min-width:0}
+.personal-menu-copy strong{color:var(--personal-ink);font-size:16px;line-height:1.3;overflow-wrap:anywhere}
+.personal-menu-copy span{color:#3e524b;font-size:12px;line-height:1.35;overflow-wrap:anywhere}
+.personal-menu-cta{display:inline-flex;align-items:center;gap:2px;color:var(--personal-green);font-size:14px;font-weight:700;white-space:nowrap}
+.personal-menu-note{margin-top:18px;padding-top:16px;border-top:1px solid #e6eeea;color:#3e524b;font-size:13px;line-height:1.6}
+.personal-menus ::selection{background:#cfe8d8;color:var(--personal-ink)}
 .personal-addresses{display:grid;gap:14px}
 .personal-address-hero{display:grid;gap:12px;padding:22px;border-radius:18px;background:linear-gradient(105deg,#e7f6ee 0%,#f4fbf7 55%,#e5f3ea 100%)}
 .personal-address-brand{margin:0 0 8px;color:#1f7a45;font-size:12px;font-weight:750;letter-spacing:.14em}
@@ -157,7 +196,11 @@ button.ui-button.personal-address-save:hover{background:#18663a}
 .personal-points-facts{display:flex;gap:48px;padding:24px 0;border-block:1px solid var(--border)}
 .personal-points-facts dd{margin:8px 0;color:var(--personal-muted)}
 .personal-workspace ::selection{background:#cfe8d8;color:var(--personal-ink)}
-.customer-portal.personal-workspace{--personal-header-bg:#116b59;--personal-header-fg:#fff}
+.customer-portal.personal-workspace{--personal-header-bg:#156951;--personal-header-fg:#fff}
+.portal-header-alerts{position:relative;justify-self:end}
+.portal-header-bell{position:relative}
+.portal-header-bell-dot{position:absolute;top:8px;right:8px;width:8px;height:8px;border-radius:50%;background:#e23d3d;box-shadow:0 0 0 2px var(--personal-header-bg)}
+.portal-header-alert{position:absolute;top:48px;right:0;z-index:20;width:220px;margin:0;padding:12px 14px;border-radius:12px;background:#fff;color:var(--personal-ink);box-shadow:0 12px 32px rgba(18,56,47,.16)}
 .customer-portal.personal-workspace .portal-workspace-header{position:sticky;top:0;z-index:10;padding:env(safe-area-inset-top) 0 0;margin:0 0 0;border:0;background:var(--personal-header-bg);color:var(--personal-header-fg)}
 .personal-workspace .portal-workspace-top{position:relative;display:grid;grid-template-columns:48px minmax(0,1fr) 48px;gap:0;min-height:64px;padding:8px 12px}
 .personal-workspace .portal-menu-trigger{color:var(--personal-header-fg)}
@@ -172,7 +215,7 @@ button.ui-button.personal-address-save:hover{background:#18663a}
   .personal-workspace .personal-content{padding:18px 16px 48px}
   .customer-portal.personal-workspace .portal-access-state{width:auto;margin:0;padding:32px 16px 48px;border:0;border-radius:0;background:transparent;justify-items:start;text-align:left}
   .customer-portal.personal-workspace form{grid-template-columns:1fr}
-  .personal-shortcuts{grid-template-columns:1fr 1fr}
+  .personal-hero{grid-template-columns:minmax(0,1fr) 220px}
   .dark .customer-portal.personal-workspace{--personal-surface:var(--background)}
 }
 .personal-profile{display:grid;gap:20px}

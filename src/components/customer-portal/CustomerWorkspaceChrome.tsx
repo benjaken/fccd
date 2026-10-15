@@ -1,7 +1,7 @@
 import { useEffect, useState, type ComponentType, type SVGProps } from "react";
 import { Link, NavLink } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { CircleAlert, LoaderCircle, LogOut, Menu, X } from "lucide-react";
+import { Bell, CircleAlert, LoaderCircle, LogOut, Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FOOD_CHANNEL_CATERING_LOGO_PATH } from "@/lib/brand-logo";
 import { CustomerPortalGuideLinks } from "@/components/customer-portal/CustomerPortalGuideLinks";
@@ -146,6 +146,7 @@ export function CustomerWorkspaceHeader({
 }) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
+  const [alertsOpen, setAlertsOpen] = useState(false);
   const heading = title || t("portal.title");
   return (
     <>
@@ -166,6 +167,14 @@ export function CustomerWorkspaceHeader({
               </select>
             ) : null}
           </div>
+          {personal ? <div className="portal-header-alerts">
+            <Button variant="ghost" size="icon" className="portal-menu-trigger portal-header-bell" aria-expanded={alertsOpen} aria-controls="personal-alerts" onClick={() => setAlertsOpen(value => !value)}>
+              <Bell />
+              <span className="portal-header-bell-dot" aria-hidden="true" />
+              <span className="sr-only">{t("personal.alerts")}</span>
+            </Button>
+            {alertsOpen ? <p id="personal-alerts" className="portal-header-alert" role="status">{t("personal.noAlerts")}</p> : null}
+          </div> : null}
         </div>
       </header>
       <CustomerPortalDrawer

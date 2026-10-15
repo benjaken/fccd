@@ -1,15 +1,16 @@
 import i18n from "@/i18n";
 
 const zh = {
-  home: "主頁", menus: "最新餐牌", instant: "即時訂購 / 加單", instantShort: "即時訂購", orders: "訂單紀錄", evidence: "上載付款單據", points: "獎勵積分", addresses: "送貨地址", profile: "個人資料",
+  home: "首頁", menus: "最新餐牌", instant: "即時訂購 / 加單", instantShort: "即時訂購", orders: "訂單紀錄", ordersRecord: "訂單記錄", evidence: "上載付款單據", evidenceUpload: "上傳付款單據", points: "獎勵積分", addresses: "送貨地址", profile: "個人資料",
   hello: "你好！", helloName: "你好，{{name}}！", helloIntro: "新一天從美味開始，為你提供健康又美味的餐飲選擇。",
-  welcome: "你的到會安排，一目了然。", intro: "查看下一次送貨、管理訂單，或到品牌官網選購。", nextOrder: "下一張訂單", nextStatus: "下一張單狀態", noNextOrder: "暫時沒有即將送貨的訂單。",
-  lastOrderOn: "上次訂單：{{date}}", visitSiteHint: "查看更多餐牌及最新資訊", viewMenu: "查看餐牌", viewMore: "查看更多", recentOrders: "近期訂單", viewAll: "查看全部",
+  welcome: "你的到會安排，一目了然。", intro: "查看下一次送貨、管理訂單，或到品牌官網選購。", nextOrder: "下一張訂單", nextStatus: "下一張訂單狀態", noNextOrder: "暫時沒有即將送貨的訂單。",
+  lastOrderOn: "上次訂單：{{date}}", visitSiteHint: "查看更多餐牌及最新資訊", viewMenu: "查看餐牌", viewMore: "查看更多", recentOrders: "最近訂單", viewAll: "查看全部",
+  menuBlurb: { catering: "健康美味・企業訂餐", express: "快速美味・靈活選擇", "lunch-box": "本地口味・優質食材", "party-food": "派對到會・歡樂分享", kitchen: "新鮮製作・每日直送", cuisine: "精選佳餚・中式風味" },
   orderNumber: "訂單編號", orderDate: "訂單日期", orderAmount: "訂單金額", columnStatus: "狀態", columnAction: "操作", pointsYouHave: "你目前有", pointsDetails: "查看積分詳情",
   alerts: "通知", noAlerts: "目前沒有新通知。", accountMenu: "帳戶",
   noOrders: "目前沒有已綁定的訂單。", orderHelp: "如找不到已下單的訂單，請聯絡客服核對帳戶歸屬。", details: "查看訂單", reorder: "再訂一次", orderNow: "立即訂購", website: "前往品牌官網",
   delivery: "送貨日期", total: "訂單總額", unknownDate: "日期待確認", paid: "已完成付款", unpaid: "待付款", unknownStatus: "查看訂單狀態",
-  menusIntro: "選擇品牌，到 Shopify 官網查看最新餐牌及訂購。", noStores: "品牌餐牌入口暫未開放，請稍後再試。", shopifyCheckout: "商品價格、供應及結帳以品牌官網為準。",
+  menusIntro: "選擇品牌，到 Shopify 店舖查看最新餐牌及訂購。", noStores: "品牌餐牌入口暫未開放，請稍後再試。", shopifyCheckout: "商品價格、供應及結賬以品牌官網為準。",
   lunchbox: "互動飯盒", lunchboxIntro: "選擇標準飯盒及數量，提交後會成為報價單，由 FCCD 確認後才是正式訂單。", noLunchbox: "目前沒有可訂的互動飯盒。", chooseLunchbox: "選擇飯盒餐單", available: "可訂 {{count}} 份", quantityLabel: "{{name}} 數量", chooseAddress: "選擇送貨地址", shipping: "運費", payable: "應付金額", submitLunchbox: "提交預備訂單", submitting: "提交中…", lunchboxSubmitted: "已提交預備訂單，等待 FCCD 確認。", awaitingConfirmation: "待確認", confirmedOrder: "已確認", awaitingNumber: "編號待編",
   reorderIntro: "原單商品及數量會帶入 Shopify 購物車；請核對最新價格、供應和送貨資料後結帳。", reorderReady: "商品已準備好，可前往 Shopify 確認。", confirmReorder: "前往 Shopify 購物車", cancel: "取消",
   reorderUnavailable: "這張訂單暫時不能自動再訂。請到品牌官網重新選購。", reorderOptions: "此訂單含套餐或特別選項，請到品牌官網重新確認選擇。",
@@ -28,10 +29,11 @@ const zh = {
   evidenceIntro: "選擇訂單，上載 FPS 付款截圖或入數紙，交由財務核實。", evidenceHint: "支援 JPG、PNG、PDF，每檔最多 10MB。提交不會立即將訂單標記為已付款。", chooseOrder: "選擇訂單", chooseOrderPlaceholder: "請選擇待付款訂單", amount: "付款金額（HKD）", amountPlaceholder: "例如：500.00", evidenceFile: "FPS／入數紙", submit: "提交付款單據", submitted: "付款單據已提交，等待財務核實。", invalidFile: "請選擇不超過 10MB 的 JPG、PNG 或 PDF，並核對付款金額。", evidenceHistory: "已提交的單據", noEvidence: "尚未提交付款單據。", noUnpaid: "目前沒有可提交付款單據的待付款訂單。", status: { pending: "待審核", accepted: "已核實", rejected: "需重新提交" },
 };
 const en = {
-  home: "Home", menus: "Latest menus", instant: "Order now / add items", instantShort: "Order now", orders: "Order history", evidence: "Upload payment evidence", points: "Reward points", addresses: "Delivery addresses", profile: "Personal details",
+  home: "Home", menus: "Latest menus", instant: "Order now / add items", instantShort: "Order now", orders: "Order history", ordersRecord: "Orders", evidence: "Upload payment evidence", evidenceUpload: "Upload payment slip", points: "Reward points", addresses: "Delivery addresses", profile: "Personal details",
   hello: "Hello!", helloName: "Hello, {{name}}!", helloIntro: "Start the day with a fresh menu, and choose a healthy meal that suits you.",
   welcome: "Your catering plans, at a glance.", intro: "Check your next delivery, manage orders or shop on a brand's website.", nextOrder: "Next order", nextStatus: "Next order status", noNextOrder: "No upcoming deliveries.",
   lastOrderOn: "Last order: {{date}}", visitSiteHint: "See more menus and the latest updates", viewMenu: "View menu", viewMore: "View more", recentOrders: "Recent orders", viewAll: "View all",
+  menuBlurb: { catering: "Healthy meals for teams", express: "Fast meals, flexible choice", "lunch-box": "Local flavours, quality ingredients", "party-food": "Party food for every gathering", kitchen: "Prepared fresh, delivered daily", cuisine: "Selected Chinese dishes" },
   orderNumber: "Order number", orderDate: "Order date", orderAmount: "Order amount", columnStatus: "Status", columnAction: "Action", pointsYouHave: "You currently have", pointsDetails: "View points details",
   alerts: "Notifications", noAlerts: "No new notifications.", accountMenu: "Account", noOrders: "No orders are linked to this account yet.", orderHelp: "Contact customer service if a placed order is missing.", details: "View order", reorder: "Order again", orderNow: "Order now", website: "Visit brand website",
   delivery: "Delivery date", total: "Order total", unknownDate: "Date to be confirmed", paid: "Payment complete", unpaid: "Awaiting payment", unknownStatus: "View order status", menusIntro: "Choose a brand to view the latest menu and order on Shopify.", noStores: "Brand menu links are not available yet. Please try again later.", shopifyCheckout: "Current prices, availability and checkout are provided by the brand website.",

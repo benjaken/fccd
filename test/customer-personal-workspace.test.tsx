@@ -39,14 +39,14 @@ beforeEach(() => {
 });
 describe("personal customer pages", () => {
   it("shows the earliest upcoming order and honest reward availability", async () => {
-    mount(); await screen.findByRole("heading", { name: "下一張單狀態" });
+    mount(); await screen.findByRole("heading", { name: "下一張訂單狀態" });
     expect(screen.getAllByRole("link", { name: "FCC-1" })[0]).toHaveAttribute("href", "/customer/personal/next");
     expect(screen.getAllByRole("link", { name: "FCC-2" }).length).toBeGreaterThan(0);
     expect(screen.getAllByText("待付款").length).toBeGreaterThan(0); expect(await screen.findByText("0 分")).toBeInTheDocument();
   });
   it("navigates with the existing drawer without showing team controls or phone matching", async () => {
-    mount(); await screen.findByRole("heading", { name: "下一張單狀態" }); fireEvent.click(screen.getByRole("button", { name: "開啟選單" }));
-    for (const name of ["主頁", "到會網站", "活動飯盒", "訂單紀錄（付款單據）", "積分換禮品", "送貨地址", "付款送貨", "我的資料", "關於我們", "客戶清單", "真實案例", "公司訂飯", "服務承諾"]) expect(screen.getAllByRole("link", { name }).length).toBeGreaterThan(0);
+    mount(); await screen.findByRole("heading", { name: "下一張訂單狀態" }); fireEvent.click(screen.getByRole("button", { name: "開啟選單" }));
+    for (const name of ["首頁", "到會網站", "活動飯盒", "訂單紀錄（付款單據）", "積分換禮品", "送貨地址", "付款送貨", "我的資料", "關於我們", "客戶清單", "真實案例", "公司訂飯", "服務承諾"]) expect(screen.getAllByRole("link", { name }).length).toBeGreaterThan(0);
     expect(screen.queryByRole("link", { name: "團隊管理" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "VIP 訂飯" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "配對訂單" })).not.toBeInTheDocument();
@@ -56,18 +56,27 @@ describe("personal customer pages", () => {
     expect(screen.queryByLabelText("姓名")).not.toBeInTheDocument();
   });
   it("shows a published guide from the sidebar", async () => {
-    mount(); await screen.findByRole("heading", { name: "下一張單狀態" });
+    mount(); await screen.findByRole("heading", { name: "下一張訂單狀態" });
     fireEvent.click(screen.getByRole("button", { name: "開啟選單" }));
     fireEvent.click(screen.getByRole("link", { name: "關於我們" }));
     expect(await screen.findByRole("heading", { name: "關於我們" })).toBeInTheDocument();
     expect(screen.getByText("我們做到會。")).toBeInTheDocument();
   });
   it("opens configured brand menus on Shopify", async () => {
-    mount("/customer/personal/menus"); await screen.findByText("Brand menu"); expect(screen.getByRole("link", { name: /Brand menu/ })).toHaveAttribute("href", "https://brand.myshopify.com");
+    mocks.snapshot.mockResolvedValue({ ...structuredClone(data), stores: [
+      { id: "catering", name: "Catering", domain: "foodchannels-catering.myshopify.com" },
+      { id: "brand", name: "Brand menu", domain: "brand.myshopify.com" },
+    ] });
+    mount("/customer/personal/menus");
+    const catering = await screen.findByRole("link", { name: /Catering/ });
+    expect(catering).toHaveAttribute("href", "https://foodchannels-catering.myshopify.com");
+    expect(catering.querySelector("img")).toHaveAttribute("src", "/assets/fc-catering-logo.svg");
+    expect(screen.getByRole("link", { name: /Brand menu/ })).toHaveAttribute("href", "https://brand.myshopify.com");
     expect(screen.getByRole("heading", { name: "最新餐牌" })).toBeInTheDocument();
+    expect(screen.getByText("選擇品牌，到 Shopify 店舖查看最新餐牌及訂購。")).toBeInTheDocument();
   });
   it("prepares a cart before navigating and explains unavailable custom options", async () => {
-    mount(); fireEvent.click((await screen.findAllByRole("button", { name: "再訂一次" }))[0]);
+    mount("/customer/personal/orders"); fireEvent.click((await screen.findAllByRole("button", { name: "再訂一次" }))[0]);
     expect(await screen.findByRole("link", { name: "前往 Shopify 購物車" })).toHaveAttribute("href", "https://brand.myshopify.com/cart/123:2?storefront=true");
     fireEvent.click(screen.getByRole("button", { name: "取消" })); mocks.reorder.mockRejectedValue({ message: "reorder_options_required" });
     fireEvent.click(screen.getAllByRole("button", { name: "再訂一次" })[0]); expect(await screen.findByRole("alert")).toHaveTextContent("此訂單含套餐或特別選項");
@@ -125,7 +134,7 @@ describe("personal customer pages", () => {
   });
   it("offers retry after a failed session and preserves navigation", async () => {
     mocks.session.mockRejectedValueOnce(new Error("offline")); mount(); await screen.findByRole("heading", { name: "未能載入客戶資料" });
-    fireEvent.click(screen.getByRole("button", { name: "重試" })); await screen.findByRole("heading", { name: "下一張單狀態" });
+    fireEvent.click(screen.getByRole("button", { name: "重試" })); await screen.findByRole("heading", { name: "下一張訂單狀態" });
   });
   it("does not expose an organization balance or an enabled redemption action", async () => {
     mount("/customer/personal/points"); expect(await screen.findByRole("heading", { name: "獎勵積分" })).toBeInTheDocument();

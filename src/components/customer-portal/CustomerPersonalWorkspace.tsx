@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
 import { Link, Navigate, Route, Routes, useLocation, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { ArrowUpRight, CalendarDays, ClipboardList, Gift, Link2, ShoppingCart } from "lucide-react";
+import { ArrowUpRight, BookOpen, CalendarDays, ChevronRight, ClipboardList, Leaf, ShoppingCart, Star, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CornerNotice } from "@/components/ui/corner-notice";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
@@ -13,6 +13,7 @@ import { PersonalLunchboxPage } from "@/components/customer-portal/PersonalLunch
 import { CustomerGuidePage } from "@/components/customer-portal/CustomerGuidePage";
 import { AccountOrderFeedback } from "@/components/customer-portal/OrderFeedbackPage";
 import { RewardCatalogList } from "@/components/customer-portal/RewardCatalogList";
+import { getStorefrontLogoPath } from "@/lib/brand-logo";
 import { fetchPersonalOtpSession, logoutPersonalOtpSession } from "@/lib/customer-otp-session";
 import type { CustomerSelfServiceOrderSummary, CustomerSelfServiceSession } from "@/lib/customer-self-service";
 import { fetchPersonalPoints, fetchPersonalSnapshot, fetchPersonalReorder, reorderPersonalQuote, shopifyCartUrl, shopifyStoreUrl, type PersonalPoints, type PersonalSnapshot } from "@/lib/customer-personal";
@@ -95,97 +96,132 @@ function upcomingOrder(session: CustomerSelfServiceSession, data: PersonalSnapsh
   }).sort((a, b) => (a.deliveryDate || "").localeCompare(b.deliveryDate || ""))[0];
 }
 
+function longDate(value: string | null, language: string) {
+  if (!value) return "";
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return "";
+  if (!language.toLowerCase().startsWith("zh")) return date(value, language);
+  const parts = new Intl.DateTimeFormat("en-US", { timeZone: "Asia/Hong_Kong", year: "numeric", month: "numeric", day: "numeric" }).formatToParts(parsed);
+  const pick = (type: string) => Number(parts.find(part => part.type === type)?.value || "");
+  return `${pick("year")}年${pick("month")}月${pick("day")}日`;
+}
+
+function menuTone(name: string, domain: string) {
+  const text = `${name} ${domain}`;
+  if (/express|\bfce\b/i.test(text)) return "express";
+  if (/lunch\s*box|lunchbox|hklunchbox|飯盒/i.test(text)) return "lunch-box";
+  if (/party\s*food|partyfood|hkpartyfood/i.test(text)) return "party-food";
+  if (/cuisine|福滿樓/i.test(text)) return "cuisine";
+  if (/kitchen|中央廚房|\bfck\b/i.test(text)) return "kitchen";
+  if (/catering|foodchannels-catering/i.test(text)) return "catering";
+  return "";
+}
+
 function PersonalHomePage() {
   const { t, i18n } = useTranslation();
   const { session, data } = usePersonalWorkspace();
-  const name = data?.profile.name?.trim();
   const next = upcomingOrder(session, data);
   const recent = [...session.orders].sort((a, b) => (b.orderDate || "").localeCompare(a.orderDate || "")).slice(0, 3);
-  const store = data?.stores[0];
-  const reorderTarget = next || recent[0];
   const [points, setPoints] = useState<PersonalPoints | null>(null);
   useEffect(() => { void fetchPersonalPoints().then(setPoints).catch(() => setPoints({ balance: 0, pending: 0, ledger: [] })); }, []);
-  return <>
+  const shortcuts = [
+    { to: `${base}/menus`, icon: BookOpen, label: t("personal.menus") },
+    { to: `${base}/lunchbox`, icon: ShoppingCart, label: t("personal.instantShort") },
+    { to: `${base}/payments`, icon: Upload, label: t("personal.evidenceUpload") },
+    { to: `${base}/orders`, icon: ClipboardList, label: t("personal.ordersRecord") },
+  ];
+  const nextState = next ? data?.order_states?.[next.id] : undefined;
+  return <div className="personal-home">
     <section className="personal-hero">
-      <div>
-        <h1>{name ? t("personal.helloName", { name }) : t("personal.hello")}</h1>
+      <div className="personal-hero-copy">
+        <h1>{t("personal.hello")}</h1>
         <p>{t("personal.helloIntro")}</p>
-        <Button asChild><Link to={`${base}/lunchbox`}>{t("personal.orderNow")}<ArrowUpRight size={16} /></Link></Button>
+        <Link className="personal-pill" to={`${base}/lunchbox`}>{t("personal.orderNow")}<ChevronRight size={16} aria-hidden="true" /></Link>
       </div>
-      <div className="personal-hero-art" aria-hidden="true">
-        <svg viewBox="0 0 320 220" role="img">
-          <rect width="320" height="220" rx="28" fill="#e7f3ea" />
-          <rect x="78" y="46" width="164" height="128" rx="36" fill="#f4e1c4" />
-          <ellipse cx="160" cy="118" rx="62" ry="36" fill="#f7f1e4" />
-          <circle cx="132" cy="108" r="16" fill="#d9783a" />
-          <circle cx="168" cy="96" r="14" fill="#de5b45" />
-          <circle cx="186" cy="122" r="12" fill="#6aa84f" />
-          <path d="M108 150c18 16 86 16 104 0" fill="none" stroke="#c4a574" strokeWidth="8" strokeLinecap="round" />
-        </svg>
-      </div>
+      <img className="personal-hero-bowl" src="/assets/customer-personal/hero-bowl.png" alt="" />
     </section>
-    <section className="personal-shortcuts" aria-label={t("personal.home")}>
-      <article>
-        <span className="personal-shortcut-icon"><ClipboardList size={18} /></span>
-        <h2>{t("personal.nextStatus")}</h2>
-        {next ? <>
-          <strong className={data?.order_states?.[next.id]?.paid ? "is-paid" : "is-unpaid"}>{t(data?.order_states?.[next.id] ? (data.order_states[next.id].paid ? "personal.paid" : "personal.unpaid") : "personal.unknownStatus")}</strong>
-          <Link to={`${base}/${encodeURIComponent(next.id)}`}>{next.orderNumber}</Link>
-        </> : <p>{t("personal.noNextOrder")}</p>}
-      </article>
-      <article>
-        <span className="personal-shortcut-icon"><Gift size={18} /></span>
-        <h2>{t("personal.balance")}</h2>
-        <strong>{points ? `${points.balance.toLocaleString()} ${t("personal.pointUnit")}` : t("personal.loading")}</strong>
-        <Link to={`${base}/points`}>{t("personal.points")}</Link>
-      </article>
-      <article>
-        <span className="personal-shortcut-icon"><ShoppingCart size={18} /></span>
-        <h2>{t("personal.reorder")}</h2>
-        <p>{reorderTarget ? t("personal.lastOrderOn", { date: date(reorderTarget.orderDate, i18n.language) || t("personal.unknownDate") }) : t("personal.noOrders")}</p>
-        {reorderTarget ? <PersonalReorderButton orderId={reorderTarget.id} /> : null}
-      </article>
-      <article>
-        <span className="personal-shortcut-icon"><Link2 size={18} /></span>
-        <h2>{t("personal.website")}</h2>
-        <p>{store ? store.name : t("personal.visitSiteHint")}</p>
-        {store ? <a href={shopifyStoreUrl(store.domain)}>{t("personal.viewMenu")}<ArrowUpRight size={14} /></a> : <Link to={`${base}/menus`}>{t("personal.menus")}</Link>}
-      </article>
+    <nav className="personal-quick" aria-label={t("personal.home")}>
+      {shortcuts.map(item => {
+        const Icon = item.icon;
+        return <Link key={item.to} to={item.to} className="personal-quick-card"><span className="personal-quick-icon"><Icon size={22} /></span><span>{item.label}<ChevronRight size={14} aria-hidden="true" /></span></Link>;
+      })}
+    </nav>
+    <div className="personal-status">
+      <section className="personal-next-card">
+        <div className="personal-status-copy">
+          <h2><span className="personal-status-icon"><CalendarDays size={16} /></span>{t("personal.nextStatus")}</h2>
+          {next ? <>
+            <span className={nextState?.paid ? "is-paid" : "is-unpaid"}>{t(nextState ? (nextState.paid ? "personal.paid" : "personal.unpaid") : "personal.unknownStatus")}</span>
+            <Link to={`${base}/${encodeURIComponent(next.id)}`}>{next.orderNumber}</Link>
+          </> : <p>{t("personal.noNextOrder")}</p>}
+          <Link className="personal-pill is-ghost" to={`${base}/lunchbox`}>{t("personal.orderNow")}<ChevronRight size={16} aria-hidden="true" /></Link>
+        </div>
+        <img src="/assets/customer-personal/order-box.png" alt="" />
+      </section>
+      <section className="personal-points-card">
+        <div className="personal-status-copy">
+          <h2><span className="personal-status-icon is-star"><Star size={16} /></span>{t("personal.balance")}</h2>
+          <strong>{points ? `${points.balance.toLocaleString()} ${t("personal.pointUnit")}` : t("personal.loading")}</strong>
+          <Link className="personal-pill is-ghost" to={`${base}/points`}>{t("personal.points")}<ChevronRight size={16} aria-hidden="true" /></Link>
+        </div>
+        <img src="/assets/customer-personal/points-coins.png" alt="" />
+      </section>
+    </div>
+    <section className="personal-panel">
+      <div className="personal-section-heading"><h2><ClipboardList size={18} />{t("personal.recentOrders")}</h2><Link to={`${base}/orders`}>{t("personal.viewAll")}<ChevronRight size={16} aria-hidden="true" /></Link></div>
+      {recent.length ? <div className="personal-recent-list">{recent.map(order => {
+        const state = data?.order_states?.[order.id];
+        const paid = Boolean(state?.paid);
+        return <article key={order.id} className="personal-recent-row">
+          <img src="/assets/customer-personal/order-thumb.png" alt="" />
+          <div>
+            <Link to={`${base}/${encodeURIComponent(order.id)}`}>{order.orderNumber}</Link>
+            <p>{longDate(order.deliveryDate || order.orderDate, i18n.language) || t("personal.unknownDate")}</p>
+          </div>
+          <span className={paid ? "is-paid" : "is-unpaid"}>{state ? t(paid ? "personal.paid" : "personal.unpaid") : t("personal.unknownStatus")}</span>
+          <ChevronRight size={18} aria-hidden="true" />
+        </article>;
+      })}</div> : <p className="personal-empty">{t("personal.noOrders")}</p>}
     </section>
     <section className="personal-panel">
-      <div className="personal-section-heading"><h2>{t("personal.menus")}</h2><Link to={`${base}/menus`}>{t("personal.viewMore")}</Link></div>
-      {data?.stores.length ? <div className="personal-menu-scroller">{data.stores.slice(0, 4).map(item => <a key={item.id} className="personal-menu-card" href={shopifyStoreUrl(item.domain)}><span className="personal-menu-visual" aria-hidden="true">{item.name.slice(0, 1)}</span><strong>{item.name}</strong><span>{item.domain}</span><em>{t("personal.viewMenu")}<ArrowUpRight size={14} /></em></a>)}</div> : <p className="personal-empty">{t("personal.noStores")}</p>}
+      <div className="personal-section-heading"><h2><Leaf size={18} />{t("personal.menus")}</h2><Link to={`${base}/menus`}>{t("personal.viewMore")}<ChevronRight size={16} aria-hidden="true" /></Link></div>
+      {data?.stores.length ? <div className="personal-menu-scroller">{data.stores.slice(0, 8).map(item => {
+        const logo = getStorefrontLogoPath(item.name, item.domain);
+        const tone = menuTone(item.name, item.domain);
+        return <a key={item.id} className="personal-menu-card" href={shopifyStoreUrl(item.domain)}>
+          <span className="personal-home-logo">{logo ? <img src={logo} alt="" /> : <span aria-hidden="true">{item.name.slice(0, 1)}</span>}</span>
+          <strong>{item.name}</strong>
+          {tone ? <span>{t(`personal.menuBlurb.${tone}`)}</span> : null}
+        </a>;
+      })}</div> : <p className="personal-empty">{t("personal.noStores")}</p>}
     </section>
-    <section className="personal-panel">
-      <div className="personal-section-heading"><h2>{t("personal.recentOrders")}</h2><Link to={`${base}/orders`}>{t("personal.viewAll")}</Link></div>
-      {recent.length ? <div className="personal-table-wrap"><table className="personal-orders-table">
-        <thead><tr><th>{t("personal.orderNumber")}</th><th>{t("personal.orderDate")}</th><th>{t("personal.delivery")}</th><th>{t("personal.orderAmount")}</th><th>{t("personal.columnStatus")}</th><th>{t("personal.columnAction")}</th></tr></thead>
-        <tbody>{recent.map(order => {
-          const state = data?.order_states?.[order.id];
-          const paid = Boolean(state?.paid);
-          return <tr key={order.id}>
-            <td><Link to={`${base}/${encodeURIComponent(order.id)}`}>{order.orderNumber}</Link></td>
-            <td>{date(order.orderDate, i18n.language) || t("personal.unknownDate")}</td>
-            <td>{date(order.deliveryDate, i18n.language) || t("personal.unknownDate")}</td>
-            <td>{money(order.grandTotal, order.currency, i18n.language)}</td>
-            <td><span className={paid ? "is-paid" : "is-unpaid"}>{state ? t(paid ? "personal.paid" : "personal.unpaid") : t("personal.unknownStatus")}</span></td>
-            <td>{paid ? <PersonalReorderButton orderId={order.id} /> : <Link to={`${base}/payments`}>{t("personal.evidence")}</Link>}</td>
-          </tr>;
-        })}</tbody>
-      </table></div> : <p className="personal-empty">{t("personal.noOrders")}</p>}
-    </section>
-    <section className="personal-points-banner">
-      <div><Gift size={28} /><div><h2>{t("personal.balance")}</h2><p>{t("personal.pointsIntro")}</p><Link to={`${base}/points`}>{t("personal.pointsDetails")}</Link></div></div>
-    </section>
-  </>;
+  </div>;
 }
 
 function PersonalMenusPage() {
   const { t } = useTranslation();
   const { data } = usePersonalWorkspace();
-  return <section><h1>{t("personal.menus")}</h1><p>{t("personal.menusIntro")}</p>
-    {data?.stores.length ? <div className="personal-store-list">{data.stores.map(store => <a key={store.id} href={shopifyStoreUrl(store.domain)} className="personal-store-link"><div><strong>{store.name}</strong><span>{store.domain}</span></div><span>{t("personal.website")}<ArrowUpRight size={18} /></span></a>)}</div> : <p className="personal-empty">{t("personal.noStores")}</p>}
-    <p>{t("personal.shopifyCheckout")}</p>
+  return <section className="personal-menus">
+    <h1>{t("personal.menus")}</h1>
+    <p>{t("personal.menusIntro")}</p>
+    {data?.stores.length ? <ul className="personal-menu-list">
+      {data.stores.map(store => {
+        const logo = getStorefrontLogoPath(store.name, store.domain);
+        return <li key={store.id}>
+          <a className="personal-menu-row" href={shopifyStoreUrl(store.domain)}>
+            <span className="personal-menu-logo">
+              {logo ? <img src={logo} alt="" /> : <span aria-hidden="true">{store.name.slice(0, 1)}</span>}
+            </span>
+            <span className="personal-menu-copy">
+              <strong>{store.name}</strong>
+              <span>{store.domain}</span>
+            </span>
+            <span className="personal-menu-cta">{t("personal.website")}<ChevronRight size={16} aria-hidden="true" /></span>
+          </a>
+        </li>;
+      })}
+    </ul> : <p className="personal-empty">{t("personal.noStores")}</p>}
+    <p className="personal-menu-note">{t("personal.shopifyCheckout")}</p>
   </section>;
 }
 
