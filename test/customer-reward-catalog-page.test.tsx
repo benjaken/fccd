@@ -109,8 +109,8 @@ it("uploads or generates a catalog image and saves the object path", async () =>
   const next = within(await screen.findByRole("dialog"));
   fireEvent.change(next.getByLabelText("名稱"), { target: { value: "AI Gift" } });
   fireEvent.click(next.getByRole("tab", { name: "AI 生成" }));
-  expect(next.getByLabelText("獎品名稱")).toHaveValue("AI Gift");
-  expect((next.getByLabelText("提示詞") as HTMLTextAreaElement).value).toContain("soft anime");
+  expect(next.queryByLabelText("獎品名稱")).not.toBeInTheDocument();
+  expect((next.getByLabelText("提示詞") as HTMLTextAreaElement).value).toContain("AI Gift");
   fireEvent.click(next.getByRole("button", { name: "AI 生成圖片" }));
   await waitFor(() => expect(mocks.generate).toHaveBeenCalledWith(expect.objectContaining({
     name: "AI Gift",

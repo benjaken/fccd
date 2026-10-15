@@ -68,7 +68,6 @@ export function CustomerPortalRewardCatalogPage() {
   const [imagePreview, setImagePreview] = useState("");
   const [imageBusy, setImageBusy] = useState(false);
   const [imageTab, setImageTab] = useState<"upload" | "ai">("upload");
-  const [aiPrizeName, setAiPrizeName] = useState("");
   const [aiPrompt, setAiPrompt] = useState("");
   const [dragOver, setDragOver] = useState(false);
   const [stores, setStores] = useState<Array<{ id: string; shop_domain: string }>>([]);
@@ -84,18 +83,21 @@ export function CustomerPortalRewardCatalogPage() {
     setEditing(null); setName(""); setDescription(""); setAmount(""); setStoreId("");
     setKind("gift"); setPoints("100"); setStock("10"); setActive(true); setValidDays("365");
     setImagePath(null); setImagePreview(""); setImageBusy(false); setImageTab("upload");
-    setAiPrizeName(""); setAiPrompt(""); setDragOver(false); setActionError("");
+    setAiPrompt(""); setDragOver(false); setActionError("");
   }
 
-  function syncAiPrompt(prize: string, detail = description) {
-    setAiPrompt(buildRewardCatalogImagePrompt({ name: prize, description: detail }));
+  function syncAiPrompt(prize = name, detail = description) {
+    setAiPrompt(buildRewardCatalogImagePrompt({ name: prize.trim(), description: detail }));
   }
 
   function openAiTab() {
-    const prize = (aiPrizeName || name).trim();
-    setAiPrizeName(prize);
-    syncAiPrompt(prize);
+    syncAiPrompt();
     setImageTab("ai");
+  }
+
+  function clearImage() {
+    setImagePath(null);
+    setImagePreview("");
   }
   async function hydrateImage(path: string | null | undefined) {
     if (!path) { setImagePath(null); setImagePreview(""); return; }
@@ -156,7 +158,7 @@ export function CustomerPortalRewardCatalogPage() {
   }
 
   async function onGenerate() {
-    const prize = aiPrizeName.trim() || name.trim();
+    const prize = name.trim();
     const prompt = aiPrompt.trim() || buildRewardCatalogImagePrompt({ name: prize, description });
     if (imageBusy || saving || !prize) {
       if (!prize) setActionError(t("portalRewardCatalog.invalid"));
@@ -191,6 +193,10 @@ export function CustomerPortalRewardCatalogPage() {
 
   const editorBusy = saving || imageBusy;
   const closeEditor = () => { if (!editorBusy) { resetEditor(); setPanel(null); } };
+  const previewBlock = <div className="reward-admin-image-preview-wrap">
+    {imagePreview ? <img className="reward-admin-image-preview" src={imagePreview} alt="" /> : <div className="reward-admin-image-preview-empty">{t("portalRewardCatalog.imageDrop")}</div>}
+    {imagePath ? <button type="button" className="reward-admin-image-remove" disabled={editorBusy} aria-label={t("portalRewardCatalog.removeImage")} onClick={clearImage}><Trash2 aria-hidden="true" /></button> : null}
+  </div>;
 
   return <section className="reward-admin">
     <header className="page-heading"><div className="reward-admin-actions">
@@ -216,7 +222,7 @@ export function CustomerPortalRewardCatalogPage() {
       <section className="reward-admin-section">
         <h3 className="reward-admin-section-title">{t("portalRewardCatalog.sectionBasics")}</h3>
         <div className="reward-admin-section-body reward-admin-section-grid">
-          <div className="reward-admin-field"><label htmlFor="catalog-name">{t("portalRewardCatalog.name")}</label><Input id="catalog-name" value={name} onChange={event => setName(event.target.value)} required /></div>
+          <div className="reward-admin-field"><label htmlFor="catalog-name">{t("portalRewardCatalog.name")}</label><Input id="catalog-name" value={name} onChange={event => { const next = event.target.value; setName(next); if (imageTab === "ai") syncAiPrompt(next); }} required /></div>
           <div className="reward-admin-field"><label htmlFor="catalog-kind">{t("portalRewardCatalog.kind")}</label><select id="catalog-kind" value={kind} onChange={event => setKind(event.target.value === "voucher" ? "voucher" : "gift")}>
             <option value="gift">{t("portalRewardCatalog.gift")}</option>
             <option value="voucher">{t("portalRewardCatalog.voucher")}</option>
@@ -271,23 +277,15 @@ export function CustomerPortalRewardCatalogPage() {
               </span>
               <input id="catalog-image" type="file" accept="image/jpeg,image/png,image/webp" disabled={editorBusy} aria-label={t("portalRewardCatalog.uploadImage")} onChange={event => { void onUpload(event.target.files?.[0]); event.target.value = ""; }} />
             </label>
-            <div className="reward-admin-image-preview-wrap">
-              {imagePreview ? <img className="reward-admin-image-preview" src={imagePreview} alt="" /> : <div className="reward-admin-image-preview-empty">{t("portalRewardCatalog.imageDrop")}</div>}
-              {imagePath ? <Button type="button" size="icon" variant="ghost" className="reward-admin-image-remove" disabled={editorBusy} aria-label={t("portalRewardCatalog.removeImage")} onClick={() => { setImagePath(null); setImagePreview(""); }}><Trash2 /></Button> : null}
-            </div>
+            {previewBlock}
           </div> : <div role="tabpanel" className="reward-admin-image-media reward-admin-image-media-ai">
             <div className="reward-admin-image-panel">
-              <p className="reward-admin-section-note">{t("portalRewardCatalog.imagePromptHint")}</p>
-              <div className="reward-admin-field"><label htmlFor="catalog-prize-name">{t("portalRewardCatalog.prizeName")}</label><Input id="catalog-prize-name" value={aiPrizeName} disabled={editorBusy} onChange={event => { const prize = event.target.value; setAiPrizeName(prize); syncAiPrompt(prize); }} /></div>
               <div className="reward-admin-field"><label htmlFor="catalog-image-prompt">{t("portalRewardCatalog.imagePrompt")}</label><textarea id="catalog-image-prompt" value={aiPrompt} disabled={editorBusy} rows={4} onChange={event => setAiPrompt(event.target.value)} /></div>
-              <Button type="button" variant="outline" className="reward-admin-ai-button" disabled={editorBusy || !aiPrizeName.trim()} aria-busy={imageBusy} onClick={() => void onGenerate()}>
+              <Button type="button" variant="outline" className="reward-admin-ai-button" disabled={editorBusy || !name.trim()} aria-busy={imageBusy} onClick={() => void onGenerate()}>
                 {imageBusy ? t("portalRewardCatalog.generatingImage") : t("portalRewardCatalog.generateImage")}
               </Button>
             </div>
-            <div className="reward-admin-image-preview-wrap">
-              {imagePreview ? <img className="reward-admin-image-preview" src={imagePreview} alt="" /> : <div className="reward-admin-image-preview-empty">{t("portalRewardCatalog.imageDrop")}</div>}
-              {imagePath ? <Button type="button" size="icon" variant="ghost" className="reward-admin-image-remove" disabled={editorBusy} aria-label={t("portalRewardCatalog.removeImage")} onClick={() => { setImagePath(null); setImagePreview(""); }}><Trash2 /></Button> : null}
-            </div>
+            {previewBlock}
           </div>}
         </div>
       </section>
@@ -297,7 +295,7 @@ export function CustomerPortalRewardCatalogPage() {
         <div className="reward-admin-section-body">
           <div className="reward-admin-field reward-admin-description">
             <label htmlFor="catalog-description">{t("portalRewardCatalog.description")}</label>
-            <textarea id="catalog-description" value={description} maxLength={500} onChange={event => setDescription(event.target.value)} />
+            <textarea id="catalog-description" value={description} maxLength={500} onChange={event => { const next = event.target.value; setDescription(next); if (imageTab === "ai") syncAiPrompt(name, next); }} />
             <span className="reward-admin-description-count">{t("portalRewardCatalog.descriptionCount", { count: description.length })}</span>
           </div>
         </div>
