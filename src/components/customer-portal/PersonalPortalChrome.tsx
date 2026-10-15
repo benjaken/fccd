@@ -3,7 +3,7 @@ import { Link, NavLink } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Bell, ClipboardList, Gift, Globe, Home, LogOut, MapPin, Menu, ShoppingCart, Truck, UserRound, X } from "lucide-react";
 import { FOOD_CHANNEL_CATERING_LOGO_PATH } from "@/lib/brand-logo";
-import { PAYMENT_DELIVERY_URL } from "@/lib/customer-portal-sitemap";
+import { PAYMENT_GUIDE_SLUG } from "@/lib/customer-portal-guides";
 import { CustomerPortalGuideLinks } from "@/components/customer-portal/CustomerPortalGuideLinks";
 
 type IconComponent = ComponentType<SVGProps<SVGSVGElement> & { size?: number | string }>;
@@ -17,7 +17,7 @@ export const personalNavigation: NavItem[] = [
   { key: "orders", to: `${base}/orders`, icon: ClipboardList },
   { key: "points", to: `${base}/points`, icon: Gift },
   { key: "addresses", to: `${base}/addresses`, icon: MapPin },
-  { key: "paymentDelivery", href: PAYMENT_DELIVERY_URL, icon: Truck },
+  { key: "paymentDelivery", to: `${base}/guides/${PAYMENT_GUIDE_SLUG}`, icon: Truck },
   { key: "profile", to: `${base}/profile`, icon: UserRound },
 ];
 

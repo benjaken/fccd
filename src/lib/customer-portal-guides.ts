@@ -1,5 +1,7 @@
 import { supabase } from "@/lib/supabase";
 
+export const PAYMENT_GUIDE_SLUG = "payment";
+
 export type PortalGuide = {
   slug: string;
   title: string;

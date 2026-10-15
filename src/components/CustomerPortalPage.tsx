@@ -27,7 +27,7 @@ import { CustomerProfilePage } from "@/components/customer-portal/CustomerProfil
 import { CustomerCompanyPage } from "@/components/customer-portal/CustomerCompanyPage";
 import { OrganizationVipPage } from "@/components/customer-portal/OrganizationVipPage";
 import { CustomerGuidePage } from "@/components/customer-portal/CustomerGuidePage";
-import { PAYMENT_DELIVERY_URL } from "@/lib/customer-portal-sitemap";
+import { PAYMENT_GUIDE_SLUG } from "@/lib/customer-portal-guides";
 
 type Page = "home" | "menus" | "vip" | "orders" | "receipts" | "points" | "team" | "addresses" | "profile" | "company";
 const nav: Array<[Page, typeof Home]> = [["home",Home],["menus",Globe],["vip",UtensilsCrossed],["orders",ReceiptText],["receipts",ReceiptText],["points",Coins],["team",Users],["addresses",MapPin],["company",Building2],["profile",UserRound]];
@@ -192,7 +192,7 @@ export function CustomerPortalPage({ load = fetchPortal, loginIntro, canSwitch =
         to: key === "home" ? "/customer" : `/customer/${key}`,
       }));
     const profileIndex = items.findIndex(item => item.key === "profile");
-    items.splice(Math.max(profileIndex, 0), 0, { key: "paymentDelivery", icon: Truck, label: t("portal.siteNav.paymentDelivery"), end: false, to: "", href: PAYMENT_DELIVERY_URL } as typeof items[number] & { href: string });
+    items.splice(Math.max(profileIndex, 0), 0, { key: "paymentDelivery", icon: Truck, label: t("portal.siteNav.paymentDelivery"), end: false, to: `/customer/guides/${PAYMENT_GUIDE_SLUG}` });
     return items;
   }, [permissions, t]);
   async function logout() {

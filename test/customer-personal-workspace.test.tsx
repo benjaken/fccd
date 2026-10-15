@@ -28,6 +28,7 @@ beforeEach(() => {
   mocks.points.mockResolvedValue({ balance: 0, pending: 0, ledger: [] });
   vi.mocked(supabase.rpc).mockImplementation(async (fn: string) => {
     if (fn === "customer_portal_list_guides") return { data: [
+      { slug: "payment", title: "付款安排", body: "<p>轉數快識別碼 102938271</p>" },
       { slug: "about", title: "關於我們", body: "我們做到會。" },
       { slug: "clients", title: "客戶清單", body: "" },
       { slug: "cases", title: "真實案例", body: "" },
@@ -61,6 +62,15 @@ describe("personal customer pages", () => {
     fireEvent.click(screen.getByRole("link", { name: "關於我們" }));
     expect(await screen.findByRole("heading", { name: "關於我們" })).toBeInTheDocument();
     expect(screen.getByText("我們做到會。")).toBeInTheDocument();
+  });
+  it("opens payment arrangement as HTML in the portal", async () => {
+    mount(); await screen.findByRole("heading", { name: "下一張訂單狀態" });
+    fireEvent.click(screen.getByRole("button", { name: "開啟選單" }));
+    const link = screen.getAllByRole("link", { name: "付款送貨" })[0];
+    expect(link).toHaveAttribute("href", "/customer/personal/guides/payment");
+    fireEvent.click(link);
+    expect(await screen.findByRole("heading", { name: "付款安排" })).toBeInTheDocument();
+    expect(screen.getByText("轉數快識別碼 102938271")).toBeInTheDocument();
   });
   it("opens configured brand menus on Shopify", async () => {
     mocks.snapshot.mockResolvedValue({ ...structuredClone(data), stores: [
