@@ -43,7 +43,7 @@ describe("personal customer pages", () => {
     mount("/customer/personal/feedback/next");
     expect(await screen.findByRole("heading", { name: "暫未能填寫訂單意見" })).toBeInTheDocument();
     expect(screen.getByText("目前沒有可填寫的意見資料。請返回訂單紀錄查看訂單狀態，或稍後再試。")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("link", { name: "返回訂單紀錄" }));
+    fireEvent.click(screen.getByRole("link", { name: "返回訂單列表" }));
     expect(await screen.findByRole("heading", { name: "訂單紀錄" })).toBeInTheDocument();
   });
   it("keeps the feedback return link available when loading fails and supports retry", async () => {
@@ -55,7 +55,7 @@ describe("personal customer pages", () => {
     });
     mount("/customer/personal/feedback/next");
     expect(await screen.findByRole("alert")).toHaveTextContent("暫時未能開啟這張訂單的意見。");
-    expect(screen.getByRole("link", { name: "返回訂單紀錄" })).toHaveAttribute("href", "/customer/personal/orders");
+    expect(screen.getByRole("link", { name: "返回訂單列表" })).toHaveAttribute("href", "/customer/personal/orders");
     fireEvent.click(screen.getByRole("button", { name: "重試" }));
     expect(await screen.findByRole("heading", { name: "暫未能填寫訂單意見" })).toBeInTheDocument();
   });

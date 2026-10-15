@@ -414,3 +414,5 @@ The five operations pages use navigation-provided page names without repeated pa
 客戶介紹內容使用共享 RichTextEditor（粗體、斜體、底線、項目與編號清單），編輯面板桌面半寬、手機全寬。內容儲存為清理過的 HTML，客戶端使用相同 allowlist 顯示；舊純文字仍保留換行。
 
 個人訂單意見頁：獨立路由固定提供返回訂單紀錄的連結；無可填寫資料時顯示空狀態說明，載入失敗提供重試，頁首顯示訂單意見。機構訂單詳情內嵌意見維持原有顯示規則。
+
+訂單意見頁返回入口沿用 self-service-back，以品牌綠色左箭嘴加「返回訂單列表」文字呈現，無按鈕底色和外框。

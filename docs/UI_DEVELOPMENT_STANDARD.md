@@ -250,3 +250,5 @@ Automated coverage: `test/i18n-placeholders.test.ts` rejects English-prose
 飯盒餐單頁（`CustomerPortalLunchboxPage`）建立／編輯須使用 `SidePanel half`，桌面 50vw、`max-width: 767px` 時 100vw。餐單資料、配送設定及餐點以 `fieldset`／`legend` 分組；產品、單價、數量須有可見標籤，手機單欄。空列表為具編輯權限者提供建立餐單 CTA；VIP 週期與餐單勾選器使用獨立 SidePanel。頁面特例樣式放在 `src/components/settings/customer-lunchbox.css`，沿用既有 tokens、Button、Input 與 ListTable。
 
 個人訂單意見頁：獨立路由固定提供返回訂單紀錄的連結；無可填寫資料時顯示空狀態說明，載入失敗提供重試，頁首顯示訂單意見。機構訂單詳情內嵌意見維持原有顯示規則。
+
+訂單意見頁返回入口沿用 self-service-back，以品牌綠色左箭嘴加「返回訂單列表」文字呈現，無按鈕底色和外框。

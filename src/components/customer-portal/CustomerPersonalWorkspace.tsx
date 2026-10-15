@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
 import { Link, Navigate, Route, Routes, useLocation, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { ArrowUpRight, BookOpen, CalendarDays, ChevronRight, ClipboardList, Leaf, ShoppingCart, Star, Upload } from "lucide-react";
+import { ArrowLeft, ArrowUpRight, BookOpen, CalendarDays, ChevronRight, ClipboardList, Leaf, ShoppingCart, Star, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CornerNotice } from "@/components/ui/corner-notice";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
@@ -234,7 +234,7 @@ function PersonalOrdersPage() {
 function PersonalOrderFeedbackPage() {
   const { t } = useTranslation();
   const { orderId = "" } = useParams();
-  return <div><Button variant="outline" asChild><Link to={`${base}/orders`}>{t("portalFeedback.backToOrders")}</Link></Button><AccountOrderFeedback key={orderId} orderId={orderId} showEmptyState /></div>;
+  return <div><Link className="self-service-back" to={`${base}/orders`}><ArrowLeft aria-hidden="true" />{t("portalFeedback.backToOrders")}</Link><AccountOrderFeedback key={orderId} orderId={orderId} showEmptyState /></div>;
 }
 
 function PersonalPointsPage() {

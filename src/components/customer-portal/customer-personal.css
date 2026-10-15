@@ -269,3 +269,7 @@ button.ui-button.personal-address-save:hover{background:#18663a}
   .personal-address-panel .side-panel-header,.personal-address-panel .side-panel-body{padding-inline:16px}
   .personal-points-facts{flex-wrap:wrap;gap:24px}
 }
+
+.personal-workspace a.self-service-back{width:fit-content;min-height:44px;margin-inline:0;color:var(--personal-green);font-weight:400;text-decoration:none}
+.personal-workspace a.self-service-back:focus-visible{outline:2px solid var(--personal-green);outline-offset:2px}
+
