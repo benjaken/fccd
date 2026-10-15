@@ -189,11 +189,11 @@ i18n.addResourceBundle("en", "translation", { portalApplications: {
   statusValue:{draft:"Draft",pending_review:"Pending review",needs_info:"More information required",rejected:"Rejected",approved:"Approved"},
 }}, true, true);
 i18n.addResourceBundle("zh-HK", "translation", { lunchboxOps: {
-  title:"互動飯盒", description:"用內部產品設定可售飯盒、價格、數量、送貨日及截單時間。客戶提交後進入報價單。",
+  title:"活動飯盒", description:"用內部產品設定可售飯盒、價格、數量、送貨日及截單時間。客戶提交後進入報價單。",
   menuDetails:"餐單資料", deliverySettings:"送貨與截單安排", selectMenus:"選擇餐單",
   back:"返回客戶訂購營運", create:"新增飯盒餐單", edit:"編輯飯盒餐單", close:"關閉", save:"儲存", saved:"已儲存飯盒餐單。",
   operationFailed:"操作未完成，請重試。", invalidMenu:"請核對餐單名稱、品牌、送貨及截單。", invalidItems:"請核對產品、價格及數量。",
-  empty:"尚未設定互動飯盒。", name:"餐單名稱", brand:"品牌", chooseBrand:"選擇品牌", delivery:"送貨", deliveryDate:"送貨日期", deliveryTime:"送貨時間", cutoff:"截單時間", fee:"運費",
+  empty:"尚未設定活動飯盒。", name:"餐單名稱", brand:"品牌", chooseBrand:"選擇品牌", delivery:"送貨", deliveryDate:"送貨日期", deliveryTime:"送貨時間", cutoff:"截單時間", fee:"運費",
   items:"餐點", product:"產品", chooseProduct:"選擇內部產品", price:"單價", stock:"可訂數量", addItem:"加入餐點", status:"狀態", active:"有效", inactive:"停用",
 }}, true, true);
 i18n.addResourceBundle("en", "translation", { lunchboxOps: {
