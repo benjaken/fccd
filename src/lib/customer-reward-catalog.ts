@@ -7,17 +7,16 @@ const IMAGE_MAX_BYTES = 5 * 1024 * 1024;
 const IMAGE_EXT = /^(jpg|jpeg|png|webp)$/i;
 const PROMPT_MAX = 500;
 
-/** Studio product-catalog look with soft anime rendering — matches current Grok outputs. */
+/** Flat catalog illustration with the prize name drawn on the artwork. */
 export function buildRewardCatalogImagePrompt(input: { name?: string; description?: string } = {}) {
   const name = input.name?.trim() ?? "";
   const description = input.description?.trim() ?? "";
   return [
-    "Product photo for a food-service loyalty reward catalog,",
-    "soft anime illustration style with clean cel-shaded highlights,",
-    "same composition as a commercial catalog shot:",
-    "clean studio lighting, centered subject, plain soft background,",
-    "no text, no watermark, no logo, no extra props.",
-    name ? `Prize item: ${name}.` : "",
+    "Flat 2D loyalty-reward catalog illustration,",
+    "soft anime style, clean vector-like shapes, even lighting, minimal depth,",
+    "front-facing centered subject on a plain soft background,",
+    "no 3D render, no strong shadows, no watermark, no brand logo, no extra props.",
+    name ? `Show the prize name clearly as readable on-image text: "${name}".` : "Include clear readable prize title text on the image.",
     description ? `Details: ${description}.` : "",
   ].filter(Boolean).join(" ").slice(0, PROMPT_MAX);
 }

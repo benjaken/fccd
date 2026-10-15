@@ -9,7 +9,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock("@/auth/use-page-access", () => ({ useCurrentPageAccess: () => ({ canAccess: () => mocks.edit }) }));
 vi.mock("@/lib/customer-reward-catalog", () => ({
   buildRewardCatalogImagePrompt: ({ name = "", description = "" }: { name?: string; description?: string }) =>
-    `soft anime catalog prompt Prize item: ${name}. ${description}`.trim(),
+    `flat 2D catalog prompt Show the prize name: "${name}". ${description}`.trim(),
   listRewardCatalogOps: mocks.catalog,
   fetchRewardRedemptionPage: mocks.page,
   upsertRewardCatalogItem: mocks.save,
