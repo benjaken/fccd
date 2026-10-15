@@ -1,6 +1,6 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
-import { Bell, Building2, Home, Lightbulb, Mail, MapPin, Pencil, Phone, Plus, Star, UserRound } from "lucide-react";
+import { Bell, Building2, Home, Info, Lightbulb, Mail, MapPin, MoreVertical, Pencil, Phone, Plus, UserRound, Warehouse } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SidePanel } from "@/components/ui/side-panel";
 import { usePersonalWorkspace } from "./CustomerPersonalWorkspace";
@@ -101,7 +101,8 @@ const addressKinds = ["home", "company", "other"] as const;
 type AddressKind = (typeof addressKinds)[number];
 type AddressDraft = { kind: AddressKind | ""; place: string; recipient: string; phone: string; address: string; is_default: boolean };
 const emptyDraft: AddressDraft = { kind: "home", place: "", recipient: "", phone: "", address: "", is_default: false };
-const kindIcons = { home: Home, company: Building2, other: MapPin };
+const kindIcons = { home: Home, company: Building2, other: Warehouse };
+const addressLimit = 300;
 
 function splitAddressLabel(label: string): { kind: AddressKind | ""; place: string } {
   const match = /^\[(home|company|other)\]\s*([\s\S]*)$/.exec(label);
@@ -120,20 +121,39 @@ export function CustomerPersonalAddressesPage() {
   const [editing, setEditing] = useState<string | null>(null);
   const [draft, setDraft] = useState(emptyDraft);
   const [open, setOpen] = useState(false);
+  const [menuId, setMenuId] = useState<string | null>(null);
+  const menuRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (!menuId) return;
+    function onPointer(event: PointerEvent) {
+      if (!menuRef.current?.contains(event.target as Node)) setMenuId(null);
+    }
+    function onKey(event: KeyboardEvent) {
+      if (event.key === "Escape") setMenuId(null);
+    }
+    document.addEventListener("pointerdown", onPointer);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("pointerdown", onPointer);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [menuId]);
   if (!data) return null;
 
   function close() {
     if (busy) return;
     setDraft(emptyDraft); setEditing(null); setOpen(false);
   }
-  function openCreate() { setEditing(null); setDraft(emptyDraft); setOpen(true); }
+  function openCreate() { setMenuId(null); setEditing(null); setDraft(emptyDraft); setOpen(true); }
   function openEdit(row: PersonalAddress) {
     const parsed = splitAddressLabel(row.label);
+    setMenuId(null);
     setEditing(row.id);
-    setDraft({ kind: parsed.kind, place: parsed.place, recipient: row.recipient, phone: row.phone, address: row.address, is_default: row.is_default });
+    setDraft({ kind: parsed.kind || "home", place: parsed.place, recipient: row.recipient, phone: row.phone, address: row.address.slice(0, 1000), is_default: row.is_default });
     setOpen(true);
   }
   const placeMax = 80 - (draft.kind ? `[${draft.kind}] `.length : 0);
+  const detailLimit = Math.min(1000, Math.max(addressLimit, draft.address.length));
 
   return <section className="personal-addresses">
     <header className="personal-address-hero">
@@ -152,31 +172,33 @@ export function CustomerPersonalAddressesPage() {
       </div>
     </div>
     <p className="personal-address-note">{t("personal.addressHint")}</p>
-    <p className="personal-integration-note">{t("personal.syncPending")}</p>
+    <p className="personal-address-sync"><Info size={18} aria-hidden="true" /><span><strong>{t("personal.syncTitle")}</strong> {t("personal.syncDetail")}</span></p>
     <Button type="button" className="personal-address-create" onClick={openCreate}><Plus size={16} />{t("personal.addAddress")}</Button>
     {data.addresses.length ? <div className="personal-address-list">{data.addresses.map(row => {
       const parsed = splitAddressLabel(row.label);
       const KindIcon = parsed.kind ? kindIcons[parsed.kind] : MapPin;
+      const title = `${parsed.place || row.recipient}${row.is_default ? t("personal.defaultInline") : ""}`;
       return <article className="personal-address-card" key={row.id}>
-        <header>
+        <div className="personal-address-card-main">
           <span className="personal-address-icon" aria-hidden="true"><KindIcon size={18} /></span>
-          <div>
+          <div className="personal-address-copy">
             <div className="personal-address-title">
-              <strong>{row.recipient}</strong>
-              <span>{row.phone}</span>
+              <strong>{title}</strong>
               {row.is_default ? <em>{t("personal.defaultAddress")}</em> : null}
-              {parsed.kind ? <em>{t(`personal.addressKinds.${parsed.kind}`)}</em> : null}
+              {parsed.kind ? <span className="personal-sr">{t(`personal.addressKinds.${parsed.kind}`)}</span> : null}
             </div>
-            <p>{parsed.place}</p>
+            <p>{row.address}</p>
           </div>
-        </header>
-        <p className="personal-address-line"><MapPin size={16} aria-hidden="true" />{row.address}</p>
+        </div>
         <div className="personal-address-actions">
-          <Button type="button" variant="outline" disabled={busy} onClick={() => openEdit(row)}>{t("personal.editAddress")}</Button>
-          <Button type="button" variant="outline" disabled={busy} onClick={() => void run(async () => { await deletePersonalAddress(row.id); await refresh(); if (editing === row.id) close(); }, t("personal.deleted"))}>{t("personal.deleteAddress")}</Button>
-          {row.is_default
-            ? <span className="personal-address-default-set"><Star size={14} aria-hidden="true" />{t("personal.defaultSet")}</span>
-            : <Button type="button" variant="outline" className="personal-address-make-default" disabled={busy} onClick={() => void run(async () => { await savePersonalAddress({ ...row, is_default: true }, row.id); await refresh(); }, t("personal.saved"))}><Star size={14} />{t("personal.makeDefault")}</Button>}
+          <button type="button" className="personal-address-edit" disabled={busy} onClick={() => openEdit(row)}><Pencil size={16} aria-hidden="true" />{t("personal.editAddress")}</button>
+          <div className="personal-address-menu-wrap" ref={menuId === row.id ? menuRef : undefined}>
+            <button type="button" className="personal-address-menu-trigger" aria-haspopup="menu" aria-expanded={menuId === row.id} aria-label={t("personal.addressMenu")} disabled={busy} onClick={() => setMenuId(current => current === row.id ? null : row.id)}><MoreVertical size={18} /></button>
+            {menuId === row.id ? <div className="personal-address-menu" role="menu">
+              {row.is_default ? null : <button type="button" role="menuitem" disabled={busy} onClick={() => { setMenuId(null); void run(async () => { await savePersonalAddress({ ...row, is_default: true }, row.id); await refresh(); }, t("personal.saved")); }}>{t("personal.makeDefault")}</button>}
+              <button type="button" role="menuitem" disabled={busy} onClick={() => { setMenuId(null); void run(async () => { await deletePersonalAddress(row.id); await refresh(); if (editing === row.id) close(); }, t("personal.deleted")); }}>{t("personal.deleteAddress")}</button>
+            </div> : null}
+          </div>
         </div>
       </article>;
     })}</div> : <p className="personal-empty">{t("personal.noAddresses")}</p>}
@@ -187,7 +209,7 @@ export function CustomerPersonalAddressesPage() {
       closeLabel={t("personal.close")}
       onClose={close}
       footer={<>
-        <Button type="button" variant="outline" disabled={busy} onClick={close}>{t("personal.cancel")}</Button>
+        <Button type="button" variant="ghost" disabled={busy} onClick={close}>{t("personal.cancel")}</Button>
         <Button type="submit" form="personal-address-form" className="personal-address-save" disabled={busy}>{t(busy ? "personal.saving" : "personal.saveAddress")}</Button>
       </>}
     >
@@ -196,25 +218,77 @@ export function CustomerPersonalAddressesPage() {
         const address = { label: joinAddressLabel(draft.kind, draft.place), recipient: draft.recipient.trim(), phone: draft.phone.trim(), address: draft.address.trim(), is_default: draft.is_default };
         void run(async () => { await savePersonalAddress(address, editing); await refresh(); }, t("personal.saved")).then(saved => { if (saved) close(); });
       }}>
-        <label>{t("personal.addressFields.recipient")}<span aria-hidden="true"> *</span>
-          <input required maxLength={120} value={draft.recipient} placeholder={t("personal.addressPlaceholders.recipientPlaceholder")} onChange={event => setDraft({ ...draft, recipient: event.target.value })} />
-        </label>
-        <label>{t("personal.addressFields.phone")}<span aria-hidden="true"> *</span>
-          <input required type="tel" maxLength={40} value={draft.phone} placeholder={t("personal.addressPlaceholders.phonePlaceholder")} onChange={event => setDraft({ ...draft, phone: event.target.value })} />
-        </label>
-        <fieldset>
-          <legend>{t("personal.addressType")}</legend>
-          <div className="personal-address-kinds" role="radiogroup" aria-label={t("personal.addressType")}>
-            {addressKinds.map(kind => <button key={kind} type="button" role="radio" aria-checked={draft.kind === kind} className={draft.kind === kind ? "is-selected" : undefined} onClick={() => setDraft(current => ({ ...current, kind }))}>{t(`personal.addressKinds.${kind}`)}</button>)}
+        <section className="personal-address-step" aria-labelledby="personal-address-contact">
+          <header>
+            <span className="personal-address-step-index" aria-hidden="true">01</span>
+            <div>
+              <h3 id="personal-address-contact">{t("personal.addressSteps.contact")}</h3>
+              <p>{t("personal.addressSteps.contactHint")}</p>
+            </div>
+          </header>
+          <div className="personal-address-pair">
+            <label>{t("personal.addressFields.recipient")}<span className="personal-address-required" aria-hidden="true"> *</span>
+              <span className="personal-address-field"><UserRound size={16} aria-hidden="true" /><input required maxLength={120} autoComplete="name" value={draft.recipient} placeholder={t("personal.addressPlaceholders.recipientPlaceholder")} onChange={event => setDraft({ ...draft, recipient: event.target.value })} /></span>
+            </label>
+            <label>{t("personal.addressFields.phone")}<span className="personal-address-required" aria-hidden="true"> *</span>
+              <span className="personal-address-field"><Phone size={16} aria-hidden="true" /><input required type="tel" maxLength={40} autoComplete="tel" inputMode="tel" value={draft.phone} placeholder={t("personal.addressPlaceholders.phonePlaceholder")} onChange={event => setDraft({ ...draft, phone: event.target.value })} /></span>
+            </label>
           </div>
-        </fieldset>
-        <label>{t("personal.addressFields.label")}<span aria-hidden="true"> *</span>
-          <input required maxLength={placeMax} value={draft.place} placeholder={t("personal.addressPlaceholders.labelPlaceholder")} onChange={event => setDraft({ ...draft, place: event.target.value })} />
+        </section>
+        <section className="personal-address-step" aria-labelledby="personal-address-type">
+          <header>
+            <span className="personal-address-step-index" aria-hidden="true">02</span>
+            <div>
+              <h3 id="personal-address-type">{t("personal.addressType")}</h3>
+              <p>{t("personal.addressTypeHint")}</p>
+            </div>
+          </header>
+          <div className="personal-address-kinds" role="radiogroup" aria-label={t("personal.addressType")}>
+            {addressKinds.map(kind => {
+              const KindIcon = kindIcons[kind];
+              return <button key={kind} type="button" role="radio" aria-checked={draft.kind === kind} className={draft.kind === kind ? "is-selected" : undefined} onClick={() => setDraft(current => ({ ...current, kind }))}>
+                <KindIcon size={18} aria-hidden="true" />
+                <span>{t(`personal.addressKinds.${kind}`)}</span>
+                <span className="personal-address-radio" aria-hidden="true" />
+              </button>;
+            })}
+          </div>
+        </section>
+        <section className="personal-address-step">
+          <header>
+            <span className="personal-address-step-index" aria-hidden="true">03</span>
+            <div>
+              <h3>{t("personal.addressFields.label")}</h3>
+              <p>{t("personal.addressSteps.placeHint")}</p>
+            </div>
+          </header>
+          <label>
+            <span className="personal-sr">{t("personal.addressFields.label")}</span>
+            <span className="personal-address-field"><Building2 size={16} aria-hidden="true" /><input maxLength={placeMax} value={draft.place} placeholder={t("personal.addressPlaceholders.labelPlaceholder")} onChange={event => setDraft({ ...draft, place: event.target.value })} /></span>
+          </label>
+        </section>
+        <section className="personal-address-step">
+          <header>
+            <span className="personal-address-step-index" aria-hidden="true">04</span>
+            <div>
+              <h3>{t("personal.addressFields.address")}</h3>
+              <p>{t("personal.addressSteps.detailHint")}</p>
+            </div>
+          </header>
+          <label>
+            <span className="personal-sr">{t("personal.addressFields.address")}</span>
+            <span className="personal-address-field">
+              <MapPin size={16} aria-hidden="true" />
+              <textarea required rows={4} maxLength={detailLimit} aria-describedby="personal-address-count" value={draft.address} placeholder={t("personal.addressPlaceholders.addressPlaceholder")} onChange={event => setDraft({ ...draft, address: event.target.value.slice(0, detailLimit) })} />
+              <span id="personal-address-count" className="personal-address-count">{Math.min(draft.address.length, detailLimit)}/{detailLimit}</span>
+            </span>
+          </label>
+        </section>
+        <p className="personal-address-notice"><Info size={18} aria-hidden="true" /><span><strong>{t("personal.addressNoticeTitle")}</strong><span>{t("personal.addressNotice")}</span></span></p>
+        <label className="personal-address-default">
+          <input type="checkbox" checked={draft.is_default} onChange={event => setDraft({ ...draft, is_default: event.target.checked })} />
+          <span><strong>{t("personal.setDefault")}</strong><small>{t("personal.defaultAddressHint")}</small></span>
         </label>
-        <label>{t("personal.addressFields.address")}<span aria-hidden="true"> *</span>
-          <textarea required rows={4} maxLength={1000} value={draft.address} placeholder={t("personal.addressPlaceholders.addressPlaceholder")} onChange={event => setDraft({ ...draft, address: event.target.value })} />
-        </label>
-        <label className="personal-address-default"><input type="checkbox" checked={draft.is_default} onChange={event => setDraft({ ...draft, is_default: event.target.checked })} />{t("personal.defaultAddress")}</label>
       </form>
     </SidePanel>
   </section>;

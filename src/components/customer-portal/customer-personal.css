@@ -84,45 +84,66 @@
 .personal-addresses{display:grid;gap:14px}
 .personal-address-hero{display:grid;gap:12px;padding:22px;border-radius:18px;background:linear-gradient(105deg,#e7f6ee 0%,#f4fbf7 55%,#e5f3ea 100%)}
 .personal-address-brand{margin:0 0 8px;color:#1f7a45;font-size:12px;font-weight:750;letter-spacing:.14em}
-.personal-addresses .personal-address-hero h1{margin:0 0 8px;color:#163028;font-size:clamp(32px,4vw,44px);line-height:1.15;letter-spacing:-.03em}
+.personal-addresses .personal-address-hero h1{margin:0 0 8px;color:#163028;font-size:clamp(28px,4vw,44px);line-height:1.15;letter-spacing:-.03em}
 .personal-addresses .personal-address-hero p,.personal-address-note{margin:0;max-width:42ch;color:#3e5c50;line-height:1.6}
 .personal-address-art{display:block;width:min(100%,280px);height:auto;justify-self:end}
 .personal-address-tip{display:flex;gap:12px;align-items:flex-start;padding:14px 16px;border-radius:14px;background:#fff;box-shadow:0 8px 24px rgba(18,56,47,.05)}
 .personal-address-tip-icon{display:grid;place-items:center;flex:0 0 auto;width:36px;height:36px;border-radius:10px;background:#e8f5ee;color:#1f7a45}
 .personal-address-tip strong{color:#163028}
 .personal-address-tip p{margin:4px 0 0;color:#5d6f68;line-height:1.5}
-.personal-addresses .personal-integration-note{margin:0}
+.personal-address-sync,.personal-address-notice{display:flex;gap:10px;align-items:flex-start;margin:0;padding:12px 14px;border-radius:12px;background:#e8f2ff;color:#1d4f91;line-height:1.5}
+.personal-address-sync svg,.personal-address-notice svg{flex:0 0 auto;margin-top:2px}
+.personal-address-sync strong,.personal-address-notice strong{font-weight:750}
+.personal-address-notice span{display:grid;gap:2px}
 button.ui-button.personal-address-create{justify-self:start;min-height:44px;border-radius:10px;background:#1f7a45;color:#fff}
 button.ui-button.personal-address-create:hover{background:#18663a}
 .personal-address-list{display:grid;gap:12px}
-.personal-address-card{display:grid;gap:12px;padding:16px;border:1px solid #e3ebe6;border-radius:16px;background:#fff;box-shadow:0 8px 20px rgba(18,56,47,.04)}
-.personal-address-card header{display:flex;gap:12px;align-items:flex-start}
+.personal-address-card{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px 12px;align-items:start;padding:16px;border:1px solid #e3ebe6;border-radius:16px;background:#fff;box-shadow:0 8px 20px rgba(18,56,47,.04)}
+.personal-address-card-main{display:flex;gap:12px;min-width:0}
 .personal-address-icon{display:grid;place-items:center;flex:0 0 auto;width:40px;height:40px;border-radius:12px;background:#e8f5ee;color:#1f7a45}
+.personal-address-copy{min-width:0}
 .personal-address-title{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
-.personal-address-title strong{color:#163028;font-size:16px}
-.personal-address-title span{color:#5d6f68}
+.personal-address-title strong{color:#163028;font-size:16px;overflow-wrap:anywhere}
 .personal-address-title em{padding:2px 8px;border-radius:999px;background:#e7f6ec;color:#1d7a45;font-size:12px;font-style:normal;font-weight:700}
-.personal-address-card header p{margin:4px 0 0;color:#163028;font-weight:650}
-.personal-address-line{display:flex;gap:8px;align-items:flex-start;margin:0;color:#3e5c50;line-height:1.5;white-space:pre-wrap}
-.personal-address-line svg{flex:0 0 auto;margin-top:2px;color:#1f7a45}
-.personal-address-actions{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px}
-.personal-address-default-set,.personal-address-make-default{display:inline-flex;align-items:center;gap:6px;min-height:40px;padding:0 12px;border-radius:10px;color:#1f7a45;font-weight:700}
-.personal-address-default-set{background:#f3f6f4}
-button.ui-button.personal-address-make-default{border-color:#b7e0c8;color:#1f7a45}
-.personal-address-form{display:grid;gap:14px}
-.personal-address-form label,.personal-address-form legend{color:#163028;font-size:14px;font-weight:700}
-.personal-address-form label{display:grid;gap:6px}
-.personal-address-form input,.personal-address-form textarea{width:100%;min-height:44px;padding:10px 12px;border:1px solid #d5e2db;border-radius:10px;background:#fff;color:#163028;font:inherit;caret-color:#1f7a45}
-.personal-address-form textarea{min-height:96px;resize:vertical}
+.personal-address-copy p{margin:4px 0 0;color:#3e5c50;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere}
+.personal-address-actions{display:flex;align-items:center;justify-content:flex-end;gap:2px}
+.personal-address-edit,.personal-address-menu-trigger,.personal-address-menu button{border:0;background:transparent;color:#3e5c50;font:inherit;cursor:pointer}
+.personal-address-edit,.personal-address-menu-trigger{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:44px;border-radius:10px}
+.personal-address-edit{padding:0 8px}
+.personal-address-menu-trigger{width:44px}
+.personal-address-edit:focus-visible,.personal-address-menu-trigger:focus-visible,.personal-address-menu button:focus-visible{outline:2px solid #1f7a45;outline-offset:2px}
+.personal-address-menu-wrap{position:relative}
+.personal-address-menu{position:absolute;right:0;bottom:calc(100% + 4px);z-index:4;display:grid;min-width:168px;padding:6px;border:1px solid #e3ebe6;border-radius:12px;background:#fff;box-shadow:0 12px 28px rgba(18,56,47,.12)}
+.personal-address-menu button{min-height:44px;padding:0 12px;border-radius:8px;text-align:left}
+.personal-address-menu button:hover{background:#f3f6f4}
+.personal-address-form{display:grid;gap:22px}
+.personal-address-step{display:grid;gap:12px}
+.personal-address-step header{display:flex;gap:10px;align-items:flex-start}
+.personal-address-step-index{display:grid;place-items:center;flex:0 0 auto;width:28px;height:28px;border-radius:50%;background:#e7f6ec;color:#1f7a45;font-size:12px;font-weight:750}
+.personal-address-step h3{margin:0;color:#163028;font-size:15px}
+.personal-address-step header p{margin:2px 0 0;color:#5d6f68;font-size:13px;line-height:1.45}
+.personal-address-pair{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.personal-address-form label{display:grid;gap:6px;color:#163028;font-size:14px;font-weight:700}
+.personal-address-required{color:#c2413a}
+.personal-address-field{position:relative;display:block}
+.personal-address-field>svg{position:absolute;top:14px;left:12px;color:#7d9288;pointer-events:none}
+.personal-address-form input,.personal-address-form textarea{width:100%;min-height:44px;padding:10px 12px 10px 38px;border:1px solid #d5e2db;border-radius:10px;background:#fff;color:#163028;font:inherit;caret-color:#1f7a45}
+.personal-address-form textarea{min-height:112px;padding-bottom:28px;resize:vertical}
+.personal-address-count{position:absolute;right:12px;bottom:8px;color:#8aa097;font-size:12px;font-weight:650}
 .personal-address-form input:focus-visible,.personal-address-form textarea:focus-visible,.personal-address-kinds button:focus-visible{outline:2px solid #1f7a45;outline-offset:2px}
-.personal-address-form fieldset{margin:0;padding:0;border:0}
-.personal-address-kinds{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:8px}
-.personal-address-kinds button{min-height:40px;border:1px solid #d5e2db;border-radius:10px;background:#fff;color:#163028;font:inherit;font-weight:650;cursor:pointer}
+.personal-address-kinds{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.personal-address-kinds button{display:flex;align-items:center;gap:8px;min-height:52px;padding:8px 10px;border:1px solid #d5e2db;border-radius:12px;background:#fff;color:#163028;font:inherit;font-weight:650;cursor:pointer}
+.personal-address-kinds button span:nth-child(2){min-width:0;overflow-wrap:anywhere}
 .personal-address-kinds button.is-selected{border-color:#1f7a45;background:#1f7a45;color:#fff}
-.personal-address-default{grid-template-columns:20px 1fr;align-items:center;min-height:44px}
-.personal-address-form input[type=checkbox]{width:20px;height:20px;min-height:20px;padding:0;accent-color:#1f7a45}
-.personal-address-panel .side-panel-footer{justify-content:space-between}
-button.ui-button.personal-address-save{background:#1f7a45;color:#fff}
+.personal-address-radio{width:18px;height:18px;margin-left:auto;border:2px solid #c5d5cc;border-radius:50%;flex:0 0 auto}
+.personal-address-kinds button.is-selected .personal-address-radio{border-color:#fff;box-shadow:inset 0 0 0 4px #1f7a45;background:#fff}
+.personal-address-default{display:grid;grid-template-columns:20px minmax(0,1fr);align-items:flex-start;gap:10px;min-height:44px}
+.personal-address-default strong{display:block}
+.personal-address-default small{display:block;margin-top:2px;color:#5d6f68;font-size:13px;font-weight:500;line-height:1.45}
+.personal-address-form input[type=checkbox]{width:20px;height:20px;min-height:20px;margin-top:2px;padding:0;accent-color:#1f7a45}
+.personal-address-panel.side-panel{width:min(520px,100vw);background:#fff}
+.personal-address-panel .side-panel-footer{justify-content:space-between;padding-bottom:max(14px,env(safe-area-inset-bottom));background:#fff}
+button.ui-button.personal-address-save{min-height:44px;padding-inline:22px;border-radius:999px;background:#1f7a45;color:#fff}
 button.ui-button.personal-address-save:hover{background:#18663a}
 .personal-address-panel ::selection{background:#cfe8d8;color:#163028}
 .personal-default{margin-left:12px;font-size:13px}
@@ -137,16 +158,18 @@ button.ui-button.personal-address-save:hover{background:#18663a}
 .personal-points-facts{display:flex;gap:48px;padding:24px 0;border-block:1px solid var(--border)}
 .personal-points-facts dd{margin:8px 0;color:var(--personal-muted)}
 .personal-workspace ::selection{background:#cfe8d8;color:var(--personal-ink)}
+.customer-portal.personal-workspace{--personal-header-bg:#116b59;--personal-header-fg:#fff}
+.customer-portal.personal-workspace .portal-workspace-header{position:sticky;top:0;z-index:10;padding:env(safe-area-inset-top) 0 0;margin:0 0 0;border:0;background:var(--personal-header-bg);color:var(--personal-header-fg)}
+.personal-workspace .portal-workspace-top{position:relative;display:grid;grid-template-columns:48px minmax(0,1fr) 48px;gap:0;min-height:64px;padding:8px 12px}
+.personal-workspace .portal-menu-trigger{color:var(--personal-header-fg)}
+.personal-workspace .portal-menu-trigger:hover{background:color-mix(in srgb,var(--personal-header-fg) 14%,transparent);color:var(--personal-header-fg)}
+.personal-workspace .portal-menu-trigger:focus-visible{outline:2px solid var(--personal-header-fg);outline-offset:2px}
+.personal-workspace .portal-brand-link,.personal-workspace .portal-workspace-title>strong:not(.portal-workspace-desktop-title){display:none}
+.personal-workspace .portal-workspace-title{text-align:center}
+.personal-workspace .portal-workspace-title>.portal-workspace-desktop-title{display:block;font-size:18px;font-weight:600;letter-spacing:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 @media(min-width:768px){
-  .customer-portal.personal-workspace{--personal-header-bg:#116b59;--personal-header-fg:#fff;width:100%;max-width:820px;min-height:100dvh;margin-inline:auto;padding:0;background:var(--personal-surface);box-shadow:0 16px 60px color-mix(in srgb,var(--foreground) 8%,transparent)}
-  .customer-portal.personal-workspace .portal-workspace-header{position:sticky;top:0;z-index:10;padding:0;margin:0;border:0;background:var(--personal-header-bg);color:var(--personal-header-fg)}
-  .personal-workspace .portal-workspace-top{position:relative;display:grid;grid-template-columns:48px 1fr 48px;gap:0;min-height:76px;padding:8px 12px}
-  .personal-workspace .portal-menu-trigger{color:var(--personal-header-fg)}
-  .personal-workspace .portal-menu-trigger:hover{background:color-mix(in srgb,var(--personal-header-fg) 14%,transparent);color:var(--personal-header-fg)}
-  .personal-workspace .portal-menu-trigger:focus-visible{outline:2px solid var(--personal-header-fg);outline-offset:2px}
-  .personal-workspace .portal-brand-link,.personal-workspace .portal-workspace-title>strong:not(.portal-workspace-desktop-title){display:none}
-  .personal-workspace .portal-workspace-title{text-align:center}
-  .personal-workspace .portal-workspace-title>.portal-workspace-desktop-title{display:block;font-size:18px;font-weight:600;letter-spacing:0}
+  .customer-portal.personal-workspace{width:100%;max-width:820px;min-height:100dvh;margin-inline:auto;padding:0;background:var(--personal-surface);box-shadow:0 16px 60px color-mix(in srgb,var(--foreground) 8%,transparent)}
+  .personal-workspace .portal-workspace-top{min-height:76px}
   .personal-workspace .personal-content{padding:18px 16px 48px}
   .customer-portal.personal-workspace .portal-access-state{width:auto;margin:0;padding:32px 16px 48px;border:0;border-radius:0;background:transparent;justify-items:start;text-align:left}
   .customer-portal.personal-workspace form{grid-template-columns:1fr}
@@ -196,6 +219,11 @@ button.ui-button.personal-address-save:hover{background:#18663a}
   .personal-account-name{display:none}
   .personal-order-row,.personal-data-error{align-items:flex-start;flex-direction:column}
   .personal-address-hero{padding:18px}
-  .personal-address-art{justify-self:start;width:min(100%,220px)}
+  .personal-address-art{justify-self:start;width:min(100%,200px)}
+  .personal-address-card{grid-template-columns:minmax(0,1fr)}
+  .personal-address-actions{justify-content:flex-end}
+  .personal-address-pair,.personal-address-kinds{grid-template-columns:1fr}
+  .personal-address-panel.side-panel{width:100vw}
+  .personal-address-panel .side-panel-header,.personal-address-panel .side-panel-body{padding-inline:16px}
   .personal-points-facts{flex-wrap:wrap;gap:24px}
 }

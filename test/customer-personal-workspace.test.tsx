@@ -91,15 +91,16 @@ describe("personal customer pages", () => {
     expect(screen.getByRole("heading", { name: "新增送貨地址" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("radio", { name: "公司" }));
     for (const [label, value] of [[/聯絡人姓名/, "Person"], [/聯絡電話/, "91234567"], [/公司名稱/, "Home"], [/詳細送貨地址/, "Hong Kong"]]) fireEvent.change(screen.getByLabelText(label), { target: { value } });
-    fireEvent.click(screen.getByLabelText("預設地址")); fireEvent.click(screen.getByRole("button", { name: "儲存地址" }));
+    fireEvent.click(screen.getByLabelText(/設為預設地址/)); fireEvent.click(screen.getByRole("button", { name: "儲存地址" }));
     await waitFor(() => expect(mocks.address).toHaveBeenCalledWith({ label: "[company] Home", recipient: "Person", phone: "91234567", address: "Hong Kong", is_default: true }, null));
     expect(screen.queryByRole("heading", { name: "新增送貨地址" })).not.toBeInTheDocument();
   });
   it("opens a saved address in the edit side panel", async () => {
     mocks.snapshot.mockResolvedValue({ ...structuredClone(data), addresses: [{ id: "a1", label: "[company] 興裕", recipient: "陳小明", phone: "91234567", address: "觀塘", is_default: true }] });
     mount("/customer/personal/addresses");
-    expect(await screen.findByText("陳小明")).toBeInTheDocument();
-    expect(screen.getByText("公司")).toBeInTheDocument();
+    expect(await screen.findByText("興裕（預設）")).toBeInTheDocument();
+    expect(screen.getByText("觀塘")).toBeInTheDocument();
+    expect(screen.getByText("預設地址")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "編輯" }));
     expect(screen.getByRole("heading", { name: "編輯送貨地址" })).toBeInTheDocument();
     expect(screen.getByLabelText(/公司名稱/)).toHaveValue("興裕");
