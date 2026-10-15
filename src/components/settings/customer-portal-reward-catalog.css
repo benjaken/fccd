@@ -31,6 +31,10 @@
 .reward-admin-image-preview-wrap{position:relative;display:block;width:220px;height:220px;border-radius:10px;isolation:isolate;overflow:hidden}
 .reward-admin-image-preview{display:block;width:100%;height:100%;object-fit:cover;border:1px solid var(--border);border-radius:10px;background:var(--muted)}
 .reward-admin-image-preview-empty{display:grid;place-items:center;width:100%;height:100%;border:1px dashed var(--border);border-radius:10px;background:var(--muted);color:var(--muted-foreground);font-size:13px;text-align:center;padding:12px;box-sizing:border-box}
+.reward-admin-image-preview-wrap.is-busy .reward-admin-image-preview,.reward-admin-image-preview-wrap.is-busy .reward-admin-image-preview-empty{filter:saturate(.35) brightness(.92)}
+.reward-admin-image-preview-loading{position:absolute;inset:0;z-index:4;display:grid;place-content:center;justify-items:center;gap:10px;padding:16px;background:color-mix(in srgb,var(--card) 72%,transparent);color:var(--foreground);font-size:13px;font-weight:600;text-align:center}
+.reward-admin-image-preview-spinner{width:28px;height:28px;border:2px solid color-mix(in srgb,var(--foreground) 18%,transparent);border-top-color:var(--primary);border-radius:999px;animation:reward-admin-image-spin .8s linear infinite}
+@keyframes reward-admin-image-spin{to{transform:rotate(360deg)}}
 .reward-admin-image-remove{appearance:none;position:absolute;inset:auto 10px 10px auto;z-index:3;display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;margin:0;padding:0;border:0;border-radius:999px;color:#dc2626;background:rgba(255,255,255,.92);box-shadow:0 1px 4px rgba(0,0,0,.22);cursor:pointer}
 .reward-admin-image-remove:hover{background:#fff;color:#b91c1c}
 .reward-admin-image-remove:disabled{opacity:.55;cursor:not-allowed}

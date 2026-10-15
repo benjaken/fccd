@@ -192,9 +192,10 @@ export function CustomerPortalRewardCatalogPage() {
 
   const editorBusy = saving || imageBusy;
   const closeEditor = () => { if (!editorBusy) { resetEditor(); setPanel(null); } };
-  const previewBlock = <div className="reward-admin-image-preview-wrap">
+  const previewBlock = <div className={imageBusy ? "reward-admin-image-preview-wrap is-busy" : "reward-admin-image-preview-wrap"} aria-busy={imageBusy || undefined}>
     {imagePreview ? <img className="reward-admin-image-preview" src={imagePreview} alt="" /> : <div className="reward-admin-image-preview-empty">{t("portalRewardCatalog.imageDrop")}</div>}
-    {imagePath ? <button type="button" className="reward-admin-image-remove" disabled={editorBusy} aria-label={t("portalRewardCatalog.removeImage")} onClick={clearImage}><Trash2 aria-hidden="true" /></button> : null}
+    {imageBusy ? <div className="reward-admin-image-preview-loading" role="status"><span className="reward-admin-image-preview-spinner" aria-hidden="true" />{imageTab === "ai" ? <span>{t("portalRewardCatalog.generatingImage")}</span> : <span className="sr-only">{t("portalRewardCatalog.uploadImage")}</span>}</div> : null}
+    {imagePath && !imageBusy ? <button type="button" className="reward-admin-image-remove" disabled={editorBusy} aria-label={t("portalRewardCatalog.removeImage")} onClick={clearImage}><Trash2 aria-hidden="true" /></button> : null}
   </div>;
 
   return <section className="reward-admin">

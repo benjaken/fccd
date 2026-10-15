@@ -111,11 +111,16 @@ it("uploads or generates a catalog image and saves the object path", async () =>
   fireEvent.click(next.getByRole("tab", { name: "AI 生成" }));
   expect(next.queryByLabelText("獎品名稱")).not.toBeInTheDocument();
   expect((next.getByLabelText("提示詞") as HTMLTextAreaElement).value).toContain("AI Gift");
+  let finishGenerate!: (value: { objectPath: string; signedUrl: string }) => void;
+  mocks.generate.mockImplementation(() => new Promise(resolve => { finishGenerate = resolve; }));
   fireEvent.click(next.getByRole("button", { name: "AI 生成圖片" }));
+  expect(next.getAllByRole("status").some(node => node.textContent?.includes("正在生成"))).toBe(true);
+  finishGenerate({ objectPath: "user/ai/img.png", signedUrl: "https://example.com/ai.png" });
   await waitFor(() => expect(mocks.generate).toHaveBeenCalledWith(expect.objectContaining({
     name: "AI Gift",
     prompt: expect.stringContaining("AI Gift"),
   })));
+  await waitFor(() => expect(next.queryByText("正在生成…")).not.toBeInTheDocument());
   fireEvent.click(next.getByRole("button", { name: "新增兌換項目" }));
   await waitFor(() => expect(mocks.save).toHaveBeenCalledWith(expect.objectContaining({ imageObjectPath: "user/ai/img.png" })));
 });
