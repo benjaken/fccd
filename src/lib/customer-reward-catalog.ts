@@ -14,6 +14,7 @@ export function buildRewardCatalogImagePrompt(input: { name?: string; descriptio
   return [
     name ? `Only on-image text:「${name}」(Traditional Chinese Hong Kong).` : "Only one Traditional Chinese (Hong Kong) prize title on the image.",
     "Do not invent prices, ¥/円, HK$, expiry lines, Japanese, Korean, Simplified Chinese, or extra slogans.",
+    "Square 1:1 composition only. Keep the full subject and text inside the frame with clear margin; nothing cropped or overflowing the edges.",
     "Flat 2D Hong Kong coupon / loyalty reward catalog illustration, soft anime, vector-like, even lighting, minimal depth,",
     "front-facing centered subject, plain soft background, no 3D, no strong shadows, no watermark, no brand logo, no extra props.",
     description ? `Visual details only (do not print as extra copy): ${description}.` : "",
