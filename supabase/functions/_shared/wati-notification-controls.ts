@@ -15,6 +15,7 @@ export type NotificationRecipientPolicy = {
   mode: NotificationRecipientMode;
   allowedWatiPhones: string[];
   allowedEmails: string[];
+  blockedEmails: string[];
 };
 
 export type NotificationDeliveryControl = {
@@ -26,6 +27,7 @@ const DEFAULT_RECIPIENT_POLICY: NotificationRecipientPolicy = {
   mode: "environment",
   allowedWatiPhones: ["8613828747224"],
   allowedEmails: ["cfb.app02@chifung.net"],
+  blockedEmails: [],
 };
 
 function fallbackControls(): WatiNotificationControls {
@@ -50,7 +52,7 @@ export async function loadWatiNotificationControls(
       .maybeSingle(),
     admin
       .from("notification_recipient_policy")
-      .select("recipient_mode,allowed_wati_phones,allowed_emails")
+      .select("recipient_mode,allowed_wati_phones,allowed_emails,blocked_emails")
       .eq("singleton", true)
       .maybeSingle(),
     admin
@@ -80,6 +82,7 @@ export async function loadWatiNotificationControls(
     recipient_mode?: string;
     allowed_wati_phones?: string[] | null;
     allowed_emails?: string[] | null;
+    blocked_emails?: string[] | null;
   } | null;
   const mode = policy?.recipient_mode;
   const recipientMode: NotificationRecipientMode =
@@ -103,6 +106,7 @@ export async function loadWatiNotificationControls(
       mode: recipientMode,
       allowedWatiPhones: policy?.allowed_wati_phones || DEFAULT_RECIPIENT_POLICY.allowedWatiPhones,
       allowedEmails: policy?.allowed_emails || DEFAULT_RECIPIENT_POLICY.allowedEmails,
+      blockedEmails: policy?.blocked_emails ?? [],
     },
     deliveryControls,
   };

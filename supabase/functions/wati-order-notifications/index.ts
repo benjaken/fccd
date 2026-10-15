@@ -16,6 +16,7 @@ import {
   resolveNotificationDeliveryMethod,
 } from "../_shared/delivery-address.ts";
 import { EMAIL_FROM } from "../_shared/email-sender.ts";
+import { isBlockedNotificationEmail } from "../_shared/notification-email-blocklist.ts";
 import {
   applyDevelopNotificationMarker,
   toNotificationEmailRecipients,
@@ -1059,6 +1060,11 @@ Deno.serve(async (request) => {
       } else if (!emailDone && !email) {
         await admin.from("wati_order_notification_outbox").update({
           email_skipped_at: new Date().toISOString(), email_error: "recipient_email_missing",
+        }).eq("id", job.id);
+        emailDone = true;
+      } else if (!emailDone && isBlockedNotificationEmail(email, controls.recipientPolicy.blockedEmails)) {
+        await admin.from("wati_order_notification_outbox").update({
+          email_skipped_at: new Date().toISOString(), email_error: "recipient_email_blocked",
         }).eq("id", job.id);
         emailDone = true;
       } else if (!emailDone && emailNotification) {

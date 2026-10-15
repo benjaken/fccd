@@ -8,6 +8,7 @@ import {
   resolveNotificationDeliveryMethod,
 } from "../_shared/delivery-address.ts";
 import { EMAIL_FROM } from "../_shared/email-sender.ts";
+import { isBlockedNotificationEmail } from "../_shared/notification-email-blocklist.ts";
 import { settleEnabledNotificationRequests } from "../_shared/notification-channel-requests.ts";
 import {
   applyDevelopNotificationMarker,
@@ -84,7 +85,8 @@ Deno.serve(async (request) => {
     const phone = phoneNumber(order.contact_number_a_snapshot || order.contact_number_b_snapshot);
     if (manualWatiEnabled && !phone) return json({ error: "customer_phone_missing" }, 400);
     const email = order.email_snapshot?.trim() || "";
-    if (manualEmailEnabled && !email) return json({ error: "customer_email_missing" }, 400);
+    const emailBlocked = isBlockedNotificationEmail(email, controls.recipientPolicy.blockedEmails);
+    if (manualEmailEnabled && !emailBlocked && !email) return json({ error: "customer_email_missing" }, 400);
     const name = order.customer_name_snapshot?.trim() || order.company_name_snapshot?.trim() || "Customer";
     const shippingMethod = Array.isArray(order.shipping_methods)
       ? order.shipping_methods[0]
@@ -139,7 +141,7 @@ Deno.serve(async (request) => {
     });
     const [watiResult, emailResult] = await settleEnabledNotificationRequests({
       watiEnabled: manualWatiEnabled,
-      emailEnabled: manualEmailEnabled,
+      emailEnabled: manualEmailEnabled && !emailBlocked,
       sendWati: () => {
         const overridePhone = toNotificationWatiPhones([phone], controls.recipientPolicy)[0] || "";
         if (!overridePhone) {
@@ -182,7 +184,7 @@ Deno.serve(async (request) => {
     const watiSkipped = !manualWatiEnabled;
     const watiDone = watiSent || watiSkipped;
     const emailSent = Boolean(emailResponse?.ok);
-    const emailSkipped = !manualEmailEnabled;
+    const emailSkipped = !manualEmailEnabled || emailBlocked;
     const emailDone = emailSent || emailSkipped;
     if (!watiDone || !emailDone) {
       return json({

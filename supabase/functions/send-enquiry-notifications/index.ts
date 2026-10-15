@@ -1,6 +1,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 
 import { EMAIL_FROM } from "../_shared/email-sender.ts";
+import { isBlockedNotificationEmail } from "../_shared/notification-email-blocklist.ts";
 import {
   buildEnquiryAckContent,
   buildEnquiryInternalContent,
@@ -360,12 +361,16 @@ Deno.serve(async (request) => {
               subject: formRow?.ack_email_subject || "",
               body: formRow?.ack_email_body || "",
             });
-            await sendResendEmail(
-              toNotificationEmailRecipients([row.email!.trim()], controls.recipientPolicy),
-              mail.subject,
-              mail.html,
-            );
-            ackStatus = "sent";
+            if (isBlockedNotificationEmail(row.email!.trim(), controls.recipientPolicy.blockedEmails)) {
+              ackStatus = "blocked";
+            } else {
+              await sendResendEmail(
+                toNotificationEmailRecipients([row.email!.trim()], controls.recipientPolicy),
+                mail.subject,
+                mail.html,
+              );
+              ackStatus = "sent";
+            }
           } catch {
             ackStatus = "failed";
           }
