@@ -7,7 +7,17 @@ import { PageSkeleton } from "@/components/ui/page-skeleton";
 import { ListTable } from "@/components/ui/list-table";
 import { SidePanel } from "@/components/ui/side-panel";
 import { TablePagination } from "@/components/ui/table-pagination";
-import { fulfillRewardRedemption, listRewardCatalogOps, fetchRewardRedemptionPage, upsertRewardCatalogItem, type RewardCatalogOpsItem, type RewardRedemption } from "@/lib/customer-reward-catalog";
+import {
+  fulfillRewardRedemption,
+  generateRewardCatalogImage,
+  listRewardCatalogOps,
+  fetchRewardRedemptionPage,
+  rewardCatalogImageUrl,
+  uploadRewardCatalogImage,
+  upsertRewardCatalogItem,
+  type RewardCatalogOpsItem,
+  type RewardRedemption,
+} from "@/lib/customer-reward-catalog";
 import { linkShopifyCustomer } from "@/lib/shopify-customer-bridge";
 import { supabase } from "@/lib/supabase";
 import "@/lib/customer-portal-i18n";
@@ -18,6 +28,9 @@ function failure(error: unknown) {
   const text = error instanceof Error ? error.message : typeof error === "object" && error && "message" in error ? String(error.message) : "";
   if (text.includes("page_access_required")) return "portalRewardCatalog.accessDenied";
   if (text.includes("invalid_catalog_item")) return "portalRewardCatalog.invalid";
+  if (text.includes("invalid_catalog_image") || text.includes("image_generation") || text.includes("image_provider")) {
+    return "portalRewardCatalog.imageFailed";
+  }
   if (text.includes("redemption_not_pending")) return "portalRewardCatalog.notPending";
   if (text.includes("invalid_shopify_customer")) return "portalRewardCatalog.invalid";
   return "portalRewardCatalog.failed";
@@ -27,6 +40,7 @@ export function CustomerPortalRewardCatalogPage() {
   const { t } = useTranslation();
   const canEdit = useCurrentPageAccess().canAccess("settings.customer_portal.edit");
   const [items, setItems] = useState<RewardCatalogOpsItem[]>([]);
+  const [previews, setPreviews] = useState<Record<string, string>>({});
   const [redemptions, setRedemptions] = useState<RewardRedemption[]>([]);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
@@ -47,6 +61,9 @@ export function CustomerPortalRewardCatalogPage() {
   const [amount, setAmount] = useState("");
   const [storeId, setStoreId] = useState("");
   const [validDays, setValidDays] = useState("365");
+  const [imagePath, setImagePath] = useState<string | null>(null);
+  const [imagePreview, setImagePreview] = useState("");
+  const [imageBusy, setImageBusy] = useState(false);
   const [stores, setStores] = useState<Array<{ id: string; shop_domain: string }>>([]);
   const [editing, setEditing] = useState<string | null>(null);
   const [ownerType, setOwnerType] = useState<"user" | "organization">("user");
@@ -57,7 +74,14 @@ export function CustomerPortalRewardCatalogPage() {
 
   function resetEditor() {
     setEditing(null); setName(""); setDescription(""); setAmount(""); setStoreId("");
-    setKind("gift"); setPoints("100"); setStock("10"); setActive(true); setValidDays("365"); setActionError("");
+    setKind("gift"); setPoints("100"); setStock("10"); setActive(true); setValidDays("365");
+    setImagePath(null); setImagePreview(""); setImageBusy(false); setActionError("");
+  }
+  async function hydrateImage(path: string | null | undefined) {
+    if (!path) { setImagePath(null); setImagePreview(""); return; }
+    setImagePath(path);
+    try { setImagePreview(await rewardCatalogImageUrl(path)); }
+    catch { setImagePreview(""); }
   }
   function openCreate() {
     resetEditor();
@@ -68,6 +92,7 @@ export function CustomerPortalRewardCatalogPage() {
     setStock(String(item.stock)); setDescription(item.description); setActive(item.is_active);
     setAmount(String(item.voucher_amount_hkd ?? "")); setStoreId(item.shopify_store_id ?? "");
     setValidDays(String(item.voucher_valid_days ?? 365)); setActionError(""); setPanel("editor");
+    void hydrateImage(item.image_object_path);
   }
 
   const load = useCallback(async () => {
@@ -77,6 +102,12 @@ export function CustomerPortalRewardCatalogPage() {
     const [catalog, claims] = await Promise.all([listRewardCatalogOps(), fetchRewardRedemptionPage(page)]);
     setItems(catalog ?? []);
     setRedemptions(claims.rows); setTotal(claims.total); setPage(claims.page);
+    const entries = await Promise.all((catalog ?? []).map(async item => {
+      if (!item.image_object_path) return null;
+      try { return [item.id, await rewardCatalogImageUrl(item.image_object_path)] as const; }
+      catch { return null; }
+    }));
+    setPreviews(Object.fromEntries(entries.filter((entry): entry is readonly [string, string] => Boolean(entry))));
     } catch (reason) { setError(t(failure(reason))); } finally { setLoading(false); }
   }, [page, t]);
   useEffect(() => { void load().catch(reason => setError(t(failure(reason)))); }, [load, t]);
@@ -88,21 +119,50 @@ export function CustomerPortalRewardCatalogPage() {
   }, []);
   useEffect(loadStores, [loadStores]);
 
+  async function onUpload(fileList: FileList | null) {
+    const file = fileList?.[0];
+    if (!file || imageBusy || saving) return;
+    setImageBusy(true); setActionError("");
+    try {
+      const path = await uploadRewardCatalogImage(file);
+      setImagePath(path);
+      setImagePreview(URL.createObjectURL(file));
+    } catch (reason) { setActionError(t(failure(reason))); }
+    finally { setImageBusy(false); }
+  }
+
+  async function onGenerate() {
+    if (imageBusy || saving || !name.trim()) {
+      if (!name.trim()) setActionError(t("portalRewardCatalog.invalid"));
+      return;
+    }
+    setImageBusy(true); setActionError("");
+    try {
+      const result = await generateRewardCatalogImage({ name: name.trim(), description });
+      setImagePath(result.objectPath);
+      setImagePreview(result.signedUrl);
+    } catch (reason) { setActionError(t(failure(reason))); }
+    finally { setImageBusy(false); }
+  }
+
   async function save(event: FormEvent) {
     event.preventDefault();
     setActionError(""); setNotice("");
     if (!name.trim() || !Number.isSafeInteger(Number(points)) || Number(points) <= 0 || !Number.isSafeInteger(Number(stock)) || Number(stock) < 0 || (kind === "voucher" && (Number(amount) <= 0 || !Number.isFinite(Number(amount)) || !Number.isSafeInteger(Number(validDays)) || Number(validDays) <= 0))) { setActionError(t("portalRewardCatalog.invalid")); return; }
-    if (saving) return;
+    if (saving || imageBusy) return;
     setSaving(true);
     try {
       await upsertRewardCatalogItem({
         id: editing, name: name.trim(), kind, points: Number(points), description, stock: Number(stock), active,
         voucherAmount: amount ? Number(amount) : null, storeId: storeId || null, validDays: Number(validDays) || 365,
+        imageObjectPath: imagePath,
       });
       resetEditor(); setPanel(null); setNotice(t("portalRewardCatalog.saved"));
       await load();
     } catch (reason) { setActionError(t(failure(reason))); } finally { setSaving(false); }
   }
+
+  const editorBusy = saving || imageBusy;
 
   return <section className="reward-admin">
     <header className="page-heading"><div className="reward-admin-actions">
@@ -113,7 +173,7 @@ export function CustomerPortalRewardCatalogPage() {
     {error ? <div className="reward-admin-error" role="alert">{error} <Button variant="outline" disabled={loading} onClick={() => void load().catch(reason => setError(t(failure(reason))))}>{t("portal.retry")}</Button></div> : null}
     {actionError && panel !== "editor" && panel !== "link" ? <p className="reward-admin-error" role="alert">{actionError}</p> : null}
     {notice ? <p className="reward-admin-notice" role="status">{notice}</p> : null}
-    {canEdit ? <SidePanel wide open={panel === "editor"} title={editing ? t("portalRewardCatalog.edit") : t("portalRewardCatalog.create")} onClose={() => { if (!saving) { resetEditor(); setPanel(null); } }} closeLabel={t("portalOps.close")} footer={<>{editing ? <Button type="button" variant="outline" disabled={saving} onClick={() => { resetEditor(); setPanel(null); }}>{t("portalRewardAdmin.cancelEdit")}</Button> : null}<Button type="submit" form="catalog-editor-form" disabled={saving} aria-busy={saving}>{editing ? t("portalRewardCatalog.save") : t("portalRewardCatalog.create")}</Button></>}>
+    {canEdit ? <SidePanel wide open={panel === "editor"} title={editing ? t("portalRewardCatalog.edit") : t("portalRewardCatalog.create")} onClose={() => { if (!editorBusy) { resetEditor(); setPanel(null); } }} closeLabel={t("portalOps.close")} footer={<>{editing ? <Button type="button" variant="outline" disabled={editorBusy} onClick={() => { resetEditor(); setPanel(null); }}>{t("portalRewardAdmin.cancelEdit")}</Button> : null}<Button type="submit" form="catalog-editor-form" disabled={editorBusy} aria-busy={saving}>{editing ? t("portalRewardCatalog.save") : t("portalRewardCatalog.create")}</Button></>}>
       <form id="catalog-editor-form" className="reward-admin-form reward-admin-panel-form" onSubmit={event => void save(event)}>
       {actionError ? <p className="reward-admin-error" role="alert">{actionError}</p> : null}
       <div className="reward-admin-field"><label htmlFor="catalog-name">{t("portalRewardCatalog.name")}</label><Input id="catalog-name" value={name} onChange={event => setName(event.target.value)} required /></div>
@@ -132,12 +192,24 @@ export function CustomerPortalRewardCatalogPage() {
         </select></div>
         <div className="reward-admin-field"><label htmlFor="catalog-days">{t("portalVoucher.validDays")}</label><Input id="catalog-days" required type="number" min="1" step="1" inputMode="numeric" value={validDays} onChange={event => setValidDays(event.target.value)} /></div>
       </> : null}
+      <div className="reward-admin-field reward-admin-image-field">
+        <label htmlFor="catalog-image">{t("portalRewardCatalog.image")}</label>
+        <p>{t("portalRewardCatalog.imageHint")}</p>
+        {imagePreview ? <img className="reward-admin-image-preview" src={imagePreview} alt="" /> : null}
+        <div className="reward-admin-image-actions">
+          <Input id="catalog-image" type="file" accept="image/jpeg,image/png,image/webp" disabled={editorBusy} onChange={event => { void onUpload(event.target.files); event.target.value = ""; }} />
+          <Button type="button" variant="outline" disabled={editorBusy || !name.trim()} aria-busy={imageBusy} onClick={() => void onGenerate()}>
+            {imageBusy ? t("portalRewardCatalog.generatingImage") : t("portalRewardCatalog.generateImage")}
+          </Button>
+          {imagePath ? <Button type="button" variant="outline" disabled={editorBusy} onClick={() => { setImagePath(null); setImagePreview(""); }}>{t("portalRewardCatalog.removeImage")}</Button> : null}
+        </div>
+      </div>
       <div className="reward-admin-field"><label htmlFor="catalog-description">{t("portalRewardCatalog.description")}</label><textarea id="catalog-description" value={description} onChange={event => setDescription(event.target.value)} /></div>
       <label className="reward-admin-checkbox"><input type="checkbox" checked={active} onChange={event => setActive(event.target.checked)} /> {t("portalRewardCatalog.active")}</label>
     </form></SidePanel> : null}
     <SidePanel wide open={panel === "catalog"} title={t("portalRewardCatalog.items")} onClose={() => setPanel(null)} closeLabel={t("portalOps.close")}>
     <section className="reward-admin-catalog">
-    {loading ? <PageSkeleton label={t("portalCatalog.loading")} variant="profile" compact /> : error ? <p>{t("portalRewardCatalog.failed")}</p> : items.length ? items.map(item => <article className="reward-admin-item" key={item.id}><div><h3>{item.name}</h3><p>{t(item.kind === "gift" ? "portalRewardCatalog.gift" : "portalRewardCatalog.voucher")} · {item.points_cost} · {t("portalRewardCatalog.stock")} {item.stock} · {t(item.is_active ? "portalRewardCatalog.active" : "portalRewardCatalog.inactive")}</p><p>{item.description}</p>{item.voucher_amount_hkd ? <p>HK$ {Number(item.voucher_amount_hkd).toFixed(2)}</p> : null}</div>{canEdit ? <Button variant="outline" disabled={saving} onClick={() => openEdit(item)}>{t("portalRewardCatalog.edit")}</Button> : null}</article>) : <div className="reward-admin-empty">{t("portalRewardCatalog.empty")}</div>}
+    {loading ? <PageSkeleton label={t("portalCatalog.loading")} variant="profile" compact /> : error ? <p>{t("portalRewardCatalog.failed")}</p> : items.length ? items.map(item => <article className="reward-admin-item" key={item.id}><div className="reward-admin-item-media">{previews[item.id] ? <img src={previews[item.id]} alt="" /> : null}<div><h3>{item.name}</h3><p>{t(item.kind === "gift" ? "portalRewardCatalog.gift" : "portalRewardCatalog.voucher")} · {item.points_cost} · {t("portalRewardCatalog.stock")} {item.stock} · {t(item.is_active ? "portalRewardCatalog.active" : "portalRewardCatalog.inactive")}</p><p>{item.description}</p>{item.voucher_amount_hkd ? <p>HK$ {Number(item.voucher_amount_hkd).toFixed(2)}</p> : null}</div></div>{canEdit ? <Button variant="outline" disabled={saving} onClick={() => openEdit(item)}>{t("portalRewardCatalog.edit")}</Button> : null}</article>) : <div className="reward-admin-empty">{t("portalRewardCatalog.empty")}</div>}
     </section>
     </SidePanel>
     {canEdit ? <SidePanel wide open={panel === "link"} title={t("portalVoucher.linkTitle")} description={t("portalVoucher.linkIntro")} onClose={() => { if (!linking) setPanel(null); }} closeLabel={t("portalOps.close")} footer={<Button type="submit" form="catalog-link-form" disabled={linking || !stores.length || storeError} aria-busy={linking}>{t("portalVoucher.link")}</Button>}>

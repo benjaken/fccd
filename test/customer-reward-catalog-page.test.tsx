@@ -2,12 +2,31 @@ import { fireEvent, render, screen, waitFor, within } from "@testing-library/rea
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, expect, it, vi } from "vitest";
 import { CustomerPortalRewardCatalogPage } from "@/components/settings/CustomerPortalRewardCatalogPage";
-const mocks = vi.hoisted(() => ({ catalog: vi.fn(), page: vi.fn(), save: vi.fn(), link: vi.fn(), edit: true }));
+const mocks = vi.hoisted(() => ({
+  catalog: vi.fn(), page: vi.fn(), save: vi.fn(), link: vi.fn(), edit: true,
+  upload: vi.fn(), generate: vi.fn(), imageUrl: vi.fn(),
+}));
 vi.mock("@/auth/use-page-access", () => ({ useCurrentPageAccess: () => ({ canAccess: () => mocks.edit }) }));
-vi.mock("@/lib/customer-reward-catalog", () => ({ listRewardCatalogOps: mocks.catalog, fetchRewardRedemptionPage: mocks.page, upsertRewardCatalogItem: mocks.save, fulfillRewardRedemption: vi.fn() }));
+vi.mock("@/lib/customer-reward-catalog", () => ({
+  listRewardCatalogOps: mocks.catalog,
+  fetchRewardRedemptionPage: mocks.page,
+  upsertRewardCatalogItem: mocks.save,
+  fulfillRewardRedemption: vi.fn(),
+  uploadRewardCatalogImage: mocks.upload,
+  generateRewardCatalogImage: mocks.generate,
+  rewardCatalogImageUrl: mocks.imageUrl,
+}));
 vi.mock("@/lib/shopify-customer-bridge", () => ({ linkShopifyCustomer: mocks.link }));
 vi.mock("@/lib/supabase", () => ({ supabase: { from: () => ({ select: () => ({ eq: () => ({ order: async () => ({ data: [], error: null }) }) }) }) } }));
-beforeEach(() => { mocks.edit = true; mocks.catalog.mockReset().mockResolvedValue([]); mocks.page.mockReset().mockResolvedValue({ rows: [], total: 0, page: 1 }); mocks.save.mockReset().mockResolvedValue("id"); });
+beforeEach(() => {
+  mocks.edit = true;
+  mocks.catalog.mockReset().mockResolvedValue([]);
+  mocks.page.mockReset().mockResolvedValue({ rows: [], total: 0, page: 1 });
+  mocks.save.mockReset().mockResolvedValue("id");
+  mocks.upload.mockReset().mockResolvedValue("user/img.png");
+  mocks.generate.mockReset().mockResolvedValue({ objectPath: "user/ai/img.png", signedUrl: "https://example.com/ai.png" });
+  mocks.imageUrl.mockReset().mockResolvedValue("https://example.com/img.png");
+});
 const mount = () => render(<MemoryRouter><CustomerPortalRewardCatalogPage /></MemoryRouter>);
 const openEditor = async () => { fireEvent.click(await screen.findByRole("button", { name: "新增兌換項目" })); return within(await screen.findByRole("dialog")); };
 it("does not misrepresent failed data as an empty catalog, and retries", async () => {
@@ -77,4 +96,23 @@ it("offers retry when refreshing fails after a successful save", async () => {
   fireEvent.click(screen.getByRole("button", { name: "重試" }));
   await waitFor(() => expect(screen.queryByRole("alert")).not.toBeInTheDocument());
   expect(mocks.save).toHaveBeenCalledTimes(1);
+});
+
+it("uploads or generates a catalog image and saves the object path", async () => {
+  mount(); const editor = await openEditor();
+  fireEvent.change(editor.getByLabelText("名稱"), { target: { value: "Gift" } });
+  const file = new File(["img"], "bag.png", { type: "image/png" });
+  fireEvent.change(editor.getByLabelText("圖片"), { target: { files: [file] } });
+  await waitFor(() => expect(mocks.upload).toHaveBeenCalledWith(file));
+  fireEvent.click(editor.getByRole("button", { name: "新增兌換項目" }));
+  await waitFor(() => expect(mocks.save).toHaveBeenCalledWith(expect.objectContaining({ imageObjectPath: "user/img.png" })));
+
+  mocks.save.mockClear();
+  fireEvent.click(await screen.findByRole("button", { name: "新增兌換項目" }));
+  const next = within(await screen.findByRole("dialog"));
+  fireEvent.change(next.getByLabelText("名稱"), { target: { value: "AI Gift" } });
+  fireEvent.click(next.getByRole("button", { name: "AI 生成圖片" }));
+  await waitFor(() => expect(mocks.generate).toHaveBeenCalledWith({ name: "AI Gift", description: "" }));
+  fireEvent.click(next.getByRole("button", { name: "新增兌換項目" }));
+  await waitFor(() => expect(mocks.save).toHaveBeenCalledWith(expect.objectContaining({ imageObjectPath: "user/ai/img.png" })));
 });

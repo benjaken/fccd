@@ -67,6 +67,9 @@ verify_jwt = false
 [functions.report-ai-interpret]
 verify_jwt = false
 
+[functions.customer-reward-catalog-image]
+verify_jwt = false
+
 [functions.translate-address]
 verify_jwt = false
 

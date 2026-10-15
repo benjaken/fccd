@@ -229,16 +229,22 @@ i18n.addResourceBundle("en", "translation", { portalCatalog: {
 i18n.addResourceBundle("zh-HK", "translation", { portalRewardCatalog: {
   back:"返回客戶訂購營運", intro:"設定可用積分兌換的實物和現金券。兌換只扣積分，不抵訂單金額。",
   name:"名稱", kind:"類型", gift:"實物", voucher:"現金券", points:"所需積分", stock:"庫存", description:"說明", active:"上架",
+  image:"圖片", uploadImage:"上傳圖片", removeImage:"移除圖片", generateImage:"AI 生成圖片", generatingImage:"正在生成…",
+  imageHint:"可上傳 JPEG、PNG 或 WebP，或依名稱與說明由 AI 生成。",
   create:"新增兌換項目", save:"儲存", edit:"編輯", saved:"已儲存兌換項目。", items:"兌換目錄", empty:"尚未設定兌換項目。", inactive:"已下架",
   redemptions:"兌換紀錄", noRedemptions:"尚未有兌換。", pending:"待履約", fulfilled:"已履約", fulfill:"標記已履約",
   accessDenied:"沒有客戶訂購營運權限。", invalid:"請核對名稱、類型、積分和庫存。", notPending:"這筆兌換已不是待履約。", failed:"操作未完成，請重試。",
+  imageFailed:"圖片未能處理，請重試。",
 }}, true, true);
 i18n.addResourceBundle("en", "translation", { portalRewardCatalog: {
   back:"Back to customer ordering ops", intro:"Publish goods and cash vouchers that customers redeem with points. Redemption deducts points and does not reduce an order total.",
   name:"Name", kind:"Type", gift:"Goods", voucher:"Cash voucher", points:"Points required", stock:"Stock", description:"Description", active:"Published",
+  image:"Image", uploadImage:"Upload image", removeImage:"Remove image", generateImage:"Generate with AI", generatingImage:"Generating…",
+  imageHint:"Upload a JPEG, PNG, or WebP, or generate one from the name and description.",
   create:"Add reward", save:"Save", edit:"Edit", saved:"Reward saved.", items:"Catalog", empty:"No rewards yet.", inactive:"Hidden",
   redemptions:"Redemptions", noRedemptions:"No redemptions yet.", pending:"Pending", fulfilled:"Fulfilled", fulfill:"Mark fulfilled",
   accessDenied:"You do not have customer ordering ops access.", invalid:"Check the name, type, points and stock.", notPending:"This redemption is no longer pending.", failed:"The action could not be completed. Please retry.",
+  imageFailed:"The image could not be processed. Please retry.",
 }}, true, true);
 i18n.addResourceBundle("zh-HK", "translation", { portalVoucher: {
   codes:"Shopify 現金券碼", queued:"正在建立折扣碼", issuing:"正在向 Shopify 發碼", issued:"可在 Shopify 結帳輸入", failed:"發碼未完成，請稍後再看",
