@@ -165,7 +165,10 @@ import { CustomerFaqPage } from "@/components/settings/CustomerFaqPage";
 import { CustomerPortalLunchboxPage } from "@/components/settings/CustomerPortalLunchboxPage";
 import { CustomerPortalMealCalendarPage } from "@/components/settings/CustomerPortalMealCalendarPage";
 import { CustomerPortalOpsPage } from "@/components/settings/CustomerPortalOpsPage";
-import { CustomerPortalRewardCatalogPage } from "@/components/settings/CustomerPortalRewardCatalogPage";
+import {
+  CustomerPortalRewardCatalogPage,
+  CustomerPortalRewardCatalogSkeleton,
+} from "@/components/settings/CustomerPortalRewardCatalogPage";
 import { CustomerPortalApplicationsPage } from "@/components/settings/CustomerPortalApplicationsPage";
 import { CustomerPortalGuidesPage } from "@/components/settings/CustomerPortalGuidesPage";
 import { CustomerPortalRewardRulesPage } from "@/components/settings/CustomerPortalRewardRulesPage";
@@ -796,8 +799,14 @@ function OperationsShell() {
         )}
       >
         <aside className={cn("sidebar", location.pathname.startsWith("/settings/customer-portal") && "customer-operations-sidebar")}>
-          <nav aria-label="Secondary">
-            {sideItems.map((item) => (
+          <nav aria-label="Secondary" aria-busy={pageAccess.loading || undefined}>
+            {pageAccess.loading
+              ? Array.from({ length: 7 }, (_, index) => (
+                  <div className="sidebar-link sidebar-link-skeleton" key={`sidebar-skeleton-${index}`} aria-hidden="true">
+                    <span className="page-skeleton-bone sidebar-link-skeleton-bone" />
+                  </div>
+                ))
+              : sideItems.map((item) => (
               <Fragment key={`${item.key}-${item.to}`}>
                 {renderSidebarItem(item)}
               </Fragment>
@@ -818,14 +827,17 @@ function OperationsShell() {
 
         <main className="main-content">
           <div className="page-transition" key={pageKey}>
-            {pageAccess.loading && !rewardCatalogPath ? (
-              <PageSkeleton label={t("settings.loadingPermissions")} />
+            {pageAccess.loading ? (
+              rewardCatalogPath ? (
+                <CustomerPortalRewardCatalogSkeleton label={t("portalCatalog.loading")} />
+              ) : (
+                <PageSkeleton label={t("settings.loadingPermissions")} />
+              )
             ) : recoveringInitialPath &&
-              !pageAccess.loading &&
               !pageAccess.canAccess(currentPageKey) &&
               firstAccessiblePath ? (
               <Navigate to={firstAccessiblePath} replace />
-            ) : !pageAccess.loading && !pageAccess.canAccess(currentPageKey) ? (
+            ) : !pageAccess.canAccess(currentPageKey) ? (
               <SettingsAccessDenied />
             ) : (
               <Routes>
@@ -1677,7 +1689,6 @@ function OperationsShell() {
               <Route
                 path="/settings/customer-portal/rewards"
                 element={
-                  pageAccess.loading ||
                   pageAccess.canAccess("settings.customer_portal") ? (
                     <CustomerPortalRewardCatalogPage />
                   ) : (

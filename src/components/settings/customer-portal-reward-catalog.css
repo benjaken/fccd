@@ -1,5 +1,7 @@
 .reward-admin{display:grid;gap:24px;min-width:0;color:var(--foreground)}
 .reward-admin-actions{display:flex;flex-wrap:wrap;gap:12px}
+.reward-admin-action-skeleton{display:inline-block;width:7.5rem;height:2.5rem;border-radius:8px}
+.reward-admin-action-skeleton.is-wide{width:6.5rem}
 .reward-admin h2{font-size:18px;font-weight:650;margin:0 0 20px;line-height:1.4}
 .reward-admin-catalog{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:24px;min-width:0}
 .side-panel .reward-admin-catalog{background:transparent;border:0;padding:0}
@@ -66,7 +68,6 @@
 .reward-admin-item p{font-size:14px;color:var(--muted-foreground);line-height:1.65;overflow-wrap:anywhere}
 .reward-admin-empty{padding:48px 12px;text-align:center;color:var(--muted-foreground);background:var(--muted);border-radius:8px;font-size:14px}
 .reward-admin-error{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px;border:1px solid var(--destructive);border-radius:8px;color:var(--destructive);background:var(--card)}
-.reward-admin-notice{padding:16px;background:var(--selection-bg);color:var(--primary);border-radius:8px}
 .reward-admin-catalog-table,.reward-admin-records{min-width:0;overflow:hidden}
 .reward-admin-catalog-table>h2,.reward-admin-records>h2{padding:20px 24px;margin:0;border-bottom:1px solid var(--border)}
 .reward-admin-catalog-table td,.reward-admin-records td,.reward-admin-records-panel td{overflow-wrap:anywhere}

@@ -1301,6 +1301,24 @@ body:has(.side-panel-root) .shell-body.sidebar-is-collapsed .sidebar {
   white-space: nowrap;
 }
 
+.sidebar-link-skeleton {
+  pointer-events: none;
+}
+
+.sidebar-link-skeleton-bone {
+  display: block;
+  width: 72%;
+  height: 14px;
+  border-radius: 999px;
+}
+
+.sidebar-link-skeleton:nth-child(2) .sidebar-link-skeleton-bone { width: 58%; }
+.sidebar-link-skeleton:nth-child(3) .sidebar-link-skeleton-bone { width: 66%; }
+.sidebar-link-skeleton:nth-child(4) .sidebar-link-skeleton-bone { width: 48%; }
+.sidebar-link-skeleton:nth-child(5) .sidebar-link-skeleton-bone { width: 70%; }
+.sidebar-link-skeleton:nth-child(6) .sidebar-link-skeleton-bone { width: 54%; }
+.sidebar-link-skeleton:nth-child(7) .sidebar-link-skeleton-bone { width: 62%; }
+
 button.sidebar-link {
   width: 100%;
   border: 0;

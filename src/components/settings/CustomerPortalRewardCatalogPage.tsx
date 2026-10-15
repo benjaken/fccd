@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import { ListTable } from "@/components/ui/list-table";
+import { CornerNotice } from "@/components/ui/corner-notice";
 import { SidePanel } from "@/components/ui/side-panel";
 import { TablePagination } from "@/components/ui/table-pagination";
 import {
@@ -36,6 +37,23 @@ function failure(error: unknown) {
   if (text.includes("redemption_not_pending")) return "portalRewardCatalog.notPending";
   if (text.includes("invalid_shopify_customer")) return "portalRewardCatalog.invalid";
   return "portalRewardCatalog.failed";
+}
+
+export function CustomerPortalRewardCatalogSkeleton({ label }: { label: string }) {
+  const { t } = useTranslation();
+  return <section className="reward-admin" aria-busy="true">
+    <span className="sr-only" role="status">{label}</span>
+    <header className="page-heading"><div className="reward-admin-actions" aria-hidden="true">
+      <span className="page-skeleton-bone reward-admin-action-skeleton" />
+      <span className="page-skeleton-bone reward-admin-action-skeleton is-wide" />
+    </div></header>
+    <section className="panel reward-admin-catalog-table">
+      <h2>{t("portalRewardCatalog.items")}</h2>
+      <ListTable loading loadingLabel={label} skeletonColumns={7} header={<tr><th>{t("portalRewardCatalog.image")}</th><th>{t("portalRewardCatalog.name")}</th><th>{t("portalRewardCatalog.kind")}</th><th>{t("portalRewardCatalog.points")}</th><th>{t("portalRewardCatalog.stock")}</th><th>{t("portalRewardCatalog.active")}</th><th>{t("orders.columns.actions")}</th></tr>}>
+        {null}
+      </ListTable>
+    </section>
+  </section>;
 }
 
 export function CustomerPortalRewardCatalogPage() {
@@ -206,7 +224,7 @@ export function CustomerPortalRewardCatalogPage() {
     </div></header>
     {error ? <div className="reward-admin-error" role="alert">{error} <Button variant="outline" disabled={loading} onClick={() => void load().catch(reason => setError(t(failure(reason))))}>{t("portal.retry")}</Button></div> : null}
     {actionError && panel !== "editor" && panel !== "link" && panel !== "redemptions" ? <p className="reward-admin-error" role="alert">{actionError}</p> : null}
-    {notice ? <p className="reward-admin-notice" role="status">{notice}</p> : null}
+    {notice ? <CornerNotice message={notice} onDismiss={() => setNotice("")} /> : null}
     {canEdit ? <SidePanel half open={panel === "editor"} title={editing ? t("portalRewardCatalog.edit") : t("portalRewardCatalog.create")} onClose={closeEditor} closeLabel={t("portalOps.close")} footer={
       <div className="reward-admin-editor-footer">
         <label className="reward-admin-checkbox"><input type="checkbox" form="catalog-editor-form" checked={active} onChange={event => setActive(event.target.checked)} /> {t("portalRewardCatalog.active")}</label>
