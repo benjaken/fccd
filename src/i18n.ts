@@ -654,7 +654,7 @@ const resources = {
         customerPortalGuides: "客戶介紹",
         customerPortalRewardRules: "客戶積分規則",
         customerPortalLunchbox: "互動飯盒",
-        customerPortalMealCalendar: "訂餐日曆",
+        customerPortalMealCalendar: "團體日曆",
         customerPortalRewardCatalog: "積分兌換",
         attachments: "附件列表",
         supplierCostCategories: "供應商費用類別",
