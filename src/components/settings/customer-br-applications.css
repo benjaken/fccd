@@ -1,13 +1,13 @@
 /* BR review surface: compact policy context, task controls and a guided empty state. */
 .customer-br-applications .portal-ops-list-intro { gap: 12px; }
-.customer-br-applications .portal-br-policy {
+.customer-portal-ops.customer-br-applications .portal-br-policy {
   display: grid;
   grid-template-columns: 24px minmax(0, 1fr) auto;
   align-items: center;
   gap: 16px;
   padding: 20px 24px;
-  background: var(--card);
-  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--primary) 10%, var(--card));
+  border: 1px solid color-mix(in srgb, var(--primary) 22%, var(--border));
   border-radius: 12px;
 }
 .customer-br-applications .br-policy-icon { color: var(--primary); align-self: start; margin-top: 2px; }
