@@ -85,8 +85,8 @@ export function CustomerPortalRewardCatalogPage() {
     setAiPrompt(""); setDragOver(false); setActionError("");
   }
 
-  function syncAiPrompt(prize = name, detail = description) {
-    setAiPrompt(buildRewardCatalogImagePrompt({ name: prize.trim(), description: detail }));
+  function syncAiPrompt(prize = name, detail = description, itemKind = kind) {
+    setAiPrompt(buildRewardCatalogImagePrompt({ name: prize.trim(), description: detail, kind: itemKind }));
   }
 
   function openAiTab() {
@@ -158,14 +158,14 @@ export function CustomerPortalRewardCatalogPage() {
 
   async function onGenerate() {
     const prize = name.trim();
-    const prompt = aiPrompt.trim() || buildRewardCatalogImagePrompt({ name: prize, description });
+    const prompt = aiPrompt.trim() || buildRewardCatalogImagePrompt({ name: prize, description, kind });
     if (imageBusy || saving || !prize) {
       if (!prize) setActionError(t("portalRewardCatalog.invalid"));
       return;
     }
     setImageBusy(true); setActionError("");
     try {
-      const result = await generateRewardCatalogImage({ name: prize, description, prompt });
+      const result = await generateRewardCatalogImage({ name: prize, description, kind, prompt });
       setImagePath(result.objectPath);
       setImagePreview(result.signedUrl);
     } catch (reason) { setActionError(t(failure(reason))); }
@@ -223,7 +223,7 @@ export function CustomerPortalRewardCatalogPage() {
         <h3 className="reward-admin-section-title">{t("portalRewardCatalog.sectionBasics")}</h3>
         <div className="reward-admin-section-body reward-admin-section-grid">
           <div className="reward-admin-field"><label htmlFor="catalog-name">{t("portalRewardCatalog.name")}</label><Input id="catalog-name" value={name} onChange={event => { const next = event.target.value; setName(next); if (imageTab === "ai") syncAiPrompt(next); }} required /></div>
-          <div className="reward-admin-field"><label htmlFor="catalog-kind">{t("portalRewardCatalog.kind")}</label><select id="catalog-kind" value={kind} onChange={event => setKind(event.target.value === "voucher" ? "voucher" : "gift")}>
+          <div className="reward-admin-field"><label htmlFor="catalog-kind">{t("portalRewardCatalog.kind")}</label><select id="catalog-kind" value={kind} onChange={event => { const next = event.target.value === "voucher" ? "voucher" : "gift"; setKind(next); if (imageTab === "ai") syncAiPrompt(name, description, next); }}>
             <option value="gift">{t("portalRewardCatalog.gift")}</option>
             <option value="voucher">{t("portalRewardCatalog.voucher")}</option>
           </select></div>

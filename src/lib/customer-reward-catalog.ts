@@ -7,17 +7,32 @@ const IMAGE_MAX_BYTES = 5 * 1024 * 1024;
 const IMAGE_EXT = /^(jpg|jpeg|png|webp)$/i;
 const PROMPT_MAX = 800;
 
-/** Flat HK-style catalog illustration with Traditional Chinese prize text only. */
-export function buildRewardCatalogImagePrompt(input: { name?: string; description?: string } = {}) {
+/** Flat HK-style catalog illustration; vouchers keep prize text, gifts stay textless. */
+export function buildRewardCatalogImagePrompt(input: {
+  name?: string;
+  description?: string;
+  kind?: "gift" | "voucher";
+} = {}) {
   const name = input.name?.trim() ?? "";
   const description = input.description?.trim() ?? "";
+  const voucher = input.kind === "voucher";
   return [
-    name ? `Only on-image text:「${name}」(Traditional Chinese Hong Kong).` : "Only one Traditional Chinese (Hong Kong) prize title on the image.",
-    "Do not invent prices, ¥/円, HK$, expiry lines, Japanese, Korean, Simplified Chinese, or extra slogans.",
-    "Square 1:1 composition only. Keep the full subject and text inside the frame with clear margin; nothing cropped or overflowing the edges.",
-    "Flat 2D Hong Kong coupon / loyalty reward catalog illustration, soft anime, vector-like, even lighting, minimal depth,",
-    "front-facing centered subject, plain soft background, no 3D, no strong shadows, no watermark, no brand logo, no extra props.",
-    description ? `Visual details only (do not print as extra copy): ${description}.` : "",
+    voucher
+      ? (name
+        ? `Hong Kong cash voucher. Only on-image text:「${name}」(Traditional Chinese Hong Kong).`
+        : "Hong Kong cash voucher with one Traditional Chinese (Hong Kong) prize title on the image.")
+      : (name
+        ? `Physical gift product only: ${name}. No text, letters, numbers, captions, watermarks, or logos on the image.`
+        : "Physical gift product only. No text, letters, numbers, captions, watermarks, or logos on the image."),
+    voucher
+      ? "Do not invent prices, ¥/円, HK$, expiry lines, Japanese, Korean, Simplified Chinese, or extra slogans."
+      : "Do not invent labels, price tags, packaging copy, or any writing.",
+    "Square 1:1 composition. Keep the full subject inside the frame with clear margin; nothing cropped or overflowing.",
+    voucher
+      ? "Flat 2D Hong Kong coupon / loyalty voucher illustration, soft anime, vector-like, even lighting, minimal depth,"
+      : "Flat 2D product catalog illustration, soft anime, vector-like, even lighting, minimal depth,",
+    "front-facing centered subject, plain soft background, no 3D, no strong shadows, no brand logo, no extra props.",
+    description ? `Visual details only${voucher ? " (do not print as extra copy)" : ""}: ${description}.` : "",
   ].filter(Boolean).join(" ").slice(0, PROMPT_MAX);
 }
 
@@ -84,7 +99,12 @@ export async function rewardCatalogImageUrl(path: string, expiresIn = 60 * 60) {
   return signed.data.signedUrl;
 }
 
-export async function generateRewardCatalogImage(input: { name?: string; description?: string; prompt?: string }) {
+export async function generateRewardCatalogImage(input: {
+  name?: string;
+  description?: string;
+  kind?: "gift" | "voucher";
+  prompt?: string;
+}) {
   const { data, error } = await supabase.functions.invoke<{ objectPath?: string; signedUrl?: string; error?: string }>(
     "customer-reward-catalog-image",
     { body: { action: "generate", ...input } },

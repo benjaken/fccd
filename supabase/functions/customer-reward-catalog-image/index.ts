@@ -49,18 +49,29 @@ async function requireCatalogEdit(request: Request, admin: SupabaseClient) {
   return data.user.id;
 }
 
-function buildPrompt(body: { name?: string; description?: string; prompt?: string }) {
+function buildPrompt(body: { name?: string; description?: string; kind?: string; prompt?: string }) {
   const custom = typeof body.prompt === "string" ? body.prompt.trim() : "";
   if (custom) return custom.slice(0, MAX_PROMPT);
   const name = typeof body.name === "string" ? body.name.trim() : "";
   const description = typeof body.description === "string" ? body.description.trim() : "";
+  const voucher = body.kind === "voucher";
   const parts = [
-    name ? `Only on-image text:「${name}」(Traditional Chinese Hong Kong).` : "Only one Traditional Chinese (Hong Kong) prize title on the image.",
-    "Do not invent prices, ¥/円, HK$, expiry lines, Japanese, Korean, Simplified Chinese, or extra slogans.",
-    "Square 1:1 composition only. Keep the full subject and text inside the frame with clear margin; nothing cropped or overflowing the edges.",
-    "Flat 2D Hong Kong coupon / loyalty reward catalog illustration, soft anime, vector-like, even lighting, minimal depth,",
-    "front-facing centered subject, plain soft background, no 3D, no strong shadows, no watermark, no brand logo, no extra props.",
-    description ? `Visual details only (do not print as extra copy): ${description}.` : "",
+    voucher
+      ? (name
+        ? `Hong Kong cash voucher. Only on-image text:「${name}」(Traditional Chinese Hong Kong).`
+        : "Hong Kong cash voucher with one Traditional Chinese (Hong Kong) prize title on the image.")
+      : (name
+        ? `Physical gift product only: ${name}. No text, letters, numbers, captions, watermarks, or logos on the image.`
+        : "Physical gift product only. No text, letters, numbers, captions, watermarks, or logos on the image."),
+    voucher
+      ? "Do not invent prices, ¥/円, HK$, expiry lines, Japanese, Korean, Simplified Chinese, or extra slogans."
+      : "Do not invent labels, price tags, packaging copy, or any writing.",
+    "Square 1:1 composition. Keep the full subject inside the frame with clear margin; nothing cropped or overflowing.",
+    voucher
+      ? "Flat 2D Hong Kong coupon / loyalty voucher illustration, soft anime, vector-like, even lighting, minimal depth,"
+      : "Flat 2D product catalog illustration, soft anime, vector-like, even lighting, minimal depth,",
+    "front-facing centered subject, plain soft background, no 3D, no strong shadows, no brand logo, no extra props.",
+    description ? `Visual details only${voucher ? " (do not print as extra copy)" : ""}: ${description}.` : "",
   ].filter(Boolean);
   return parts.join(" ").slice(0, MAX_PROMPT);
 }

@@ -8,8 +8,14 @@ const mocks = vi.hoisted(() => ({
 }));
 vi.mock("@/auth/use-page-access", () => ({ useCurrentPageAccess: () => ({ canAccess: () => mocks.edit }) }));
 vi.mock("@/lib/customer-reward-catalog", () => ({
-  buildRewardCatalogImagePrompt: ({ name = "", description = "" }: { name?: string; description?: string }) =>
-    `flat 2D catalog prompt Show the prize name: "${name}". ${description}`.trim(),
+  buildRewardCatalogImagePrompt: ({
+    name = "",
+    description = "",
+    kind = "gift",
+  }: { name?: string; description?: string; kind?: "gift" | "voucher" }) =>
+    kind === "voucher"
+      ? `voucher prompt Only on-image text:「${name}」. ${description}`.trim()
+      : `gift prompt No text for ${name}. ${description}`.trim(),
   listRewardCatalogOps: mocks.catalog,
   fetchRewardRedemptionPage: mocks.page,
   upsertRewardCatalogItem: mocks.save,
@@ -118,9 +124,13 @@ it("uploads or generates a catalog image and saves the object path", async () =>
   finishGenerate({ objectPath: "user/ai/img.png", signedUrl: "https://example.com/ai.png" });
   await waitFor(() => expect(mocks.generate).toHaveBeenCalledWith(expect.objectContaining({
     name: "AI Gift",
-    prompt: expect.stringContaining("AI Gift"),
+    kind: "gift",
+    prompt: expect.stringContaining("No text"),
   })));
   await waitFor(() => expect(next.queryByText("正在生成…")).not.toBeInTheDocument());
+  fireEvent.change(next.getByLabelText("類型"), { target: { value: "voucher" } });
+  expect((next.getByLabelText("提示詞") as HTMLTextAreaElement).value).toContain("「AI Gift」");
+  fireEvent.change(next.getByLabelText("類型"), { target: { value: "gift" } });
   fireEvent.click(next.getByRole("button", { name: "新增兌換項目" }));
   await waitFor(() => expect(mocks.save).toHaveBeenCalledWith(expect.objectContaining({ imageObjectPath: "user/ai/img.png" })));
 });
