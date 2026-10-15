@@ -5,19 +5,18 @@ import { portalRpc } from "@/lib/customer-portal-rpc";
 export const REWARD_CATALOG_IMAGE_BUCKET = "customer-reward-catalog";
 const IMAGE_MAX_BYTES = 5 * 1024 * 1024;
 const IMAGE_EXT = /^(jpg|jpeg|png|webp)$/i;
-const PROMPT_MAX = 500;
+const PROMPT_MAX = 800;
 
-/** Flat catalog illustration with the prize name drawn on the artwork. */
+/** Flat HK-style catalog illustration with Traditional Chinese prize text only. */
 export function buildRewardCatalogImagePrompt(input: { name?: string; description?: string } = {}) {
   const name = input.name?.trim() ?? "";
   const description = input.description?.trim() ?? "";
   return [
-    "Flat 2D loyalty-reward catalog illustration,",
-    "soft anime style, clean vector-like shapes, even lighting, minimal depth,",
-    "front-facing centered subject on a plain soft background,",
-    "no 3D render, no strong shadows, no watermark, no brand logo, no extra props.",
-    name ? `Show the prize name clearly as readable on-image text: "${name}".` : "Include clear readable prize title text on the image.",
-    description ? `Details: ${description}.` : "",
+    name ? `Only on-image text:「${name}」(Traditional Chinese Hong Kong).` : "Only one Traditional Chinese (Hong Kong) prize title on the image.",
+    "Do not invent prices, ¥/円, HK$, expiry lines, Japanese, Korean, Simplified Chinese, or extra slogans.",
+    "Flat 2D Hong Kong coupon / loyalty reward catalog illustration, soft anime, vector-like, even lighting, minimal depth,",
+    "front-facing centered subject, plain soft background, no 3D, no strong shadows, no watermark, no brand logo, no extra props.",
+    description ? `Visual details only (do not print as extra copy): ${description}.` : "",
   ].filter(Boolean).join(" ").slice(0, PROMPT_MAX);
 }
 

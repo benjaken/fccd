@@ -7,7 +7,7 @@ const cors = {
 };
 
 const BUCKET = "customer-reward-catalog";
-const MAX_PROMPT = 500;
+const MAX_PROMPT = 800;
 
 function json(body: unknown, status = 200) {
   return Response.json(body, { status, headers: cors });
@@ -55,12 +55,11 @@ function buildPrompt(body: { name?: string; description?: string; prompt?: strin
   const name = typeof body.name === "string" ? body.name.trim() : "";
   const description = typeof body.description === "string" ? body.description.trim() : "";
   const parts = [
-    "Flat 2D loyalty-reward catalog illustration,",
-    "soft anime style, clean vector-like shapes, even lighting, minimal depth,",
-    "front-facing centered subject on a plain soft background,",
-    "no 3D render, no strong shadows, no watermark, no brand logo, no extra props.",
-    name ? `Show the prize name clearly as readable on-image text: "${name}".` : "Include clear readable prize title text on the image.",
-    description ? `Details: ${description}.` : "",
+    name ? `Only on-image text:「${name}」(Traditional Chinese Hong Kong).` : "Only one Traditional Chinese (Hong Kong) prize title on the image.",
+    "Do not invent prices, ¥/円, HK$, expiry lines, Japanese, Korean, Simplified Chinese, or extra slogans.",
+    "Flat 2D Hong Kong coupon / loyalty reward catalog illustration, soft anime, vector-like, even lighting, minimal depth,",
+    "front-facing centered subject, plain soft background, no 3D, no strong shadows, no watermark, no brand logo, no extra props.",
+    description ? `Visual details only (do not print as extra copy): ${description}.` : "",
   ].filter(Boolean);
   return parts.join(" ").slice(0, MAX_PROMPT);
 }
