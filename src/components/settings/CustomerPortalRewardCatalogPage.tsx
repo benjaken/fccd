@@ -245,48 +245,50 @@ export function CustomerPortalRewardCatalogPage() {
         <h3 className="reward-admin-section-title" id="catalog-image-label">{t("portalRewardCatalog.sectionImage")}</h3>
         <div className="reward-admin-section-body">
           <p className="reward-admin-section-note">{t("portalRewardCatalog.imageHint")}</p>
-          <div className="reward-admin-image-media">
-            <div className="reward-admin-image-controls">
-              <div className="reward-admin-image-tabs" role="tablist" aria-labelledby="catalog-image-label">
-                <button type="button" role="tab" aria-selected={imageTab === "upload"} className={imageTab === "upload" ? "is-active" : undefined} disabled={editorBusy} onClick={() => setImageTab("upload")}>{t("portalRewardCatalog.imageTabUpload")}</button>
-                <button type="button" role="tab" aria-selected={imageTab === "ai"} className={imageTab === "ai" ? "is-active" : undefined} disabled={editorBusy} onClick={openAiTab}>{t("portalRewardCatalog.imageTabAi")}</button>
-              </div>
-              {imageTab === "upload" ? <div role="tabpanel" className="reward-admin-image-panel">
-                <label className="reward-admin-drop">
-                  <span
-                    className={dragOver ? "reward-admin-drop-target is-over" : "reward-admin-drop-target"}
-                    onDragEnter={allowDrop}
-                    onDragOver={allowDrop}
-                    onDragLeave={(event) => {
-                      event.preventDefault();
-                      if (event.currentTarget.contains(event.relatedTarget as Node | null)) return;
-                      setDragOver(false);
-                    }}
-                    onDrop={(event) => {
-                      event.preventDefault();
-                      setDragOver(false);
-                      void onUpload(event.dataTransfer.files?.[0]);
-                    }}
-                  >
-                    <strong>{t("portalRewardCatalog.imageDrop")}</strong>
-                    <small>{t("portalRewardCatalog.imageDropHint")}</small>
-                  </span>
-                  <input id="catalog-image" type="file" accept="image/jpeg,image/png,image/webp" disabled={editorBusy} aria-label={t("portalRewardCatalog.uploadImage")} onChange={event => { void onUpload(event.target.files?.[0]); event.target.value = ""; }} />
-                </label>
-              </div> : <div role="tabpanel" className="reward-admin-image-panel">
-                <p className="reward-admin-section-note">{t("portalRewardCatalog.imagePromptHint")}</p>
-                <div className="reward-admin-field"><label htmlFor="catalog-prize-name">{t("portalRewardCatalog.prizeName")}</label><Input id="catalog-prize-name" value={aiPrizeName} disabled={editorBusy} onChange={event => { const prize = event.target.value; setAiPrizeName(prize); syncAiPrompt(prize); }} /></div>
-                <div className="reward-admin-field"><label htmlFor="catalog-image-prompt">{t("portalRewardCatalog.imagePrompt")}</label><textarea id="catalog-image-prompt" value={aiPrompt} disabled={editorBusy} rows={4} onChange={event => setAiPrompt(event.target.value)} /></div>
-                <Button type="button" variant="outline" className="reward-admin-ai-button" disabled={editorBusy || !aiPrizeName.trim()} aria-busy={imageBusy} onClick={() => void onGenerate()}>
-                  {imageBusy ? t("portalRewardCatalog.generatingImage") : t("portalRewardCatalog.generateImage")}
-                </Button>
-              </div>}
+          <div className="reward-admin-image-tabs" role="tablist" aria-labelledby="catalog-image-label">
+            <button type="button" role="tab" aria-selected={imageTab === "upload"} className={imageTab === "upload" ? "is-active" : undefined} disabled={editorBusy} onClick={() => setImageTab("upload")}>{t("portalRewardCatalog.imageTabUpload")}</button>
+            <button type="button" role="tab" aria-selected={imageTab === "ai"} className={imageTab === "ai" ? "is-active" : undefined} disabled={editorBusy} onClick={openAiTab}>{t("portalRewardCatalog.imageTabAi")}</button>
+          </div>
+          {imageTab === "upload" ? <div role="tabpanel" className="reward-admin-image-media">
+            <label className="reward-admin-drop">
+              <span
+                className={dragOver ? "reward-admin-drop-target is-over" : "reward-admin-drop-target"}
+                onDragEnter={allowDrop}
+                onDragOver={allowDrop}
+                onDragLeave={(event) => {
+                  event.preventDefault();
+                  if (event.currentTarget.contains(event.relatedTarget as Node | null)) return;
+                  setDragOver(false);
+                }}
+                onDrop={(event) => {
+                  event.preventDefault();
+                  setDragOver(false);
+                  void onUpload(event.dataTransfer.files?.[0]);
+                }}
+              >
+                <strong>{t("portalRewardCatalog.imageDrop")}</strong>
+                <small>{t("portalRewardCatalog.imageDropHint")}</small>
+              </span>
+              <input id="catalog-image" type="file" accept="image/jpeg,image/png,image/webp" disabled={editorBusy} aria-label={t("portalRewardCatalog.uploadImage")} onChange={event => { void onUpload(event.target.files?.[0]); event.target.value = ""; }} />
+            </label>
+            <div className="reward-admin-image-preview-wrap">
+              {imagePreview ? <img className="reward-admin-image-preview" src={imagePreview} alt="" /> : <div className="reward-admin-image-preview-empty">{t("portalRewardCatalog.imageDrop")}</div>}
+              {imagePath ? <Button type="button" size="icon" variant="ghost" className="reward-admin-image-remove" disabled={editorBusy} aria-label={t("portalRewardCatalog.removeImage")} onClick={() => { setImagePath(null); setImagePreview(""); }}><Trash2 /></Button> : null}
+            </div>
+          </div> : <div role="tabpanel" className="reward-admin-image-media reward-admin-image-media-ai">
+            <div className="reward-admin-image-panel">
+              <p className="reward-admin-section-note">{t("portalRewardCatalog.imagePromptHint")}</p>
+              <div className="reward-admin-field"><label htmlFor="catalog-prize-name">{t("portalRewardCatalog.prizeName")}</label><Input id="catalog-prize-name" value={aiPrizeName} disabled={editorBusy} onChange={event => { const prize = event.target.value; setAiPrizeName(prize); syncAiPrompt(prize); }} /></div>
+              <div className="reward-admin-field"><label htmlFor="catalog-image-prompt">{t("portalRewardCatalog.imagePrompt")}</label><textarea id="catalog-image-prompt" value={aiPrompt} disabled={editorBusy} rows={4} onChange={event => setAiPrompt(event.target.value)} /></div>
+              <Button type="button" variant="outline" className="reward-admin-ai-button" disabled={editorBusy || !aiPrizeName.trim()} aria-busy={imageBusy} onClick={() => void onGenerate()}>
+                {imageBusy ? t("portalRewardCatalog.generatingImage") : t("portalRewardCatalog.generateImage")}
+              </Button>
             </div>
             <div className="reward-admin-image-preview-wrap">
               {imagePreview ? <img className="reward-admin-image-preview" src={imagePreview} alt="" /> : <div className="reward-admin-image-preview-empty">{t("portalRewardCatalog.imageDrop")}</div>}
               {imagePath ? <Button type="button" size="icon" variant="ghost" className="reward-admin-image-remove" disabled={editorBusy} aria-label={t("portalRewardCatalog.removeImage")} onClick={() => { setImagePath(null); setImagePreview(""); }}><Trash2 /></Button> : null}
             </div>
-          </div>
+          </div>}
         </div>
       </section>
 
