@@ -10,7 +10,7 @@ import { listPortalOrderBlackouts, type OrderBlackout } from "@/lib/customer-por
 import { ReceiptPreview } from "@/components/CustomerSelfServicePage";
 import type { CustomerSelfServiceOrderDetail } from "@/lib/customer-self-service";
 import { printPdf } from "@/lib/print-pdf";
-import { CustomerWorkspaceHeader, CustomerPortalAccessState } from "@/components/customer-portal/CustomerWorkspaceChrome";
+import { CustomerWorkspaceHeader, CustomerPortalAccessState, type CustomerPortalNavItem } from "@/components/customer-portal/CustomerWorkspaceChrome";
 import "./customer-portal.css";
 import "@/lib/customer-portal-i18n";
 
@@ -177,7 +177,7 @@ export function CustomerPortalPage({ load = fetchPortal, loginIntro, canSwitch =
   const {t, setParams, loggedIn, authLoading, data, setQuantities, busy, error, notice, setNotice, financialDocument, setFinancialDocument, inviteToken, refresh, run, setPage, setData, setInviteLink} = portal;
   const permissions = portalPermissions(data);
   const navItems = useMemo(() => {
-    const items = nav
+    const items: CustomerPortalNavItem[] = nav
       .filter(([key]) => key === "home" || key === "profile"
         || ((key === "menus" || key === "vip") && permissions.ordering)
         || (key === "orders" && permissions.orders)

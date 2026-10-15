@@ -248,3 +248,8 @@ Automated coverage: `test/i18n-placeholders.test.ts` rejects English-prose
 客戶介紹內容使用共享 RichTextEditor（粗體、斜體、底線、項目與編號清單），編輯面板桌面半寬、手機全寬。內容儲存為清理過的 HTML，客戶端使用相同 allowlist 顯示；舊純文字仍保留換行。
 
 飯盒餐單頁（`CustomerPortalLunchboxPage`）建立／編輯須使用 `SidePanel half`，桌面 50vw、`max-width: 767px` 時 100vw。餐單資料、配送設定及餐點以 `fieldset`／`legend` 分組；產品、單價、數量須有可見標籤，手機單欄。空列表為具編輯權限者提供建立餐單 CTA；VIP 週期與餐單勾選器使用獨立 SidePanel。頁面特例樣式放在 `src/components/settings/customer-lunchbox.css`，沿用既有 tokens、Button、Input 與 ListTable。
+
+
+### 個人活動飯盒（2026-10-15）
+
+/customer/personal/lunchbox 參照核准手機稿：薄荷綠介紹橫額、雙欄飯盒卡片、44px 數量按鈕及頁內 sticky 合計。點卡片進詳情，加入訂單後返回列表；下一步確認地址、送貨及運費後才提交預備訂單。訂購須知顯示實際香港截單時間，不猜測備餐日數。圖片及描述來自已授權餐單的產品資料；缺圖使用餐具圖示，不新增示例商品或未提供的營養資料。載入失敗提供重試，不當作空餐單。空狀態提供空飯盒插圖及訂單紀錄連結，按用戶要求不顯示聯絡文案。保留繁中／英文、存貨上限及冪等提交。

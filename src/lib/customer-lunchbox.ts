@@ -1,6 +1,6 @@
 import { supabase } from "@/lib/supabase";
 
-export type LunchboxItem = { product_id: string; name: string; unit_price: number; available_quantity: number };
+export type LunchboxItem = { product_id: string; name: string; unit_price: number; available_quantity: number; image_url?: string | null; description?: string | null };
 export type LunchboxMenu = {
   id: string; name: string; brand: string; delivery_date: string; delivery_time: string;
   cutoff_at: string; shipping_fee: number; items: LunchboxItem[];
