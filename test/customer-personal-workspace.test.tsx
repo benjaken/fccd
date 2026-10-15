@@ -47,7 +47,7 @@ describe("personal customer pages", () => {
   });
   it("navigates with the existing drawer without showing team controls or phone matching", async () => {
     mount(); await screen.findByRole("heading", { name: "下一張訂單狀態" }); fireEvent.click(screen.getByRole("button", { name: "開啟選單" }));
-    for (const name of ["首頁", "到會網站", "活動飯盒", "訂單紀錄（付款單據）", "積分換禮品", "送貨地址", "付款送貨", "我的資料", "關於我們", "客戶清單", "真實案例", "公司訂飯", "服務承諾"]) expect(screen.getAllByRole("link", { name }).length).toBeGreaterThan(0);
+    for (const name of ["首頁", "到會網站", "活動飯盒", "訂單紀錄", "積分換禮品", "送貨地址", "付款送貨", "我的資料", "關於我們", "客戶清單", "真實案例", "公司訂飯", "服務承諾"]) expect(screen.getAllByRole("link", { name }).length).toBeGreaterThan(0);
     expect(screen.queryByRole("link", { name: "團隊管理" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "VIP 訂飯" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "配對訂單" })).not.toBeInTheDocument();
