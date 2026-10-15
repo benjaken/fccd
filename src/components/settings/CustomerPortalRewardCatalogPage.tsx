@@ -284,7 +284,7 @@ export function CustomerPortalRewardCatalogPage() {
             </div>
             <div className="reward-admin-image-preview-wrap">
               {imagePreview ? <img className="reward-admin-image-preview" src={imagePreview} alt="" /> : <div className="reward-admin-image-preview-empty">{t("portalRewardCatalog.imageDrop")}</div>}
-              {imagePath ? <Button type="button" size="icon" variant="outline" className="reward-admin-image-remove" disabled={editorBusy} aria-label={t("portalRewardCatalog.removeImage")} onClick={() => { setImagePath(null); setImagePreview(""); }}><Trash2 /></Button> : null}
+              {imagePath ? <Button type="button" size="icon" variant="ghost" className="reward-admin-image-remove" disabled={editorBusy} aria-label={t("portalRewardCatalog.removeImage")} onClick={() => { setImagePath(null); setImagePreview(""); }}><Trash2 /></Button> : null}
             </div>
           </div>
         </div>
