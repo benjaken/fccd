@@ -42,6 +42,7 @@ export type WatiNotificationControls = {
   recipientMode: NotificationRecipientMode;
   allowedWatiPhones: string[];
   allowedEmails: string[];
+  blockedEmails: string[];
   eventControls: Record<string, NotificationDeliveryControl>;
   templateStates: Record<string, WatiTemplateState>;
   updatedAt: string;
@@ -61,6 +62,7 @@ type ControlCenterRow = {
   recipient_mode: string;
   allowed_wati_phones: string[] | null;
   allowed_emails: string[] | null;
+  blocked_emails?: string[] | null;
   event_controls: Record<string, NotificationDeliveryControl> | null;
   template_states: Record<string, WatiTemplateState> | null;
   updated_at: string;
@@ -82,6 +84,7 @@ function mapControls(row: ControlsRow): WatiNotificationControls {
     recipientMode: "environment",
     allowedWatiPhones: ["8613828747224"],
     allowedEmails: ["cfb.app02@chifung.net"],
+    blockedEmails: [],
     eventControls: DEFAULT_EVENT_CONTROLS,
     templateStates: {},
     updatedAt: row.updated_at,
@@ -98,6 +101,7 @@ function mapControlCenter(row: ControlCenterRow): WatiNotificationControls {
     recipientMode: mode === "allowlist" || mode === "live" ? mode : "environment",
     allowedWatiPhones: row.allowed_wati_phones ?? [],
     allowedEmails: row.allowed_emails ?? [],
+    blockedEmails: row.blocked_emails ?? [],
     eventControls: { ...DEFAULT_EVENT_CONTROLS, ...(row.event_controls ?? {}) },
     templateStates: row.template_states ?? {},
     updatedAt: row.updated_at,
@@ -151,11 +155,13 @@ export async function setNotificationRecipientPolicy(input: {
   mode: NotificationRecipientMode;
   allowedWatiPhones: string[];
   allowedEmails: string[];
+  blockedEmails: string[];
 }) {
   const { error } = await supabase.rpc("notification_recipient_policy_set", {
     p_recipient_mode: input.mode,
     p_allowed_wati_phones: input.allowedWatiPhones,
     p_allowed_emails: input.allowedEmails,
+    p_blocked_emails: input.blockedEmails,
   });
   if (error) throw error;
   return fetchWatiNotificationControls();

@@ -1114,6 +1114,10 @@
   gap: 10px;
 }
 
+.notification-email-blocklist {
+  grid-column: 1 / -1;
+}
+
 .notification-allowlist-fields label {
   display: grid;
   gap: 6px;

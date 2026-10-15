@@ -1,5 +1,6 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { EMAIL_FROM } from "../_shared/email-sender.ts";
+import { isBlockedNotificationEmail } from "../_shared/notification-email-blocklist.ts";
 import { applyDevelopNotificationMarker, toNotificationEmailRecipients, type NotificationRecipientPolicy } from "../_shared/notification-test-overrides.ts";
 
 type Job = { id: string; recipient: string; order_number: string; token: string; attempts: number };
@@ -18,16 +19,25 @@ Deno.serve(async request => {
   const origin = Deno.env.get("CUSTOMER_PORTAL_ORIGIN")?.replace(/\/$/, "");
   if (!url || !key || !resendKey || !origin) return json({ error: "email_configuration_missing" }, 503);
   const admin = createClient(url, key);
-  const policyResult = await admin.from("notification_recipient_policy").select("recipient_mode,allowed_wati_phones,allowed_emails").eq("singleton", true).single();
+  const policyResult = await admin.from("notification_recipient_policy").select("recipient_mode,allowed_wati_phones,allowed_emails,blocked_emails").eq("singleton", true).single();
   if (policyResult.error || !policyResult.data) return json({ error: "recipient_policy_unavailable" }, 503);
   const row = policyResult.data;
-  const policy: NotificationRecipientPolicy = { mode: row.recipient_mode, allowedEmails: row.allowed_emails || [], allowedWatiPhones: row.allowed_wati_phones || [] };
+  const policy: NotificationRecipientPolicy = { mode: row.recipient_mode, allowedEmails: row.allowed_emails || [], allowedWatiPhones: row.allowed_wati_phones || [], blockedEmails: row.blocked_emails || [] };
   if (!["environment", "allowlist", "live"].includes(policy.mode)) return json({ error: "invalid_recipient_policy" }, 503);
   const claimed = await admin.rpc("claim_customer_order_feedback_emails", { p_limit: 20 });
   if (claimed.error) return json({ error: "claim_failed" }, 500);
   let sent = 0;
   let failed = 0;
+  let skipped = 0;
   for (const job of (claimed.data || []) as Job[]) {
+    if (isBlockedNotificationEmail(job.recipient, policy.blockedEmails)) {
+      const updated = await admin.from("customer_order_feedback_email_outbox").update({
+        status: "failed", last_error: "recipient_email_blocked", locked_at: null,
+      }).eq("id", job.id);
+      if (updated.error) return json({ error: "queue_update_failed", sent, failed, skipped }, 500);
+      skipped++;
+      continue;
+    }
     const link = `${origin}/customer/feedback/${job.token}`;
     try {
       const recipients = toNotificationEmailRecipients([job.recipient], policy);
@@ -50,5 +60,5 @@ Deno.serve(async request => {
       failed++;
     }
   }
-  return json({ sent, failed });
+  return json({ sent, failed, skipped });
 });

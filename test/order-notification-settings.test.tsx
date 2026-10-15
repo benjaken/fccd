@@ -187,12 +187,14 @@ describe("order notification settings", () => {
 
     await screen.findByText("收件人安全模式");
     await userEvent.click(screen.getByRole("radio", { name: /^白名單/ }));
+    await userEvent.type(screen.getByRole("textbox", { name: /客戶郵件黑名單/ }), "guest@example.com");
     await userEvent.click(screen.getByRole("button", { name: "儲存收件人模式" }));
 
     await waitFor(() => expect(savePolicy).toHaveBeenCalledWith({
       mode: "allowlist",
       allowedWatiPhones: ["8613828747224"],
       allowedEmails: ["cfb.app02@chifung.net"],
+      blockedEmails: ["guest@example.com"],
     }));
   });
 

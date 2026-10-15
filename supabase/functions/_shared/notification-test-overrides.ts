@@ -6,6 +6,7 @@ export type NotificationRecipientPolicy = {
   mode: "environment" | "allowlist" | "live";
   allowedWatiPhones: string[];
   allowedEmails: string[];
+  blockedEmails?: string[];
 };
 
 function normalizeEmail(value: string) {

@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import {
+  Ban,
   BellRing,
   ClipboardCheck,
   Factory,
@@ -99,6 +100,7 @@ function completeWatiControls(value: LegacyWatiNotificationControls): WatiNotifi
     recipientMode: value.recipientMode ?? "environment",
     allowedWatiPhones: value.allowedWatiPhones ?? ["8613828747224"],
     allowedEmails: value.allowedEmails ?? ["cfb.app02@chifung.net"],
+    blockedEmails: value.blockedEmails ?? [],
     eventControls,
     templateStates: value.templateStates ?? {},
   };
@@ -124,6 +126,7 @@ export function WatiNotificationSettings({
     mode: NotificationRecipientMode;
     allowedWatiPhones: string[];
     allowedEmails: string[];
+    blockedEmails: string[];
   }) => Promise<LegacyWatiNotificationControls>;
 }) {
   const { t } = useTranslation();
@@ -138,6 +141,7 @@ export function WatiNotificationSettings({
   const [recipientMode, setRecipientMode] = useState<NotificationRecipientMode>("environment");
   const [phoneDraft, setPhoneDraft] = useState("");
   const [emailDraft, setEmailDraft] = useState("");
+  const [blockedDraft, setBlockedDraft] = useState("");
   const [savingPolicy, setSavingPolicy] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
 
@@ -153,6 +157,7 @@ export function WatiNotificationSettings({
           setRecipientMode(completed.recipientMode);
           setPhoneDraft(completed.allowedWatiPhones.join("\n"));
           setEmailDraft(completed.allowedEmails.join("\n"));
+          setBlockedDraft(completed.blockedEmails.join("\n"));
         }
       })
       .catch(() => {
@@ -234,6 +239,7 @@ export function WatiNotificationSettings({
     if (!canManage || savingPolicy || !controls) return;
     const phones = splitRecipients(phoneDraft);
     const emails = splitRecipients(emailDraft);
+    const blockedEmails = splitRecipients(blockedDraft);
     if (recipientMode === "allowlist" && phones.length === 0 && emails.length === 0) {
       setActionError(true);
       return;
@@ -245,11 +251,13 @@ export function WatiNotificationSettings({
         mode: recipientMode,
         allowedWatiPhones: phones,
         allowedEmails: emails,
+        blockedEmails,
       }));
       setControls(completed);
       setRecipientMode(completed.recipientMode);
       setPhoneDraft(completed.allowedWatiPhones.join("\n"));
       setEmailDraft(completed.allowedEmails.join("\n"));
+      setBlockedDraft(completed.blockedEmails.join("\n"));
     } catch {
       setActionError(true);
     } finally {
@@ -446,6 +454,18 @@ export function WatiNotificationSettings({
                 onChange={(event) => setEmailDraft(event.target.value)}
               />
               <small>{t("orderSettings.watiNotifications.policy.onePerLine")}</small>
+            </label>
+            <label className="notification-email-blocklist">
+              <span><Ban /> {t("orderSettings.watiNotifications.policy.blocklist")}</span>
+              <textarea
+                value={blockedDraft}
+                rows={3}
+                inputMode="email"
+                disabled={!canManage || savingPolicy}
+                placeholder={t("orderSettings.watiNotifications.policy.blocklistPlaceholder")}
+                onChange={(event) => setBlockedDraft(event.target.value)}
+              />
+              <small>{t("orderSettings.watiNotifications.policy.blocklistHint")}</small>
             </label>
           </div>
           {canManage ? (
