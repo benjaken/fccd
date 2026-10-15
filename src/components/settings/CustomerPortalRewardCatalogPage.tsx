@@ -1,5 +1,5 @@
 import { DragEvent, FormEvent, useCallback, useEffect, useState } from "react";
-import { Trash2 } from "lucide-react";
+import { Pencil, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useCurrentPageAccess } from "@/auth/use-page-access";
 import { Input } from "@/components/ui/input";
@@ -216,14 +216,17 @@ export function CustomerPortalRewardCatalogPage() {
     {imagePath && !imageBusy ? <button type="button" className="reward-admin-image-remove" disabled={editorBusy} aria-label={t("portalRewardCatalog.removeImage")} onClick={clearImage}><Trash2 aria-hidden="true" /></button> : null}
   </div>;
 
-  return <section className="reward-admin">
-    <header className="page-heading"><div className="reward-admin-actions">
-      {canEdit ? <Button type="button" onClick={openCreate}>{t("portalRewardCatalog.create")}</Button> : null}
-      <Button type="button" variant="outline" onClick={() => { setActionError(""); setPanel("redemptions"); }}>{t("portalRewardCatalog.redemptions")}</Button>
-      {canEdit ? <Button type="button" variant="outline" onClick={() => { setActionError(""); setPanel("link"); }}>{t("portalVoucher.linkTitle")}</Button> : null}
-    </div></header>
-    {error ? <div className="reward-admin-error" role="alert">{error} <Button variant="outline" disabled={loading} onClick={() => void load().catch(reason => setError(t(failure(reason))))}>{t("portal.retry")}</Button></div> : null}
-    {actionError && panel !== "editor" && panel !== "link" && panel !== "redemptions" ? <p className="reward-admin-error" role="alert">{actionError}</p> : null}
+  return <section className="orders-page reward-admin customer-portal-ops">
+    <div className="portal-ops-list-intro">
+      <h2 className="sr-only">{t("portalRewardCatalog.items")}</h2>
+      <header className="page-heading"><div className="reward-admin-actions">
+        {canEdit ? <Button type="button" onClick={openCreate}>{t("portalRewardCatalog.create")}</Button> : null}
+        <Button type="button" variant="outline" onClick={() => { setActionError(""); setPanel("redemptions"); }}>{t("portalRewardCatalog.redemptions")}</Button>
+        {canEdit ? <Button type="button" variant="outline" onClick={() => { setActionError(""); setPanel("link"); }}>{t("portalVoucher.linkTitle")}</Button> : null}
+      </div></header>
+      {error ? <div className="reward-admin-error" role="alert">{error} <Button variant="outline" disabled={loading} onClick={() => void load().catch(reason => setError(t(failure(reason))))}>{t("portal.retry")}</Button></div> : null}
+      {actionError && panel !== "editor" && panel !== "link" && panel !== "redemptions" ? <p className="reward-admin-error" role="alert">{actionError}</p> : null}
+    </div>
     {notice ? <CornerNotice message={notice} onDismiss={() => setNotice("")} /> : null}
     {canEdit ? <SidePanel half open={panel === "editor"} title={editing ? t("portalRewardCatalog.edit") : t("portalRewardCatalog.create")} onClose={closeEditor} closeLabel={t("portalOps.close")} footer={
       <div className="reward-admin-editor-footer">
@@ -355,10 +358,9 @@ export function CustomerPortalRewardCatalogPage() {
       </select></div>
       <div className="reward-admin-field"><label htmlFor="link-customer">{t("portalVoucher.customerId")}</label><Input id="link-customer" value={customerId} onChange={event => setCustomerId(event.target.value)} required /></div>
     </form></SidePanel> : null}
-    <section className="panel reward-admin-catalog-table">
-      <h2>{t("portalRewardCatalog.items")}</h2>
-      <ListTable loading={loading && !items.length} loadingLabel={t("portalCatalog.loading")} skeletonColumns={7} onRefresh={() => load().catch(reason => setError(t(failure(reason))))}
-        header={<tr><th>{t("portalRewardCatalog.image")}</th><th>{t("portalRewardCatalog.name")}</th><th>{t("portalRewardCatalog.kind")}</th><th>{t("portalRewardCatalog.points")}</th><th>{t("portalRewardCatalog.stock")}</th><th>{t("portalRewardCatalog.active")}</th><th>{t("orders.columns.actions")}</th></tr>}>
+    <article className="panel orders-panel orders-panel-no-toolbar">
+      <ListTable className="orders-table-wrap" loading={loading && !items.length} loadingLabel={t("portalCatalog.loading")} skeletonColumns={7} onRefresh={() => load().catch(reason => setError(t(failure(reason))))}
+        header={<tr><th>{t("portalRewardCatalog.image")}</th><th>{t("portalRewardCatalog.name")}</th><th>{t("portalRewardCatalog.kind")}</th><th>{t("portalRewardCatalog.points")}</th><th>{t("portalRewardCatalog.stock")}</th><th>{t("portalRewardCatalog.active")}</th><th className="table-actions-cell">{t("orders.columns.actions")}</th></tr>}>
         {items.map(item => <tr key={item.id}>
           <td>{previews[item.id] ? <button type="button" className="reward-admin-table-thumb-button" aria-label={t("portalRewardCatalog.previewImage", { name: item.name })} onClick={() => setLightbox({ url: previews[item.id], name: item.name })}><img className="reward-admin-table-thumb" src={previews[item.id]} alt="" /></button> : <span className="reward-admin-table-thumb is-empty" aria-hidden="true" />}</td>
           <td><div className="reward-admin-table-name">{item.name}{item.description ? <small>{item.description}</small> : null}{item.voucher_amount_hkd ? <small>HK$ {Number(item.voucher_amount_hkd).toFixed(2)}</small> : null}</div></td>
@@ -366,11 +368,24 @@ export function CustomerPortalRewardCatalogPage() {
           <td>{item.points_cost}</td>
           <td>{item.stock}</td>
           <td>{t(item.is_active ? "portalRewardCatalog.active" : "portalRewardCatalog.inactive")}</td>
-          <td className="table-actions-cell">{canEdit ? <Button variant="outline" disabled={saving} onClick={() => openEdit(item)}>{t("portalRewardCatalog.edit")}</Button> : null}</td>
+          <td className="table-actions-cell">{canEdit ? <div className="order-row-actions quote-row-actions"><button type="button" disabled={saving} aria-label={t("portalRewardCatalog.edit")} title={t("portalRewardCatalog.edit")} onClick={() => openEdit(item)}><Pencil aria-hidden="true" /></button></div> : null}</td>
         </tr>)}
         {!items.length ? <tr><td colSpan={7}>{error ? t("portalRewardCatalog.failed") : t("portalRewardCatalog.empty")}</td></tr> : null}
       </ListTable>
-    </section>
+      <TablePagination
+        summary={loading && !items.length ? "" : t("settings.pagination", { from: items.length ? 1 : 0, to: items.length, total: items.length })}
+        page={1}
+        totalPages={1}
+        loading={loading && !items.length}
+        onPrevious={() => undefined}
+        onNext={() => undefined}
+        onPageChange={() => undefined}
+        previousLabel={t("settings.previous")}
+        nextLabel={t("settings.next")}
+        pageLabel={t("orders.pageOf")}
+        jumpLabel={t("orders.jumpToPage")}
+      />
+    </article>
     <Modal open={Boolean(lightbox)} title={lightbox?.name ?? ""} closeLabel={t("portalOps.close")} size="lg" className="reward-admin-image-lightbox" onClose={() => setLightbox(null)}>
       {lightbox ? <img src={lightbox.url} alt={lightbox.name} /> : null}
     </Modal>

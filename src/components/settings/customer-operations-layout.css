@@ -52,6 +52,22 @@
   position: static;
   flex: 0 0 auto;
 }
+/* An intro with no elements must not leave the list panel in the auto-sized
+   first row. That keeps pagination under the rows instead of the page bottom. */
+.orders-page.customer-portal-ops > .portal-ops-list-intro:not(:has(*)) {
+  display: none;
+}
+.orders-page.customer-portal-ops:not(:has(> .portal-ops-list-intro:has(*))) {
+  grid-template-rows: minmax(0, 1fr);
+}
+.orders-page.customer-portal-ops > .orders-panel,
+.orders-page.customer-portal-ops > .portal-ops-scroll {
+  height: 100%;
+  min-height: 0;
+}
+.orders-panel.orders-panel-no-toolbar {
+  grid-template-rows: minmax(0, 1fr) auto;
+}
 .customer-portal-ops .portal-ops-scroll {
   flex: 1;
 }

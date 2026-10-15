@@ -1,10 +1,11 @@
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Plus, RefreshCw, UtensilsCrossed } from "lucide-react";
+import { Pencil, Plus, RefreshCw, UtensilsCrossed } from "lucide-react";
 import { useCurrentPageAccess } from "@/auth/use-page-access";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ListTable } from "@/components/ui/list-table";
+import { TablePagination } from "@/components/ui/table-pagination";
 import { CornerNotice } from "@/components/ui/corner-notice";
 import { SidePanel } from "@/components/ui/side-panel";
 import { Switch } from "@/components/ui/switch";
@@ -155,26 +156,29 @@ export function CustomerPortalLunchboxPage() {
   const activeMenus = menus.filter(menu => menu.is_active);
 
   return (
-    <section className="reward-admin lunchbox-ops-page customer-portal-ops">
-      <header className="page-heading">
-        <div className="reward-admin-actions">
-          {canEdit ? <Button type="button" onClick={startCreate}>{t("lunchboxOps.create")}</Button> : null}
-          {canEdit ? <Button type="button" variant="outline" onClick={() => setCycleOpen(true)}>{t("lunchboxOps.vipTitle")}</Button> : null}
-        </div>
-      </header>
+    <section className="orders-page reward-admin lunchbox-ops-page customer-portal-ops">
+      <div className="portal-ops-list-intro">
+        <h2 className="sr-only">{t("lunchboxOps.listTitle")}</h2>
+        <header className="page-heading">
+          <div className="reward-admin-actions">
+            {canEdit ? <Button type="button" onClick={startCreate}>{t("lunchboxOps.create")}</Button> : null}
+            {canEdit ? <Button type="button" variant="outline" onClick={() => setCycleOpen(true)}>{t("lunchboxOps.vipTitle")}</Button> : null}
+          </div>
+        </header>
+        {error && !loadFailed ? <p className="reward-admin-error" role="alert">{error}</p> : null}
+      </div>
       {notice ? <CornerNotice message={notice} onDismiss={() => setNotice("")} /> : null}
-      {error && !loadFailed ? <p className="reward-admin-error" role="alert">{error}</p> : null}
 
-      <section className="panel reward-admin-catalog-table">
-        <h2>{t("lunchboxOps.listTitle")}</h2>
+      <article className="panel orders-panel orders-panel-no-toolbar">
         {loadFailed ? (
-          <div className="reward-admin-empty lunchbox-empty" role="alert">
+          <div className="orders-state orders-state-error" role="alert">
             <UtensilsCrossed />
             <div><strong>{error}</strong></div>
             <Button variant="outline" onClick={() => void load()}><RefreshCw />{t("portal.retry")}</Button>
           </div>
         ) : (
           <ListTable
+            className="orders-table-wrap"
             loading={loading && !menus.length}
             loadingLabel={t("lunchboxOps.loading")}
             skeletonColumns={6}
@@ -186,7 +190,7 @@ export function CustomerPortalLunchboxPage() {
               <th>{t("lunchboxOps.delivery")}</th>
               <th>{t("lunchboxOps.items")}</th>
               <th>{t("lunchboxOps.status")}</th>
-              <th>{t("orders.columns.actions")}</th>
+              <th className="table-actions-cell">{t("orders.columns.actions")}</th>
             </tr>}
           >
             {menus.map(menu => (
@@ -197,14 +201,33 @@ export function CustomerPortalLunchboxPage() {
                 <td>{menu.items.length}</td>
                 <td>{menu.is_active ? t("lunchboxOps.active") : t("lunchboxOps.inactive")}</td>
                 <td className="table-actions-cell">
-                  {canEdit ? <Button type="button" variant="outline" onClick={() => startEdit(menu)}>{t("lunchboxOps.editAction")}</Button> : null}
+                  {canEdit ? (
+                    <div className="order-row-actions quote-row-actions">
+                      <button type="button" onClick={() => startEdit(menu)} aria-label={t("lunchboxOps.editAction")} title={t("lunchboxOps.editAction")}>
+                        <Pencil aria-hidden="true" />
+                      </button>
+                    </div>
+                  ) : null}
                 </td>
               </tr>
             ))}
             {!menus.length ? <tr><td colSpan={6}>{t("lunchboxOps.empty")}</td></tr> : null}
           </ListTable>
         )}
-      </section>
+        <TablePagination
+          summary={loading || loadFailed ? "" : t("settings.pagination", { from: menus.length ? 1 : 0, to: menus.length, total: menus.length })}
+          page={1}
+          totalPages={1}
+          loading={loading && !menus.length}
+          onPrevious={() => undefined}
+          onNext={() => undefined}
+          onPageChange={() => undefined}
+          previousLabel={t("settings.previous")}
+          nextLabel={t("settings.next")}
+          pageLabel={t("orders.pageOf")}
+          jumpLabel={t("orders.jumpToPage")}
+        />
+      </article>
 
       {canEdit ? (
         <SidePanel className="lunchbox-cycle-panel" open={cycleOpen} onClose={() => { if (!saving) setCycleOpen(false); }} title={t("lunchboxOps.vipTitle")} description={t("lunchboxOps.vipIntro")} closeLabel={t("lunchboxOps.close")} footer={<Button type="submit" form="vip-cycle-form" disabled={saving} aria-busy={saving}>{t("lunchboxOps.vipSave")}</Button>}>

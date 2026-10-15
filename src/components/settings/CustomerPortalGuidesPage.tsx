@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { Input } from "@/components/ui/input";
 import { ListTable } from "@/components/ui/list-table";
+import { TablePagination } from "@/components/ui/table-pagination";
 import { CornerNotice } from "@/components/ui/corner-notice";
 import { SidePanel } from "@/components/ui/side-panel";
 import { Switch } from "@/components/ui/switch";
@@ -85,18 +86,16 @@ export function CustomerPortalGuidesPage() {
         {notice ? <CornerNotice message={notice} onDismiss={() => setNotice("")} /> : null}
         {error && !loadFailed ? <p className="portal-ops-alert" role="alert">{error}</p> : null}
       </div>
-      <div className="portal-ops-scroll">
+      <article className="panel orders-panel orders-panel-no-toolbar">
         {loadFailed ? (
-          <div className="panel">
-            <div className="orders-state orders-state-error" role="alert">
-              <FilePenLine />
-              <div><strong>{error}</strong></div>
-              <Button variant="outline" onClick={() => void load()}><RefreshCw />{t("portal.retry")}</Button>
-            </div>
+          <div className="orders-state orders-state-error" role="alert">
+            <FilePenLine />
+            <div><strong>{error}</strong></div>
+            <Button variant="outline" onClick={() => void load()}><RefreshCw />{t("portal.retry")}</Button>
           </div>
         ) : (
           <ListTable
-            className="panel"
+            className="orders-table-wrap"
             loading={loading}
             loadingLabel={t("portalGuides.loading")}
             skeletonColumns={3}
@@ -105,19 +104,40 @@ export function CustomerPortalGuidesPage() {
             header={<tr>
               <th>{t("portalGuides.titleField")}</th>
               <th>{t("portalGuides.published")}</th>
-              <th />
+              <th className="table-actions-cell">{t("orders.columns.actions")}</th>
             </tr>}
           >
             {guides.map(guide => (
               <tr key={guide.slug}>
                 <td>{guide.title}</td>
                 <td>{guide.isPublished === false ? t("portalGuides.hidden") : t("portalGuides.visible")}</td>
-                <td>{canEdit ? <Button variant="outline" size="sm" onClick={() => open(guide)}><Pencil /> {t("portalGuides.edit")}</Button> : null}</td>
+                <td className="table-actions-cell">
+                  {canEdit ? (
+                    <div className="order-row-actions quote-row-actions">
+                      <button type="button" onClick={() => open(guide)} aria-label={t("portalGuides.edit")} title={t("portalGuides.edit")}>
+                        <Pencil aria-hidden="true" />
+                      </button>
+                    </div>
+                  ) : null}
+                </td>
               </tr>
             ))}
           </ListTable>
         )}
-      </div>
+        <TablePagination
+          summary={loading || loadFailed ? "" : t("settings.pagination", { from: guides.length ? 1 : 0, to: guides.length, total: guides.length })}
+          page={1}
+          totalPages={1}
+          loading={loading}
+          onPrevious={() => undefined}
+          onNext={() => undefined}
+          onPageChange={() => undefined}
+          previousLabel={t("settings.previous")}
+          nextLabel={t("settings.next")}
+          pageLabel={t("orders.pageOf")}
+          jumpLabel={t("orders.jumpToPage")}
+        />
+      </article>
       <SidePanel
         half
         open={Boolean(editing)}

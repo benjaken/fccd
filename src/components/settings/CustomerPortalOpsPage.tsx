@@ -509,11 +509,8 @@ export function CustomerPortalOpsPage() {
 
   const filteredEmpty = Boolean(search || status);
   return (
-    <section className="orders-page customer-portal-ops">
-      <div className="portal-ops-list-intro">
-
-        {notice ? <CornerNotice message={notice} onDismiss={() => setNotice("")} /> : null}
-      </div>
+    <section className="orders-page customer-portal-ops has-no-visible-heading">
+      {notice ? <CornerNotice message={notice} onDismiss={() => setNotice("")} /> : null}
       <article className="panel orders-panel">
         <header className="orders-toolbar">
           <ListSearchBar
