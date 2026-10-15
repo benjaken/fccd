@@ -319,19 +319,17 @@ export function CustomerPortalRewardCatalogPage() {
         </div>
       </section>
     </form></SidePanel> : null}
-    <SidePanel half open={panel === "redemptions"} title={t("portalRewardCatalog.redemptions")} onClose={() => setPanel(null)} closeLabel={t("portalOps.close")}>
+    <SidePanel open={panel === "redemptions"} className="side-panel-majority reward-redemptions-panel" title={t("portalRewardCatalog.redemptions")} onClose={() => setPanel(null)} closeLabel={t("portalOps.close")}>
       {actionError ? <p className="reward-admin-error" role="alert">{actionError}</p> : null}
-      <div className="reward-admin-records-panel">
-        <ListTable loading={loading} loadingLabel={t("portalCatalog.loading")} skeletonColumns={3} onRefresh={() => load().catch(reason => setError(t(failure(reason))))}
-          header={<tr><th>{t("portalVoucher.ownerId")}</th><th>{t("portalRewardCatalog.items")}</th><th>{t("orders.columns.actions")}</th></tr>}>
-          {redemptions.map(row => <tr key={row.id}><td>{row.account}</td><td>{row.name} · {row.points} · {t(row.status === "fulfilled" ? "portalRewardCatalog.fulfilled" : "portalRewardCatalog.pending")}{row.voucher_status ? ` · ${t(`portalVoucher.${row.voucher_status}`)}` : ""}{row.voucher_last4 ? ` · ${row.voucher_last4}` : ""}</td><td className="table-actions-cell">{canEdit && row.status === "pending" ? <Button type="button" variant="outline" disabled={fulfilling !== null} aria-busy={fulfilling === row.id} onClick={() => { setFulfilling(row.id); setActionError(""); void fulfillRewardRedemption(row.id).then(() => load()).catch(reason => setActionError(t(failure(reason)))).finally(() => setFulfilling(null)); }}>{t("portalRewardCatalog.fulfill")}</Button> : null}</td></tr>)}
-          {!redemptions.length ? <tr><td colSpan={3}>{error ? t("portalRewardCatalog.failed") : t("portalRewardCatalog.noRedemptions")}</td></tr> : null}
-        </ListTable>
-        <TablePagination summary={t("orders.pagination", {from: total ? (page-1)*15+1 : 0, to:Math.min(page*15,total),total})}
-          page={page} totalPages={Math.max(1,Math.ceil(total/15))} loading={loading}
-          onPrevious={() => setPage(current=>Math.max(1,current-1))} onNext={() => setPage(current=>Math.min(Math.max(1,Math.ceil(total/15)),current+1))}
-          onPageChange={setPage} previousLabel={t("orders.previous")} nextLabel={t("orders.next")} pageLabel={t("orders.pageOf")} jumpLabel={t("orders.jumpToPage")} />
-      </div>
+      <ListTable className="reward-redemptions-table" loading={loading} loadingLabel={t("portalCatalog.loading")} skeletonColumns={3} onRefresh={() => load().catch(reason => setError(t(failure(reason))))}
+        header={<tr><th>{t("portalVoucher.ownerId")}</th><th>{t("portalRewardCatalog.items")}</th><th>{t("orders.columns.actions")}</th></tr>}>
+        {redemptions.map(row => <tr key={row.id}><td>{row.account}</td><td>{row.name} · {row.points} · {t(row.status === "fulfilled" ? "portalRewardCatalog.fulfilled" : "portalRewardCatalog.pending")}{row.voucher_status ? ` · ${t(`portalVoucher.${row.voucher_status}`)}` : ""}{row.voucher_last4 ? ` · ${row.voucher_last4}` : ""}</td><td className="table-actions-cell">{canEdit && row.status === "pending" ? <Button type="button" variant="outline" disabled={fulfilling !== null} aria-busy={fulfilling === row.id} onClick={() => { setFulfilling(row.id); setActionError(""); void fulfillRewardRedemption(row.id).then(() => load()).catch(reason => setActionError(t(failure(reason)))).finally(() => setFulfilling(null)); }}>{t("portalRewardCatalog.fulfill")}</Button> : null}</td></tr>)}
+        {!redemptions.length ? <tr><td colSpan={3}>{error ? t("portalRewardCatalog.failed") : t("portalRewardCatalog.noRedemptions")}</td></tr> : null}
+      </ListTable>
+      <TablePagination summary={t("orders.pagination", {from: total ? (page-1)*15+1 : 0, to:Math.min(page*15,total),total})}
+        page={page} totalPages={Math.max(1,Math.ceil(total/15))} loading={loading}
+        onPrevious={() => setPage(current=>Math.max(1,current-1))} onNext={() => setPage(current=>Math.min(Math.max(1,Math.ceil(total/15)),current+1))}
+        onPageChange={setPage} previousLabel={t("orders.previous")} nextLabel={t("orders.next")} pageLabel={t("orders.pageOf")} jumpLabel={t("orders.jumpToPage")} />
     </SidePanel>
     {canEdit ? <SidePanel wide open={panel === "link"} title={t("portalVoucher.linkTitle")} description={t("portalVoucher.linkIntro")} onClose={() => { if (!linking) setPanel(null); }} closeLabel={t("portalOps.close")} footer={<Button type="submit" form="catalog-link-form" disabled={linking || !stores.length || storeError} aria-busy={linking}>{t("portalVoucher.link")}</Button>}>
       <form id="catalog-link-form" className="reward-admin-form reward-admin-panel-form" onSubmit={event => {
