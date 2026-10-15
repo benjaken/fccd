@@ -23,11 +23,12 @@
 
 .reward-admin-image-media{display:grid;grid-template-columns:minmax(0,1fr) minmax(148px,180px);gap:16px;align-items:stretch}
 .reward-admin-image-controls{display:grid;gap:12px;min-width:0}
-.reward-admin-image-preview-wrap{position:relative;display:block;width:100%;align-self:stretch}
+.reward-admin-image-preview-wrap{position:relative;display:block;width:100%;align-self:stretch;overflow:hidden;border-radius:10px}
 .reward-admin-image-preview{display:block;width:100%;aspect-ratio:1;object-fit:cover;border:1px solid var(--border);border-radius:10px;background:var(--muted)}
 .reward-admin-image-preview-empty{display:grid;place-items:center;width:100%;aspect-ratio:1;border:1px dashed var(--border);border-radius:10px;background:var(--muted);color:var(--muted-foreground);font-size:13px;text-align:center;padding:12px}
-.reward-admin-image-remove{position:absolute;right:8px;bottom:8px;z-index:1;width:36px;height:36px;border-radius:999px;background:color-mix(in srgb,var(--card) 92%,transparent);box-shadow:0 1px 4px color-mix(in srgb,var(--foreground) 18%,transparent)}
-.reward-admin-image-remove:hover{background:var(--card)}
+.reward-admin-image-remove{position:absolute;right:8px;bottom:8px;z-index:1;width:34px;height:34px;border-radius:999px;color:var(--destructive);background:color-mix(in srgb,var(--card) 88%,transparent);box-shadow:0 1px 4px color-mix(in srgb,var(--foreground) 16%,transparent)}
+.reward-admin-image-remove:hover{color:var(--destructive);background:var(--card)}
+.reward-admin-image-remove svg{width:18px;height:18px;stroke:currentColor}
 .reward-admin-image-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .reward-admin-image-tabs{display:flex;gap:0;border:1px solid var(--border);border-radius:8px;overflow:hidden;width:fit-content;max-width:100%}
 .reward-admin-image-tabs>button{appearance:none;border:0;background:var(--muted);color:var(--muted-foreground);min-height:36px;padding:6px 14px;font-size:13px;font-weight:600;cursor:pointer}
