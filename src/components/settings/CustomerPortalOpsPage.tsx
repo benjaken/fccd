@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ListSearchBar } from "@/components/ui/list-search-bar";
 import { ListTable } from "@/components/ui/list-table";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { CornerNotice } from "@/components/ui/corner-notice";
 import { SidePanel } from "@/components/ui/side-panel";
 import { Switch } from "@/components/ui/switch";
@@ -24,6 +25,7 @@ import {
   formatMenuPeriod,
   getPortalOpsOrg,
   listPortalOpsChannels,
+  deletePortalOpsOrg,
   listPortalOpsOrgs,
   listPortalOpsProducts,
   replacePortalOpsMenuItems,
@@ -45,6 +47,7 @@ function errorText(error: unknown) {
   if (message.includes("membership_conflict")) return "membershipConflict";
   if (message.includes("invalid_email")) return "invalidEmail";
   if (message.includes("invalid_menu_items") || message.includes("invalid_menu")) return "invalidMenu";
+  if (message.includes("in_use")) return "inUse";
   return "operationFailed";
 }
 
@@ -99,6 +102,7 @@ export function CustomerPortalOpsPage() {
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<"" | "active" | "inactive">("");
   const [page, setPage] = useState(1);
+  const [pendingDelete, setPendingDelete] = useState<OpsOrgListItem | null>(null);
   const statusFilter = useDeferredFilter(status, (value: "" | "active" | "inactive") => {
     setPage(1);
     setStatus(value);
@@ -587,13 +591,18 @@ export function CustomerPortalOpsPage() {
                 <td>{row.menu_count}</td>
                 <td>{row.is_active ? t("portalOps.active") : t("portalOps.inactive")}</td>
                 <td className="table-actions-cell">
-                  <div className="order-row-actions quote-row-actions">
+                  <div className="order-row-actions">
                     <Link to={`/settings/customer-portal/${row.id}`} aria-label={t("portalOps.manage")} title={t("portalOps.manage")}>
                       <Settings />
                     </Link>
                     {canEdit ? (
                       <button type="button" onClick={() => openEditOrg(row)} aria-label={t("portalOps.editOrg")} title={t("portalOps.editOrg")}>
                         <Pencil />
+                      </button>
+                    ) : null}
+                    {canEdit ? (
+                      <button type="button" className="is-row-delete" disabled={busy} onClick={() => setPendingDelete(row)} aria-label={t("portalOps.delete")} title={t("portalOps.delete")}>
+                        <Trash2 aria-hidden="true" />
                       </button>
                     ) : null}
                   </div>
@@ -605,8 +614,33 @@ export function CustomerPortalOpsPage() {
         <TablePagination summary={t("settings.pagination", { from: orgFrom, to: orgTo, total: filteredOrgs.length })} page={orgPage} totalPages={orgTotalPages} loading={loading}
  onPrevious={() => setPage(Math.max(1, orgPage - 1))} onNext={() => setPage(Math.min(orgTotalPages, orgPage + 1))}
  onPageChange={setPage} previousLabel={t("settings.previous")} nextLabel={t("settings.next")}
- pageLabel={t("orders.pageOf")} jumpLabel={t("orders.jumpToPage")} />
+        pageLabel={t("orders.pageOf")} jumpLabel={t("orders.jumpToPage")} />
       </article>
+      <ConfirmDialog
+        open={Boolean(pendingDelete)}
+        title={t("portalOps.deleteTitle", { name: pendingDelete?.name ?? "" })}
+        description={t("portalOps.deleteDescription")}
+        confirmLabel={t("portalOps.delete")}
+        cancelLabel={t("common.cancel")}
+        closeLabel={t("portalOps.close")}
+        variant="destructive"
+        busy={busy}
+        onCancel={() => { if (!busy) setPendingDelete(null); }}
+        onConfirm={() => {
+          if (!pendingDelete || busy) return;
+          const target = pendingDelete;
+          setBusy(true);
+          setError("");
+          void deletePortalOpsOrg(target.id)
+            .then(() => {
+              setOrgs(current => current.filter(row => row.id !== target.id));
+              setNotice(t("portalOps.deleted"));
+              setPendingDelete(null);
+            })
+            .catch(err => setError(t(`portalOps.${errorText(err)}`)))
+            .finally(() => setBusy(false));
+        }}
+      />
       {orgPanelOpen ? renderOrgPanel() : null}
     </section>
   );

@@ -13,6 +13,7 @@ async function rpc<T>(name: string, args?: Record<string, unknown>): Promise<T> 
 }
 
 export const listLunchboxes = () => rpc<LunchboxOpsMenu[]>("customer_portal_ops_list_lunchboxes");
+export const deleteLunchbox = (id: string) => rpc<void>("customer_portal_ops_delete_lunchbox", { p_id: id });
 export const upsertLunchbox = (input: {
   id?: string | null; channelId: string; name: string; deliveryDate: string; deliveryTime: string;
   cutoffAt: string; shippingFee: number; isActive: boolean;

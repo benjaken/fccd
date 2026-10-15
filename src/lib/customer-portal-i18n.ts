@@ -434,7 +434,35 @@ i18n.addResourceBundle("en", "translation", { mealCalendar: {
 }}, true, true);
 
 
-i18n.addResourceBundle("zh-HK", "translation", { portalOps: { formBasics: "基本資料", formDelivery: "供餐安排", formSettings: "設定" } }, true, true);
+i18n.addResourceBundle("zh-HK", "translation", {
+  portalOps: {
+    formBasics: "基本資料", formDelivery: "供餐安排", formSettings: "設定",
+    delete: "刪除", deleteTitle: "刪除「{{name}}」？", deleteDescription: "刪除後不能復原。", deleted: "已刪除。", inUse: "已有相關紀錄，不能刪除。",
+  },
+  portalGuides: {
+    delete: "刪除", deleteTitle: "刪除「{{name}}」？", deleteDescription: "這頁會從客戶服務平台移除，而且不能復原。", deleted: "已刪除。",
+  },
+  lunchboxOps: {
+    delete: "刪除", deleteTitle: "刪除「{{name}}」？", deleteDescription: "刪除後不能復原。", deleted: "已刪除。", inUse: "這張餐單已有訂單，不能刪除。",
+  },
+  portalRewardCatalog: {
+    delete: "刪除", deleteTitle: "刪除「{{name}}」？", deleteDescription: "刪除後不能復原。", deleted: "已刪除。", inUse: "這項已有兌換紀錄，不能刪除。",
+  },
+}, true, true);
+i18n.addResourceBundle("en", "translation", {
+  portalOps: {
+    delete: "Delete", deleteTitle: "Delete “{{name}}”?", deleteDescription: "This cannot be undone.", deleted: "Deleted.", inUse: "This record is already in use and cannot be deleted.",
+  },
+  portalGuides: {
+    delete: "Delete", deleteTitle: "Delete “{{name}}”?", deleteDescription: "This page is removed from the customer service portal and cannot be restored.", deleted: "Deleted.",
+  },
+  lunchboxOps: {
+    delete: "Delete", deleteTitle: "Delete “{{name}}”?", deleteDescription: "This cannot be undone.", deleted: "Deleted.", inUse: "This menu already has orders and cannot be deleted.",
+  },
+  portalRewardCatalog: {
+    delete: "Delete", deleteTitle: "Delete “{{name}}”?", deleteDescription: "This cannot be undone.", deleted: "Deleted.", inUse: "This reward already has redemptions and cannot be deleted.",
+  },
+}, true, true);
 i18n.addResourceBundle("en-GB", "translation", { portalOps: { formBasics: "Basic information", formDelivery: "Delivery schedule", formSettings: "Settings" } }, true, true);
 i18n.addResourceBundle("zh-HK", "translation", { portalGuides: {
   title: "客戶介紹",

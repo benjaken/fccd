@@ -42,6 +42,11 @@ export async function fetchPortalGuideDrafts() {
   return parsePortalGuides(data);
 }
 
+export async function deletePortalGuide(slug: string) {
+  const { error } = await supabase.rpc("customer_portal_ops_delete_guide", { p_slug: slug });
+  if (error) throw error;
+}
+
 export async function savePortalGuide(guide: { slug: string; title: string; body: string; isPublished: boolean }) {
   const { data, error } = await supabase.rpc("customer_portal_ops_save_guide", {
     p_slug: guide.slug,

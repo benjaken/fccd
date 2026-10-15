@@ -126,6 +126,7 @@ export async function redeemOrganizationCatalog(requestId: string, catalogId: st
   return result;
 }
 export const listRewardCatalogOps = () => rpc<RewardCatalogOpsItem[]>("customer_portal_ops_list_reward_catalog");
+export const deleteRewardCatalogItem = (id: string) => rpc<void>("customer_portal_ops_delete_reward_catalog", { p_id: id });
 export const listRewardRedemptions = () => rpc<RewardRedemption[]>("customer_portal_ops_list_reward_redemptions");
 export const fetchRewardRedemptionPage = (page: number) =>
   rpc<{ rows: RewardRedemption[]; total: number; page: number }>("customer_portal_ops_redemption_page", { p_page: page });

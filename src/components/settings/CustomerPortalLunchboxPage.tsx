@@ -1,16 +1,17 @@
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Pencil, Plus, RefreshCw, UtensilsCrossed } from "lucide-react";
+import { Pencil, Plus, RefreshCw, Trash2, UtensilsCrossed } from "lucide-react";
 import { useCurrentPageAccess } from "@/auth/use-page-access";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ListTable } from "@/components/ui/list-table";
 import { TablePagination } from "@/components/ui/table-pagination";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { CornerNotice } from "@/components/ui/corner-notice";
 import { SidePanel } from "@/components/ui/side-panel";
 import { Switch } from "@/components/ui/switch";
 import { listPortalOpsChannels, listPortalOpsProducts, type OpsChannel, type OpsProduct } from "@/lib/customer-portal-ops";
-import { listLunchboxes, listVipCycles, replaceLunchboxItems, setVipCycleMenus, upsertLunchbox, upsertVipCycle, type LunchboxOpsMenu, type VipCycle } from "@/lib/customer-lunchbox-ops";
+import { deleteLunchbox, listLunchboxes, listVipCycles, replaceLunchboxItems, setVipCycleMenus, upsertLunchbox, upsertVipCycle, type LunchboxOpsMenu, type VipCycle } from "@/lib/customer-lunchbox-ops";
 import "@/components/customer-portal.css";
 import "./customer-portal-reward-catalog.css";
 import "./customer-lunchbox.css";
@@ -63,6 +64,7 @@ export function CustomerPortalLunchboxPage() {
   const [cycleName, setCycleName] = useState("");
   const [cycleCutoff, setCycleCutoff] = useState(localInput(new Date()));
   const [cycleMenus, setCycleMenus] = useState<string[]>([]);
+  const [pendingDelete, setPendingDelete] = useState<LunchboxOpsMenu | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -206,6 +208,9 @@ export function CustomerPortalLunchboxPage() {
                       <button type="button" onClick={() => startEdit(menu)} aria-label={t("lunchboxOps.editAction")} title={t("lunchboxOps.editAction")}>
                         <Pencil aria-hidden="true" />
                       </button>
+                      <button type="button" className="is-row-delete" disabled={saving} onClick={() => setPendingDelete(menu)} aria-label={t("lunchboxOps.delete")} title={t("lunchboxOps.delete")}>
+                        <Trash2 aria-hidden="true" />
+                      </button>
                     </div>
                   ) : null}
                 </td>
@@ -228,6 +233,38 @@ export function CustomerPortalLunchboxPage() {
           jumpLabel={t("orders.jumpToPage")}
         />
       </article>
+      <ConfirmDialog
+        open={Boolean(pendingDelete)}
+        title={t("lunchboxOps.deleteTitle", { name: pendingDelete?.name ?? "" })}
+        description={t("lunchboxOps.deleteDescription")}
+        confirmLabel={t("lunchboxOps.delete")}
+        cancelLabel={t("common.cancel")}
+        closeLabel={t("lunchboxOps.close")}
+        variant="destructive"
+        busy={saving}
+        onCancel={() => { if (!saving) setPendingDelete(null); }}
+        onConfirm={() => {
+          if (!pendingDelete || saving) return;
+          const target = pendingDelete;
+          setSaving(true);
+          setError("");
+          void deleteLunchbox(target.id)
+            .then(() => {
+              setMenus(current => current.filter(menu => menu.id !== target.id));
+              setNotice(t("lunchboxOps.deleted"));
+              setPendingDelete(null);
+            })
+            .catch(reason => {
+              const message = reason instanceof Error
+                ? reason.message
+                : typeof reason === "object" && reason && "message" in reason
+                  ? String(reason.message)
+                  : "";
+              setError(t(message.includes("in_use") ? "lunchboxOps.inUse" : "lunchboxOps.failed"));
+            })
+            .finally(() => setSaving(false));
+        }}
+      />
 
       {canEdit ? (
         <SidePanel className="lunchbox-cycle-panel" open={cycleOpen} onClose={() => { if (!saving) setCycleOpen(false); }} title={t("lunchboxOps.vipTitle")} description={t("lunchboxOps.vipIntro")} closeLabel={t("lunchboxOps.close")} footer={<Button type="submit" form="vip-cycle-form" disabled={saving} aria-busy={saving}>{t("lunchboxOps.vipSave")}</Button>}>

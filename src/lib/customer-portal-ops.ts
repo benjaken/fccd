@@ -84,6 +84,7 @@ async function rpc<T>(name: string, args?: Record<string, unknown>): Promise<T> 
 }
 
 export const listPortalOpsOrgs = () => rpc<OpsOrgListItem[]>("customer_portal_ops_list_orgs");
+export const deletePortalOpsOrg = (orgId: string) => rpc<void>("customer_portal_ops_delete_org", { p_id: orgId });
 export const getPortalOpsOrg = (orgId: string) =>
   rpc<OpsOrgDetail>("customer_portal_ops_get_org", { p_org_id: orgId });
 export const upsertPortalOpsOrg = (input: {

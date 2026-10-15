@@ -68,6 +68,9 @@
 .orders-panel.orders-panel-no-toolbar {
   grid-template-rows: minmax(0, 1fr) auto;
 }
+.order-row-actions button.is-row-delete {
+  color: var(--destructive);
+}
 .customer-portal-ops .portal-ops-scroll {
   flex: 1;
 }

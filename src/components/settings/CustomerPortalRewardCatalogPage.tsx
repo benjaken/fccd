@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import { ListTable } from "@/components/ui/list-table";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { CornerNotice } from "@/components/ui/corner-notice";
 import { SidePanel } from "@/components/ui/side-panel";
 import { TablePagination } from "@/components/ui/table-pagination";
@@ -13,6 +14,7 @@ import {
   buildRewardCatalogImagePrompt,
   fulfillRewardRedemption,
   generateRewardCatalogImage,
+  deleteRewardCatalogItem,
   listRewardCatalogOps,
   fetchRewardRedemptionPage,
   rewardCatalogImageUrl,
@@ -35,6 +37,7 @@ function failure(error: unknown) {
     return "portalRewardCatalog.imageFailed";
   }
   if (text.includes("redemption_not_pending")) return "portalRewardCatalog.notPending";
+  if (text.includes("in_use")) return "portalRewardCatalog.inUse";
   if (text.includes("invalid_shopify_customer")) return "portalRewardCatalog.invalid";
   return "portalRewardCatalog.failed";
 }
@@ -68,6 +71,7 @@ export function CustomerPortalRewardCatalogPage() {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [saving, setSaving] = useState(false);
+  const [pendingDelete, setPendingDelete] = useState<RewardCatalogOpsItem | null>(null);
   const [fulfilling, setFulfilling] = useState<string | null>(null);
   const [storeError, setStoreError] = useState(false);
   const [linking, setLinking] = useState(false);
@@ -368,7 +372,7 @@ export function CustomerPortalRewardCatalogPage() {
           <td>{item.points_cost}</td>
           <td>{item.stock}</td>
           <td>{t(item.is_active ? "portalRewardCatalog.active" : "portalRewardCatalog.inactive")}</td>
-          <td className="table-actions-cell">{canEdit ? <div className="order-row-actions quote-row-actions"><button type="button" disabled={saving} aria-label={t("portalRewardCatalog.edit")} title={t("portalRewardCatalog.edit")} onClick={() => openEdit(item)}><Pencil aria-hidden="true" /></button></div> : null}</td>
+          <td className="table-actions-cell">{canEdit ? <div className="order-row-actions quote-row-actions"><button type="button" disabled={saving} aria-label={t("portalRewardCatalog.edit")} title={t("portalRewardCatalog.edit")} onClick={() => openEdit(item)}><Pencil aria-hidden="true" /></button><button type="button" className="is-row-delete" disabled={saving} aria-label={t("portalRewardCatalog.delete")} title={t("portalRewardCatalog.delete")} onClick={() => setPendingDelete(item)}><Trash2 aria-hidden="true" /></button></div> : null}</td>
         </tr>)}
         {!items.length ? <tr><td colSpan={7}>{error ? t("portalRewardCatalog.failed") : t("portalRewardCatalog.empty")}</td></tr> : null}
       </ListTable>
@@ -386,6 +390,31 @@ export function CustomerPortalRewardCatalogPage() {
         jumpLabel={t("orders.jumpToPage")}
       />
     </article>
+    <ConfirmDialog
+      open={Boolean(pendingDelete)}
+      title={t("portalRewardCatalog.deleteTitle", { name: pendingDelete?.name ?? "" })}
+      description={t("portalRewardCatalog.deleteDescription")}
+      confirmLabel={t("portalRewardCatalog.delete")}
+      cancelLabel={t("common.cancel")}
+      closeLabel={t("portalOps.close")}
+      variant="destructive"
+      busy={saving}
+      onCancel={() => { if (!saving) setPendingDelete(null); }}
+      onConfirm={() => {
+        if (!pendingDelete || saving) return;
+        const target = pendingDelete;
+        setSaving(true);
+        setActionError("");
+        void deleteRewardCatalogItem(target.id)
+          .then(() => {
+            setItems(current => current.filter(item => item.id !== target.id));
+            setNotice(t("portalRewardCatalog.deleted"));
+            setPendingDelete(null);
+          })
+          .catch(reason => setActionError(t(failure(reason))))
+          .finally(() => setSaving(false));
+      }}
+    />
     <Modal open={Boolean(lightbox)} title={lightbox?.name ?? ""} closeLabel={t("portalOps.close")} size="lg" className="reward-admin-image-lightbox" onClose={() => setLightbox(null)}>
       {lightbox ? <img src={lightbox.url} alt={lightbox.name} /> : null}
     </Modal>

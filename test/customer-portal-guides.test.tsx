@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { CustomerPortalGuidesPage } from "@/components/settings/CustomerPortalGuidesPage";
 import { supabase } from "@/lib/supabase";
@@ -35,5 +35,15 @@ describe("customer guide editor", () => {
     }));
     expect(await screen.findByRole("status")).toHaveTextContent("已儲存。");
     expect(screen.getByText("關於食品頻道")).toBeInTheDocument();
+  });
+
+  it("deletes a guide after confirmation", async () => {
+    render(<CustomerPortalGuidesPage />);
+    expect(await screen.findByText("關於我們")).toBeInTheDocument();
+    fireEvent.click(screen.getAllByRole("button", { name: "刪除" })[0]);
+    fireEvent.click(within(await screen.findByRole("alertdialog")).getByRole("button", { name: "刪除" }));
+    await waitFor(() => expect(supabase.rpc).toHaveBeenCalledWith("customer_portal_ops_delete_guide", { p_slug: "about" }));
+    expect(screen.queryByText("關於我們")).not.toBeInTheDocument();
+    expect(await screen.findByRole("status")).toHaveTextContent("已刪除。");
   });
 });
