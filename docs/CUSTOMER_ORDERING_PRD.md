@@ -458,7 +458,7 @@ Shopify 修改未被 FCCD 接受時顯示原因；同步失敗顯示待同步／
 
 HK Lunch Box 沿用 `B-{sequence}` 訂單編號（見 `20260829140000_fix_hk_lunch_box_order_numbers.sql`）。個人訂單的品牌官網由 `customer_personal_snapshot.order_states[*].store_domain` 提供：優先使用訂單綁定的有效 Shopify 店舖，舊單沒有店舖 ID 時使用該 `channel_id` 唯一的有效店舖。此查詢由 `20261015140000_customer_personal_brand_website.sql` 提供；缺少這項 migration 會令前端誤顯示未設定品牌官網。不可只依 B 字頭覆寫已有的品牌渠道。
 
-`src/lib/brand-logo.ts` 明確處理 Food Channel Catering、HK Lunch Box、HK Party Food、Food Channel Kitchen、FC Cuisine。工具內部分英文及中文顯示名稱有不一致，不能用字串／logo 工具當作六品牌主資料；以 `channels` 及經核對的正式品牌名稱為準。品牌正式名稱中的 Lunch Box 保留，不屬於平台文案限定用餐時段。
+`src/lib/brand-logo.ts` 明確處理 Food Channel Catering、HK Lunch Box、HK Party Food、Food Channel Kitchen、FC Cuisine，並為 Express 及 Delivery 提供品牌官網 logo 映射（`getStorefrontLogoPath`；只有 logo，不影響文件品牌）。工具內部分英文及中文顯示名稱有不一致，不能用字串／logo 工具當作品牌主資料；以 `channels` 及經核對的正式品牌名稱為準。品牌正式名稱中的 Lunch Box 保留，不屬於平台文案限定用餐時段。
 
 ### 15.3 資料及接口沿用方案
 

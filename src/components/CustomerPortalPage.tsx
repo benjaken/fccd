@@ -120,7 +120,7 @@ export function CustomerPortalPage({ load = fetchPortal, loginIntro, canSwitch =
   const portal = useCustomerPortalController(load,onMembershipChanged,activeOrganizationId);
   const location = useLocation();
   const onGuide = Boolean(useMatch("/customer/guides/:slug"));
-  const {t, setParams, loggedIn, authLoading, data, busy, error, notice, setNotice, financialDocument, setFinancialDocument, inviteToken, refresh, run, setPage, setData, setInviteLink, page} = portal;
+  const {t, setParams, loggedIn, authLoading, data, busy, error, setError, notice, setNotice, financialDocument, setFinancialDocument, inviteToken, refresh, run, setPage, setData, setInviteLink, page} = portal;
   const permissions = portalPermissions(data);
   const navItems = useMemo(() => {
     const items: CustomerPortalNavItem[] = nav

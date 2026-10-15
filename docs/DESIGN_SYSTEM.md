@@ -455,3 +455,6 @@ Customer portal navigation drawers keep logout visible in a non-shrinking footer
 機構客戶「到會網站」（`/customer/menus`）沿用個人客戶 `.personal-workspace` 版型，只作展示，不提供落單。頁面以大標題「最新餐單」開頭，列出各品牌官網入口卡片（品牌 logo、名稱、網域、前往品牌官網），資料取自已啟用的 Shopify 店舖，與個人客戶到會網站一致；載入失敗當作空狀態並顯示本地化文案。機構客戶只在「活動飯盒」落單，因此本頁已移除指定餐單、常用訂單及餐單詳情；機構首頁的「最新餐單」快捷入口、機構訂單頁的待送提交區塊及訂單詳情「再次訂購」亦一併移除。品牌官網卡片沿用個人客戶的 `.personal-menu-list`／`.personal-menu-row`，未有指定餐單資料時不影響其餘頁面。
 
 共享空狀態使用 `src/components/ui/empty-state.tsx` 的 `EmptyState`：預設為可無損縮放的 `/assets/empty-box.svg`，標題與說明由頁面傳入本地化文字，可選自訂插圖及操作。客戶訂單列表與首頁無訂單紙箱共用此 SVG。
+
+
+`/customer/team` uses four independent rounded cards for member permissions, members, pending invitations and invite creation. Permission controls use the shared accessible Switch in a two-column grid; member totals, admins and members appear above the member rows. Small screens wrap member actions while retaining menu scopes and member profile editing. Existing portal alerts retain their shared presentation.

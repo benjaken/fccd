@@ -1,5 +1,6 @@
 export const FOOD_CHANNEL_CATERING_LOGO_PATH = "/assets/fc-catering-logo.svg";
 export const FOOD_CHANNEL_EXPRESS_LOGO_PATH = "/assets/fc-express-logo.png";
+export const FOOD_CHANNEL_DELIVERY_LOGO_PATH = "/assets/fc-delivery-logo.png";
 export const HK_LUNCH_BOX_LOGO_PATH = "/assets/fcc-hk-lunch-box-logo.svg";
 export const HK_PARTY_FOOD_LOGO_PATH = "/assets/fcc-hk-party-food-logo.svg";
 export const FOOD_CHANNEL_KITCHEN_LOGO_PATH = "/assets/fck-logo.svg";
@@ -10,6 +11,7 @@ const PARTY_FOOD_PATTERN = /(?:party\s*food|partyfood|hkpartyfood|\bfcpq\d*)/i;
 const KITCHEN_PATTERN = /(?:food\s*channel(?:s)?\s*kitchen|\bfck\b|中央廚房|kitchen|\bfckq\d*)/i;
 const CUISINE_PATTERN = /(?:福滿樓|fc\s*cuisine|cuisine)/i;
 const EXPRESS_PATTERN = /(?:\bexpress\b|foodchannels-express)/i;
+const DELIVERY_PATTERN = /(?:\bdelivery\b|foodchannels-delivery)/i;
 const CATERING_PATTERN = /(?:\bcatering\b|foodchannels-catering)/i;
 
 /** Logo for a storefront menu card. Unknown brands return null so they are not shown with another brand's mark. */
@@ -22,6 +24,7 @@ export function getStorefrontLogoPath(
   if (CUISINE_PATTERN.test(brandText)) return FC_CUISINE_LOGO_PATH;
   if (KITCHEN_PATTERN.test(brandText)) return FOOD_CHANNEL_KITCHEN_LOGO_PATH;
   if (EXPRESS_PATTERN.test(brandText)) return FOOD_CHANNEL_EXPRESS_LOGO_PATH;
+  if (DELIVERY_PATTERN.test(brandText)) return FOOD_CHANNEL_DELIVERY_LOGO_PATH;
   if (CATERING_PATTERN.test(brandText)) return FOOD_CHANNEL_CATERING_LOGO_PATH;
   return null;
 }

@@ -266,7 +266,13 @@ describe("organization portal",()=>{
   it("lets an admin turn off a member permission", async () => {
     mocks.submit.mockResolvedValue({ data: { ordering: false, orders: true, delivery: true, points: true, redeem: true, members: false, export: false, menus: false, settings: false }, error: null });
     mount({ ...snapshot, role: "admin" }, "/customer/team");
-    fireEvent.click(await screen.findByRole("checkbox", { name: "訂餐管理" }));
+    const orderingSwitch = await screen.findByRole("switch", { name: "訂餐管理" });
+    expect(orderingSwitch).toBeChecked();
+    expect(screen.getAllByRole("switch")).toHaveLength(9);
+    expect(screen.getByText("成員總數")).toBeInTheDocument();
+    expect(screen.getByText("目前沒有待接受邀請。")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "建立邀請連結" })).toBeEnabled();
+    fireEvent.click(orderingSwitch);
     await waitFor(() => expect(mocks.submit).toHaveBeenCalledWith("customer_portal_set_member_permission", { p_permission: "ordering", p_allowed: false }));
   });
   it("lets a member with only menu management assign menus",async()=>{

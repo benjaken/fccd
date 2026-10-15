@@ -1,3 +1,6 @@
+import { Users, UserRound, ShieldCheck, UtensilsCrossed, FileText, Download, ClipboardList, Truck, Coins, Gift, Settings, Crown, Mail, MailOpen, Link as LinkIcon } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import "./customer-team.css";
 import { useEffect, useState } from "react";
 import { useOutletContext, Navigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -17,6 +20,8 @@ import {
   type PortalPermission,
 } from "@/lib/customer-portal";
 import type { CustomerPortalController } from "@/components/CustomerPortalPage";
+
+const permissionIcons = { members: Users, ordering: UtensilsCrossed, orders: FileText, export: Download, menus: ClipboardList, delivery: Truck, points: Coins, redeem: Gift, settings: Settings };
 
 export function CustomerTeamPage() {
   const portal = useOutletContext<CustomerPortalController>();
@@ -59,39 +64,50 @@ export function CustomerTeamPage() {
   }
 
   return (
-    <section className="personal-profile">
-      <h1>{t("portal.team")}</h1>
+    <section className="customer-team">
+      <h1 className="sr-only">{t("portal.team")}</h1>
       {data.role === "admin" && grants ? (
-        <div className="portal-menu-scopes">
-          <h2>{t("portal.memberPermissions")}</h2>
+        <section className="team-card team-permissions">
+          <h2><span className="team-section-icon"><ShieldCheck aria-hidden="true" /></span>{t("portal.memberPermissions")}</h2>
           <p>{t("portal.memberPermissionsHint")}</p>
-          {portalPermissionKeys.map(key => (
-            <label key={key} className="portal-menu-scope-option">
-              <input
-                type="checkbox"
+          <div className="team-permission-grid">
+          {portalPermissionKeys.map(key => {
+            const Icon = permissionIcons[key];
+            return <label key={key} className="team-permission">
+              <Icon aria-hidden="true" />
+              <span>{t(`portal.permissions.${key}`)}</span>
+              <Switch
+                aria-label={t(`portal.permissions.${key}`)}
                 checked={grants[key]}
                 disabled={busy}
-                onChange={() => void run(async () => {
-                  const allowed = !grants[key];
+                onCheckedChange={allowed => void run(async () => {
                   const saved = await setPortalMemberPermission(key, allowed, data.organization.id);
                   setGrants(memberPermissionGrants({ memberPermissions: saved }));
                   await refresh();
                 }, t("portal.permissionsSaved"))}
               />
-              <span>{t(`portal.permissions.${key}`)}</span>
-            </label>
-          ))}
-        </div>
+            </label>;
+          })}
+          </div>
+        </section>
       ) : null}
-      {permissions.members || permissions.menus ? <h2>{t("portal.members")}</h2> : null}
-      {permissions.members || permissions.menus ? data.members.map(member => {
+      {permissions.members || permissions.menus ? <section className="team-card team-members">
+        <h2><span className="team-section-icon"><Users aria-hidden="true" /></span>{t("portal.members")}</h2>
+        <div className="team-statistics">
+          {[
+            { label: t("portal.teamTotal"), count: data.members.length, Icon: Users },
+            { label: t("portal.teamAdmins"), count: data.members.filter(member => member.role === "admin").length, Icon: Crown },
+            { label: t("portal.teamMemberLabel"), count: data.members.filter(member => member.role === "member").length, Icon: UserRound },
+          ].map(({ label, count, Icon }) => <div className="team-stat" key={label}><span className="team-section-icon"><Icon aria-hidden="true" /></span><div><span>{label}</span><strong>{count}</strong></div></div>)}
+        </div>
+      {data.members.map(member => {
         const selected = menuIdsFor(member);
         const unrestricted = selected.length === 0;
         return (
           <div className="portal-row portal-team-member" key={member.user_id}>
-            <div>
-              <strong>{member.email}</strong>
-              <p>{t(`portal.roles.${member.role}`)} · {member.is_active ? t("portal.active") : t("portal.inactive")}</p>
+            <div className="team-member-content">
+              <div className="team-member-identity"><span className="team-section-icon"><UserRound aria-hidden="true" /></span><div><strong>{member.email}</strong>
+              <p>{t(`portal.roles.${member.role}`)} · <span className={member.is_active ? "team-status active" : "team-status"}>{member.is_active ? t("portal.active") : t("portal.inactive")}</span></p></div></div>
               {permissions.menus && member.is_active && member.role === "member" ? (
                 <div className="portal-menu-scopes">
                   <p>{t("portal.menuScopesHint")}</p>
@@ -215,10 +231,11 @@ export function CustomerTeamPage() {
             </div>
           </div>
         );
-      }) : null}
+      })}
+      </section> : null}
 
-      {permissions.members ? <h2>{t("portal.pendingInvites")}</h2> : null}
-      {permissions.members && invitations.length === 0 ? <p>{t("portal.noPendingInvites")}</p> : null}
+      {permissions.members ? <><section className="team-card team-invitations"><h2><span className="team-section-icon"><Mail aria-hidden="true" /></span>{t("portal.pendingInvites")}</h2>
+      {invitations.length === 0 ? <div className="team-empty"><MailOpen aria-hidden="true" /><p>{t("portal.noPendingInvites")}</p></div> : null}
       {permissions.members ? invitations.map(invite => (
         <div className="portal-row" key={invite.id}>
           <div>
@@ -239,8 +256,9 @@ export function CustomerTeamPage() {
         </div>
       )) : null}
 
-      {permissions.members ? <>
-      <h2>{t("portal.createInvite")}</h2>
+      </section>
+      <section className="team-card team-invite-form">
+      <h2><span className="team-section-icon"><LinkIcon aria-hidden="true" /></span>{t("portal.createInvite")}</h2>
       <form
         onSubmit={e => {
           e.preventDefault();
@@ -269,7 +287,7 @@ export function CustomerTeamPage() {
           <input readOnly value={inviteLink} onFocus={e => e.target.select()} />
         </label>
       ) : null}
-      </> : null}
+      </section></> : null}
     </section>
   );
 }
