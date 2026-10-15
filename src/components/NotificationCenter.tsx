@@ -18,6 +18,7 @@ import {
   fetchNotifications,
   markNotificationRead,
   notificationDestination,
+  notificationPanelAutoOpens,
   refreshDueNotifications,
   resolveNotification,
   snoozeNotification,
@@ -68,9 +69,7 @@ export function NotificationCenter({ userId }: { userId: string }) {
       }
       if (initialLoad.current && next.some((item) => item.category === "action")) {
         setSummaryVisible(true);
-        if (next.some((item) =>
-          item.priority === "urgent" && item.eventType !== "order_reconciliation_urgent"
-        )) setOpen(true);
+        if (notificationPanelAutoOpens(next)) setOpen(true);
       }
     } catch {
       setError(true);

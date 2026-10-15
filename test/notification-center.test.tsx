@@ -10,6 +10,7 @@ import i18n from "@/i18n";
 import {
   fetchNotifications,
   markNotificationRead,
+  notificationPanelAutoOpens,
   refreshDueNotifications,
   snoozeNotification,
   subscribeToNotifications,
@@ -94,6 +95,37 @@ describe("NotificationCenter", () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  it("keeps the side panel closed on develop even when urgent alerts are waiting", async () => {
+    const urgent = {
+      id: "notice-urgent-1",
+      eventType: "factory_unsent",
+      category: "action" as const,
+      priority: "urgent" as const,
+      title: "訂單尚未發送工場",
+      body: "B-1555 距離送餐日期還有 0 天。",
+      entityType: "order",
+      entityId: "order-urgent",
+      route: null,
+      metadata: {},
+      readAt: null,
+      snoozedUntil: null,
+      createdAt: "2026-09-18T09:17:00.000Z",
+      updatedAt: "2026-09-18T09:17:00.000Z",
+    };
+    vi.mocked(fetchNotifications).mockResolvedValue([urgent]);
+
+    render(
+      <MemoryRouter>
+        <NotificationCenter userId="user-1" />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("你有 1 項待處理工作")).toBeInTheDocument();
+    expect(screen.queryByRole("dialog", { name: "通知中心" })).not.toBeInTheDocument();
+    expect(notificationPanelAutoOpens([urgent], { VITE_GIT_BRANCH: "develop" })).toBe(false);
+    expect(notificationPanelAutoOpens([urgent], { VITE_GIT_BRANCH: "main" })).toBe(true);
   });
 
   it("loads the login summary and opens the filterable bell inbox", async () => {
