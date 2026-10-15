@@ -229,7 +229,7 @@ i18n.addResourceBundle("en", "translation", { portalCatalog: {
 i18n.addResourceBundle("zh-HK", "translation", { portalRewardCatalog: {
   back:"返回客戶訂購營運", intro:"設定可用積分兌換的實物和現金券。兌換只扣積分，不抵訂單金額。",
   name:"名稱", kind:"類型", gift:"實物", voucher:"現金券", points:"所需積分", stock:"庫存", description:"說明", active:"上架",
-  image:"項目圖片", uploadImage:"選擇圖片", removeImage:"移除圖片", generateImage:"AI 生成圖片", generatingImage:"正在生成…",
+  image:"項目圖片", uploadImage:"選擇圖片", removeImage:"移除圖片", previewImage:"放大查看 {{name}}", generateImage:"AI 生成圖片", generatingImage:"正在生成…",
   imageTabUpload:"上傳", imageTabAi:"AI 生成", imageDrop:"選擇圖片", imageDropHint:"JPG、PNG、WebP · 建議 800×800",
   prizeName:"獎品名稱", imagePrompt:"提示詞", imagePromptHint:"輸入獎品名稱後會自動帶出動漫風棚拍提示詞，可再微調。",
   imageHint:"可拖拽或選擇圖片，亦可用 AI 生成。", sectionBasics:"基本資料", sectionStore:"適用店鋪", sectionImage:"項目圖片", sectionDescription:"項目說明",
@@ -242,7 +242,7 @@ i18n.addResourceBundle("zh-HK", "translation", { portalRewardCatalog: {
 i18n.addResourceBundle("en", "translation", { portalRewardCatalog: {
   back:"Back to customer ordering ops", intro:"Publish goods and cash vouchers that customers redeem with points. Redemption deducts points and does not reduce an order total.",
   name:"Name", kind:"Type", gift:"Goods", voucher:"Cash voucher", points:"Points required", stock:"Stock", description:"Description", active:"Published",
-  image:"Item image", uploadImage:"Choose image", removeImage:"Remove image", generateImage:"Generate with AI", generatingImage:"Generating…",
+  image:"Item image", uploadImage:"Choose image", removeImage:"Remove image", previewImage:"Enlarge {{name}}", generateImage:"Generate with AI", generatingImage:"Generating…",
   imageTabUpload:"Upload", imageTabAi:"AI generate", imageDrop:"Choose image", imageDropHint:"JPG, PNG, WebP · 800×800 recommended",
   prizeName:"Prize name", imagePrompt:"Prompt", imagePromptHint:"Entering a prize name fills an anime-style catalog prompt you can edit.",
   imageHint:"Drag or choose an image, or generate one with AI.", sectionBasics:"Basics", sectionStore:"Applicable stores", sectionImage:"Item image", sectionDescription:"Description",

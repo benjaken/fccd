@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { useCurrentPageAccess } from "@/auth/use-page-access";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Modal } from "@/components/ui/modal";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
 import { ListTable } from "@/components/ui/list-table";
 import { SidePanel } from "@/components/ui/side-panel";
@@ -77,6 +78,7 @@ export function CustomerPortalRewardCatalogPage() {
   const [customerId, setCustomerId] = useState("");
   const [linkStoreId, setLinkStoreId] = useState("");
   const [panel, setPanel] = useState<"editor" | "redemptions" | "link" | null>(null);
+  const [lightbox, setLightbox] = useState<{ url: string; name: string } | null>(null);
 
   function resetEditor() {
     setEditing(null); setName(""); setDescription(""); setAmount(""); setStoreId("");
@@ -343,7 +345,7 @@ export function CustomerPortalRewardCatalogPage() {
       <ListTable loading={loading && !items.length} loadingLabel={t("portalCatalog.loading")} skeletonColumns={6} onRefresh={() => load().catch(reason => setError(t(failure(reason))))}
         header={<tr><th>{t("portalRewardCatalog.image")}</th><th>{t("portalRewardCatalog.name")}</th><th>{t("portalRewardCatalog.kind")}</th><th>{t("portalRewardCatalog.points")}</th><th>{t("portalRewardCatalog.stock")}</th><th>{t("portalRewardCatalog.active")}</th><th>{t("orders.columns.actions")}</th></tr>}>
         {items.map(item => <tr key={item.id}>
-          <td>{previews[item.id] ? <img className="reward-admin-table-thumb" src={previews[item.id]} alt="" /> : <span className="reward-admin-table-thumb is-empty" aria-hidden="true" />}</td>
+          <td>{previews[item.id] ? <button type="button" className="reward-admin-table-thumb-button" aria-label={t("portalRewardCatalog.previewImage", { name: item.name })} onClick={() => setLightbox({ url: previews[item.id], name: item.name })}><img className="reward-admin-table-thumb" src={previews[item.id]} alt="" /></button> : <span className="reward-admin-table-thumb is-empty" aria-hidden="true" />}</td>
           <td><div className="reward-admin-table-name">{item.name}{item.description ? <small>{item.description}</small> : null}{item.voucher_amount_hkd ? <small>HK$ {Number(item.voucher_amount_hkd).toFixed(2)}</small> : null}</div></td>
           <td>{t(item.kind === "gift" ? "portalRewardCatalog.gift" : "portalRewardCatalog.voucher")}</td>
           <td>{item.points_cost}</td>
@@ -354,5 +356,8 @@ export function CustomerPortalRewardCatalogPage() {
         {!items.length ? <tr><td colSpan={7}>{error ? t("portalRewardCatalog.failed") : t("portalRewardCatalog.empty")}</td></tr> : null}
       </ListTable>
     </section>
+    <Modal open={Boolean(lightbox)} title={lightbox?.name ?? ""} closeLabel={t("portalOps.close")} size="lg" className="reward-admin-image-lightbox" onClose={() => setLightbox(null)}>
+      {lightbox ? <img src={lightbox.url} alt={lightbox.name} /> : null}
+    </Modal>
   </section>;
 }
