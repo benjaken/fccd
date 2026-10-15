@@ -8,6 +8,7 @@ import "@/lib/customer-portal-i18n";
 
 const mocks = vi.hoisted(() => ({
   orgs: vi.fn(), rules: vi.fn(), applications: vi.fn(), policy: vi.fn(),
+  brChanges: vi.fn(), reviewBrChange: vi.fn(),
   canEdit: true,
 }));
 vi.mock("@/auth/use-page-access", () => ({
@@ -31,6 +32,8 @@ vi.mock("@/lib/customer-portal-applications-ops", async (original) => ({
     return Array.isArray(result) ? { rows: result, total: result.length, page: 1 } : result;
   },
   getBrExpiryPolicy: mocks.policy,
+  listBrChanges: mocks.brChanges,
+  reviewBrChange: mocks.reviewBrChange,
 }));
 
 const pages = [
@@ -45,6 +48,8 @@ beforeEach(() => {
   mocks.rules.mockResolvedValue([]);
   mocks.applications.mockResolvedValue([]);
   mocks.policy.mockResolvedValue(null);
+  mocks.brChanges.mockResolvedValue([]);
+  mocks.reviewBrChange.mockResolvedValue(undefined);
 });
 
 describe.each(pages)("$Component.name shared table", ({ Component, load, columns, skeletonRows, empty, emptyInTable }) => {
@@ -156,6 +161,20 @@ it("keeps a dropped BR file on the add-company form", async () => {
   const rejected = new File(["notes"], "notes.txt", { type: "text/plain" });
   fireEvent.drop(target!, { dataTransfer: { files: [rejected] } });
   expect(within(dialog).getByText("只接受 JPG、PNG 或 PDF，而且不可超過 10MB。")).toBeInTheDocument();
+});
+
+it("reviews a company's pending BR change", async () => {
+  mocks.brChanges.mockResolvedValue([{
+    id: "change-1", organizationId: "org", orgName: "甲公司", brNumber: "99998888", brExpiresOn: "2030-01-01",
+    currentBrNumber: "BR-88", currentBrExpiresOn: "2027-06-30", submittedByEmail: "admin@example.com", submittedAt: "2026-10-16T00:00:00Z",
+  }]);
+  render(<MemoryRouter><CustomerPortalApplicationsPage /></MemoryRouter>);
+  fireEvent.click(await screen.findByRole("button", { name: "審核" }));
+  const dialog = await screen.findByRole("dialog");
+  expect(within(dialog).getByText(/99998888/)).toBeInTheDocument();
+  fireEvent.change(within(dialog).getByRole("textbox"), { target: { value: "已核對文件" } });
+  fireEvent.click(within(dialog).getByRole("button", { name: "批准" }));
+  await waitFor(() => expect(mocks.reviewBrChange).toHaveBeenCalledWith({ id: "change-1", decision: "approved", reason: "已核對文件" }));
 });
 
 it("requests the next company-application page from the server and keeps the total visible", async () => {

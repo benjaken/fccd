@@ -19,12 +19,15 @@ import {
   getBrExpiryPolicy,
   getOrganizationApplication,
   fetchOrganizationApplicationPage,
+  listBrChanges,
   openBrDocument,
   publishBrExpiryPolicy,
   renewOrganizationBr,
+  reviewBrChange,
   reviewOrganizationApplication,
   uploadStaffBr,
   type ApplicationStatus,
+  type BrChangeRequest,
   type BrExpiryPolicy,
   type OrganizationApplicationDetail,
   type OrganizationApplicationSummary,
@@ -113,6 +116,9 @@ export function CustomerPortalApplicationsPage() {
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [orgs, setOrgs] = useState<OpsOrgListItem[]>([]);
+  const [brChanges, setBrChanges] = useState<BrChangeRequest[]>([]);
+  const [brDetail, setBrDetail] = useState<BrChangeRequest | null>(null);
+  const [brReason, setBrReason] = useState("");
   const [policy, setPolicy] = useState<BrExpiryPolicy | null>(null);
   const [detail, setDetail] = useState<OrganizationApplicationDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -151,9 +157,10 @@ export function CustomerPortalApplicationsPage() {
     setLoading(true);
     setError("");
     try {
-      const [published, organizations] = await Promise.all([
+      const [published, organizations, changes] = await Promise.all([
         getBrExpiryPolicy(),
         listPortalOpsOrgs(),
+        listBrChanges(),
       ]);
       if (search || status) {
         const first = await fetchOrganizationApplicationPage(1);
@@ -179,6 +186,7 @@ export function CustomerPortalApplicationsPage() {
       }
       setPolicy(published);
       setOrgs(organizations);
+      setBrChanges(Array.isArray(changes) ? changes : []);
       setRenewOrgId(current => current || organizations[0]?.id || "");
     } catch (err) {
       setError(t(errorKey(err)));
@@ -213,6 +221,15 @@ export function CustomerPortalApplicationsPage() {
     } catch (err) {
       setError(t(errorKey(err)));
     }
+  }
+
+  async function reviewChange(decision: "approved" | "rejected") {
+    if (!brDetail) return;
+    await run(async () => {
+      await reviewBrChange({ id: brDetail.id, decision, reason: brReason });
+      setBrDetail(null);
+      setBrReason("");
+    }, "portalApplications.brChangeReviewed");
   }
 
   async function review(event: FormEvent, decision: "needs_info" | "rejected" | "approved") {
@@ -327,6 +344,23 @@ export function CustomerPortalApplicationsPage() {
             </Button>
           ) : null}
         </div>
+        {brChanges.length ? (
+          <div className="portal-br-policy" aria-labelledby="br-change-heading">
+            <RefreshCw className="br-policy-icon" aria-hidden="true" />
+            <div>
+              <h2 id="br-change-heading">{t("portalApplications.brChangesTitle")}</h2>
+              <p>{t("portalApplications.brChangesHint", { count: brChanges.length })}</p>
+              <ul className="portal-br-change-list">
+                {brChanges.map(change => (
+                  <li key={change.id}>
+                    <span>{change.orgName} · {change.brNumber} · {change.brExpiresOn}</span>
+                    {canEdit ? <Button type="button" variant="outline" onClick={() => { setBrReason(""); setBrDetail(change); }}>{t("portalApplications.review")}</Button> : null}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        ) : null}
       </div>
       <article className="panel orders-panel">
         <header className="orders-toolbar">
@@ -505,6 +539,24 @@ export function CustomerPortalApplicationsPage() {
               </>
             ) : null}
           </form>
+        ) : null}
+      </SidePanel>
+      <SidePanel open={Boolean(brDetail)} title={brDetail?.orgName ?? ""} onClose={() => setBrDetail(null)} closeLabel={t("portalApplications.close")} footer={<>
+        <Button type="button" variant="outline" disabled={busy} onClick={() => void reviewChange("rejected")}>{t("portalApplications.reject")}</Button>
+        <Button type="button" disabled={busy} onClick={() => void reviewChange("approved")}>{t("portalApplications.approveChange")}</Button>
+      </>}>
+        {brDetail ? (
+          <div className="portal-ops-form">
+            <dl className="portal-ops-definition">
+              <dt>{t("portalApplications.currentBr")}</dt>
+              <dd>{brDetail.currentBrNumber || "—"} · {brDetail.currentBrExpiresOn ?? "—"}</dd>
+              <dt>{t("portalApplications.proposedBr")}</dt>
+              <dd>{brDetail.brNumber} · {brDetail.brExpiresOn}</dd>
+              <dt>{t("portalApplications.applicant")}</dt>
+              <dd>{brDetail.submittedByEmail ?? "—"}</dd>
+            </dl>
+            <label>{t("portalApplications.reason")}<Input value={brReason} onChange={event => setBrReason(event.target.value)} required maxLength={500} /></label>
+          </div>
         ) : null}
       </SidePanel>
     </section>

@@ -4,10 +4,15 @@
   --personal-green:#1f7a45;
   --personal-sidebar:#12382f;
   --personal-surface:#f3f6f4;
+  --personal-navbar-height:64px;
   min-height:100dvh;
+  padding:calc(var(--personal-navbar-height) + env(safe-area-inset-top)) 0 0;
+  overflow-x:clip;
   background:var(--personal-surface);
   color:var(--personal-ink);
 }
+.customer-portal.personal-workspace section{margin:0}
+.personal-content,.personal-home,.personal-menu-scroller{min-width:0;max-width:100%}
 .personal-app{display:flex;flex-direction:column;min-height:100dvh}
 .personal-topbar{display:flex;align-items:center;gap:8px;min-height:64px;padding:8px 12px;background:#fff;border-bottom:1px solid #e3ebe6}
 .personal-menu-trigger,.personal-icon-button,.personal-drawer aside>button,.personal-side-foot button,.personal-drawer header button{
@@ -42,48 +47,76 @@
 .personal-mode-switch{display:grid;gap:6px;margin-top:12px}
 .personal-mode-switch a{display:flex;align-items:center;min-height:40px;padding:0 12px;border-radius:10px;color:#eef6f2;background:rgba(255,255,255,.08);text-decoration:none}
 .customer-portal.personal-workspace .portal-access-state{width:auto;margin:24px 16px;border:0;background:transparent;text-align:left;justify-items:start}
-.personal-home{display:grid;gap:14px}
-.personal-hero{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(128px,.85fr);gap:4px;align-items:center;padding:18px 4px 12px 18px;border-radius:22px;background:#e8f6f0;overflow:hidden}
-.personal-hero h1{margin:0 0 8px;color:#1f6b4a;font-size:32px;line-height:1.15;font-weight:750}
-.personal-hero p{margin:0 0 14px;max-width:22ch;color:#5c6f68;font-size:14px;line-height:1.55}
-.personal-hero-bowl{display:block;width:100%;max-height:168px;object-fit:cover;object-position:center top}
-.personal-hero-art svg{display:block;width:100%;height:auto;border-radius:18px}
+.personal-home{display:grid;grid-template-columns:minmax(0,1fr);gap:14px}
+.personal-home>*{min-width:0}
+.personal-hero{position:relative;isolation:isolate;display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr);gap:4px;align-items:center;min-height:186px;padding:22px 4px 22px 20px;border-radius:22px;background:#e8f6f0;overflow:hidden}
+.personal-hero::before{position:absolute;top:0;bottom:0;left:44%;width:85%;z-index:-1;border-top-left-radius:90px;background:#d2e8de;transform:skewX(-38deg);transform-origin:bottom left;content:""}
+.personal-hero-copy{position:relative;z-index:1;min-width:0}
+.customer-portal.personal-workspace .personal-hero h1{margin:0 0 8px;color:#1f6b4a;font-size:32px;line-height:1.15;font-weight:750}
+.customer-portal.personal-workspace .personal-hero p{margin:0 0 14px;max-width:22ch;color:#5c6f68;font-size:14px;line-height:1.55}
+.personal-hero-art{position:absolute;right:-34px;bottom:-48px;width:62%;max-width:320px;pointer-events:none}
+.personal-hero-bowl{display:block;width:100%;height:auto;object-fit:contain}
+.personal-hero-rays{position:absolute;left:-4px;top:4px;width:54px;height:48px;color:#299a73}
+@media(max-width:360px){.personal-hero-rays{left:20%;top:-18px}}
 .personal-pill{display:inline-flex;align-items:center;gap:2px;width:fit-content;min-height:36px;padding:0 14px;border-radius:999px;background:#146b4f;color:#fff;font-size:14px;font-weight:700;text-decoration:none}
 .personal-pill.is-ghost{background:#fff;color:#146b4f;border:1px solid #d5e6dc}
 .personal-quick{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
 .personal-quick-card{display:grid;justify-items:center;align-content:center;gap:8px;min-height:104px;padding:12px 4px;border-radius:16px;background:#fff;color:var(--personal-ink);box-shadow:0 8px 20px rgba(18,56,47,.05);text-align:center;text-decoration:none;font-size:13px;font-weight:650;line-height:1.3}
-.personal-quick-card:focus-visible,.personal-pill:focus-visible,.personal-menu-card:focus-visible,.personal-recent-row a:focus-visible{outline:2px solid var(--personal-green);outline-offset:2px}
+.personal-quick-card:focus-visible,.personal-pill:focus-visible,.personal-menu-card:focus-visible,.personal-recent-row:focus-visible{outline:2px solid var(--personal-green);outline-offset:2px}
 .personal-quick-icon{display:grid;place-items:center;width:42px;height:42px;border-radius:12px;background:#e7f6ee;color:#1f7a45}
-.personal-quick-card>span:last-child{display:inline-flex;align-items:center}
-.personal-status{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.personal-quick-card>span:last-child{display:block;max-width:100%;overflow-wrap:anywhere}
+.personal-status{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
 .personal-next-card,.personal-points-card{display:grid;grid-template-columns:minmax(0,1fr) 76px;gap:4px;align-items:end;min-height:156px;padding:14px 8px 12px 14px;border-radius:18px}
 .personal-next-card{background:#fff8ee}
-.personal-points-card{background:#e8f6f0}
-.personal-status-copy{display:grid;align-content:start;gap:8px;min-width:0}
-.personal-status-copy h2{display:flex;align-items:center;gap:6px;margin:0;color:#1f6b4a;font-size:14px;font-weight:700}
+.personal-points-card{position:relative;background:#e8f6f0}
+.personal-status-copy{display:flex;flex-direction:column;gap:8px;min-width:0;align-self:stretch}
+.personal-status-copy h2{display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin:0;color:#1f6b4a;font-size:14px;font-weight:700;line-height:1.3}
 .personal-status-icon{display:grid;place-items:center;flex:0 0 auto;width:26px;height:26px;border-radius:8px;background:#f4e7c4;color:#1f7a45}
 .personal-status-icon.is-star{border-radius:50%;background:#dff3e6}
 .personal-status-copy p{margin:0;color:#5c6f68;font-size:13px;line-height:1.45}
 .personal-status-copy a:not(.personal-pill){color:#1f7a45;font-weight:750;text-decoration:none}
 .personal-status-copy strong{font-size:32px;line-height:1;font-weight:750;color:#163028}
+.personal-points-loading{display:block;width:72px;height:32px;border-radius:8px;background:#dff3e6}
 .personal-next-card>img,.personal-points-card>img{width:76px;height:76px;object-fit:contain}
+.personal-points-card>img{position:absolute;right:12px;bottom:12px;width:70px;height:124px;object-fit:contain;opacity:1}
+.personal-next-card.has-delivery{position:relative;grid-template-columns:minmax(0,1fr);align-items:start;min-height:228px;padding:20px}
+.personal-next-card.has-delivery .personal-status-copy{position:relative;z-index:1;gap:16px}
+.personal-delivery-summary{display:flex;align-items:center;flex-wrap:wrap;gap:10px}
+.personal-next-card .personal-delivery-summary strong{font-size:clamp(18px,3vw,24px);line-height:1.4;overflow-wrap:anywhere}
+.personal-next-card.has-delivery .personal-delivery-time{margin:0;padding:0;color:var(--personal-muted);font-size:14px;line-height:1.5}
+.personal-next-card .personal-pill,.personal-points-card .personal-pill{margin-top:auto;min-height:40px;padding-inline:18px}
+.personal-next-card.has-delivery>img{position:absolute;right:12px;bottom:12px;width:36%;height:92px;object-fit:contain;opacity:1}
+.personal-status.has-delivery{grid-template-columns:minmax(0,1.8fr) minmax(0,1fr)}
 .personal-panel{padding:14px 14px 8px;border-radius:18px;background:#fff;box-shadow:0 8px 20px rgba(18,56,47,.05)}
 .personal-section-heading h2{display:flex;align-items:center;gap:8px;margin:0;color:#1f6b4a;font-size:16px}
 .personal-section-heading h2 svg,.personal-section-heading a{color:#1f7a45}
 .personal-section-heading a{display:inline-flex;align-items:center;font-size:14px;font-weight:700;text-decoration:none}
 .personal-recent-list{display:grid;margin-top:4px}
-.personal-recent-row{display:grid;grid-template-columns:52px minmax(0,1fr) auto auto;gap:10px;align-items:center;padding:12px 0;border-top:1px solid #eef3f0}
-.personal-recent-row img{width:52px;height:52px;border-radius:12px;object-fit:cover}
-.personal-recent-row a{color:#1f7a45;font-weight:750;text-decoration:none}
+.personal-recent-row{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:10px;align-items:center;min-height:76px;padding:12px 0;border-top:1px solid #eef3f0;color:inherit;text-decoration:none}
+.personal-recent-row strong{color:#1f7a45;font-weight:750}
 .personal-recent-row p{margin:2px 0 0;color:#6b7c76;font-size:13px}
 .personal-recent-row>svg{color:#9aa8a2}
 .personal-shortcut-icon{display:grid;place-items:center;width:36px;height:36px;border-radius:10px;background:#e8f5ee;color:var(--personal-green)}
-.personal-panel{margin-top:16px}
+.personal-home .personal-panel{margin-top:0}
+.personal-vip-cycle{display:flex;flex-direction:column;align-items:stretch;gap:8px;margin:12px 0 0}
+.personal-vip-name{color:#6b7c76;font-size:13px;font-weight:650;overflow-wrap:anywhere}
+.personal-vip-countdown{display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:14px;background:#e8f6f0;color:#0f5a45}
+.personal-vip-countdown svg{flex:none;color:#1f7a45}
+.personal-vip-countdown-label{font-size:14px;font-weight:700;white-space:nowrap}
+.personal-vip-countdown-time{margin-left:auto;font-size:18px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:.5px;white-space:nowrap}
+.personal-vip-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(94px,1fr));gap:10px;margin:12px 0 0}
+.personal-vip-stats>div{display:grid;gap:4px;padding:12px;border-radius:14px;background:#f4f7f5}
+.personal-vip-stats dt{color:#6b7c76;font-size:12px}
+.personal-vip-stats dd{margin:0;color:#12382f;font-size:20px;font-weight:750;font-variant-numeric:tabular-nums}
+.personal-vip-stats dd[data-state]{font-size:16px}
+.personal-vip-stats dd[data-state="ordered"]{color:#1d7a45}
+.personal-vip-stats dd[data-state="waiting"]{color:#9a5b00}
 .personal-section-heading{display:flex;align-items:center;justify-content:space-between;gap:12px}
 .personal-menu-scroller{display:grid;grid-auto-flow:column;grid-auto-columns:148px;gap:12px;margin-top:12px;overflow-x:auto;padding-bottom:6px}
 .personal-menu-card{display:grid;gap:4px;color:inherit;text-decoration:none}
 .personal-home-logo{display:grid;place-items:center;height:108px;padding:12px;overflow:hidden;border-radius:16px;background:#f4f7f5;color:var(--personal-green);font-size:28px;font-weight:750}
-.personal-home-logo img{display:block;max-width:100%;max-height:72px;object-fit:contain}
+.personal-home-logo:has(img){background:transparent;padding:8px}
+.personal-home-logo img{display:block;max-width:100%;max-height:84px;object-fit:contain;mix-blend-mode:multiply}
 .personal-menu-card strong{font-size:14px;line-height:1.3}
 .personal-menu-card>span:not(.personal-home-logo){color:#6b7c76;font-size:12px;line-height:1.4}
 .personal-table-wrap{overflow-x:auto;margin-top:8px}
@@ -97,15 +130,42 @@
 .personal-points-banner>div{display:flex;gap:14px;align-items:flex-start}
 .personal-points-banner svg{color:var(--personal-green)}
 .personal-reorder{max-width:none}
-.personal-reorder>button,.personal-orders-table .personal-reorder>button{min-height:36px;padding:0;border:0;background:transparent;color:var(--personal-green);font-weight:700}
+.personal-orders-table .personal-reorder>button{min-height:36px;padding:0;border:0;background:transparent;color:var(--personal-green);font-weight:700}
 .personal-reorder-confirm{padding:12px;background:#f3f6f4;border-radius:12px}
 .personal-workspace .personal-content>section>h1{color:var(--personal-ink)}
-.personal-order-row{display:flex;align-items:center;gap:24px;padding:24px 0;border-bottom:1px solid var(--border);flex-wrap:wrap}
-.personal-order-info{flex:1;min-width:200px}.personal-order-number{font-weight:700;font-size:20px;color:var(--foreground);text-decoration:none}
-.personal-order-info p{display:flex;align-items:center;gap:8px}.personal-order-row>strong{font-size:20px;font-variant-numeric:tabular-nums}
-.personal-order-status{display:flex;flex-wrap:wrap;gap:8px;font-size:13px}.personal-order-status span,.personal-default{padding:4px 8px;background:var(--secondary);border-radius:6px;color:var(--secondary-foreground)}
+.personal-orders{padding:22px 0 18px}
+.personal-orders-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.personal-orders h1{margin:0 0 6px;color:#163028;font-size:28px;line-height:1.2;font-weight:750;letter-spacing:-.03em;text-wrap:balance}
+.personal-orders-heading h1{margin:0}
+.personal-orders>p{margin:0 0 16px;color:#4f4a62;font-size:14px;line-height:1.5}
+.personal-order-list{display:grid;gap:12px}
+.personal-order-card{display:grid;gap:10px;padding:16px;border:1px solid #e6eeea;border-radius:16px;background:#fff;box-shadow:0 8px 18px rgba(18,56,47,.05)}
+.personal-order-top{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+.personal-order-top a{color:#163028;font-size:18px;font-weight:750;text-decoration:none}
+.personal-order-top strong{color:#163028;font-size:18px;font-weight:750;font-variant-numeric:tabular-nums;white-space:nowrap}
+.personal-order-date{display:flex;align-items:center;gap:6px;margin:0;color:#5d6f68;font-size:14px}
+.personal-order-date svg{flex:0 0 auto;color:#7d8f86}
+.personal-order-chips{display:flex;flex-wrap:wrap;gap:8px}
+.personal-order-chips span{display:inline-flex;align-items:center;gap:4px;min-height:28px;padding:0 10px;border-radius:999px;font-size:13px;font-weight:650}
+.personal-order-chips .is-done{background:#0f5a3f;color:#eafaf1}
+.personal-order-chips .is-wait{background:#6f4a16;color:#fdf3e3}
+.personal-order-actions{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr) 44px;gap:8px;margin-top:2px}
+.personal-order-actions>.personal-order-more{grid-column:-2/-1;min-width:44px;min-height:44px;padding:8px}
+.personal-order-more-menu{display:grid;gap:8px;width:240px;max-width:calc(100vw - 24px);padding:8px;border-radius:14px;background:var(--popover,#fff);color:var(--popover-foreground,#163028)}
+.personal-order-more-menu .personal-order-action{min-height:44px;justify-content:flex-start;padding:10px 12px;white-space:normal;background:var(--customer-action-bg,#e8f6ee);color:var(--customer-action-ink,#146b4f)}
+.personal-order-more-menu .personal-order-action:hover{background:var(--customer-action-hover,#dff3e8)}
+.personal-order-more-menu .personal-order-action:disabled{background:#edf0ef;color:#6b7671;cursor:not-allowed;opacity:1}
+.personal-order-more-menu .personal-order-note{padding:4px 10px;color:#5d6f68;font-size:12px;line-height:1.5}
+.personal-order-actions .personal-reorder{display:contents}
+.personal-order-action{display:inline-flex;align-items:center;justify-content:center;gap:4px;width:100%;min-height:42px;padding:6px 8px;border:0;border-radius:12px;background:#e8f6ee;color:#146b4f;font:inherit;font-size:12px;font-weight:700;line-height:1.25;text-align:center;text-decoration:none;white-space:nowrap;cursor:pointer}
+.personal-order-action:hover{background:#dff3e8}
+.personal-order-action:focus-visible{outline:2px solid #1f7a45;outline-offset:2px}
+.personal-order-action:disabled{cursor:progress;opacity:.65}
+.personal-order-actions .personal-reorder>p,.personal-order-actions .personal-reorder-confirm,.personal-order-actions .portal-error,.personal-order-note{grid-column:1/-1;margin:0}
+.personal-orders ::selection{background:#cfe8d8;color:#163028}
+.personal-default{padding:4px 8px;background:var(--secondary);border-radius:6px;color:var(--secondary-foreground)}
 .personal-empty{padding:20px 0;color:var(--personal-muted);line-height:1.7}
-.personal-menus{padding:22px 16px 20px;border-radius:22px;background:#fff;box-shadow:0 10px 28px rgba(18,56,47,.06)}
+.personal-menus{padding:22px 0 20px}
 .personal-menus h1{margin:0 0 8px;color:var(--personal-ink);font-size:28px;line-height:1.2;letter-spacing:-.03em;text-wrap:balance}
 .personal-menus>p{margin:0;max-width:36rem;color:#3e524b;font-size:14px;line-height:1.6}
 .personal-menu-list{display:grid;gap:12px;margin:18px 0 0;padding:0;list-style:none}
@@ -113,7 +173,8 @@
 .personal-menu-row:hover{box-shadow:0 12px 28px rgba(18,56,47,.12)}
 .personal-menu-row:focus-visible{outline:2px solid var(--personal-green);outline-offset:3px}
 .personal-menu-logo{display:grid;place-items:center;width:72px;height:72px;overflow:hidden;border-radius:14px;background:#f4f7f5;color:var(--personal-green);font-size:22px;font-weight:750}
-.personal-menu-logo img{display:block;width:100%;height:100%;object-fit:contain;padding:8px}
+.personal-menu-logo:has(img){background:transparent}
+.personal-menu-logo img{display:block;width:100%;height:100%;object-fit:contain;padding:2px;mix-blend-mode:multiply}
 .personal-menu-copy{display:grid;gap:2px;min-width:0}
 .personal-menu-copy strong{color:var(--personal-ink);font-size:16px;line-height:1.3;overflow-wrap:anywhere}
 .personal-menu-copy span{color:#3e524b;font-size:12px;line-height:1.35;overflow-wrap:anywhere}
@@ -146,6 +207,17 @@ button.ui-button.personal-address-create:hover{background:#18663a}
 .personal-address-title em{padding:2px 8px;border-radius:999px;background:#e7f6ec;color:#1d7a45;font-size:12px;font-style:normal;font-weight:700}
 .personal-address-copy p{margin:4px 0 0;color:#3e5c50;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere}
 .personal-address-actions{display:flex;align-items:center;justify-content:flex-end;gap:2px}
+.personal-address-points{display:grid;gap:8px;margin-top:12px;padding-top:12px;border-top:1px dashed #e0e6e3}
+.personal-address-points-title{color:#5d6f68;font-size:13px;font-weight:750;letter-spacing:.02em}
+.personal-address-points-list{display:flex;flex-wrap:wrap;gap:8px;margin:0;padding:0;list-style:none}
+.personal-address-points-list li{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;background:#e8f5ee;color:#163028;font-size:13px}
+.personal-address-points-empty{margin:0;color:#7d9288;font-size:13px}
+.personal-address-points-edit{display:grid;gap:10px}
+.personal-address-point-row{display:flex;align-items:center;gap:8px}
+.personal-address-point-row .personal-address-field{flex:1 1 auto;min-width:0}
+.personal-address-point-row>button{display:grid;place-items:center;flex:0 0 auto;width:40px;height:40px;border:1px solid #d5e2db;border-radius:10px;background:#fff;color:#3e5c50;cursor:pointer}
+.personal-address-point-row>button:hover:not(:disabled){background:#f2f8f4}
+.personal-address-point-row>button:focus-visible{outline:2px solid #1f7a45;outline-offset:2px}
 .personal-address-edit,.personal-address-menu-trigger,.personal-address-menu button{border:0;background:transparent;color:#3e5c50;font:inherit;cursor:pointer}
 .personal-address-edit,.personal-address-menu-trigger{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:44px;border-radius:10px}
 .personal-address-edit{padding:0 8px}
@@ -197,11 +269,7 @@ button.ui-button.personal-address-save:hover{background:#18663a}
 .personal-points-facts dd{margin:8px 0;color:var(--personal-muted)}
 .personal-workspace ::selection{background:#cfe8d8;color:var(--personal-ink)}
 .customer-portal.personal-workspace{--personal-header-bg:#156951;--personal-header-fg:#fff}
-.portal-header-alerts{position:relative;justify-self:end}
-.portal-header-bell{position:relative}
-.portal-header-bell-dot{position:absolute;top:8px;right:8px;width:8px;height:8px;border-radius:50%;background:#e23d3d;box-shadow:0 0 0 2px var(--personal-header-bg)}
-.portal-header-alert{position:absolute;top:48px;right:0;z-index:20;width:220px;margin:0;padding:12px 14px;border-radius:12px;background:#fff;color:var(--personal-ink);box-shadow:0 12px 32px rgba(18,56,47,.16)}
-.customer-portal.personal-workspace .portal-workspace-header{position:sticky;top:0;z-index:10;padding:env(safe-area-inset-top) 0 0;margin:0 0 0;border:0;background:var(--personal-header-bg);color:var(--personal-header-fg)}
+.customer-portal.personal-workspace .portal-workspace-header{position:fixed;top:0;left:50%;transform:translateX(-50%);width:100%;max-width:820px;z-index:30;padding:env(safe-area-inset-top) 0 0;margin:0 0 0;border:0;background:var(--personal-header-bg);color:var(--personal-header-fg)}
 .personal-workspace .portal-workspace-top{position:relative;display:grid;grid-template-columns:48px minmax(0,1fr) 48px;gap:0;min-height:64px;padding:8px 12px}
 .personal-workspace .portal-menu-trigger{color:var(--personal-header-fg)}
 .personal-workspace .portal-menu-trigger:hover{background:color-mix(in srgb,var(--personal-header-fg) 14%,transparent);color:var(--personal-header-fg)}
@@ -209,57 +277,112 @@ button.ui-button.personal-address-save:hover{background:#18663a}
 .personal-workspace .portal-brand-link,.personal-workspace .portal-workspace-title>strong:not(.portal-workspace-desktop-title){display:none}
 .personal-workspace .portal-workspace-title{text-align:center}
 .personal-workspace .portal-workspace-title>.portal-workspace-desktop-title{display:block;font-size:18px;font-weight:600;letter-spacing:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media(max-width:767px){
+  .personal-workspace .personal-content{padding:12px 12px calc(28px + env(safe-area-inset-bottom))}
+  .personal-home{gap:12px}
+  .personal-hero{grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr);padding:20px 0 20px 18px}
+  .customer-portal.personal-workspace .personal-hero h1{font-size:28px}
+  .personal-quick{gap:8px}
+  .personal-quick-card{font-size:12px}
+  .personal-quick-card>span:last-child svg{display:inline;vertical-align:middle;width:12px}
+  .personal-next-card,.personal-points-card{position:relative;grid-template-columns:minmax(0,1fr);align-items:start;min-height:156px;padding:12px}
+  .personal-status-copy{position:relative;z-index:1;gap:10px}
+  .personal-status-copy p{padding-right:20px;font-size:12px}
+  .personal-status-copy .personal-pill{align-self:flex-start;margin-top:auto;padding-inline:10px;font-size:12px}
+  .personal-next-card>img,.personal-points-card>img{position:absolute;right:4px;bottom:12px;opacity:.85}
+  .personal-next-card>img,.personal-points-card>img,.personal-skel-art{width:56px;height:56px}
+  .personal-status-copy h2{font-size:12px;gap:4px}
+  .personal-status-copy strong{font-size:28px}
+  .personal-status.has-delivery{grid-template-columns:repeat(2,minmax(0,1fr));align-items:stretch}
+  .personal-next-card.has-delivery{padding:14px;min-height:0}
+  .personal-status.has-delivery .personal-next-card.has-delivery,
+  .personal-status.has-delivery .personal-points-card{display:flex;flex-direction:column;padding:14px}
+  .personal-status.has-delivery .personal-status-copy{display:flex;flex-direction:column;flex:1;gap:10px}
+  .personal-next-card.has-delivery .personal-status-copy h2{font-size:14px}
+  .personal-status.has-delivery .personal-status-copy .personal-pill{margin-top:auto;align-self:flex-start;min-height:34px;padding-inline:14px;font-size:12px}
+  .personal-next-card.has-delivery .personal-pill{margin-top:auto;min-height:34px;padding-inline:14px;font-size:12px}
+  .personal-points-card>img{width:62px;height:112px;right:8px;bottom:10px;opacity:1}
+  .personal-status.has-delivery .personal-next-card>img,
+  .personal-status.has-delivery .personal-points-card>img{position:absolute;right:6px;bottom:6px;width:auto;max-width:74%;margin:0;opacity:.3}
+  .personal-status.has-delivery .personal-next-card>img{height:84px}
+  .personal-status.has-delivery .personal-points-card>img{height:140px;opacity:.2}
+  .personal-section-heading{gap:6px}
+  .personal-section-heading h2{font-size:14px}
+  .personal-section-heading a{font-size:12px;flex-shrink:0}
+  .personal-recent-row{grid-template-columns:minmax(0,1fr) auto 14px;gap:6px}
+  .personal-recent-row>div{min-width:0;overflow-wrap:anywhere}
+  .personal-recent-row .is-paid,.personal-recent-row .is-unpaid{font-size:12px;padding-inline:8px}
+}
 @media(min-width:768px){
-  .customer-portal.personal-workspace{width:100%;max-width:820px;min-height:100dvh;margin-inline:auto;padding:0;background:var(--personal-surface);box-shadow:0 16px 60px color-mix(in srgb,var(--foreground) 8%,transparent)}
+  .customer-portal.personal-workspace{width:100%;max-width:820px;min-height:100dvh;margin-inline:auto;--personal-navbar-height:76px;padding:calc(var(--personal-navbar-height) + env(safe-area-inset-top)) 0 0;background:var(--personal-surface);box-shadow:0 16px 60px color-mix(in srgb,var(--foreground) 8%,transparent)}
   .personal-workspace .portal-workspace-top{min-height:76px}
   .personal-workspace .personal-content{padding:18px 16px 48px}
   .customer-portal.personal-workspace .portal-access-state{width:auto;margin:0;padding:32px 16px 48px;border:0;border-radius:0;background:transparent;justify-items:start;text-align:left}
   .customer-portal.personal-workspace form{grid-template-columns:1fr}
-  .personal-hero{grid-template-columns:minmax(0,1fr) 220px}
+  .personal-hero{grid-template-columns:minmax(0,1fr) 280px;min-height:208px}
   .dark .customer-portal.personal-workspace{--personal-surface:var(--background)}
 }
-.personal-profile{display:grid;gap:20px}
-.personal-profile-banner{display:grid;gap:16px;padding:24px;border-radius:20px;background:#e7f3ea}
-.personal-profile-banner h1{margin:0 0 8px;color:var(--personal-ink);font-size:clamp(32px,4vw,44px);line-height:1.15;letter-spacing:-.03em;text-wrap:balance}
-.personal-profile-banner p{margin:0;max-width:38rem;color:#2c4a40;font-size:16px;line-height:1.6}
-.personal-profile-body{display:grid;gap:28px;padding:4px 4px 8px}
-.personal-profile-identity{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
-.personal-profile-avatar{display:grid;place-items:center;width:72px;height:72px;border-radius:50%;background:#e5f3ea;color:var(--personal-green);font-size:28px;font-weight:750}
-.personal-profile-identity h2{margin:0 0 6px;color:var(--personal-ink);font-size:28px;letter-spacing:-.03em}
-.personal-profile-identity p{display:flex;align-items:center;gap:8px;margin:2px 0;color:var(--personal-muted)}
-.personal-profile-identity>button{margin-left:auto}
-.personal-profile-section h2{display:flex;align-items:center;gap:8px;margin:0 0 6px;color:var(--personal-ink);font-size:18px}
-.personal-profile-section h2 svg{color:var(--personal-green)}
-.personal-profile-section>p{margin:0 0 16px;max-width:62ch;color:var(--personal-muted);line-height:1.6}
-.personal-profile-facts{display:grid;gap:16px 24px;margin:0}
-.personal-profile-facts div{display:grid;gap:4px}
-.personal-profile-facts dt{color:var(--personal-muted);font-size:13px;font-weight:650}
-.personal-profile-facts dd{margin:0;font-size:16px;font-weight:650;overflow-wrap:anywhere}
-.personal-profile-prefs{display:grid;gap:0;margin:0;padding:0;list-style:none}
-.personal-profile-prefs li{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:48px;border-bottom:1px solid #e6eeea}
+/* Personal profile: reference card layout. */
+.personal-profile{display:grid;gap:14px;color:#123e34}
+.personal-profile-banner{position:relative;display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:10px;padding:20px 18px;border-radius:20px;background:#e7f3ea;overflow:hidden}
+.personal-profile-banner-copy{position:relative;z-index:1;min-width:0}
+.personal-profile-banner h1{margin:0 0 6px;color:#0b3d31;font-size:clamp(26px,4.4vw,40px);font-weight:800;letter-spacing:-.03em;line-height:1.18}
+.personal-profile-banner p{margin:0;max-width:30ch;color:#2c4a40;font-size:14px;font-weight:500;line-height:1.55}
+.personal-profile-banner-art{position:relative;z-index:0;width:clamp(96px,26vw,210px);justify-self:end}
+.personal-profile-banner-art svg{display:block;width:100%;height:auto}
+.personal-profile-card{display:grid;gap:14px;padding:16px 14px;border-radius:18px;background:#fff;box-shadow:0 4px 14px #12382f0f}
+.personal-profile-identity{display:flex;align-items:center;gap:14px;flex-wrap:nowrap}
+.personal-profile-avatar{display:grid;place-items:center;flex:0 0 auto;width:64px;height:64px;border-radius:50%;background:#e3f1e7;color:#146b4f;font-size:26px;font-weight:800}
+.personal-profile-identity-copy{display:grid;gap:5px;min-width:0;flex:1 1 0}
+.personal-profile-identity-copy h2{margin:0 0 1px;color:#0b3d31;font-size:20px;font-weight:800;letter-spacing:-.02em}
+.personal-profile-identity-copy p{display:flex;align-items:center;gap:10px;margin:0;min-width:0;color:#5d6f68;font-size:14px;line-height:1.4}
+.personal-profile-identity-copy p svg{flex:0 0 auto;color:#849a92}
+.personal-profile-identity-copy p span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.personal-profile-identity .personal-profile-edit-btn{flex:0 0 auto;margin-left:auto;white-space:nowrap}
+.personal-company-action{width:100%;justify-content:center;gap:8px}
+.personal-profile-note{margin:0;padding:0 4px;color:#5d6f68;font-size:13px;line-height:1.6}
+.personal-profile-card-head{display:flex;align-items:center;gap:12px}
+.personal-profile-card-icon{display:grid;place-items:center;flex:0 0 auto;width:42px;height:42px;border-radius:50%;background:#eaf6ee;color:#1f7a45}
+.personal-profile-card-head h2{margin:0 0 3px;color:#0b3d31;font-size:17px;font-weight:800}
+.personal-profile-card-head p{margin:0;color:#6b7c76;font-size:13px;line-height:1.5}
+.personal-profile-fact-icon{display:grid;place-items:center;flex:0 0 auto;width:36px;height:36px;border-radius:50%;background:#eaf6ee;color:#1f7a45}
+.personal-profile-toggles{display:grid;margin:0;padding:0 14px;list-style:none;border:1px solid #e6eeea;border-radius:14px}
+.personal-profile-toggle{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;align-items:center;gap:12px;padding:12px 0;border-top:1px solid #eef3f0}
+.personal-profile-toggle:first-child{border-top:0}
+.personal-profile-toggle-label{min-width:0;color:#163028;font-size:14px;font-weight:650;line-height:1.4}
+.personal-profile-toggle .personal-pref-on,.personal-profile-toggle .personal-pref-off{white-space:nowrap;font-size:13px}
+.personal-profile-toggle .ui-switch{width:44px;height:26px}
+.personal-profile-toggle .ui-switch-checked{background:#1f7a45}
+.personal-profile-toggle .ui-switch-thumb{width:20px;height:20px}
+.personal-profile-toggle .ui-switch-checked .ui-switch-thumb{transform:translateX(18px)}
 .personal-pref-on,.personal-pref-off{font-size:13px;font-weight:750}
 .personal-pref-on{color:#1d7a45}
 .personal-pref-off{color:#3e524b}
 .personal-profile-form{display:grid;gap:16px}
-.personal-profile-form label,.personal-profile-panel .personal-notifications label{display:grid;gap:6px;color:#163028;font-weight:650}
-.personal-profile-panel .personal-notifications label{grid-template-columns:20px 1fr;align-items:center;min-height:44px}
+.personal-profile-form label{display:grid;gap:6px;color:#163028;font-weight:650}
 .personal-profile-form input:not([type=checkbox]){min-height:44px;padding:0 12px;border:1px solid #d5e3db;border-radius:10px;background:#fff;color:#163028;font:inherit;caret-color:#1f7a45}
 .personal-profile-form input[readonly]{background:#f3f6f4}
 .personal-profile-form input:focus-visible,.personal-profile-panel button:focus-visible{outline:2px solid #1f7a45;outline-offset:2px}
-.personal-profile-panel input[type=checkbox]{width:20px;height:20px;accent-color:#1f7a45}
-.personal-profile-panel .personal-notifications{margin:4px 0 0;padding:0;border:0}
-.personal-profile-panel .personal-notifications legend{margin-bottom:8px;color:#163028;font-weight:750}
-.personal-profile-panel .personal-notifications p{margin:8px 0 0;color:#3e524b;line-height:1.5}
 .personal-profile-panel ::selection{background:#cfe8d8;color:#163028}
+@media(max-width:420px){
+  .personal-profile-identity{gap:10px}
+  .personal-profile-avatar{width:52px;height:52px;font-size:22px}
+  .personal-profile-identity-copy{gap:4px}
+  .personal-profile-identity-copy h2{font-size:18px}
+  .personal-profile-identity-copy p{gap:8px;font-size:13px}
+  .personal-profile-identity .personal-profile-edit-btn{gap:6px;padding-inline:12px}
+}
 @media(min-width:800px){
-  .personal-profile-banner{grid-template-columns:minmax(0,1.2fr) minmax(180px,.7fr);align-items:center;padding:28px 32px}
-  .personal-profile-facts{grid-template-columns:1fr 1fr}
+  .personal-profile-banner{padding:28px 32px}
+  .personal-profile-banner-art{width:190px}
+  .personal-profile-card{padding:22px 22px}
   .personal-address-hero{grid-template-columns:minmax(0,1.2fr) minmax(180px,.8fr);align-items:center;padding:28px 32px}
 }
 @media(max-width:640px){
-  .personal-profile-identity>button{margin-left:0}
   .personal-account-name{display:none}
-  .personal-order-row,.personal-data-error{align-items:flex-start;flex-direction:column}
+  .personal-data-error{align-items:flex-start;flex-direction:column}
+  .personal-orders{padding:18px 0 16px}
+  .personal-orders h1{font-size:26px}
   .personal-address-hero{padding:18px}
   .personal-address-art{justify-self:start;width:min(100%,200px)}
   .personal-address-card{grid-template-columns:minmax(0,1fr)}
@@ -269,3 +392,137 @@ button.ui-button.personal-address-save:hover{background:#18663a}
   .personal-address-panel .side-panel-header,.personal-address-panel .side-panel-body{padding-inline:16px}
   .personal-points-facts{flex-wrap:wrap;gap:24px}
 }
+
+/* Shared page rhythm for personal lists and rewards. */
+.personal-content{--personal-page-title-size:28px;--personal-page-top:22px;--personal-page-copy:#5d6f68}
+.personal-content .personal-orders,.personal-content .personal-menus{padding-top:var(--personal-page-top)}
+.personal-content .personal-orders h1,.personal-content .personal-menus h1,.personal-content .personal-rewards-intro h1{margin:0 0 8px;color:var(--personal-ink);font-size:var(--personal-page-title-size);font-weight:750;line-height:1.3;letter-spacing:0;text-wrap:balance}
+.personal-content .personal-orders>p,.personal-content .personal-menus>p,.personal-content .personal-rewards-intro p{font-size:14px;font-weight:400;line-height:1.6;color:var(--personal-page-copy)}
+.personal-content .personal-rewards-intro{padding:var(--personal-page-top) 0 20px}
+.personal-content .personal-rewards-history{padding-inline:0}
+@media(max-width:767px){
+ .personal-content{--personal-page-title-size:26px;--personal-page-top:18px}
+}
+@media(max-width:360px){
+  .personal-order-action{white-space:normal;font-size:11px}
+}
+/* Personal address book: reference layout, scoped to the address surface. */
+.personal-addresses{gap:16px;color:#123e34}
+.personal-addresses .personal-address-hero{position:relative;isolation:isolate;grid-template-columns:minmax(0,1fr) 38%;min-height:228px;padding:28px 30px;overflow:hidden;background:#e3f1e7;border-radius:24px}
+.personal-address-hero>div{position:relative;z-index:1}
+.personal-addresses .personal-address-hero h1{color:#083d32;font-size:clamp(28px,4vw,42px);font-weight:800;line-height:1.25}
+.personal-addresses .personal-address-hero p{font-size:17px;color:#234e43}
+.personal-addresses .personal-address-art{width:100%;max-height:210px;object-fit:contain;align-self:end;justify-self:end}
+.personal-addresses button.ui-button.personal-address-create{min-width:210px;margin-top:20px;min-height:52px;padding-inline:24px;gap:12px;border-radius:999px;background:#0b4c3c;font-size:18px}
+
+.customer-portal.personal-workspace .personal-address-list-heading{margin:12px 0 0;font-size:25px;color:#102f29}
+.personal-addresses .personal-address-sync{align-items:center;padding:16px 20px;border-radius:18px;background:#e2efff;color:#195695}
+.personal-addresses .personal-address-list{gap:18px}
+.personal-addresses .personal-address-card{position:relative;display:block;padding:20px 24px 8px;border:1px solid #e0e6e3;border-radius:20px;box-shadow:0 5px 12px #12382f0d}
+.personal-addresses .personal-address-card.is-default{border-color:#e0e6e3;background:#fff}
+.personal-addresses .personal-address-card-main{display:block}
+.personal-addresses .personal-address-icon{position:absolute;left:24px;top:18px;width:42px;height:42px;background:#e8f4ee;color:#0c493b}
+.personal-addresses .personal-address-title{min-height:42px;padding-left:56px;padding-right:58px;margin-bottom:16px}
+.personal-addresses .personal-address-title>strong{font-size:21px;color:#103e33}
+.personal-addresses .personal-address-title em{position:absolute;right:20px;top:24px;padding:5px 12px;background:#187750;color:white}
+.personal-addresses .personal-address-contact{display:flex;flex-wrap:wrap;gap:10px 24px;margin:0 0 10px;font-size:19px;color:#59636a}
+.personal-addresses .personal-address-contact strong{font-size:21px;color:#183c32}
+.personal-addresses .personal-address-location{display:flex;align-items:flex-start;gap:16px;margin:0 0 18px;font-size:18px;line-height:1.65;color:#374b44}
+.personal-address-location svg{flex-shrink:0;margin-top:5px;color:#235649}
+.personal-addresses .personal-address-actions{justify-content:stretch;border-top:1px solid #e0e8e3;padding-top:6px}
+.personal-address-actions>.personal-address-edit{flex:1 1 0;min-width:0;color:#124e3c;gap:9px;white-space:nowrap}
+.personal-address-actions>.personal-address-delete{color:#cc2c2c}
+.personal-address-card.is-default .personal-address-actions{display:flex;justify-content:stretch}
+.personal-address-card.is-default .personal-address-edit{min-width:0}
+.personal-addresses .personal-address-menu-wrap{position:absolute;right:14px;top:17px}
+.personal-address-card.is-default .personal-address-menu-wrap{position:relative;margin-left:auto;top:auto;right:auto}
+.personal-addresses .personal-address-menu{bottom:auto;top:calc(100% + 4px)}
+.personal-addresses button:disabled{opacity:.5;cursor:not-allowed}
+.personal-addresses ::selection{background:#cfe8d8;color:#163028}
+@media(max-width:520px){
+.personal-addresses .personal-address-hero{grid-template-columns:minmax(0,1fr) 30%;min-height:190px;padding:22px 18px;gap:0}
+.personal-addresses .personal-address-hero h1{font-size:28px;white-space:nowrap}
+.personal-addresses .personal-address-hero p{font-size:14px;max-width:20ch}
+.personal-addresses button.ui-button.personal-address-create{min-width:170px;font-size:16px;min-height:46px;margin-top:16px}
+.personal-addresses .personal-address-art{width:150%;max-width:none;margin-left:-40%;pointer-events:none}
+.personal-addresses .personal-address-card{padding:18px 16px 6px}
+.personal-addresses .personal-address-icon{left:16px}
+.personal-addresses .personal-address-title>strong{font-size:18px}
+.personal-addresses .personal-address-contact,.personal-addresses .personal-address-location{font-size:16px}
+.personal-addresses .personal-address-contact strong{font-size:18px}
+.personal-addresses .personal-address-sync{padding:12px 14px;font-size:14px}
+.personal-address-actions>.personal-address-edit{padding-inline:3px;font-size:14px;gap:6px}
+}
+/* Reference proportions: all sizes scale from the artwork's 390px content viewport. */
+.personal-addresses{font-family:"Noto Sans HK","PingFang HK","Microsoft JhengHei",Arial,sans-serif;gap:10px;padding-top:0}
+.personal-addresses .personal-address-hero{display:block;min-height:144px;padding:18px 22px;border-radius:16px;background:#e3f1e7}
+.personal-addresses .personal-address-hero>div{width:100%}
+.personal-addresses .personal-address-hero h1{margin:0 0 5px;font-size:clamp(27px,4vw,42px);font-weight:800;letter-spacing:-.025em;line-height:1.3;white-space:normal}
+.personal-addresses .personal-address-hero p{max-width:none;width:fit-content;margin:0;font-size:14px;font-weight:500;white-space:normal;line-height:1.5}
+.personal-addresses .personal-address-art{position:absolute;z-index:0;right:0;bottom:0;width:48%;height:100%;max-height:none;max-width:none;margin:0;object-fit:cover;object-position:center;pointer-events:none;mask-image:linear-gradient(to right,transparent,#000 15%)}
+.personal-addresses button.ui-button.personal-address-create{margin-top:12px;min-width:150px;min-height:38px;height:38px;padding:0 22px;gap:10px;font-size:15px;background:#0c493b;box-shadow:0 3px 5px #12382f1a}
+.personal-addresses .personal-address-guidance{margin:0 2px;padding:10px 15px;font-size:12px;line-height:1.5;gap:10px;border-radius:12px;background:#e7f3ed}
+.personal-addresses .personal-address-guidance svg{width:17px;height:17px}
+.customer-portal.personal-workspace .personal-address-list-heading{margin:7px 6px 0;font-size:19px;font-weight:750;line-height:1.5}
+.personal-addresses .personal-address-sync{margin:0 5px 0;padding:10px 15px;font-size:12px;line-height:1.5;gap:12px;border-radius:12px}
+.personal-addresses .personal-address-sync svg{width:18px;height:18px}
+.personal-addresses .personal-address-list{gap:11px;margin:0 3px}
+.personal-addresses .personal-address-card{padding:10px 14px 5px;border-radius:12px;background:#fff;box-shadow:0 3px 7px #12382f12}
+.personal-addresses .personal-address-card.is-default{background:#fff;border-color:#e0e6e3}
+.personal-addresses .personal-address-icon{left:12px;top:9px;width:28px;height:28px;border-radius:9px}
+.personal-addresses .personal-address-icon svg{width:20px;height:20px;stroke-width:2.3}
+.personal-addresses .personal-address-title{min-height:28px;padding-left:34px;padding-right:50px;margin:0 0 9px;line-height:1.45}
+.personal-addresses .personal-address-title>strong{font-size:16px;font-weight:750;line-height:1.45}
+.personal-addresses .personal-address-title em{top:13px;right:11px;padding:3px 11px;font-size:12px;font-weight:500;line-height:1.4}
+.personal-addresses .personal-address-contact{margin:0 0 5px;gap:8px 20px;font-size:13px;line-height:1.6}
+.personal-addresses .personal-address-contact strong{font-size:15px;font-weight:750}
+.personal-addresses .personal-address-location{gap:13px;margin:0 0 10px;font-size:13px;line-height:1.65}
+.personal-addresses .personal-address-location svg{width:16px;height:16px;margin-top:3px}
+.personal-addresses .personal-address-location span{white-space:pre-wrap;overflow-wrap:anywhere}
+.personal-addresses .personal-address-actions{flex-wrap:nowrap;padding-top:3px;gap:2px}
+.personal-addresses .personal-address-edit{min-height:30px;padding:0 4px;font-size:13px;gap:7px}
+.customer-portal.personal-workspace .personal-address-card .personal-address-actions>.personal-address-edit{padding-inline:8px;font-size:13px;gap:6px}
+.personal-addresses .personal-address-edit svg{width:16px;height:16px}
+.personal-addresses .personal-address-menu-wrap{right:9px;top:6px}
+.personal-addresses .personal-address-menu-trigger{width:30px;min-height:30px}
+@media(min-width:768px){
+.personal-addresses{gap:15px}
+.personal-addresses .personal-address-hero{min-height:245px;padding:30px 40px;border-radius:24px}
+.personal-addresses .personal-address-hero p{font-size:21px}
+.personal-addresses button.ui-button.personal-address-create{margin-top:22px;min-width:265px;min-height:60px;font-size:23px}
+.personal-addresses .personal-address-guidance,.personal-addresses .personal-address-sync{font-size:18px;padding:17px 24px;border-radius:18px}
+.customer-portal.personal-workspace .personal-address-list-heading{font-size:28px;margin-top:13px}
+.personal-addresses .personal-address-card{padding:18px 24px 8px;border-radius:18px}
+.personal-addresses .personal-address-icon{left:22px;top:17px;width:44px;height:44px}
+.personal-addresses .personal-address-title{padding-left:58px;min-height:44px;margin-bottom:13px}
+.personal-addresses .personal-address-title>strong{font-size:23px}
+.personal-addresses .personal-address-title em{top:23px;right:22px;font-size:17px}
+.personal-addresses .personal-address-contact,.personal-addresses .personal-address-location{font-size:20px}
+.personal-addresses .personal-address-contact strong{font-size:23px}
+.personal-addresses .personal-address-edit{min-height:44px;font-size:18px}
+}
+.personal-addresses .personal-address-card p,.personal-addresses .personal-address-card strong,.personal-addresses .personal-address-card button{font-family:"Noto Sans HK","PingFang HK","Microsoft JhengHei",Arial,sans-serif}
+.personal-addresses .personal-address-contact{margin-bottom:6px}
+.personal-addresses .personal-address-location{margin-bottom:13px}
+.personal-addresses .personal-address-edit{min-height:34px}
+.personal-addresses .personal-address-guidance{display:flex;align-items:center}
+
+.personal-workspace a.self-service-back{width:fit-content;min-height:44px;margin-inline:0;color:var(--personal-green);font-weight:400;text-decoration:none}
+.personal-workspace a.self-service-back:focus-visible{outline:2px solid var(--personal-green);outline-offset:2px}
+
+.personal-home button.personal-menu-card{border:0;background:transparent;padding:0;font:inherit;text-align:left;cursor:pointer;-webkit-tap-highlight-color:transparent}
+
+/* Customer portal: shared drag-and-drop file field. */
+.portal-file-drop{display:grid;gap:8px;min-width:0}
+.portal-file-drop-label{color:#163028;font-size:14px;font-weight:650;line-height:1.45}
+.portal-file-drop-target{position:relative;display:grid;justify-items:center;align-content:center;gap:5px;min-height:112px;padding:18px 16px;border:1.5px dashed #b7d8c6;border-radius:14px;background:#f3faf5;text-align:center;cursor:pointer;transition:border-color .15s,background .15s,box-shadow .15s}
+.portal-file-drop-target:hover{border-color:#1f7a45;background:#edf8f1}
+.portal-file-drop-target.is-over{border-color:#1f7a45;background:#e2f3e8;box-shadow:0 0 0 3px #1f7a451f}
+.portal-file-drop-target:focus-within{outline:2px solid #1f7a45;outline-offset:2px}
+.portal-file-drop-icon{display:grid;place-items:center;width:42px;height:42px;border-radius:50%;background:#e3f1e7;color:#1f7a45}
+.portal-file-drop-target strong{max-width:100%;color:#123e34;font-size:14px;font-weight:700;line-height:1.4;overflow-wrap:anywhere}
+.portal-file-drop-target small{max-width:100%;color:#5d6f68;font-size:12.5px;font-weight:500;line-height:1.45;overflow-wrap:anywhere}
+.portal-file-drop-target[data-rejected]{border-color:#e0b4ad;background:#fdf4f2}
+.portal-file-drop-target[data-rejected] small{color:#b3402f}
+.portal-file-drop-input{position:absolute;inset:0;width:100%;height:100%;margin:0;padding:0;border:0;opacity:0;cursor:pointer}
+

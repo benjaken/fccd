@@ -1,5 +1,7 @@
 # UI Development Standard
 
+客戶指南富文本的編輯區與顯示頁共用 `fccd-rich-content` 深綠色標題、連結及薄荷綠引用樣式。編輯器提供 HTML 匯入區；套用前告知會取代內容，經現有白名單清理後載入預覽，支援復原及取消，仍需頁面原有儲存操作。電話連結僅接受數字、空格、括號、連字號及開頭可選加號的 `tel:` 格式；不開放任意行內樣式。
+
 Approved UI hard rules for **FCCD** (*Food Channel Catering Delivery*) —
 layout, theme, status colors, and preview sign-in.
 
@@ -30,7 +32,7 @@ this file in the same change set.
 
 ## 1. Page layout (all authenticated pages)
 
-客戶訂購營運、公司 BR 申請、訂餐日曆、活動飯盒與積分兌換採列表與操作優先：頁名與說明由導航提供，頁面不另設標題區，搜尋、篩選及主要操作緊接列表。訂餐日曆的團體客戶選擇與月份導覽放在同一工具列，窄螢幕篩選獨佔一行。活動飯盒 VIP 週期設定透過既有 SidePanel 開啟；客戶積分規則的佈局保持原有安排。這些頁面使用既有 Input、Button、ListTable、TablePagination 及 SidePanel，不新增替代控制組件。
+客戶訂購營運、公司 BR 申請、訂餐日曆、活動飯盒與積分兌換採列表與操作優先：頁名與說明由導航提供，頁面不另設標題區，搜尋、篩選及主要操作緊接列表。訂餐日曆的團體客戶選擇與月份導覽放在同一工具列，窄螢幕篩選獨佔一行。活動飯盒是否屬 VIP 訂飯由餐單編輯器的開關直接設定，不另設週期面板；客戶積分規則的佈局保持原有安排。這些頁面使用既有 Input、Button、ListTable、TablePagination 及 SidePanel，不新增替代控制組件。
 
 客戶積分規則頁保留全寬 shell；內容採規則橫額與版本紀錄。此頁不放假期或營業日設定。
 積分規則資料載入期間，使用對應規則橫額、三項說明、版本表格的整頁骨架屏；沿用共享骨架樣式及減少動態偏好，以 `aria-busy` 和本地化狀態文字標示載入，資料就緒後才顯示版本數及操作。
@@ -41,7 +43,9 @@ this file in the same change set.
 Main content must use the full available width inside the shell. Do **not**
 reintroduce a centered `max-width` (for example `1600px`) on page shells.
 
-User-approved exception (2026-10-13): the personal customer Portal uses the original desktop shell from 768px: a centered column up to 820px, a 76px green title bar with the menu on the left and the current page title centered. Mobile keeps the existing logo header and drawer. This exception applies only to `.personal-workspace`; organization and operational pages retain the full-width rule.
+User-approved exception (2026-10-13): the personal customer Portal uses the original desktop shell from 768px: a centered column up to 820px, a 76px green title bar with the menu on the left and the current page title centered. Mobile keeps the existing logo header and drawer. This exception applies to `.personal-workspace`.
+
+User-approved extension (2026-10-15): the **organization** customer Portal (`/customer`) now uses the same `.personal-workspace` shell and tokens as the personal Portal (centered column, green title bar with the current page title, shared drawer/nav, `.personal-content` padding, cards). The organization home mirrors the personal home: hero with the company name, quick links, next-order and points cards whose action buttons stay bottom-aligned, a recent-orders panel, and an open-cycle summary. The cycle summary shows the team counts (ordered / not ordered) and cycle total to admins, and the member's own order status to members; there is no saved-orders (常用訂單) panel. Menus are shown on the menus page. Organization-only pages (members, review, settlement, operations) still follow their own full-width operational rules. Shared pages (guides, payment/delivery) are the same components for both identities.
 
 | Shell | Rule |
 |---|---|
@@ -248,3 +252,41 @@ Automated coverage: `test/i18n-placeholders.test.ts` rejects English-prose
 客戶介紹內容使用共享 RichTextEditor（粗體、斜體、底線、項目與編號清單），編輯面板桌面半寬、手機全寬。內容儲存為清理過的 HTML，客戶端使用相同 allowlist 顯示；舊純文字仍保留換行。
 
 飯盒餐單頁（`CustomerPortalLunchboxPage`）建立／編輯須使用 `SidePanel half`，桌面 50vw、`max-width: 767px` 時 100vw。餐單資料、配送設定及餐點以 `fieldset`／`legend` 分組；產品、單價、數量須有可見標籤，手機單欄。空列表為具編輯權限者提供建立餐單 CTA；VIP 週期與餐單勾選器使用獨立 SidePanel。頁面特例樣式放在 `src/components/settings/customer-lunchbox.css`，沿用既有 tokens、Button、Input 與 ListTable。
+
+個人積分頁 `/customer/personal/points` 依參考圖使用薄荷綠結餘卡、雙欄獎賞及賺取／使用紀錄。裝飾圖獨立切圖，所有文字與操作保留 HTML；商品圖片使用 `object-fit: contain` 完整展示。600px 以下獎賞卡內圖片與文字垂直排列，保持兩欄。結餘及商品來自既有 API，失敗不可顯示假零分；紀錄初始兩項，可展開全部並顯示香港時間。
+
+個人送貨地址頁依參考圖使用薄荷綠橫額（內含新增地址按鈕）、未影響現有訂單的提示、Shopify 同步狀態及地址卡片。卡片顯示類型、收貨人、電話、完整地址，預設地址優先並用綠色邊框標示；其他地址直接提供編輯、刪除及設為預設，沿用既有 SidePanel 表單與 API。
+
+客戶平台一般操作按鈕共用 customer-buttons.css，採積分兌換的 #007257 深綠底、白字、13px 圓角、最少 44px 高；hover #005e48，停用灰底 #e9eceb／文字 #727d84。刪除保留紅色識別，導覽、圖示及關閉按鈕保留原語意。
+
+
+### 個人活動飯盒（2026-10-15）
+
+/customer/personal/lunchbox 參照核准手機稿：薄荷綠介紹橫額、雙欄飯盒卡片、44px 數量按鈕及頁內 sticky 合計。點卡片進詳情，加入訂單後返回列表；下一步確認地址、送貨及運費後才提交預備訂單。訂購須知顯示實際香港截單時間，不猜測備餐日數。圖片及描述來自已授權餐單的產品資料；缺圖使用餐具圖示，不新增示例商品或未提供的營養資料。載入失敗提供重試，不當作空餐單。空狀態提供空飯盒插圖及訂單紀錄連結，按用戶要求不顯示聯絡文案。保留繁中／英文、存貨上限及冪等提交。
+
+
+### 個人客戶頁面骨架屏（2026-10-15）
+
+所有個人客戶主選單頁及直接進入的訂單詳情、付款上傳、訂單意見和指南文章，按目標路由選擇 `PersonalPageSkeleton` 的對應版型，保留共享頁首。主頁、到會網站、飯盒、訂單列表／詳情、積分、地址、個人資料與文章分別使用符合頁面結構的區塊，不再共用內部儀表板骨架。飯盒及指南的第二階段資料請求、積分目錄及優惠券各自提供區域骨架；飯盒詳情照片在圖片完成載入前保留同尺寸骨架，失敗後使用原有缺圖狀態。即時可用的表單及本地詳情不刻意延遲。骨架以 `role="status"`、本地化標籤和 `aria-busy` 標示，裝飾區塊隱藏於輔助技術，沒有可聚焦的假控制；減少動態偏好停用呼吸動畫，錯誤及空狀態仍保留原有處理。
+
+Customer portal drawer: constrain the panel to the dynamic viewport height. Keep the header and logout footer outside the independently scrolling link region, and include the bottom safe area so logout remains reachable on short mobile screens.
+
+個人訂單卡片的操作列最多直接顯示兩個操作，並以 44px 淺灰色省略號按鈕展開其餘操作。已付款時直接顯示淺綠色下載收據及淺紫色下載發票，訂單意見與前往訂餐／品牌官網放在彈出選單；未付款只有上傳單據時，把訂單意見移出補上空位。選單沿用共享 Popover，支援點擊外部、Escape 關閉及返回觸發按鈕焦點；點擊連結後關閉，品牌未設定時保留原有停用提示。對應訂單骨架亦使用兩個操作及省略號的佈局。
+
+Personal portal navbar stays fixed to the viewport on mobile and desktop. Reserve its 64px/76px height plus the top safe area in the workspace so scrolling content cannot move or cover navigation.
+
+Personal points uses three accessible in-page tabs below the balance: catalog, earn/use ledger, and redemption records. Redemption records list goods and cash vouchers as cards that are not collapsible: the type title sits top-left with the status pill top-right, and the item name, amount/points and Hong Kong time follow below. A cash voucher always shows its discount code with a show/hide toggle and an icon-only copy button, with no decorative artwork. Switching tabs resets the visible record count to 10; do not infer fulfillment status from a points debit.
+
+積分及兌換記錄預設顯示 10 條，滾動至列表底部每次追加 10 條；移除查看全部／收起按鈕，切換 tab 重設為 10 條。目前使用積分 API 回傳的最多 100 條記錄。
+
+Personal order detail: preserve actual payment rows, masked contact values and financial breakdown. Initially show two food rows with an accessible expand/collapse button. Missing product photos must not be substituted with unrelated food imagery.
+
+訂單意見頁返回入口沿用訂單詳情的 self-service-back：左箭嘴加「返回訂單列表」文字，透明背景、無外框。
+
+訂單意見空狀態使用 feedback-empty.png 的淡綠立體意見卡插圖，圖片、標題和說明置中排列；保留上方文字返回入口。插圖為裝飾用途，空 alt 避免重複朗讀。
+
+客戶端文案只顯示協助完成操作的資訊：無加單商品、缺少送貨日期、已結束訂單及一般不可加單狀態不另顯示提示；保留實際截單與禁單日期提示。不顯示內部品牌設定、地址同步及發碼系統細節；付款／重試／防止重複付款提示必須保留。
+
+The organization customer catering site (`/customer/menus`, `CustomerMenusPage`) is display-only and reuses the personal customer `.personal-workspace` shell and card rhythm rather than the generic `portal-row` layout. It leads with the `最新餐單` heading and lists the brand website entries from the active Shopify stores as cards (logo, name, domain, `前往品牌官網`), matching the personal customer catering site; a failed load is treated as an empty state. Organization customers order only through `活動飯盒`, so this page no longer shows assigned menus, saved orders or menu detail, the organization home's menu quick link is a display entry, the organization orders page no longer has the pending-submission batch section, and the order detail no longer offers `再次訂購`. Do not reintroduce assigned-menu ordering into these surfaces.
+
+共享空狀態使用 `src/components/ui/empty-state.tsx` 的 `EmptyState`：預設為可無損縮放的 `/assets/empty-box.svg`，標題與說明由頁面傳入本地化文字，可選自訂插圖及操作。客戶訂單列表與首頁無訂單紙箱共用此 SVG。

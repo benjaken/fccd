@@ -114,6 +114,23 @@ export async function generateRewardCatalogImage(input: {
   return { objectPath: data.objectPath, signedUrl: data.signedUrl ?? (await rewardCatalogImageUrl(data.objectPath)) };
 }
 
+export type RewardRedemptionRecord = {
+  id: string;
+  name: string;
+  kind: "gift" | "voucher";
+  points: number;
+  status: "pending" | "fulfilled";
+  created_at: string;
+  voucher_status: "queued" | "issuing" | "issued" | "failed" | null;
+  voucher_code: string | null;
+  voucher_amount: number | null;
+  shop_domain: string | null;
+};
+
+export const listPersonalRewardRedemptions = () => rpc<RewardRedemptionRecord[]>("customer_personal_reward_redemptions");
+export const listPortalRewardRedemptions = async (organizationId?: string) =>
+  (await portalRpc<RewardRedemptionRecord[]>("customer_portal_reward_redemptions", undefined, organizationId)) ?? [];
+
 export const listRewardCatalog = () => rpc<RewardCatalogItem[]>("customer_reward_catalog");
 export async function redeemPersonalCatalog(requestId: string, catalogId: string) {
   const result = await rpc<{ id: string; balance: number }>("customer_personal_redeem_catalog", { p_request_id: requestId, p_catalog_id: catalogId });

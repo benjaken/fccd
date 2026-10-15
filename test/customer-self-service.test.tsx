@@ -1,8 +1,8 @@
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 
-import { CustomerSelfServicePage } from "@/components/CustomerSelfServicePage";
+import { CustomerSelfServicePage, DetailView } from "@/components/CustomerSelfServicePage";
 import type {
   CustomerSelfServiceOrderDetail,
   CustomerSelfServiceSession,
@@ -69,6 +69,18 @@ const detail: CustomerSelfServiceOrderDetail = {
 };
 
 describe("CustomerSelfServicePage", () => {
+  it("keeps the personal order detail skeleton visible until the detail request finishes", async () => {
+    let resolveDetail!: (value: CustomerSelfServiceOrderDetail) => void;
+    const loadDetail = vi.fn(() => new Promise<CustomerSelfServiceOrderDetail>(resolve => { resolveDetail = resolve; }));
+    const { container } = render(<MemoryRouter initialEntries={["/customer/personal/order-1"]}><Routes><Route path="/customer/personal/:orderId" element={<CustomerSelfServicePage embedded otpOnly routeBase="/customer/personal" restore={vi.fn().mockResolvedValue(session)} loadDetail={loadDetail} loadAddonOptions={vi.fn().mockResolvedValue({ canAddOn: false, items: [] })} />} /></Routes></MemoryRouter>);
+    expect(container.querySelector('[data-skeleton="order-detail"]')).toBeInTheDocument();
+    await waitFor(() => expect(loadDetail).toHaveBeenCalledWith(session.token, "order-1"));
+    expect(container.querySelector('[data-skeleton="order-detail"]')).toHaveAttribute("aria-busy", "true");
+    expect(screen.queryByText("B-1247")).not.toBeInTheDocument();
+    await act(async () => resolveDetail(detail));
+    expect(await screen.findByRole("heading", { name: "B-1247" })).toBeInTheDocument();
+    expect(container.querySelector('[data-skeleton="order-detail"]')).not.toBeInTheDocument();
+  });
   beforeEach(() => {
     sessionStorage.clear();
     vi.stubGlobal("URL", {
@@ -192,4 +204,45 @@ describe("CustomerSelfServicePage", () => {
     expect(await screen.findByText(detail.lines[0].name)).toBeInTheDocument();
     expect(loadDetail).toHaveBeenCalledWith("customer-session", "order-1");
   });
+});
+
+it("renders the redesigned personal detail with expandable items, masked contact and payment facts", async () => {
+  const order = { ...detail, lines: Array.from({length: 4}, (_, i) => ({...detail.lines[0], id: String(i), name: "食品" + i})) };
+  render(<DetailView embedded session={session} order={order} onBack={vi.fn()} onLogout={vi.fn()} printReceipt={vi.fn()} loadAddonOptions={vi.fn().mockResolvedValue({canAddOn:false, reason:"cutoff_passed", items:[]})} />);
+  expect(screen.getByRole("heading", {name:"收貨人資料"})).toBeInTheDocument();
+  expect(screen.getByRole("heading", {name:"付款資料"})).toBeInTheDocument();
+  expect(screen.getByText("Credit card")).toBeInTheDocument();
+  expect(screen.getByText("****9987")).toBeInTheDocument();
+  expect(screen.queryByText("60879987")).not.toBeInTheDocument();
+  expect(screen.getByRole("link", {name:"查看地圖"})).toHaveAttribute("href", "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(detail.address!));
+  expect(screen.queryByText("食品2")).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", {name:"查看全部 4 項食品"}));
+  expect(screen.getByText("食品3")).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", {name:"收起食品"}));
+  expect(screen.queryByText("食品2")).not.toBeInTheDocument();
+  expect(await screen.findByText(/加單時限已過/)).toBeInTheDocument();
+});
+
+it.each(["no_products", "order_unavailable", "delivery_date_missing", "order_closed"])("hides non-actionable add-on notice for %s", async reason => {
+  const loadAddonOptions = vi.fn().mockResolvedValue({canAddOn:false, reason, items:[]});
+  const {container} = render(<DetailView embedded session={session} order={detail} onBack={vi.fn()} onLogout={vi.fn()} printReceipt={vi.fn()} loadAddonOptions={loadAddonOptions} />);
+  await waitFor(() => expect(loadAddonOptions).toHaveBeenCalled());
+  await act(async () => {});
+  expect(container.querySelector(".self-service-addon-note")).toBeNull();
+  expect(screen.queryByRole("button", {name:"加單", exact:true})).not.toBeInTheDocument();
+});
+
+it("selects add-on products without exposing SKUs and updates quantities and total", async () => {
+  render(<DetailView embedded session={session} order={detail} onBack={vi.fn()} onLogout={vi.fn()} printReceipt={vi.fn()} loadAddonOptions={vi.fn().mockResolvedValue({canAddOn:true, items:[{id:"addon", productId:"product", name:"測試飯盒", sku:"INTERNAL-SKU", price:60, minQuantity:1, maxQuantity:20}]})} />);
+  fireEvent.click(await screen.findByRole("button", {name:"加單", exact:true}));
+  const panel=within(screen.getByRole("dialog"));
+  expect(panel.queryByText("INTERNAL-SKU")).not.toBeInTheDocument();
+  const select=panel.getByRole("button", {name:/測試飯盒.*HK/});
+  fireEvent.click(select);
+  expect(select).toHaveAttribute("aria-pressed","true");
+  fireEvent.click(panel.getByRole("button", {name:"增加 測試飯盒"}));
+  expect(panel.getByRole("spinbutton", {name:"測試飯盒 數量"})).toHaveValue(2);
+  expect(panel.getAllByText("HK$120")).toHaveLength(2);
+  fireEvent.click(panel.getByRole("button", {name:"減少 測試飯盒"}));
+  expect(panel.getByRole("spinbutton", {name:"測試飯盒 數量"})).toHaveValue(1);
 });

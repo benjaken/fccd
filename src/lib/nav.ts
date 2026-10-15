@@ -769,6 +769,12 @@ export const secondaryNav: Record<string, NavItem[]> = {
       permissionKey: "settings.customer_portal",
     },
     {
+      key: "customerPortalPacking",
+      to: "/settings/customer-portal/packing",
+      icon: PackageCheck,
+      permissionKey: "settings.customer_portal",
+    },
+    {
       key: "customerPortalRewardCatalog",
       to: "/settings/customer-portal/rewards",
       icon: Gift,

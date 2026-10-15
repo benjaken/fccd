@@ -1,145 +1,43 @@
-import { useState } from "react";
-import { useOutletContext, useParams, Navigate } from "react-router-dom";
-import { Button } from "@/components/ui/button";
-import { archivePortalTemplate, formatMenuPeriod, hongKongToday, menuValidUntil, savePortalTemplate } from "@/lib/customer-portal";
-import type { CustomerPortalController } from "@/components/CustomerPortalPage";
-
-const money = (cents: number) => new Intl.NumberFormat("zh-HK", { style: "currency", currency: "HKD" }).format(cents / 100);
+import { useEffect, useState } from "react";
+import { ChevronRight } from "lucide-react";
+import { useTranslation } from "react-i18next";
+import { EmptyState } from "@/components/ui/empty-state";
+import { getStorefrontLogoPath } from "@/lib/brand-logo";
+import { fetchPersonalSnapshot, shopifyStoreUrl, type PersonalStore } from "@/lib/customer-personal";
+import "@/lib/customer-portal-i18n";
+import "@/lib/customer-personal-i18n";
 
 export function CustomerMenusPage() {
-  const portal = useOutletContext<CustomerPortalController>();
-  const { menuId } = useParams();
-  const {
-    t, menu, quantities, setQuantities, serviceDate, setServiceDate, blackouts, addressId, setAddressId,
-    busy, requestId, chooseMenu, applyTemplate, cart, checkout, setPage, refresh, run,
-  } = portal;
-  const data = portal.data;
-  const [templateName, setTemplateName] = useState("");
-  if (!data) return null;
-  if (menuId && !menu) return <Navigate to="/customer/menus" replace />;
-  const templates = data.templates ?? [];
-  const holiday = blackouts.find(day => day.blackout_on === serviceDate);
-  const cartItems = cart?.items ?? [];
-
+  const { t } = useTranslation();
+  const [sites, setSites] = useState<PersonalStore[] | null>(null);
+  useEffect(() => {
+    let active = true;
+    void fetchPersonalSnapshot()
+      .then(snapshot => { if (active) setSites(snapshot.stores); })
+      .catch(() => { if (active) setSites([]); });
+    return () => { active = false; };
+  }, []);
   return (
-    <section>
-      <h1>{menu ? menu.name : t("portal.menus")}</h1>
-      {!menu ? (
-        <>
-          {data.menus.map(row => (
-            <div className="portal-row" key={row.id}>
-              <div>
-                <strong>{row.brand} · {row.name}</strong>
-                <p>{formatMenuPeriod(row)} · {row.delivery_time}</p>
-              </div>
-              <Button onClick={() => chooseMenu(row)}>{t("portal.choose")}</Button>
-            </div>
-          ))}
-          <h2>{t("portal.templates")}</h2>
-          {templates.length === 0 ? <p>{t("portal.noTemplates")}</p> : null}
-          {templates.map(template => (
-            <div className="portal-row" key={template.id}>
-              <div>
-                <strong>{template.name}</strong>
-                <p>{template.items.map(item => `${item.name} × ${item.quantity}`).join("、")}</p>
-              </div>
-              <div className="portal-actions">
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={busy || data.menus.length === 0}
-                  onClick={() => applyTemplate(template)}
-                >
-                  {t("portal.applyTemplate")}
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={busy}
-                  onClick={() => void run(async () => {
-                    await archivePortalTemplate(template.id, data.organization.id);
-                    await refresh();
-                  }, t("portal.templateArchived"))}
-                >
-                  {t("portal.deleteTemplate")}
-                </Button>
-              </div>
-            </div>
-          ))}
-        </>
-      ) : (
-        <>
-          <p>{menu.brand} · {formatMenuPeriod(menu)} · {menu.delivery_time}</p>
-          {menu.items.map(item => (
-            <div className="portal-row" key={item.id}>
-              <label>
-                <strong>{item.name}</strong>
-                <span>{money(Math.round(Number(item.unit_price) * 100))} · {t("portal.available", { count: item.available_quantity })}</span>
-              </label>
-              <input
-                aria-label={t("portal.quantityLabel", { name: item.name })}
-                type="number"
-                min={0}
-                max={item.available_quantity}
-                step={1}
-                value={quantities[item.product_id] || 0}
-                onChange={e => {
-                  requestId.current = null;
-                  setQuantities({ ...quantities, [item.product_id]: Number(e.target.value) });
-                }}
-              />
-            </div>
-          ))}
-          <div className="portal-checkout">
-            <div className="portal-service-date">
-              <label>
-                {t("portal.serviceDate")}
-                <input
-                  type="date"
-                  required
-                  min={hongKongToday() > menu.delivery_date ? hongKongToday() : menu.delivery_date}
-                  max={menuValidUntil(menu)}
-                  value={serviceDate}
-                  onChange={event => { requestId.current = null; setServiceDate(event.target.value); }}
-                />
-              </label>
-              <small>{holiday ? t("portal.orderBlackoutNamed", { date: holiday.blackout_on, name: holiday.name }) : t("portal.serviceDateHint")}</small>
-            </div>
-            <label>
-              {t("portal.addresses")}
-              <select value={addressId} onChange={e => { requestId.current = null; setAddressId(e.target.value); }}>
-                <option value="">{t("portal.chooseAddress")}</option>
-                {data.addresses.map(a => <option key={a.id} value={a.id}>{a.label} · {a.address}</option>)}
-              </select>
-            </label>
-            {!data.addresses.length && (
-              <Button variant="outline" onClick={() => setPage("addresses")}>{t("portal.addAddress")}</Button>
-            )}
-            <p>{t("portal.pointsHint")}</p>
-            <p>{t("portal.shipping")}: {money(Math.round(Number(menu.shipping_fee) * 100))}</p>
-            <strong>{t("portal.payable")}: {money(cart?.payableCents || 0)}</strong>
-            <Button disabled={busy || !cart?.valid || !addressId || !serviceDate || Boolean(holiday)} onClick={() => void checkout()}>
-              {busy ? t("portal.submitting") : t("portal.confirmOrder")}
-            </Button>
-            <label>
-              {t("portal.templateName")}
-              <input value={templateName} onChange={e => setTemplateName(e.target.value)} placeholder={t("portal.templateNamePlaceholder")} />
-            </label>
-            <Button
-              type="button"
-              variant="outline"
-              disabled={busy || !templateName.trim() || cartItems.length === 0}
-              onClick={() => void run(async () => {
-                await savePortalTemplate(templateName.trim(), cartItems, data.organization.id);
-                setTemplateName("");
-                await refresh();
-              }, t("portal.templateSaved"))}
-            >
-              {t("portal.saveTemplate")}
-            </Button>
-          </div>
-        </>
-      )}
+    <section className="personal-menus">
+      <h1>{t("portal.menus")}</h1>
+      <p>{t("portal.menusIntro")}</p>
+      {sites === null ? <p className="personal-empty" role="status" aria-busy="true">{t("portal.loading")}</p>
+        : sites.length ? <ul className="personal-menu-list">
+          {sites.map(site => {
+            const logo = getStorefrontLogoPath(site.name, site.domain);
+            return <li key={site.id}>
+              <a className="personal-menu-row" href={shopifyStoreUrl(site.domain)}>
+                <span className="personal-menu-logo">{logo ? <img src={logo} alt="" /> : <span aria-hidden="true">{site.name.slice(0, 1)}</span>}</span>
+                <span className="personal-menu-copy">
+                  <strong>{site.name}</strong>
+                  <span>{site.domain}</span>
+                </span>
+                <span className="personal-menu-cta">{t("personal.website")}<ChevronRight size={16} aria-hidden="true" /></span>
+              </a>
+            </li>;
+          })}
+        </ul> : <EmptyState title={t("personal.noStores")} />}
+      <p className="personal-menu-note">{t("personal.shopifyCheckout")}</p>
     </section>
   );
 }

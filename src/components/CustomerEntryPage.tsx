@@ -82,10 +82,13 @@ export function CustomerEntryPage() {
       void supabase.auth.getSession().then(({ data }) => { setUserId(data.session?.user.id ?? null); });
     }} />
   </>;
-  if (!identities || identities.userId !== userId) return <main className={`customer-portal${personal ? " personal-workspace" : ""}`}>
-    <CustomerWorkspaceHeader desktopTitle={personal ? t("personal.home") : undefined} mode={personal ? "personal" : "organization"} personal={personal} loggingOut={loggingOut} onLogout={() => void signOut()} />
-    <CustomerPortalAccessState error={identityError} busy={false} onRetry={()=>setIdentityVersion(value=>value+1)} />
-  </main>;
+  if (!identities || identities.userId !== userId) {
+    if (requestedPersonal) return <CustomerPersonalWorkspace key={`personal-${userId}`} canSwitch={false} loggingOut={loggingOut} onLogout={() => void signOut()} />;
+    return <main className={`customer-portal${personal ? " personal-workspace" : ""}`}>
+      <CustomerWorkspaceHeader desktopTitle={personal ? t("personal.home") : undefined} mode={personal ? "personal" : "organization"} personal={personal} loggingOut={loggingOut} onLogout={() => void signOut()} />
+      <CustomerPortalAccessState error={identityError} busy={false} onRetry={()=>setIdentityVersion(value=>value+1)} />
+    </main>;
+  }
   if (applying) {
     if (identities.organization) return <Navigate to="/customer" replace />;
     return <CustomerOrganizationApplicationPage loggingOut={loggingOut} onLogout={() => void signOut()} />;

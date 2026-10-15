@@ -83,6 +83,7 @@ export function CustomerPortalOpsPage() {
   const [orgName, setOrgName] = useState("");
   const [orgActive, setOrgActive] = useState(true);
   const [orgVip, setOrgVip] = useState(false);
+  const [orgShowPrices, setOrgShowPrices] = useState(true);
   const [editingOrgId, setEditingOrgId] = useState<string | null>(null);
   const [adminEmail, setAdminEmail] = useState("");
   const [menuPanelOpen, setMenuPanelOpen] = useState(false);
@@ -94,6 +95,7 @@ export function CustomerPortalOpsPage() {
     deliveryTime: "12:00",
     cutoffAt: "",
     shippingFee: "0",
+    minimumQuantity: "0",
     isActive: true,
   });
   const [menuItems, setMenuItems] = useState<OpsMenuItem[]>([]);
@@ -159,6 +161,7 @@ export function CustomerPortalOpsPage() {
         deliveryTime: detail.delivery_time,
         cutoffAt: toLocalInput(detail.cutoff_at),
         shippingFee: String(detail.shipping_fee),
+        minimumQuantity: String(detail.minimum_quantity ?? 0),
         isActive: detail.is_active,
       });
     } catch (err) {
@@ -189,10 +192,10 @@ export function CustomerPortalOpsPage() {
   }
 
   function openCreateOrg() {
-    setEditingOrgId(null); setOrgName(""); setOrgActive(true); setOrgVip(false); setOrgPanelOpen(true);
+    setEditingOrgId(null); setOrgName(""); setOrgActive(true); setOrgVip(false); setOrgShowPrices(true); setOrgPanelOpen(true);
   }
   function openEditOrg(row: OpsOrgListItem | OpsOrgDetail) {
-    setEditingOrgId(row.id); setOrgName(row.name); setOrgActive(row.is_active); setOrgVip(row.is_vip); setOrgPanelOpen(true);
+    setEditingOrgId(row.id); setOrgName(row.name); setOrgActive(row.is_active); setOrgVip(row.is_vip); setOrgShowPrices(row.show_prices); setOrgPanelOpen(true);
   }
 
   async function submitOrg(event: FormEvent) {
@@ -203,6 +206,7 @@ export function CustomerPortalOpsPage() {
         name: orgName.trim(),
         isActive: orgActive,
         isVip: orgVip,
+        showPrices: orgShowPrices,
       });
       setOrgPanelOpen(false);
       if (orgId) await loadOrg(id);
@@ -235,6 +239,7 @@ export function CustomerPortalOpsPage() {
       deliveryTime: "12:00",
       cutoffAt: "",
       shippingFee: "0",
+      minimumQuantity: "0",
       isActive: true,
     });
     setMenuPanelOpen(true);
@@ -287,6 +292,7 @@ export function CustomerPortalOpsPage() {
         deliveryTime: menuForm.deliveryTime.trim(),
         cutoffAt,
         shippingFee: Number(menuForm.shippingFee) || 0,
+        minimumQuantity: Number(menuForm.minimumQuantity) || 0,
         isActive: menuForm.isActive,
       });
       await replacePortalOpsMenuItems(
@@ -660,6 +666,7 @@ export function CustomerPortalOpsPage() {
           <label>{t("portalOps.orgName")}<Input required disabled={busy} value={orgName} onChange={event => setOrgName(event.target.value)} /></label>
           <fieldset className="portal-editor-section"><legend>{t("portalOps.formSettings")}</legend>
             <div className="portal-editor-setting"><label className="portal-ops-switch"><span>{t("portalOps.vip")}</span><Switch disabled={busy} checked={orgVip} onCheckedChange={setOrgVip} aria-describedby="portal-org-vip-hint" /></label><p id="portal-org-vip-hint">{t("portalOps.vipHint")}</p></div>
+            <div className="portal-editor-setting"><label className="portal-ops-switch"><span>{t("portalOps.showPrices")}</span><Switch disabled={busy} checked={orgShowPrices} onCheckedChange={setOrgShowPrices} aria-describedby="portal-org-prices-hint" /></label><p id="portal-org-prices-hint">{t("portalOps.showPricesHint")}</p></div>
             <div className="portal-editor-setting"><label className="portal-ops-switch"><span>{t("portalOps.active")}</span><Switch disabled={busy} checked={orgActive} onCheckedChange={setOrgActive} /></label></div>
           </fieldset>
         </form>
@@ -693,6 +700,7 @@ export function CustomerPortalOpsPage() {
           </fieldset>
           <fieldset className="portal-editor-section"><legend>{t("portalOps.formSettings")}</legend><div className="portal-editor-grid">
             <label>{t("portalOps.fee")}<Input required disabled={busy} type="number" min={0} step="0.01" value={menuForm.shippingFee} onChange={event => setMenuForm({ ...menuForm, shippingFee: event.target.value })} /></label>
+            <label>{t("portalOps.minimumQuantity")}<Input required disabled={busy} type="number" min={0} step={1} value={menuForm.minimumQuantity} onChange={event => setMenuForm({ ...menuForm, minimumQuantity: event.target.value })} /></label>
             <label className="portal-ops-switch portal-editor-setting"><span>{t("portalOps.active")}</span><Switch disabled={busy} checked={menuForm.isActive} onCheckedChange={value => setMenuForm({ ...menuForm, isActive: value })} /></label>
           </div></fieldset>
           <fieldset className="portal-editor-section"><legend>{t("portalOps.items")}</legend>

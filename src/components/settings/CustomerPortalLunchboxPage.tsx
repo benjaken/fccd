@@ -11,7 +11,7 @@ import { CornerNotice } from "@/components/ui/corner-notice";
 import { SidePanel } from "@/components/ui/side-panel";
 import { Switch } from "@/components/ui/switch";
 import { listPortalOpsChannels, listPortalOpsProducts, type OpsChannel, type OpsProduct } from "@/lib/customer-portal-ops";
-import { deleteLunchbox, listLunchboxes, listVipCycles, replaceLunchboxItems, setVipCycleMenus, upsertLunchbox, upsertVipCycle, type LunchboxOpsMenu, type VipCycle } from "@/lib/customer-lunchbox-ops";
+import { deleteLunchbox, listLunchboxes, replaceLunchboxItems, upsertLunchbox, type LunchboxOpsMenu } from "@/lib/customer-lunchbox-ops";
 import "@/components/customer-portal.css";
 import "./customer-portal-reward-catalog.css";
 import "./customer-lunchbox.css";
@@ -22,20 +22,6 @@ type ItemDraft = { product_id: string; unit_price: string; available_quantity: s
 function localInput(value: Date) {
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${value.getFullYear()}-${pad(value.getMonth() + 1)}-${pad(value.getDate())}T${pad(value.getHours())}:${pad(value.getMinutes())}`;
-}
-
-function formatCutoff(value: string) {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return new Intl.DateTimeFormat(undefined, {
-    timeZone: "Asia/Hong_Kong",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    hourCycle: "h23",
-  }).format(date);
 }
 
 export function CustomerPortalLunchboxPage() {
@@ -50,7 +36,6 @@ export function CustomerPortalLunchboxPage() {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [open, setOpen] = useState(false);
-  const [cycleOpen, setCycleOpen] = useState(false);
   const [editing, setEditing] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [channelId, setChannelId] = useState("");
@@ -59,20 +44,16 @@ export function CustomerPortalLunchboxPage() {
   const [cutoffAt, setCutoffAt] = useState(localInput(new Date()));
   const [shippingFee, setShippingFee] = useState("0");
   const [active, setActive] = useState(true);
+  const [isVip, setIsVip] = useState(false);
   const [items, setItems] = useState<ItemDraft[]>([]);
-  const [cycles, setCycles] = useState<VipCycle[]>([]);
-  const [cycleName, setCycleName] = useState("");
-  const [cycleCutoff, setCycleCutoff] = useState(localInput(new Date()));
-  const [cycleMenus, setCycleMenus] = useState<string[]>([]);
   const [pendingDelete, setPendingDelete] = useState<LunchboxOpsMenu | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [rows, brands, vipCycles] = await Promise.all([listLunchboxes(), listPortalOpsChannels(), listVipCycles()]);
+      const [rows, brands] = await Promise.all([listLunchboxes(), listPortalOpsChannels()]);
       setMenus(rows ?? []);
       setChannels(brands ?? []);
-      setCycles(vipCycles ?? []);
       setLoadFailed(false);
     } catch {
       setLoadFailed(true);
@@ -91,13 +72,13 @@ export function CustomerPortalLunchboxPage() {
   function startCreate() {
     setError(""); setNotice("");
     setEditing(null); setName(""); setChannelId(channels[0]?.id ?? ""); setDeliveryDate(""); setDeliveryTime("12:00");
-    setCutoffAt(localInput(new Date())); setShippingFee("0"); setActive(true); setItems([]); setOpen(true);
+    setCutoffAt(localInput(new Date())); setShippingFee("0"); setActive(true); setIsVip(false); setItems([]); setOpen(true);
   }
   function startEdit(menu: LunchboxOpsMenu) {
     setError(""); setNotice("");
     setEditing(menu.id); setName(menu.name); setChannelId(menu.channel_id); setDeliveryDate(menu.delivery_date);
     setDeliveryTime(menu.delivery_time); setCutoffAt(localInput(new Date(menu.cutoff_at))); setShippingFee(String(menu.shipping_fee));
-    setActive(menu.is_active);
+    setActive(menu.is_active); setIsVip(menu.is_vip);
     setItems(menu.items.map(item => ({ product_id: item.product_id, unit_price: String(item.unit_price), available_quantity: String(item.available_quantity) })));
     setOpen(true);
   }
@@ -119,7 +100,7 @@ export function CustomerPortalLunchboxPage() {
     try {
       const id = await upsertLunchbox({
         id: editing, channelId, name: name.trim(), deliveryDate, deliveryTime: deliveryTime.trim(),
-        cutoffAt: cutoff.toISOString(), shippingFee: fee, isActive: active,
+        cutoffAt: cutoff.toISOString(), shippingFee: fee, isActive: active, isVip,
       });
       await replaceLunchboxItems(id, parsed);
       setOpen(false); setNotice(t("lunchboxOps.saved")); await load();
@@ -130,33 +111,6 @@ export function CustomerPortalLunchboxPage() {
     }
   }
 
-  async function publishCycle(event: FormEvent) {
-    event.preventDefault();
-    const cutoff = new Date(cycleCutoff);
-    if (!cycleName.trim() || Number.isNaN(cutoff.getTime()) || cycleMenus.length === 0) {
-      setError(t("lunchboxOps.vipInvalid"));
-      return;
-    }
-    setSaving(true);
-    setError("");
-    setNotice("");
-    try {
-      const id = await upsertVipCycle({ name: cycleName.trim(), cutoffAt: cutoff.toISOString(), isActive: true });
-      await setVipCycleMenus(id, cycleMenus);
-      setCycleName("");
-      setCycleMenus([]);
-      setNotice(t("lunchboxOps.vipSaved"));
-      setCycleOpen(false);
-      await load();
-    } catch {
-      setError(t("lunchboxOps.failed"));
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  const activeMenus = menus.filter(menu => menu.is_active);
-
   return (
     <section className="orders-page reward-admin lunchbox-ops-page customer-portal-ops">
       <div className="portal-ops-list-intro">
@@ -164,7 +118,6 @@ export function CustomerPortalLunchboxPage() {
         <header className="page-heading">
           <div className="reward-admin-actions">
             {canEdit ? <Button type="button" onClick={startCreate}>{t("lunchboxOps.create")}</Button> : null}
-            {canEdit ? <Button type="button" variant="outline" onClick={() => setCycleOpen(true)}>{t("lunchboxOps.vipTitle")}</Button> : null}
           </div>
         </header>
         {error && !loadFailed ? <p className="reward-admin-error" role="alert">{error}</p> : null}
@@ -197,7 +150,7 @@ export function CustomerPortalLunchboxPage() {
           >
             {menus.map(menu => (
               <tr key={menu.id}>
-                <td><div className="reward-admin-table-name">{menu.name}</div></td>
+                <td><div className="reward-admin-table-name">{menu.name}{menu.is_vip ? <span className="lunchbox-vip-tag"> · {t("lunchboxOps.vipToggle")}</span> : null}</div></td>
                 <td>{menu.brand}</td>
                 <td>{menu.delivery_date} {menu.delivery_time}</td>
                 <td>{menu.items.length}</td>
@@ -266,47 +219,6 @@ export function CustomerPortalLunchboxPage() {
         }}
       />
 
-      {canEdit ? (
-        <SidePanel className="lunchbox-cycle-panel" open={cycleOpen} onClose={() => { if (!saving) setCycleOpen(false); }} title={t("lunchboxOps.vipTitle")} description={t("lunchboxOps.vipIntro")} closeLabel={t("lunchboxOps.close")} footer={<Button type="submit" form="vip-cycle-form" disabled={saving} aria-busy={saving}>{t("lunchboxOps.vipSave")}</Button>}>
-          {error ? <p className="portal-ops-alert" role="alert">{error}</p> : null}
-          <form id="vip-cycle-form" className="portal-ops-form" onSubmit={event => void publishCycle(event)}>
-            {cycles.length ? (
-              <ul className="portal-ops-cycles">
-                {cycles.map(cycle => (
-                  <li key={cycle.id}>
-                    <strong>{cycle.name}</strong>
-                    <span>{formatCutoff(cycle.cutoff_at)} · {t("lunchboxOps.vipDays", { count: cycle.menu_ids.length })}</span>
-                  </li>
-                ))}
-              </ul>
-            ) : null}
-            <div className="portal-ops-fields">
-              <label htmlFor="vip-cycle-name">
-                {t("lunchboxOps.vipName")}
-                <Input id="vip-cycle-name" value={cycleName} onChange={event => setCycleName(event.target.value)} />
-              </label>
-              <label htmlFor="vip-cycle-cutoff">
-                {t("lunchboxOps.cutoff")}
-                <Input id="vip-cycle-cutoff" type="datetime-local" value={cycleCutoff} onChange={event => setCycleCutoff(event.target.value)} />
-              </label>
-            </div>
-            <fieldset className="lunchbox-form-section portal-ops-menu-picker">
-              <legend>{t("lunchboxOps.selectMenus")}</legend>
-              {activeMenus.length ? activeMenus.map(menu => (
-                <label className="portal-ops-check" key={menu.id}>
-                  <input
-                    type="checkbox"
-                    checked={cycleMenus.includes(menu.id)}
-                    onChange={() => setCycleMenus(current => current.includes(menu.id) ? current.filter(id => id !== menu.id) : [...current, menu.id])}
-                  />
-                  <span>{menu.delivery_date} · {menu.name}</span>
-                </label>
-              )) : <p>{t("lunchboxOps.vipNoMenus")}</p>}
-            </fieldset>
-          </form>
-        </SidePanel>
-      ) : null}
-
       <SidePanel half className="lunchbox-editor-panel" open={open} onClose={() => { if (!saving) setOpen(false); }} title={editing ? t("lunchboxOps.edit") : t("lunchboxOps.create")} closeLabel={t("lunchboxOps.close")} footer={<Button type="submit" form="lunchbox-menu-form" disabled={saving} aria-busy={saving}>{t("lunchboxOps.save")}</Button>}>
         <form id="lunchbox-menu-form" className="portal-ops-form lunchbox-editor-form" onSubmit={event => void submit(event)}>
           {error ? <p className="portal-ops-alert" role="alert">{error}</p> : null}
@@ -345,8 +257,13 @@ export function CustomerPortalLunchboxPage() {
           </div>
           <label className="portal-ops-switch">
             <span>{t("lunchboxOps.active")}</span>
-            <Switch checked={active} onCheckedChange={setActive} />
+            <Switch checked={active} onCheckedChange={setActive} aria-label={t("lunchboxOps.active")} />
           </label>
+          <label className="portal-ops-switch">
+            <span>{t("lunchboxOps.vipToggle")}</span>
+            <Switch checked={isVip} onCheckedChange={setIsVip} aria-label={t("lunchboxOps.vipToggle")} />
+          </label>
+          <p className="portal-ops-hint">{t("lunchboxOps.vipToggleHint")}</p>
           </fieldset>
           <fieldset className="lunchbox-form-section"><legend>{t("lunchboxOps.items")}</legend>
           {items.map((item, index) => (

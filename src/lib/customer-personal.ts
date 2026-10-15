@@ -5,7 +5,7 @@ export type PersonalAddress = { id: string; label: string; recipient: string; ph
 export type PersonalProfile = { name: string; phone: string; email: string; notify_email: boolean; notify_whatsapp: boolean };
 export type PersonalStore = { id: string; name: string; domain: string };
 export type PersonalEvidence = { id: string; order_id: string; amount: number; status: "pending" | "accepted" | "rejected"; review_reason: string | null; created_at: string };
-export type PersonalSnapshot = { profile: PersonalProfile; addresses: PersonalAddress[]; stores: PersonalStore[]; evidence: PersonalEvidence[]; order_states: Record<string, { delivery_status: string | null; paid: boolean }> };
+export type PersonalSnapshot = { profile: PersonalProfile; addresses: PersonalAddress[]; stores: PersonalStore[]; evidence: PersonalEvidence[]; order_states: Record<string, { delivery_status: string | null; paid: boolean; store_domain?: string | null }> };
 export type ReorderCart = { domain: string; items: Array<{ variant: string; quantity: number }> };
 
 export const fetchPersonalReorder = (orderId: string) =>

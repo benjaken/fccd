@@ -22,8 +22,6 @@
 .lunchbox-editor-form .portal-ops-switch { margin-top: 20px; padding: 14px 0; }
 .lunchbox-editor-form .portal-ops-item-row.is-fields { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr); padding: 0 0 18px; margin-bottom: 18px; gap: 12px; }
 .lunchbox-form-section input, .lunchbox-form-section select { min-width: 0; }
-.lunchbox-cycle-panel .portal-ops-menu-picker { padding-top: 18px; border-top: 1px solid var(--border); }
-.lunchbox-cycle-panel .portal-ops-check { display: flex; align-items: center; gap: 12px; padding: 12px 0; }
 @media (max-width: 767px) {
   .lunchbox-editor-panel.side-panel-half { width: 100vw; }
   .lunchbox-details-grid,

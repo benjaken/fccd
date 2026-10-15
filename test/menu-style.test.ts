@@ -269,6 +269,7 @@ describe("menu styles", () => {
       "customerPortalRewardRules",
       "customerPortalMealCalendar",
       "customerPortalLunchbox",
+      "customerPortalPacking",
       "customerPortalRewardCatalog",
     ]);
     expect(businessSidebarNav("customerOperations", "")[0]?.to).toBe(

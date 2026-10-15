@@ -50,9 +50,24 @@ beforeEach(async()=>{
   const period = readFileSync("supabase/migrations/20261014200000_customer_menu_valid_period.sql", "utf8");
   await db.exec(period.split("\n-- workspace-overlay\n")[0]);
   await db.exec(readFileSync("supabase/migrations/20261014210000_customer_group_order_calendar.sql", "utf8"));
+  // Permission helpers live in a later migration that this harness does not load.
+  await db.exec(`create function private.customer_require_permission(text) returns void language sql as $$select null::void$$;
+    create function private.customer_has_permission(text) returns boolean language sql as $$select true$$;
+    create function private.customer_portal_ops_require(p_admin boolean default false) returns void language sql as $$select null::void$$;
+    create function private.enqueue_customer_address_sync(p_owner_type text,p_owner_id uuid,p_address_id uuid,p_action text) returns void language sql as $$select null::void$$;`);
+  await db.exec(readFileSync("supabase/migrations/20261015160000_customer_portal_member_order_isolation.sql","utf8"));
+  await db.exec(readFileSync("supabase/migrations/20261015170000_customer_portal_price_visibility.sql","utf8"));
+  await db.exec(readFileSync("supabase/migrations/20261015180000_customer_member_profiles.sql","utf8"));
+  await db.exec(readFileSync("supabase/migrations/20261015190000_customer_member_requests.sql","utf8"));
+  await db.exec(readFileSync("supabase/migrations/20261015200000_customer_ops_packing_list.sql","utf8"));
+  await db.exec(readFileSync("supabase/migrations/20261015210000_customer_delivery_minimum.sql","utf8"));
+  await db.exec(readFileSync("supabase/migrations/20261015220000_customer_request_change_menu.sql","utf8"));
+  await db.exec(readFileSync("supabase/migrations/20261015230000_customer_portal_address_default.sql","utf8"));
+  await db.exec(readFileSync("supabase/migrations/20261015240000_customer_delivery_points.sql","utf8"));
 },20000);
 afterEach(async()=>{await db.close();});
 function order(request=ids.request,points=0){return db.query<{id:string}>(`select customer_portal_submit_order($1,$2,$3,$4::jsonb,$5) as id`,[request,ids.menu,ids.address,JSON.stringify([{product_id:ids.product,quantity:1}]),points]);}
+function seededPoint(addressId=ids.address){return db.query<{id:string}>("select id from customer_delivery_points where address_id=$1 and archived_at is null order by created_at, id limit 1",[addressId]);}
 describe("customer portal SQL transactions",()=>{
   it("rejects nonmembers and never trusts a supplied organization",async()=>{
     await db.exec(`select set_config('test.user_id','${ids.other}',false)`);
@@ -215,6 +230,178 @@ describe("customer portal SQL transactions",()=>{
     await db.exec(`select set_config('test.user_id','${ids.other}',false)`);
     await expect(db.query("select customer_portal_save_template('X',$1::jsonb)",[JSON.stringify([{product_id:ids.product,quantity:1}])])).rejects.toThrow("customer_membership_required");
   });
+  it("isolates member order history, exports and documents from other members",async()=>{
+    const adminOrder=(await order("00000000-0000-0000-0000-0000000000f1")).rows[0].id;
+    const invite=(await db.query<{token:string}>("select customer_portal_invite('member@example.com') token")).rows[0].token;
+    await db.exec(`select set_config('test.user_id','${ids.other}',false)`);
+    await db.query("select customer_portal_accept_invite($1)",[invite]);
+    const memberOrder=(await order("00000000-0000-0000-0000-0000000000f2")).rows[0].id;
+    const memberSnapshot=await db.query<{s:{orders:Array<{id:string}>}}>("select customer_portal_snapshot() s");
+    expect(memberSnapshot.rows[0].s.orders.map(o=>o.id)).toEqual([memberOrder]);
+    const memberExport=(await db.query<{c:string}>("select customer_portal_export_orders() c")).rows[0].c;
+    expect(memberExport.split("\n")).toHaveLength(2);
+    await expect(db.query("select customer_portal_financial_document($1,'receipt')",[adminOrder])).rejects.toThrow("order_not_found");
+    await expect(db.query("select customer_portal_request_cancel($1,'no')",[adminOrder])).rejects.toThrow("order_not_cancellable");
+    await db.exec(`select set_config('test.user_id','${ids.user}',false)`);
+    const adminSnapshot=await db.query<{s:{orders:Array<{id:string}>}}>("select customer_portal_snapshot() s");
+    expect(adminSnapshot.rows[0].s.orders.map(o=>o.id).sort()).toEqual([adminOrder,memberOrder].sort());
+    expect((await db.query<{c:string}>("select customer_portal_export_orders() c")).rows[0].c.split("\n")).toHaveLength(3);
+  });
+  it("hides amounts from members when the company disables prices",async()=>{
+    const adminOrder=(await order("00000000-0000-0000-0000-0000000000c1")).rows[0].id;
+    const invite=(await db.query<{token:string}>("select customer_portal_invite('member@example.com') token")).rows[0].token;
+    await db.exec(`select set_config('test.user_id','${ids.other}',false)`);
+    await db.query("select customer_portal_accept_invite($1)",[invite]);
+    const memberOrder=(await order("00000000-0000-0000-0000-0000000000c2")).rows[0].id;
+    await db.exec(`select set_config('test.user_id','${ids.user}',false)`);
+    await db.exec(`update customer_organizations set show_prices=false where id='${ids.org}'`);
+    await db.exec(`select set_config('test.user_id','${ids.other}',false)`);
+    const snap=await db.query<{s:{show_prices:boolean;menus:Array<{shipping_fee:number|null;items:Array<{unit_price:number|null}>}>;orders:Array<{total:number|null;outstanding:number|null;lines:Array<{unit_price:number|null}>}>}}>(
+      "select customer_portal_snapshot() s");
+    expect(snap.rows[0].s.show_prices).toBe(false);
+    expect(snap.rows[0].s.menus[0].shipping_fee).toBeNull();
+    expect(snap.rows[0].s.menus[0].items[0].unit_price).toBeNull();
+    expect(snap.rows[0].s.orders[0].total).toBeNull();
+    expect(snap.rows[0].s.orders[0].lines[0].unit_price).toBeNull();
+    const csv=(await db.query<{c:string}>("select customer_portal_export_orders() c")).rows[0].c;
+    expect(csv.split("\n")[1].endsWith(",")).toBe(true);
+    await expect(db.query("select customer_portal_financial_document($1,'receipt')",[memberOrder])).rejects.toThrow("permission_denied");
+    await db.exec(`select set_config('test.user_id','${ids.user}',false)`);
+    const admin=await db.query<{s:{show_prices:boolean;orders:Array<{id:string;total:number|null}>}}>("select customer_portal_snapshot() s");
+    expect(admin.rows[0].s.show_prices).toBe(true);
+    expect(admin.rows[0].s.orders.find(o=>o.id===adminOrder)?.total).not.toBeNull();
+  });
+  it("assigns a member department, delivery point and ordering switch",async()=>{
+    const invite=(await db.query<{token:string}>("select customer_portal_invite('member@example.com') token")).rows[0].token;
+    await db.exec(`select set_config('test.user_id','${ids.other}',false)`);
+    await db.query("select customer_portal_accept_invite($1)",[invite]);
+    await db.exec(`select set_config('test.user_id','${ids.user}',false)`);
+    const point=(await seededPoint()).rows[0].id;
+    await db.query("select customer_portal_set_member_profile($1,$2,$3,$4)",[ids.other,'Kitchen',point,false]);
+    const snap=await db.query<{s:{members:Array<{user_id:string;department:string;delivery_point_id:string;can_order:boolean}>}}>("select customer_portal_snapshot() s");
+    expect(snap.rows[0].s.members.find(x=>x.user_id===ids.other)).toMatchObject({department:'Kitchen',delivery_point_id:point,can_order:false});
+    await db.exec(`select set_config('test.user_id','${ids.other}',false)`);
+    await expect(order("00000000-0000-0000-0000-0000000000a5")).rejects.toThrow("ordering_disabled");
+    await db.exec(`select set_config('test.user_id','${ids.user}',false)`);
+    await db.query("select customer_portal_set_member_profile($1,null,null,true)",[ids.other]);
+    await db.exec(`select set_config('test.user_id','${ids.other}',false)`);
+    await order("00000000-0000-0000-0000-0000000000a6");
+    expect((await db.query<{s:{me:{department:string|null;can_order:boolean}}}>("select customer_portal_snapshot() s")).rows[0].s.me)
+      .toMatchObject({department:null,can_order:true});
+    await db.exec(`select set_config('test.user_id','${ids.user}',false)`);
+    await expect(db.query("select customer_portal_set_member_profile($1,null,$2,true)",[ids.other,'00000000-0000-0000-0000-0000000000ff'])).rejects.toThrow("address_required");
+  });
+  it("seeds a delivery point for every address and manages several per address",async()=>{
+    type Snap={s:{addresses:Array<{id:string;delivery_points:Array<{id:string;name:string}>}>;members:Array<{user_id:string;delivery_point_id:string|null}>}};
+    const invite=(await db.query<{token:string}>("select customer_portal_invite('member@example.com') token")).rows[0].token;
+    await db.exec(`select set_config('test.user_id','${ids.other}',false)`);
+    await db.query("select customer_portal_accept_invite($1)",[invite]);
+    await db.exec(`select set_config('test.user_id','${ids.user}',false)`);
+    const seeded=(await seededPoint()).rows[0].id;
+    const fresh=(await db.query<{id:string}>("insert into customer_addresses(organization_id,label,recipient,phone,address,created_by) values($1,'Warehouse','R','91234567','Somewhere',$2) returning id",[ids.org,ids.user])).rows[0].id;
+    const freshPoints=await db.query<{name:string}>("select name from customer_delivery_points where address_id=$1",[fresh]);
+    expect(freshPoints.rows.map(r=>r.name)).toEqual(["Warehouse"]);
+    const point=(await db.query<{id:string}>("select customer_portal_save_delivery_point(null,$1,$2) id",[ids.address,"3/F"])).rows[0].id;
+    await db.query("select customer_portal_set_member_profile($1,null,$2,true)",[ids.other,point]);
+    const snap=await db.query<Snap>("select customer_portal_snapshot() s");
+    const address=snap.rows[0].s.addresses.find(a=>a.id===ids.address)!;
+    expect(address.delivery_points.map(p=>p.name).sort()).toEqual(["3/F","Office"]);
+    expect(snap.rows[0].s.members.find(m=>m.user_id===ids.other)?.delivery_point_id).toBe(point);
+    await db.query("select customer_portal_archive_delivery_point($1)",[point]);
+    const after=await db.query<Snap>("select customer_portal_snapshot() s");
+    const afterAddress=after.rows[0].s.addresses.find(a=>a.id===ids.address)!;
+    expect(afterAddress.delivery_points.map(p=>p.id)).toEqual([seeded]);
+    expect(after.rows[0].s.members.find(m=>m.user_id===ids.other)?.delivery_point_id).toBeNull();
+  });
+  it("keeps member submissions internal until an admin sends the batch",async()=>{
+    const invite=(await db.query<{token:string}>("select customer_portal_invite('member@example.com') token")).rows[0].token;
+    await db.exec(`select set_config('test.user_id','${ids.other}',false)`);
+    await db.query("select customer_portal_accept_invite($1)",[invite]);
+    const submit="select customer_portal_submit_member_request($1,$2,$3,$4,$5::jsonb) id";
+    const args=["00000000-0000-0000-0000-0000000000b1",ids.menu,null,ids.address,JSON.stringify([{product_id:ids.product,quantity:2}])];
+    const req=(await db.query<{id:string}>(submit,args)).rows[0].id;
+    expect((await db.query<{n:number}>("select count(*)::int n from orders")).rows[0].n).toBe(0);
+    expect((await db.query<{id:string}>(submit,args)).rows[0].id).toBe(req);
+    const day=(await db.query<{d:string}>("select service_date::text d from customer_member_requests where id=$1",[req])).rows[0].d;
+    await expect(db.query("select customer_portal_send_member_requests($1,$2,$3)",[ids.menu,day,"00000000-0000-0000-0000-0000000000b3"])).rejects.toThrow("permission_denied");
+    await db.exec(`select set_config('test.user_id','${ids.user}',false)`);
+    const first=(await db.query<{ids:string[]}>("select customer_portal_send_member_requests($1,$2,$3) ids",[ids.menu,day,"00000000-0000-0000-0000-0000000000b2"])).rows[0].ids;
+    expect(first).toHaveLength(1);
+    expect((await db.query<{n:number}>("select count(*)::int n from orders")).rows[0].n).toBe(1);
+    expect((await db.query<{status:string;order_id:string}>("select status,order_id from customer_member_requests where id=$1",[req])).rows[0])
+      .toEqual({status:"sent",order_id:first[0]});
+    expect((await db.query<{n:number}>("select available_quantity::int n from customer_menu_items where product_id=$1",[ids.product])).rows[0].n).toBe(8);
+    const again=(await db.query<{ids:string[]}>("select customer_portal_send_member_requests($1,$2,$3) ids",[ids.menu,day,"00000000-0000-0000-0000-0000000000b2"])).rows[0].ids;
+    expect(again).toEqual(first);
+    expect((await db.query<{n:number}>("select count(*)::int n from orders")).rows[0].n).toBe(1);
+    await db.exec(`select set_config('test.user_id','${ids.other}',false)`);
+    expect((await db.query<{s:{orders:Array<{id:string}>}}>("select customer_portal_snapshot() s")).rows[0].s.orders.map(o=>o.id)).toEqual([first[0]]);
+  });
+  it("lists pending submissions to the caller only",async()=>{
+    const invite=(await db.query<{token:string}>("select customer_portal_invite('member@example.com') token")).rows[0].token;
+    await db.exec(`select set_config('test.user_id','${ids.other}',false)`);
+    await db.query("select customer_portal_accept_invite($1)",[invite]);
+    await db.query("select customer_portal_submit_member_request($1,$2,$3,$4,$5::jsonb)",
+      ["00000000-0000-0000-0000-0000000000c1",ids.menu,null,ids.address,JSON.stringify([{product_id:ids.product,quantity:1}])]);
+    const memberList=await db.query<{r:Array<{member_id:string}>}>("select customer_portal_member_requests() r");
+    expect(memberList.rows[0].r.map(x=>x.member_id)).toEqual([ids.other]);
+    await db.exec(`select set_config('test.user_id','${ids.user}',false)`);
+    expect((await db.query<{r:Array<{member_id:string}>}>("select customer_portal_member_requests() r")).rows[0].r.map(x=>x.member_id)).toEqual([ids.other]);
+  });
+  it("summarises a sent batch for packing by delivery point",async()=>{
+    const invite=(await db.query<{token:string}>("select customer_portal_invite('member@example.com') token")).rows[0].token;
+    await db.exec(`select set_config('test.user_id','${ids.other}',false)`);
+    await db.query("select customer_portal_accept_invite($1)",[invite]);
+    await db.query("select customer_portal_set_member_profile($1,$2,$3,$4)",[ids.other,'Kitchen',(await seededPoint()).rows[0].id,true]);
+    await db.query("select customer_portal_submit_member_request($1,$2,$3,$4,$5::jsonb)",
+      ["00000000-0000-0000-0000-0000000000e1",ids.menu,null,ids.address,JSON.stringify([{product_id:ids.product,quantity:2}])]);
+    const day=(await db.query<{d:string}>("select service_date::text d from customer_member_requests where organization_id=$1",[ids.org])).rows[0].d;
+    await db.exec(`select set_config('test.user_id','${ids.user}',false)`);
+    await db.query("select customer_portal_send_member_requests($1,$2,$3)",[ids.menu,day,"00000000-0000-0000-0000-0000000000e2"]);
+    const list=await db.query<{p:{days:Array<{address_id:string;total_quantity:number;lines:Array<{member_email:string;department:string;items:Array<{quantity:number}>}>}>}}>(
+      "select customer_portal_ops_packing_list($1::date,$2::date) p",[day,day]);
+    const d=list.rows[0].p.days[0];
+    expect(d.address_id).toBe(ids.address);
+    expect(Number(d.total_quantity)).toBe(2);
+    expect(d.lines[0].member_email).toBe("member@example.com");
+    expect(d.lines[0].department).toBe("Kitchen");
+    expect(d.lines[0].items[0].quantity).toBe(2);
+  });
+  it("blocks a batch when a delivery point is below the minimum order quantity",async()=>{
+    const invite=(await db.query<{token:string}>("select customer_portal_invite('member@example.com') token")).rows[0].token;
+    await db.exec(`select set_config('test.user_id','${ids.other}',false)`);
+    await db.query("select customer_portal_accept_invite($1)",[invite]);
+    await db.query("select customer_portal_submit_member_request($1,$2,$3,$4,$5::jsonb)",
+      ["00000000-0000-0000-0000-0000000000f1",ids.menu,null,ids.address,JSON.stringify([{product_id:ids.product,quantity:2}])]);
+    const day=(await db.query<{d:string}>("select service_date::text d from customer_member_requests where organization_id=$1",[ids.org])).rows[0].d;
+    await db.exec(`select set_config('test.user_id','${ids.user}',false)`);
+    await db.exec(`update customer_menu_assignments set minimum_quantity=5 where id='${ids.menu}'`);
+    await expect(db.query("select customer_portal_send_member_requests($1,$2,$3)",[ids.menu,day,"00000000-0000-0000-0000-0000000000f3"])).rejects.toThrow("minimum_not_met");
+    expect((await db.query<{n:number}>("select count(*)::int n from orders")).rows[0].n).toBe(0);
+    await db.exec(`update customer_menu_assignments set minimum_quantity=0 where id='${ids.menu}'`);
+    await db.query("select customer_portal_send_member_requests($1,$2,$3)",[ids.menu,day,"00000000-0000-0000-0000-0000000000f4"]);
+    expect((await db.query<{n:number}>("select count(*)::int n from orders")).rows[0].n).toBe(1);
+  });
+  it("lets an admin change the meal menu of a submitted request",async()=>{
+    const alt="00000000-0000-0000-0000-0000000000a9";
+    await db.exec(`insert into customer_menu_assignments(id,organization_id,channel_id,name,delivery_date,cutoff_at,delivery_time) values('${alt}','${ids.org}','${ids.brand}','Alt menu',current_date+2,now()+interval '1 day','12:00')`);
+    await db.exec(`insert into customer_menu_items(menu_id,product_id,unit_price,available_quantity) values('${alt}','${ids.product}',20,10)`);
+    const invite=(await db.query<{token:string}>("select customer_portal_invite('member@example.com') token")).rows[0].token;
+    await db.exec(`select set_config('test.user_id','${ids.other}',false)`);
+    await db.query("select customer_portal_accept_invite($1)",[invite]);
+    const req=(await db.query<{id:string}>("select customer_portal_submit_member_request($1,$2,$3,$4,$5::jsonb) id",
+      ["00000000-0000-0000-0000-0000000000b1",ids.menu,null,ids.address,JSON.stringify([{product_id:ids.product,quantity:1}])])).rows[0].id;
+    await expect(db.query("select customer_portal_update_member_request($1,$2::jsonb,$3,$4,$5)",
+      [req,JSON.stringify([{product_id:ids.product,quantity:3}]),"2099-01-01",ids.address,alt])).rejects.toThrow("permission_denied");
+    await db.exec(`select set_config('test.user_id','${ids.user}',false)`);
+    const day=(await db.query<{d:string}>("select (current_date+2)::text d")).rows[0].d;
+    await db.query("select customer_portal_update_member_request($1,$2::jsonb,$3,$4,$5)",
+      [req,JSON.stringify([{product_id:ids.product,quantity:3}]),day,ids.address,alt]);
+    const row=(await db.query<{menu_id:string;food_amount:number;status:string}>("select menu_id,food_amount,status from customer_member_requests where id=$1",[req])).rows[0];
+    expect(row.menu_id).toBe(alt);
+    expect(Number(row.food_amount)).toBe(60);
+    expect(row.status).toBe("submitted");
+  });
   it("updates and archives organization addresses without exposing them to nonmembers",async()=>{
     await db.query("select customer_portal_update_address($1,'Warehouse','Lee','91234568','Kowloon warehouse')",[ids.address]);
     const updated=await db.query<{label:string;recipient:string;phone:string;address:string}>(
@@ -227,5 +414,16 @@ describe("customer portal SQL transactions",()=>{
     await expect(db.query("select customer_portal_update_address($1,'X','Y','91234567','Still here')",[ids.address])).rejects.toThrow("address_required");
     await db.exec(`select set_config('test.user_id','${ids.other}',false)`);
     await expect(db.query("select customer_portal_archive_address($1)",[ids.address])).rejects.toThrow("customer_membership_required");
+  });
+  it("keeps exactly one default organization address across save and archive",async()=>{
+    type Snap={s:{addresses:Array<{id:string;is_default:boolean}>}};
+    let snap=await db.query<Snap>("select customer_portal_snapshot() s");
+    expect(snap.rows[0].s.addresses).toEqual([expect.objectContaining({id:ids.address,is_default:true})]);
+    const saved=await db.query<{id:string}>("select customer_portal_save_address($1,$2,$3,$4,$5) id",["Warehouse","Lee","91234568","Kowloon warehouse",true]);
+    snap=await db.query<Snap>("select customer_portal_snapshot() s");
+    expect(snap.rows[0].s.addresses.filter(a=>a.is_default).map(a=>a.id)).toEqual([saved.rows[0].id]);
+    await db.query("select customer_portal_archive_address($1)",[saved.rows[0].id]);
+    snap=await db.query<Snap>("select customer_portal_snapshot() s");
+    expect(snap.rows[0].s.addresses).toEqual([expect.objectContaining({id:ids.address,is_default:true})]);
   });
 });

@@ -7,6 +7,8 @@ import { AlignCenter, AlignLeft, AlignRight, Bold, Heading2, Heading3, Italic, L
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { richTextHtml, safeHref, sanitizeRichHtml } from "@/lib/rich-text";
+import "./rich-content.css";
+import "@/lib/rich-text-import-i18n";
 
 function storedHtml(value: string) {
   const cleaned = sanitizeRichHtml(value).trim();
@@ -19,6 +21,8 @@ export function RichTextEditor({ value, onChange, label, disabled = false }: {
   const { t } = useTranslation();
   const [linkOpen, setLinkOpen] = useState(false);
   const [linkUrl, setLinkUrl] = useState("");
+  const [importOpen, setImportOpen] = useState(false);
+  const [htmlSource, setHtmlSource] = useState("");
   const [, setRevision] = useState(0);
   const editor = useEditor({
     extensions: [
@@ -55,6 +59,7 @@ export function RichTextEditor({ value, onChange, label, disabled = false }: {
   };
   return <div className="rich-text-editor">
     <div className="rich-text-toolbar" role="toolbar" aria-label={t("richText.formatting")}>
+      <Button type="button" variant="ghost" disabled={disabled || !editor} aria-expanded={importOpen} onClick={() => { setHtmlSource(""); setImportOpen(open => !open); }}>{t("richTextImport.open")}</Button>
       <Tool editor={editor} label={t("richText.undo")} disabled={disabled || !editor?.can().undo()} onClick={() => editor?.chain().focus().undo().run()}><Undo2 /></Tool>
       <Tool editor={editor} label={t("richText.redo")} disabled={disabled || !editor?.can().redo()} onClick={() => editor?.chain().focus().redo().run()}><Redo2 /></Tool>
       <span className="rich-text-sep" />
@@ -82,7 +87,17 @@ export function RichTextEditor({ value, onChange, label, disabled = false }: {
       <input aria-label={t("richText.linkUrl")} value={linkUrl} placeholder="https://" onChange={event => setLinkUrl(event.target.value)} />
       <Button type="submit" size="sm">{t("richText.applyLink")}</Button>
     </form> : null}
-    <EditorContent editor={editor} className="rich-text-content" />
+    {importOpen ? <div className="rich-text-import">
+      <label>{t("richTextImport.source")}<textarea value={htmlSource} onChange={event => setHtmlSource(event.target.value)} placeholder={t("richTextImport.sourcePlaceholder")} disabled={disabled} rows={8} /></label>
+      <p>{t("richTextImport.hint")}</p>
+      <div><Button type="button" disabled={disabled || !editor || !htmlSource.trim()} onClick={() => {
+        if (!editor || disabled) return;
+        editor.commands.selectAll();
+        editor.commands.insertContent(sanitizeRichHtml(htmlSource));
+        setImportOpen(false); setHtmlSource("");
+      }}>{t("richTextImport.apply")}</Button><Button type="button" variant="outline" disabled={disabled} onClick={() => setImportOpen(false)}>{t("richTextImport.cancel")}</Button></div>
+    </div> : null}
+    <EditorContent editor={editor} className="rich-text-content fccd-rich-content" />
   </div>;
 }
 

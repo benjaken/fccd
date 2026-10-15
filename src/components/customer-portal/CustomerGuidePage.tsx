@@ -1,4 +1,7 @@
+import { PersonalPageSkeleton } from "./PersonalPageSkeleton";
+import { EmptyState } from "@/components/ui/empty-state";
 import { richTextHtml } from "@/lib/rich-text";
+import "@/components/ui/rich-content.css";
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -19,13 +22,13 @@ export function CustomerGuidePage() {
   }, []);
 
   if (failed) return <section><p role="alert">{t("portalGuides.operationFailed")}</p></section>;
-  if (!guides) return <section><p role="status">{t("portalGuides.loading")}</p></section>;
+  if (!guides) return <PersonalPageSkeleton variant="guide" label={t("portalGuides.loading")} />;
   const guide = guides.find(item => item.slug === slug);
   if (!guide) return <section><h1>{t("portalGuides.notFound")}</h1></section>;
   return (
     <section className="portal-guide">
       <h1>{guide.title}</h1>
-      {guide.body.trim() ? <div className="portal-guide-body" dangerouslySetInnerHTML={{ __html: richTextHtml(guide.body) }} /> : <p>{t("portalGuides.emptyBody")}</p>}
+      {guide.body.trim() ? <div className="portal-guide-body fccd-rich-content" dangerouslySetInnerHTML={{ __html: richTextHtml(guide.body) }} /> : <EmptyState title={t("portalGuides.emptyBody")} />}
     </section>
   );
 }

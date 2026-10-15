@@ -4,6 +4,7 @@ const htmlStart = /^(?:p|div|br|strong|b|em|i|u|s|strike|ul|ol|li|h2|h3|blockquo
 
 export function safeHref(value: string) {
   const href = value.trim();
+  if (/^tel:\+?[0-9][0-9 ()-]*$/i.test(href)) return href;
   if (/^(https?:\/\/|mailto:)/i.test(href)) return href;
   if (href.startsWith("/") && !href.startsWith("//") && !href.startsWith("/\\")) return href;
   return "";

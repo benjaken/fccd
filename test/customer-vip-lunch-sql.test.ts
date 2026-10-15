@@ -50,6 +50,7 @@ beforeEach(async () => {
   await db.exec(readFileSync("supabase/migrations/20261013170000_customer_personal_lunchbox.sql", "utf8"));
   await db.exec(readFileSync("supabase/migrations/20261014140000_customer_vip_lunch_cycles.sql", "utf8"));
   await db.exec(readFileSync("supabase/migrations/20261014220000_customer_vip_organization_only.sql", "utf8"));
+  await db.exec(readFileSync("supabase/migrations/20261015220000_lunchbox_vip_toggle.sql", "utf8"));
 }, 20000);
 afterEach(async () => { await db.close(); });
 
@@ -80,5 +81,23 @@ describe("VIP lunch cycles", () => {
     await expect(db.query("select customer_personal_submit_vip($1,$2,$3,$4::jsonb)", [request, cycle, "00000000-0000-0000-0000-000000000008", days])).rejects.toThrow("organization_required");
     await db.query("select customer_portal_ops_upsert_vip_cycle($1,'本週',now()-interval '1 minute',true)", [cycle]);
     await expect(db.query("select customer_portal_submit_vip($1,$2,$3,$4::jsonb)", ["00000000-0000-0000-0000-000000000029", cycle, "00000000-0000-0000-0000-000000000008", days])).rejects.toThrow("menu_unavailable");
+  });
+
+  it("toggles one menu between the personal and VIP catalogs from the menu form", async () => {
+    const menu = (await db.query<{ id: string }>(
+      "select customer_portal_ops_upsert_lunchbox(null,$1,'VIP 餐',current_date+1,'12:00',now()+interval '2 days',0,true,true) id",
+      [brand],
+    )).rows[0].id;
+    await db.query("select customer_portal_ops_replace_lunchbox_items($1,$2::jsonb)", [menu, JSON.stringify([{ product_id: product, unit_price: 88, available_quantity: 5 }])]);
+    const regular = (await db.query<{ data: { menus: unknown[] } }>("select customer_personal_lunchbox_catalog() data")).rows[0].data;
+    expect(regular.menus).toEqual([]);
+    const vip = (await db.query<{ data: Array<{ menus: Array<{ id: string }> }> }>("select customer_portal_vip_catalog() data")).rows[0].data;
+    expect(vip[0].menus[0].id).toBe(menu);
+    const list = (await db.query<{ data: Array<{ id: string; is_vip: boolean }> }>("select customer_portal_ops_list_lunchboxes() data")).rows[0].data;
+    expect(list.find(row => row.id === menu)?.is_vip).toBe(true);
+    await db.query("select customer_portal_ops_upsert_lunchbox($1,$2,'VIP 餐',current_date+1,'12:00',now()+interval '2 days',0,true,false)", [menu, brand]);
+    const back = (await db.query<{ data: { menus: Array<{ id: string }> } }>("select customer_personal_lunchbox_catalog() data")).rows[0].data;
+    expect(back.menus[0].id).toBe(menu);
+    expect((await db.query<{ count: string }>("select count(*)::text count from customer_vip_cycles")).rows[0].count).toBe("0");
   });
 });

@@ -556,3 +556,86 @@
 @media (prefers-reduced-motion: reduce) {
   .self-service-spin { animation-duration: 1.8s; }
 }
+/* Personal order detail follows the approved mint card reference. */
+.personal-order-detail{width:100%;max-width:none;padding:0;color:#102d32;background:transparent}
+.personal-order-detail .self-service-back{margin:0 0 18px;color:#006b53;font-size:16px;font-weight:650}
+.customer-portal.personal-workspace .personal-order-detail .self-service-detail-title{position:relative;isolation:isolate;display:flex;flex-direction:column;align-items:flex-start;gap:16px;margin:0 0 18px;padding:26px;border:1px solid #e0eee7;border-radius:20px;background:#e6f4ed;overflow:hidden}
+.personal-order-detail .self-service-detail-title>div{position:relative;z-index:1}
+.personal-order-detail .self-service-detail-title>div:first-child{padding-right:24%}
+.personal-order-detail .self-service-detail-title h1{margin:5px 0 0;font-size:42px;line-height:1.2;font-weight:600;color:#10232f}
+.personal-order-hero-art{position:absolute;right:0;bottom:0;width:32%;height:100%;object-fit:contain;opacity:.7;z-index:-1}
+.personal-order-detail .self-service-statuses{gap:10px}
+.personal-order-detail .self-service-statuses>span{padding:9px 14px;font-weight:600;background:#dbefe5;color:#006c53}
+.personal-order-detail .self-service-statuses>.is-neutral{background:#e8eeeb;color:#526057}
+.personal-order-detail .self-service-detail-actions:empty{display:none}
+.personal-order-detail .self-service-addon-note{display:flex;align-items:center;gap:14px;text-align:left;padding:16px 22px;border-radius:12px;font-weight:500;line-height:1.6}
+.personal-order-detail .self-service-addon-note svg{flex:none;width:25px;height:25px}
+.customer-portal.personal-workspace .personal-order-detail :is(.self-service-content-card,.self-service-delivery-card){margin-top:18px;border:1px solid #e7eeea;border-radius:18px;box-shadow:none;background:#fff}
+.personal-order-detail :is(.self-service-content-card,.self-service-delivery-card)>header{padding:20px 24px;border:0;gap:12px}
+.personal-order-card-title{display:flex;align-items:center;gap:14px}
+.personal-order-card-title svg{color:#00965c;flex:none;width:26px;height:26px}
+.personal-order-items-total{display:grid;gap:4px;text-align:right;margin-left:auto}
+.personal-order-items-total>span{color:#687b83;font-size:13px}
+.personal-order-items-total>strong{color:#006b53;font-size:26px}
+.personal-order-detail h2{font-size:22px;margin:0;font-weight:700;color:#10232f}
+.personal-order-detail .self-service-line-list{padding:0 24px}
+.personal-order-detail .self-service-line-list article{grid-template-columns:24px minmax(0,1fr);gap:12px;padding:20px 0;background:#fff;border-top:1px solid #eaf0ec}
+.personal-order-detail .self-service-line-list article>div>strong{font-size:18px;line-height:1.5}
+.personal-order-detail .self-service-line-list dl{grid-column:2;gap:12px;margin-top:6px}
+.personal-order-detail .self-service-line-list dd{font-size:18px;font-weight:500}
+.personal-order-expand{display:flex;align-items:center;justify-content:center;gap:10px;width:calc(100% - 48px);min-height:46px;margin:0 24px 18px;border:0;border-radius:12px;background:#ebf8f2;color:#006b53;font:inherit;font-weight:600;cursor:pointer}
+.personal-order-expand[aria-expanded=true] svg{transform:rotate(180deg)}
+.personal-order-detail .self-service-content-card>footer{background:#f6faf8;text-align:left;border-top:1px solid #eaf0ec}
+.personal-order-detail .self-service-content-card>footer strong{text-align:right}
+.personal-order-map{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:40px;padding:6px 14px;margin-left:auto;border:1px solid #7cbda5;border-radius:999px;color:#006b53;text-decoration:none;font-size:14px;white-space:nowrap}
+.personal-order-detail .self-service-delivery-grid{padding:0 24px 22px;grid-template-columns:repeat(2,minmax(0,1fr))}
+.personal-order-detail .self-service-delivery-grid>div{padding:12px 0;border:0;min-width:0}
+.personal-order-detail .self-service-delivery-grid strong{font-size:17px;font-weight:500;line-height:1.5;overflow-wrap:anywhere}
+.personal-order-detail .self-service-delivery-grid small{color:#5d6f68}
+.personal-order-detail .self-service-delivery-grid>.is-wide{padding-top:0;padding-bottom:18px;margin-bottom:8px;border-bottom:1px solid #eaf0ec}
+.personal-order-detail .personal-order-recipient .self-service-delivery-grid{grid-template-columns:minmax(0,2fr) minmax(0,1fr);gap:24px}
+.personal-order-detail .personal-order-payments .self-service-delivery-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
+.personal-order-no-payment{padding:0 24px 24px}
+.personal-order-detail :is(button,a):focus-visible{outline:2px solid #006b53;outline-offset:4px}
+@media(max-width:480px){
+ .personal-order-detail .self-service-detail-title{padding:20px;gap:12px}
+ .personal-order-detail .self-service-detail-title h1{font-size:34px}
+ .personal-order-detail .self-service-statuses{gap:6px}
+ .personal-order-detail .self-service-statuses>span{font-size:12px;padding:7px 9px}
+ .personal-order-detail :is(.self-service-content-card,.self-service-delivery-card)>header{padding:18px 16px;flex-wrap:wrap}
+ .personal-order-detail h2{font-size:19px}
+ .personal-order-detail .self-service-line-list{padding:0 16px}
+ .personal-order-detail .self-service-delivery-grid{padding:0 16px 18px}
+ .personal-order-detail .personal-order-recipient .self-service-delivery-grid{grid-template-columns:1fr;gap:4px}
+ .personal-order-detail .personal-order-payments .self-service-delivery-grid{grid-template-columns:1fr;gap:4px}
+ .personal-order-detail .self-service-delivery-grid strong{font-size:16px}
+ .personal-order-expand{width:calc(100% - 32px);margin-inline:16px}
+ .personal-order-map{font-size:12px;padding-inline:10px}
+}
+
+.personal-order-detail .self-service-delivery-grid>.is-wide{grid-column:1/-1}
+/* Sheet is portalled outside the order shell, so define its palette locally. */
+.self-service-addon-panel{--portal-green:#006b53;--portal-ink:#163028;--portal-muted:#5d6f68;color:var(--portal-ink);background:#f3f6f4}
+.self-service-addon-panel .side-panel-header{background:#fff;border-bottom:1px solid #dce8e1;padding:20px}
+.self-service-addon-panel .side-panel-header h2{font-size:21px;font-weight:700;line-height:1.4}
+.self-service-addon-panel .side-panel-header p{margin-top:6px;color:var(--portal-muted);font-size:14px;line-height:1.6}
+.self-service-addon-panel .side-panel-body{padding:16px 20px}
+.self-service-addon-panel .self-service-addon-products{gap:12px}
+.self-service-addon-panel .self-service-addon-products article{border:1px solid #dce8e1;border-radius:14px}
+.self-service-addon-panel .self-service-addon-products article.is-selected{border-color:#006b53;box-shadow:none;background:#f7fcf9}
+.self-service-addon-panel .self-service-addon-select{grid-template-columns:24px minmax(0,1fr) auto;gap:12px;padding:18px 14px;min-height:82px;font:inherit;color:var(--portal-ink)}
+.self-service-addon-panel .self-service-addon-select>span:nth-child(2)>strong{font-size:15px;font-weight:600;line-height:1.55;overflow-wrap:anywhere}
+.self-service-addon-panel .self-service-addon-select>strong{grid-column:auto;font-size:16px;white-space:nowrap;font-weight:650;color:#006b53}
+.self-service-addon-panel .self-service-addon-check{width:24px;height:24px;border-color:#8eaca0;background:#fff}
+.self-service-addon-panel .is-selected .self-service-addon-check{border-color:#006b53;background:#006b53}
+.self-service-addon-panel .self-service-addon-quantity{display:grid;grid-template-columns:minmax(0,1fr) 40px 48px 40px auto;gap:6px;padding:12px 14px;border-top:1px solid #dce8e1}
+.self-service-addon-panel .self-service-addon-quantity button{width:40px;height:44px;background:#fff;color:#006b53;border-color:#bfd3c8;border-radius:8px;cursor:pointer}
+.self-service-addon-panel .self-service-addon-quantity input{width:48px;height:44px;padding:0;border-color:#bfd3c8;font:inherit;appearance:textfield;background:#fff;color:#163028}
+.self-service-addon-panel input::-webkit-inner-spin-button,.self-service-addon-panel input::-webkit-outer-spin-button{appearance:none;margin:0}
+.self-service-addon-panel .self-service-addon-quantity>strong{min-width:0;margin-left:6px;font-size:15px;font-weight:650;color:#006b53;white-space:nowrap}
+.self-service-addon-panel .side-panel-footer{align-items:center;gap:12px;padding:14px 20px calc(14px + env(safe-area-inset-bottom));background:#fff;border-top:1px solid #dce8e1}
+.self-service-addon-panel .side-panel-footer>.ui-button{min-height:46px;background:#006b53;color:#fff;box-shadow:none;border-radius:12px;padding-inline:18px}
+.self-service-addon-panel .side-panel-footer>.ui-button:disabled{background:#e0e8e3;color:#63746a;opacity:1}
+.self-service-addon-panel .self-service-addon-total strong{color:#006b53;font-size:23px;font-variant-numeric:tabular-nums}
+.self-service-addon-panel button:focus-visible,.self-service-addon-panel input:focus-visible{outline:2px solid #006b53;outline-offset:3px}
+@media(max-width:360px){.self-service-addon-panel .self-service-addon-select{grid-template-columns:24px minmax(0,1fr)}.self-service-addon-panel .self-service-addon-select>strong{grid-column:2}.self-service-addon-panel .self-service-addon-quantity{grid-template-columns:1fr 36px 40px 36px auto}.self-service-addon-panel .self-service-addon-quantity button{width:36px}.self-service-addon-panel .self-service-addon-quantity input{width:40px}.self-service-addon-panel .side-panel-footer{padding-inline:14px}}

@@ -1,0 +1,84 @@
+.personal-rewards{color:#10323a;--reward-green:#006c53;--reward-muted:#60718a}
+.personal-rewards h1,.personal-rewards h2,.personal-rewards p{margin:0}
+.personal-rewards-intro{position:relative;isolation:isolate;min-height:150px;padding:12px 12px 24px;overflow:hidden}
+.personal-rewards-intro>div{position:relative;z-index:1}
+.personal-rewards-intro h1{font-size:36px;line-height:1.3;font-weight:800;margin-bottom:12px}
+.personal-rewards-intro p{max-width:61ch;font-size:17px;line-height:1.7;color:var(--reward-muted)}
+.personal-rewards-intro>img{position:absolute;right:-16px;top:0;width:237px;height:167px;object-fit:contain;z-index:-1;opacity:.8;mask-image:linear-gradient(to right,transparent,#000 24%)}
+.personal-rewards-balance{position:relative;isolation:isolate;display:flex;align-items:center;gap:24px;min-height:180px;padding:20px 28px;border:7px solid #fff;border-radius:28px;background:#ecf9f1;overflow:hidden;box-shadow:0 10px 28px #174e3510}
+.personal-rewards-wallet{width:116px;height:116px;object-fit:contain;border-radius:50%}
+.personal-rewards-total{position:relative;z-index:1;min-width:0}
+.personal-rewards-total h2{font-size:22px;font-weight:750}
+.personal-rewards-total>strong{display:block;font-size:58px;line-height:1.25;font-weight:800;font-variant-numeric:tabular-nums}
+.personal-rewards-total>span{display:inline-flex;align-items:center;gap:8px;padding:5px 12px;border-radius:24px;background:#d8f0e2;color:#075b49;font-size:16px}
+.personal-rewards-total>span svg{color:#bd7c00;flex:none}
+.personal-rewards-coins{position:absolute;right:0;bottom:0;height:100%;width:284px;object-fit:cover;z-index:-1;mask-image:linear-gradient(to right,transparent,#000 22%)}
+.personal-rewards-catalog{margin-top:28px}
+.personal-rewards-catalog>section{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.personal-rewards-catalog h2,.personal-rewards-catalog>section>p,.personal-rewards-catalog [role=alert]{grid-column:1/-1}
+.personal-rewards-catalog h2,.personal-rewards-history h2{font-size:28px;line-height:1.4;font-weight:800}
+.personal-rewards-catalog>section>p{color:var(--reward-muted);font-size:16px;line-height:1.6;margin-bottom:4px}
+.personal-rewards-catalog .portal-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(110px,.85fr);gap:6px 16px;padding:14px;background:#fff;border:0;border-radius:22px;align-items:center}
+.personal-rewards-catalog .portal-row-media{display:contents}
+.personal-rewards-catalog .portal-row-image{display:grid;place-items:center;grid-column:1;grid-row:1/3;width:100%;height:auto;aspect-ratio:1;object-fit:contain;border:0;border-radius:16px;background:#faf6f0;overflow:hidden}
+.personal-rewards-catalog .portal-row-image img{width:100%;height:100%;object-fit:contain}
+.personal-rewards-catalog .portal-row.is-loading{pointer-events:none}
+.personal-rewards-catalog .portal-row-button-bone{grid-column:2;width:100%;height:46px;margin-top:4px;border-radius:13px}
+.personal-rewards-catalog .portal-row-media>div{grid-column:2;min-width:0}
+.personal-rewards-catalog .portal-row-media>div:only-child{grid-column:1/-1}
+.personal-rewards-catalog .portal-row strong{display:block;font-size:22px;line-height:1.3;overflow-wrap:anywhere}
+.personal-rewards-catalog .portal-row p{margin:7px 0 0;color:var(--reward-muted);font-size:16px;line-height:1.5}
+.personal-rewards-catalog .portal-row button{grid-column:2;min-height:46px;width:100%;margin-top:4px;border:0;border-radius:13px;background:#007257;color:#fff;font-size:19px;font-weight:700;box-shadow:inset 0 2px 3px #ffffff24}
+.personal-rewards-catalog .portal-row button:hover{background:#005e48}
+.personal-rewards-catalog .portal-row button:disabled{background:#e9eceb;color:#727d84;opacity:1;box-shadow:none}
+.personal-rewards-history{margin-top:24px;padding:16px}
+.personal-rewards-history>header{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px}
+.personal-rewards-history>header button{display:flex;align-items:center;gap:5px;min-height:44px;padding:8px 16px;border:0;border-radius:24px;background:#e4f2eb;color:#00654e;font:inherit;font-weight:700;white-space:nowrap}
+.personal-rewards-history ul{margin:0;padding:0 16px;list-style:none;border-radius:22px;background:#fff}
+.personal-rewards-history li{display:flex;align-items:center;gap:24px;padding:16px 6px;min-height:90px}
+.personal-rewards-history li+li{border-top:1px solid #e7eeeb}
+.personal-rewards-record-icon{display:grid;place-items:center;flex:none;width:58px;height:58px;border-radius:50%;background:#e5f5ed;color:#00654e}
+.personal-rewards-history li>div{min-width:0}
+.personal-rewards-history li strong{font-size:19px;font-weight:600}
+.personal-rewards-history time{display:block;color:var(--reward-muted);font-size:15px;margin-top:5px}
+.personal-rewards-history li b{margin-left:auto;font-size:25px;color:#006b50;font-variant-numeric:tabular-nums}
+.personal-rewards-history li b.is-debit{color:#9b432d}
+.personal-rewards :focus-visible{outline:3px solid #007257;outline-offset:3px}
+.personal-rewards ::selection{background:#c9ecda;color:#103b2c}
+@media(max-width:600px){
+ .personal-rewards-intro{padding:4px 2px 18px;min-height:140px}
+ .personal-rewards-intro h1{font-size:28px}
+ .personal-rewards-intro p{font-size:14px}
+ .personal-rewards-intro>img{opacity:.2;right:-50px}
+ .personal-rewards-balance{min-height:150px;padding:16px 12px;gap:14px;border-width:5px;border-radius:22px}
+ .personal-rewards-wallet{width:72px;height:72px}
+ .personal-rewards-total h2{font-size:18px}
+ .personal-rewards-total>strong{font-size:42px}
+ .personal-rewards-total>span{font-size:12px;padding:5px 8px;gap:4px}
+ .personal-rewards-coins{opacity:.35;width:200px}
+ .personal-rewards-catalog{margin-top:24px}
+ .personal-rewards-catalog>section{gap:10px}
+ .personal-rewards-catalog h2,.personal-rewards-history h2{font-size:23px}
+ .personal-rewards-catalog>section>p{font-size:14px}
+ .personal-rewards-catalog .portal-row{grid-template-columns:minmax(0,1fr);gap:10px;padding:10px;border-radius:18px;align-content:start}
+ .personal-rewards-catalog .portal-row-image{grid-row:auto;grid-column:1;border-radius:12px}
+ .personal-rewards-catalog .portal-row-media>div,.personal-rewards-catalog .portal-row button,.personal-rewards-catalog .portal-row-button-bone{grid-column:1}
+ .personal-rewards-catalog .portal-row strong{font-size:18px}
+ .personal-rewards-catalog .portal-row p{font-size:14px}
+ .personal-rewards-catalog .portal-row button{font-size:16px;margin-top:auto}
+ .personal-rewards-history{padding:12px 0}
+ .personal-rewards-history>header{gap:6px}
+ .personal-rewards-history>header button{padding:6px 10px;font-size:13px}
+ .personal-rewards-history ul{padding:0 12px}
+ .personal-rewards-history li{gap:12px}
+ .personal-rewards-record-icon{width:44px;height:44px}
+ .personal-rewards-history li strong{font-size:16px}
+ .personal-rewards-history time{font-size:12px}
+ .personal-rewards-history li b{font-size:22px}
+}
+.personal-rewards-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;margin-top:20px;border-bottom:1px solid #b9d5c8}
+.personal-rewards-tabs button{min-height:48px;padding:10px 4px;border:0;border-bottom:3px solid transparent;background:transparent;color:#48665c;font:inherit;font-size:14px;font-weight:600;cursor:pointer}
+.personal-rewards-tabs button[aria-selected=true]{border-bottom-color:#006c53;color:#006c53;background:#e4f2eb}
+.personal-rewards-tabs button:hover{background:#e4f2eb}
+
+.personal-rewards-load-more{height:1px}

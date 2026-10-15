@@ -1,0 +1,57 @@
+/* Shared customer portal action style, based on reward redemption. */
+.customer-portal,
+.personal-address-panel,
+.personal-profile-panel{
+  --customer-button-bg:#007257;
+  --customer-button-hover:#005e48;
+  --customer-button-disabled:#e9eceb;
+  --customer-button-disabled-ink:#727d84;
+  --customer-button-radius:13px;
+}
+.customer-portal.customer-portal .ui-button:not([data-variant="ghost"]):not([data-variant="destructive"]):not([data-size="icon"]):not(:disabled),
+.customer-portal.customer-portal .personal-order-action:not(:disabled),
+.customer-portal.customer-portal .personal-address-edit:not(.personal-address-delete):not(:disabled),
+.customer-portal.customer-portal .personal-rewards-history>header button:not(:disabled),
+:is(.personal-address-panel,.personal-profile-panel) .ui-button:not([data-variant="ghost"]):not([data-variant="destructive"]):not([data-size="icon"]):not(:disabled){
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  min-height:44px;height:auto;padding:10px 16px;
+  border:0;border-radius:var(--customer-button-radius);
+  background:var(--customer-action-bg,var(--customer-button-bg));color:var(--customer-action-ink,#fff);
+  font-family:inherit;font-size:14px;font-weight:700;line-height:1.4;
+  text-align:center;text-decoration:none;cursor:pointer;
+  box-shadow:inset 0 2px 3px #ffffff24;
+  transition:background-color .15s ease,color .15s ease;
+}
+.customer-portal.customer-portal :is(.ui-button:not([data-variant="ghost"]):not([data-variant="destructive"]):not([data-size="icon"]),.personal-order-action,.personal-address-edit:not(.personal-address-delete),.personal-rewards-history>header button):hover,
+:is(.personal-address-panel,.personal-profile-panel) .ui-button:not([data-variant="ghost"]):not([data-variant="destructive"]):not([data-size="icon"]):hover{
+  background:var(--customer-action-hover,var(--customer-button-hover));color:var(--customer-action-hover-ink,var(--customer-action-ink,#fff));
+}
+.customer-portal.customer-portal :is(.ui-button,.personal-order-action,.personal-address-edit,.personal-rewards-history>header button):disabled,
+:is(.personal-address-panel,.personal-profile-panel) .ui-button:disabled{
+  background:var(--customer-button-disabled);color:var(--customer-button-disabled-ink);
+  opacity:1;box-shadow:none;cursor:not-allowed;
+}
+.customer-portal.customer-portal :is(.ui-button,.personal-order-action,.personal-address-edit,.personal-rewards-history>header button):focus-visible,
+:is(.personal-address-panel,.personal-profile-panel) .ui-button:focus-visible{
+  outline:3px solid var(--customer-button-bg);outline-offset:3px;
+}
+.customer-portal.customer-portal .personal-address-actions{gap:8px;padding-top:8px}
+.customer-portal.customer-portal .personal-address-delete{
+  min-height:44px;padding:10px 16px;border:0;border-radius:13px;
+  background:#fff0ef;color:#b42318;font:inherit;font-size:14px;font-weight:700;
+}
+.customer-portal.personal-workspace .personal-address-edit.personal-address-make-default,
+.customer-portal.personal-workspace .personal-address-edit.personal-address-make-default:hover,
+.customer-portal.personal-workspace .personal-address-edit.personal-address-make-default:disabled{
+  background:#e6f4ec;color:#146b4f;box-shadow:none;
+}
+.customer-portal.personal-workspace .personal-address-edit.personal-address-make-default:hover:not(:disabled){background:#d8eede}
+.customer-portal.customer-portal .personal-order-action{white-space:normal;min-width:0;padding-inline:8px;font-size:12px}
+.personal-order-action.is-payment{--customer-action-bg:#e7f6ec;--customer-action-ink:#1d7a45;--customer-action-hover:#d8efe2;--customer-action-hover-ink:#1d7a45}
+.personal-order-action.is-invoice{--customer-action-bg:#f0ecfb;--customer-action-ink:#68439b;--customer-action-hover:#e6def7;--customer-action-hover-ink:#68439b}
+.personal-order-action.personal-order-more{--customer-action-bg:#f0f2f3;--customer-action-ink:#58656d;--customer-action-hover:#e2e7e9;--customer-action-hover-ink:#405058}
+.personal-order-action.is-feedback{--customer-action-bg:#e8f2ff;--customer-action-ink:#1d4f91;--customer-action-hover:#d9e9fc;--customer-action-hover-ink:#1d4f91}
+.personal-order-action.is-order{--customer-action-bg:#fdeee0;--customer-action-ink:#b45309;--customer-action-hover:#fbe1ca;--customer-action-hover-ink:#b45309}
+@media(prefers-reduced-motion:reduce){.customer-portal.customer-portal :is(.ui-button,.personal-order-action,.personal-address-edit){transition:none}}
+.customer-portal.customer-portal .personal-order-action{gap:4px;padding-inline:6px}
+.customer-portal.customer-portal .personal-order-action svg{flex-shrink:0;width:15px;height:15px}

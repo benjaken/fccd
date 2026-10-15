@@ -11,7 +11,9 @@ import {
   revokePortalInvitation,
   setPortalMemberMenuScopes,
   setPortalMemberPermission,
+  setPortalMemberProfile,
   setPortalMemberRole,
+  splitPortalAddressLabel,
   type PortalPermission,
 } from "@/lib/customer-portal";
 import type { CustomerPortalController } from "@/components/CustomerPortalPage";
@@ -21,6 +23,7 @@ export function CustomerTeamPage() {
   const { t, busy, inviteLink, inviteEmail, setInviteEmail, refresh, run, setInviteLink } = portal;
   const data = portal.data;
   const [scopeDrafts, setScopeDrafts] = useState<Record<string, string[]>>({});
+  const [profileDrafts, setProfileDrafts] = useState<Record<string, { department: string; deliveryPointId: string; canOrder: boolean }>>({});
   const [grants, setGrants] = useState<Record<PortalPermission, boolean> | null>(null);
   useEffect(() => {
     if (data?.role === "admin") setGrants(memberPermissionGrants(data));
@@ -42,8 +45,21 @@ export function CustomerTeamPage() {
     setScopeDrafts(draft => ({ ...draft, [userId]: next }));
   }
 
+  type TeamMember = NonNullable<typeof data>["members"][number];
+  function profileFor(member: TeamMember) {
+    return profileDrafts[member.user_id] ?? {
+      department: member.department ?? "",
+      deliveryPointId: member.delivery_point_id ?? "",
+      canOrder: member.can_order ?? true,
+    };
+  }
+  function updateProfile(member: TeamMember, patch: Partial<{ department: string; deliveryPointId: string; canOrder: boolean }>) {
+    const current = profileFor(member);
+    setProfileDrafts(draft => ({ ...draft, [member.user_id]: { ...current, ...patch } }));
+  }
+
   return (
-    <section>
+    <section className="personal-profile">
       <h1>{t("portal.team")}</h1>
       {data.role === "admin" && grants ? (
         <div className="portal-menu-scopes">
@@ -110,6 +126,53 @@ export function CustomerTeamPage() {
                   </Button>
                 </div>
               ) : null}
+              {permissions.members && member.is_active && member.role === "member" ? (() => {
+                const draft = profileFor(member);
+                return (
+                  <div className="portal-menu-scopes">
+                    <label>{t("portal.memberDepartment")}
+                      <input value={draft.department} disabled={busy} onChange={e => updateProfile(member, { department: e.target.value })} />
+                    </label>
+                    <label>{t("portal.memberDeliveryPoint")}
+                      <select value={draft.deliveryPointId} disabled={busy} onChange={e => updateProfile(member, { deliveryPointId: e.target.value })}>
+                        <option value="">{t("portal.memberNone")}</option>
+                        {data.addresses.map(address => {
+                          if (!address.delivery_points.length) return null;
+                          const parsed = splitPortalAddressLabel(address.label);
+                          const title = parsed.place || (parsed.kind ? t(`portal.addressKinds.${parsed.kind}`) : address.label);
+                          return <optgroup key={address.id} label={title}>
+                            {address.delivery_points.map(point => <option key={point.id} value={point.id}>{point.name}</option>)}
+                          </optgroup>;
+                        })}
+                      </select>
+                    </label>
+                    <label className="portal-menu-scope-option">
+                      <input type="checkbox" checked={draft.canOrder} disabled={busy} onChange={() => updateProfile(member, { canOrder: !draft.canOrder })} />
+                      <span>{t("portal.memberCanOrder")}</span>
+                    </label>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      disabled={busy}
+                      onClick={() => void run(async () => {
+                        await setPortalMemberProfile(member.user_id, {
+                          department: draft.department.trim() || null,
+                          deliveryPointId: draft.deliveryPointId || null,
+                          canOrder: draft.canOrder,
+                        }, data.organization.id);
+                        setProfileDrafts(draftMap => {
+                          const next = { ...draftMap };
+                          delete next[member.user_id];
+                          return next;
+                        });
+                        await refresh();
+                      }, t("portal.memberProfileSaved"))}
+                    >
+                      {t("portal.saveMemberProfile")}
+                    </Button>
+                  </div>
+                );
+              })() : null}
             </div>
             <div className="portal-actions">
               {data.role === "admin" && member.is_active && member.role === "member" ? (

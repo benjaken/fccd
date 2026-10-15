@@ -1,3 +1,4 @@
+import { PersonalPageSkeleton } from "@/components/customer-portal/PersonalPageSkeleton";
 import {
   useEffect,
   useMemo,
@@ -9,10 +10,15 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
-import { useMatch, useNavigate, useParams } from "react-router-dom";
+import { useLocation, useMatch, useNavigate, useParams } from "react-router-dom";
 import {
   ArrowLeft,
   CalendarDays,
+  ChevronDown,
+  Clock3,
+  Navigation,
+  ShoppingBag,
+  UserRound,
   Check,
   ChevronRight,
   CreditCard,
@@ -475,10 +481,10 @@ export function ReceiptPreview({ order, onClose, printReceipt, documentKind = "r
 function addonReason(options: CustomerSelfServiceAddonOptions) {
   if (options.reason === "block_date") return "此送貨日期暫停接受加單，如有查詢請透過 WhatsApp 聯絡我們。";
   if (options.reason === "cutoff_passed") return "加單時限已過。加單截止時間為送貨前一天下午 3 點。";
-  if (options.reason === "order_closed") return "此訂單已完成或取消，不能再加單。";
-  if (options.reason === "delivery_date_missing") return "訂單尚未確定送貨日期，暫時不能加單。";
-  if (options.reason === "no_products") return "此品牌目前沒有可供加單的商品。";
-  return "此訂單暫時不能加單。";
+
+
+
+  return null;
 }
 
 function AddonPanel({
@@ -521,7 +527,7 @@ function AddonPanel({
     }
   }
 
-  return <SidePanel open={open} title={`加單 · ${order.orderNumber}`} description="加單只接受 PayPal 付款。付款完成後商品才會加入原訂單。" onClose={onClose} closeLabel="關閉加單" className="self-service-addon-panel"
+  return <SidePanel open={open} title={`加單 · ${order.orderNumber}`} description="選擇商品及數量，付款後即加入原訂單。" onClose={onClose} closeLabel="關閉加單" className="self-service-addon-panel"
     footer={<><div className="self-service-addon-total"><span>加單總額</span><strong>{money(total, order.currency)}</strong></div><Button type="button" disabled={!selected.length || busy} onClick={() => void pay()}>{busy ? <LoaderCircle className="self-service-spin" /> : <CreditCard />}{busy ? "正在前往 PayPal…" : "使用 PayPal 付款"}</Button></>}>
     <div className="self-service-addon-products">
       {options.items.map((item) => {
@@ -529,7 +535,7 @@ function AddonPanel({
         return <article key={item.id} className={quantity ? "is-selected" : ""}>
           <button type="button" className="self-service-addon-select" aria-pressed={quantity > 0} onClick={() => setQuantity(item.productId, quantity ? 0 : item.minQuantity, item.minQuantity, item.maxQuantity)}>
             <span className="self-service-addon-check">{quantity ? <Check /> : null}</span>
-            <span><strong>{item.name}</strong><small>{item.sku || "—"}</small></span>
+            <span><strong>{item.name}</strong></span>
             <strong>{money(item.price, order.currency)}</strong>
           </button>
           {quantity ? <div className="self-service-addon-quantity"><span>數量</span><button type="button" aria-label={`減少 ${item.name}`} onClick={() => setQuantity(item.productId, quantity - 1, item.minQuantity, item.maxQuantity)}><Minus /></button><input type="number" min={item.minQuantity} max={item.maxQuantity} value={quantity} aria-label={`${item.name} 數量`} onChange={(event) => setQuantity(item.productId, Number(event.target.value), item.minQuantity, item.maxQuantity)} /><button type="button" aria-label={`增加 ${item.name}`} onClick={() => setQuantity(item.productId, quantity + 1, item.minQuantity, item.maxQuantity)}><Plus /></button><strong>{money(item.price * quantity, order.currency)}</strong></div> : null}
@@ -540,8 +546,9 @@ function AddonPanel({
   </SidePanel>;
 }
 
-function DetailView({ session, order, onBack, onLogout, printReceipt, loadAddonOptions, embedded = false }: { session: CustomerSelfServiceSession; order: CustomerSelfServiceOrderDetail; onBack: () => void; onLogout: () => void; printReceipt: PrintReceiptFn; loadAddonOptions: AddonOptionsFn; embedded?: boolean }) {
+export function DetailView({ session, order, onBack, onLogout, printReceipt, loadAddonOptions, embedded = false }: { session: CustomerSelfServiceSession; order: CustomerSelfServiceOrderDetail; onBack: () => void; onLogout: () => void; printReceipt: PrintReceiptFn; loadAddonOptions: AddonOptionsFn; embedded?: boolean }) {
   const Container = embedded ? "div" : "main";
+  const [itemsExpanded, setItemsExpanded] = useState(false);
   const [receiptOpen, setReceiptOpen] = useState(false);
   const [addonOpen, setAddonOpen] = useState(false);
   const [addonOptions, setAddonOptions] = useState<CustomerSelfServiceAddonOptions | null>(null);
@@ -552,31 +559,38 @@ function DetailView({ session, order, onBack, onLogout, printReceipt, loadAddonO
   const cashdollarPurchased = customerOrderCashdollarPurchased(order);
   useEffect(() => {
     let active = true;
-    void loadAddonOptions(session.token, order.id).then((value) => { if (active) setAddonOptions(value); }).catch(() => undefined);
+    const openOnLoad = new URLSearchParams(window.location.search).get("addon") === "1";
+    void loadAddonOptions(session.token, order.id).then((value) => {
+      if (!active) return;
+      setAddonOptions(value);
+      if (value.canAddOn && openOnLoad) setAddonOpen(true);
+    }).catch(() => undefined);
     return () => { active = false; };
   }, [loadAddonOptions, order.id, session.token]);
   return (
-    <Container className="self-service-shell self-service-detail-shell">
+    <Container className={`self-service-shell self-service-detail-shell${embedded ? " personal-order-detail" : ""}`}>
       {!embedded && <PortalHeader session={session} onLogout={onLogout} detail={order} />}
       <button type="button" className="self-service-back" onClick={onBack}><ArrowLeft />返回訂單列表</button>
       <section className="self-service-detail-title">
-        <div><span>訂單</span><h1>{order.orderNumber}</h1></div>
+        <div><span>訂單編號</span><h1>{order.orderNumber}</h1></div>
+        {embedded ? <img className="personal-order-hero-art" src="/assets/customer-personal/lunchbox-empty.png" alt="" /> : null}
         <StatusBadges order={order} />
         <div className="self-service-detail-actions">
           {addonOptions?.canAddOn ? <Button onClick={() => setAddonOpen(true)}><Plus />加單</Button> : null}
           {order.payments.length ? <Button onClick={() => setReceiptOpen(true)}><ReceiptText />預覽並下載收據</Button> : null}
         </div>
       </section>
-      {addonOptions && !addonOptions.canAddOn ? <div className="self-service-addon-note">{addonReason(addonOptions)}</div> : null}
+      {addonOptions && !addonOptions.canAddOn && addonReason(addonOptions) ? <div className="self-service-addon-note"><Clock3 aria-hidden="true" />{addonReason(addonOptions)}</div> : null}
       <section className="self-service-content-card">
-        <header><div><span>訂單內容</span><h2>{order.lines.length} 項食品</h2></div><strong>{money(order.grandTotal, order.currency)}</strong></header>
+        <header><div className="personal-order-card-title"><ShoppingBag aria-hidden="true" /><h2>訂單內容</h2></div><div className="personal-order-items-total"><span>共 {order.lines.length} 項食品</span><strong>{money(order.grandTotal, order.currency)}</strong></div></header>
         <div className="self-service-line-list">
-          {order.lines.map((line, index) => <article key={line.id}>
+          {(embedded && !itemsExpanded ? order.lines.slice(0, 2) : order.lines).map((line, index) => <article key={line.id}>
             <span>{index + 1}</span>
             <div><strong>{line.name}</strong>{line.content && line.content !== line.name ? <small>{line.content}</small> : null}{line.isAddon ? <em>加單項目</em> : null}</div>
             <dl><div><dt>單價</dt><dd>{money(line.unitPrice, order.currency)}</dd></div><div><dt>數量</dt><dd>{line.quantity}</dd></div><div><dt>小計</dt><dd>{money(line.totalPrice, order.currency)}</dd></div></dl>
           </article>)}
         </div>
+        {embedded && order.lines.length > 2 ? <button type="button" className="personal-order-expand" aria-expanded={itemsExpanded} onClick={() => setItemsExpanded(value => !value)}>{itemsExpanded ? "收起食品" : `查看全部 ${order.lines.length} 項食品`}<ChevronDown aria-hidden="true" /></button> : null}
         <footer>
           <span>食品小計</span><strong>{money(itemTotal, order.currency)}</strong>
           <span>運費</span><strong>{money(shippingFee, order.currency)}</strong>
@@ -587,14 +601,27 @@ function DetailView({ session, order, onBack, onLogout, printReceipt, loadAddonO
         </footer>
       </section>
       <section className="self-service-delivery-card">
-        <header><MapPin /><div><span>送貨資料</span><h2>{order.shippingMethod || "送貨安排"}</h2></div></header>
+        <header><MapPin aria-hidden="true" /><h2>送貨資料</h2>{order.address ? <a className="personal-order-map" href={"https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(order.address)} target="_blank" rel="noreferrer"><Navigation size={18} />查看地圖</a> : null}</header>
         <div className="self-service-delivery-grid">
+          <div className="is-wide"><span>送貨地址</span><strong>{order.address || "—"}</strong>{order.shippingMethod ? <small>{order.shippingMethod}</small> : null}</div>
           <div><span>日期</span><strong>{portalDate(order.deliveryDate, true)}</strong></div>
           <div><span>時間</span><strong>{order.deliveryTime || "待確認"}</strong></div>
-          <div><span>收貨人</span><strong>{[order.companyName, order.customerName].filter(Boolean).join(" / ") || "—"}</strong></div>
-          <div><span>聯絡電話</span><strong>{[order.maskedPhoneA, order.maskedPhoneB].filter(Boolean).join(" / ")}</strong></div>
-          <div className="is-wide"><span>地址</span><strong>{order.address || "—"}</strong></div>
         </div>
+      </section>
+      <section className="self-service-delivery-card personal-order-recipient">
+        <header><UserRound aria-hidden="true" /><h2>收貨人資料</h2></header>
+        <div className="self-service-delivery-grid">
+          <div><span>收貨人</span><strong>{[order.companyName, order.customerName].filter(Boolean).join(" / ") || "—"}</strong></div>
+          <div><span>聯絡電話</span><strong>{[order.maskedPhoneA, order.maskedPhoneB].filter(Boolean).join(" / ") || "—"}</strong></div>
+        </div>
+      </section>
+      <section className="self-service-delivery-card personal-order-payments">
+        <header><CreditCard aria-hidden="true" /><h2>付款資料</h2></header>
+        {order.payments.length ? order.payments.map(payment => <div className="self-service-delivery-grid" key={payment.id}>
+          <div><span>付款方式</span><strong>{payment.method || "—"}</strong></div>
+          <div><span>付款日期</span><strong>{payment.paymentAt ? portalDate(payment.paymentAt, true) : "—"}</strong></div>
+          <div><span>付款金額</span><strong>{money(payment.amount, order.currency)}</strong></div>
+        </div>) : <p className="personal-order-no-payment">暫無付款記錄</p>}
       </section>
       {receiptOpen ? <ReceiptPreview order={order} printReceipt={printReceipt} onClose={() => setReceiptOpen(false)} /> : null}
       {addonOpen && addonOptions ? <AddonPanel open session={session} order={order} options={addonOptions} onClose={() => setAddonOpen(false)} /> : null}
@@ -617,6 +644,7 @@ export function CustomerSelfServicePage({
   listPath = routeBase,
 }: { login?: LoginFn; restore?: RestoreFn; loadDetail?: DetailFn; loadAddonOptions?: AddonOptionsFn; logout?: LogoutFn; printReceipt?: PrintReceiptFn; routeBase?: string; loginPath?: string; loginIntro?: ReactNode; otpOnly?: boolean; embedded?: boolean; listPath?: string }) {
   const navigate = useNavigate();
+  const routeLocation = useLocation();
   const params = useParams<{ orderId?: string }>();
   const detailMatch = useMatch(`${routeBase}/:orderId`);
   const orderId = detailMatch?.params.orderId ?? params.orderId ?? "";
@@ -707,6 +735,7 @@ export function CustomerSelfServicePage({
     navigate(loginPath, { replace: true });
   }
 
+  if (embedded && (loading || Boolean(session && orderId && !detailError && detail?.id !== orderId))) return <PersonalPageSkeleton variant={orderId || new URLSearchParams(routeLocation.search).has("addonCheckout") ? "order-detail" : "orders"} />;
   if (loading && !session && otpOnly) return <CustomerPortalAccessState error="" busy={false} onRetry={()=>{}} />;
   if (loading && !session) return <main className="self-service-loading"><LoaderCircle className="self-service-spin" /><span>正在載入客戶自助服務…</span></main>;
   if (!session && otpOnly) return <CustomerPortalAccessState error={detailError || "暫時無法載入訂單，請重新查詢。"} busy={loading} onRetry={() => {setLoading(true);setDetailError("");void restore().then(setSession).catch(()=>setDetailError("暫時無法載入訂單，請重新查詢。")).finally(()=>setLoading(false));}} />;

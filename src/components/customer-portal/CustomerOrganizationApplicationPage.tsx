@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { CustomerWorkspaceHeader } from "@/components/customer-portal/CustomerWorkspaceChrome";
+import { FileDropField } from "@/components/customer-portal/FileDropField";
 import { Button } from "@/components/ui/button";
 import { CornerNotice } from "@/components/ui/corner-notice";
 import { supabase } from "@/lib/supabase";
@@ -136,7 +137,7 @@ export function CustomerOrganizationApplicationPage({ loggingOut, onLogout }: { 
             <label>{t("portalApply.companyName")}<input value={companyName} onChange={event => setCompanyName(event.target.value)} required maxLength={120} /></label>
             <label>{t("portalApply.brNumber")}<input value={brNumber} onChange={event => setBrNumber(event.target.value)} required pattern="[A-Za-z0-9-]{4,40}" /></label>
             <label>{t("portalApply.brExpiresOn")}<input type="date" value={brExpiresOn} onChange={event => setBrExpiresOn(event.target.value)} required /></label>
-            <label>{t("portalApply.attachment")}<input type="file" accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf" onChange={event => setFile(event.target.files?.[0] ?? null)} /></label>
+            <FileDropField label={t("portalApply.attachment")} file={file} onFile={setFile} />
             {application?.br_object_path ? <p>{t("portalApply.attachmentReady")}</p> : null}
             <h2>{t("portalApply.contacts")}</h2>
             {contacts.map((contact, index) => (

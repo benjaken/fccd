@@ -12,13 +12,13 @@ i18n.addResourceBundle("zh-HK", "translation", { portal: {
   email:"電郵", password:"密碼", emailPlaceholder:"輸入電郵地址", passwordPlaceholder:"輸入密碼", login:"登入", register:"建立受邀帳戶", verifyEmail:"請查閱電郵完成驗證，再登入接受邀請。",
   forgotPassword:"重設密碼", resetSent:"重設密碼電郵已發出，請查閱收件箱。", lookup:"使用電話及電郵查單", invitation:"機構邀請", acceptInvite:"接受邀請", joined:"已加入機構。",
   membershipRequired:"此帳戶尚未取得機構訂購權限。請先完成電郵驗證，並透過機構管理員提供的邀請連結加入；如已加入，請聯絡管理員確認帳戶及機構是否仍有效。", loadFailed:"暫時無法載入機構資料，請重試；如問題持續，請聯絡客服。", operationFailed:"操作未完成，請核對資料及權限後重試。", retry:"重試", navigation:"客戶功能", openMenu:"開啟選單", closeMenu:"關閉選單",
-  home:"主頁", menus:"最新餐單", vip:"VIP 訂飯", siteNav:{cateringSite:"到會網站", eventLunch:"活動飯盒", orders:"訂單紀錄", rewards:"積分換禮品", paymentDelivery:"付款送貨", profile:"我的資料", guides:"到會介紹", about:"關於我們", clients:"客戶清單", cases:"真實案例", companyMeals:"公司訂飯", promise:"服務承諾", evidenceLink:"付款單據"}, vipIntro:"一個週期共用一個截單時間。可一次為多日選數量，每一天會各自成為一張報價單。", noVip:"目前沒有開放中的 VIP 訂飯週期。", chooseVip:"選擇週期", vipCutoff:"截單時間 {{time}}", submitVip:"一次提交 {{count}} 日", vipSubmitted:"已提交各日的預備訂單，等待 FCCD 確認。", orders:"訂單紀錄", points:"獎勵積分", team:"團隊管理", addresses:"送貨地址", profile:"個人資料",
-  headline:"幾步就訂好。", homeDescription:"選擇指定餐單，確認送貨資料，快捷完成訂購。", orderNow:"立即訂購", details:"查看明細", pointUnit:"分",
-  choose:"選擇餐單", noMenus:"目前沒有可訂購餐單，請聯絡營運核對授權。", serviceDate:"送貨日期", serviceDateHint:"只可選擇此餐牌供餐期間內、今天或之後的日期。", invalidServiceDate:"請選擇供餐期間內的送貨日期。", orderBlackout:"這天是節日，不能落單。", orderBlackoutNamed:"{{date}} 是{{name}}，這天不能落單。", available:"可訂 {{count}} 份", quantityLabel:"{{name}} 數量", chooseAddress:"選擇送貨地址", addAddress:"新增地址", editAddress:"編輯地址", deleteAddress:"刪除地址", cancelEdit:"取消編輯", addressArchived:"已刪除地址。",
-  pointsHint:"每消費 HK$25 餐費得 1 分，訂單完成後 1 個工作日內入帳。運費不計分。積分只可兌換實物或現金券，不可抵付金額。", shipping:"運費", payable:"應付金額", submitting:"提交中…", confirmOrder:"提交預備訂單",
-  orderCreated:"已提交預備訂單，等待 FCCD 確認。確認後才會成為正式訂單。", noOrders:"目前沒有訂單。", awaitingConfirmation:"待確認", confirmed:"已確認", settled:"已結清", awaitingPayment:"待付款", reorder:"再次訂購",
+  home:"主頁", menus:"最新餐單", menusIntro:"查看各品牌餐牌及最新資訊。", vip:"VIP 訂飯", siteNav:{cateringSite:"到會網站", eventLunch:"活動飯盒", orders:"訂單紀錄", rewards:"積分換禮品", paymentDelivery:"付款送貨", profile:"我的資料", company:"公司資料", guides:"到會介紹", about:"關於我們", clients:"客戶清單", cases:"真實案例", companyMeals:"公司訂飯", promise:"服務承諾", evidenceLink:"付款單據"}, vipIntro:"一個週期共用一個截單時間。可一次為多日選數量，每一天會各自成立一張訂單。", noVip:"目前沒有開放中的 VIP 訂飯週期。", chooseVip:"選擇週期", vipCutoff:"截單時間 {{time}}", cutoffIn:"截單倒數 {{time}}", cutoffLabel:"截單倒數", cutoffPassed:"已截單", cdDay:"{{n}}日", cdHour:"{{n}}小時", cdMinute:"{{n}}分", cdSecond:"{{n}}秒", vipSummaryTitle:"本期訂飯", vipOrdered:"已落單人數", vipNotOrdered:"未落單人數", vipAmount:"本期累計金額", vipMyStatus:"我的訂單狀態", vipMyOrdered:"已落單", vipMyWaiting:"未落單", vipMyAmount:"我的金額", submitVip:"一次提交 {{count}} 日", vipSubmitted:"已提交各日訂單，等待確認。", vipNotice:"訂購須知", vipAvailable:"可訂購的餐盒", vipSelected:"已選 {{count}} 份", vipNext:"下一步", vipConfirm:"確認訂購資料", vipBack:"返回", vipChooseQuantity:"選擇數量", vipAdd:"加入訂單", vipDecrease:"減少{{name}}數量", vipIncrease:"增加{{name}}數量", vipLoadFailed:"暫時未能載入 VIP 訂飯，請重試。", orders:"訂單紀錄", points:"獎勵積分", team:"團隊管理", addresses:"送貨地址", profile:"個人資料", profileIntro:"查看你的帳戶及成員資料。", memberProfile:"成員資料",
+  headline:"幾步就訂好。", homeDescription:"選擇活動飯盒，確認送貨資料，快捷完成訂購。", orderNow:"立即訂購", details:"查看明細", pointUnit:"分",
+  choose:"選擇餐單", noMenus:"目前沒有可訂購餐單。", serviceDate:"送貨日期", serviceDateHint:"只可選擇此餐牌供餐期間內、今天或之後的日期。", invalidServiceDate:"請選擇供餐期間內的送貨日期。", orderBlackout:"這天是節日，不能落單。", orderBlackoutNamed:"{{date}} 是{{name}}，這天不能落單。", available:"可訂 {{count}} 份", quantityLabel:"{{name}} 數量", chooseAddress:"選擇送貨地址", addAddress:"新增地址", editAddress:"編輯地址", deleteAddress:"刪除地址", cancelEdit:"取消編輯", addressArchived:"已刪除地址。",
+  shipping:"運費", payable:"應付金額", submitting:"提交中…", confirmOrder:"提交預備訂單",
+  orderPendingAdmin:"已提交，等 Admin 送單。", orderFor:"訂餐對象", orderForSelf:"本人", rewardsTitle:"獎賞", ledgerTitle:"積分紀錄", balanceLabel:"積分結餘", myAddresses:"我的送貨地址", addressIntro:"管理公司送貨地址，訂購時可選擇使用。", noAddresses:"尚未有送貨地址。", pendingRequests:"待 Admin 送單", pendingRequestsHint:"成員提交後，需由公司 Admin 送單才會成立訂單。", sendBatch:"批次送單", requestSent:"已送單。", requestDeleted:"已刪除提交。", requestUpdated:"已更新提交。", saveRequest:"儲存", noPendingRequests:"暫無待送提交。", memberLabel:"成員", noOrders:"目前沒有訂單。", awaitingConfirmation:"待確認", confirmed:"已確認", settled:"已結清", awaitingPayment:"待付款", reorder:"再次訂購",
   reorderNotice:"已帶入仍可供應的餐點，請核對數量及最新價格；未提供的餐點不會加入。", cancelReason:"請輸入取消原因", cancelRequested:"已提交取消申請，等待營運確認。", requestCancel:"申請取消", cancelPending:"取消申請已提交",
-  rewardRules:"個人與企業積分分開。每消費 HK$25 餐費得 1 分，訂單完成後 1 個工作日內入帳，有效期一年。積分只可兌換實物或現金券，不可抵付金額。", expires:"到期", noLedger:"目前沒有積分交易。",
+  expires:"到期", noLedger:"目前沒有積分交易。",
   ledger:{earn:"完成訂單儲分",redeem:"兌換實物或現金券",return:"退款退分",expire:"積分到期",clawback:"退款追回積分"},
   addressFields:{label:"地址名稱",recipient:"收件人",phone:"電話",address:"送貨地址"},addressPlaceholders:{label:"例如：辦公室",recipient:"輸入收件人姓名",phone:"輸入聯絡電話",address:"輸入完整送貨地址"},
   save:"儲存", saved:"已儲存。", roles:{admin:"機構管理員",member:"機構成員"},active:"有效",inactive:"已停用",remove:"停用成員",createInvite:"建立邀請連結",inviteLink:"邀請連結（7 日內有效，請交予指定收件人）",
@@ -30,12 +30,13 @@ i18n.addResourceBundle("zh-HK", "translation", { portal: {
   menuScopesHint:"勾選此成員可訂購的指定餐單；全部取消勾選即恢復可訂全部餐單。",
   noAssignableMenus:"目前沒有可分配的指定餐單。",menuScopesAll:"目前可訂全部餐單。",menuScopesSelected:"已限制 {{count}} 張餐單。",
   saveMenuScopes:"儲存餐牌權限",menuScopesSaved:"已更新餐牌權限。",
+  memberDepartment:"部門",memberDeliveryPoint:"指定送貨點",memberCanOrder:"可訂餐",memberNone:"未設定",saveMemberProfile:"儲存成員設定",memberProfileSaved:"已更新成員設定。",myDepartment:"部門",myDeliveryPoint:"指定送貨點",yes:"是",no:"否",
 }}, true, true);
 i18n.addResourceBundle("zh-HK", "translation", { portalOps: {
   description:"建立機構、指定首位管理員，並配置指定餐單、價格、庫存、截單及運費。",
   loading:"載入中…",saved:"已儲存。",close:"關閉",accessDenied:"沒有客戶訂購營運權限。",operationFailed:"操作未完成，請重試。",
   userNotFound:"找不到已驗證電郵的使用者。",membershipConflict:"此使用者已屬於其他機構。",invalidEmail:"電郵格式無效。",invalidMenu:"請核對餐單欄位及餐點。",
-  createOrg:"新增機構",editOrg:"編輯機構",orgName:"機構名稱",vip:"VIP 客戶",vipHint:"只有標為 VIP 的客戶會出現在團體日曆。",noOrgs:"尚未建立機構。",noOrgsDescription:"建立機構後，可在此指定管理員及餐單。",noMatches:"未找到機構",noMatchesDescription:"調整搜尋或狀態條件後再試。",search:"搜尋機構",searchPlaceholder:"搜尋機構名稱",statusFilter:"狀態",allStatuses:"全部狀態",active:"有效",inactive:"停用",
+  createOrg:"新增機構",editOrg:"編輯機構",orgName:"機構名稱",vip:"VIP 客戶",vipHint:"只有標為 VIP 的客戶會出現在團體日曆。",showPrices:"顯示價格",showPricesHint:"關閉後，成員在客戶平台、匯出及文件中都不會看到任何金額。",minimumQuantity:"每送貨點最低訂量",noOrgs:"尚未建立機構。",noOrgsDescription:"建立機構後，可在此指定管理員及餐單。",noMatches:"未找到機構",noMatchesDescription:"調整搜尋或狀態條件後再試。",search:"搜尋機構",searchPlaceholder:"搜尋機構名稱",statusFilter:"狀態",allStatuses:"全部狀態",active:"有效",inactive:"停用",
   admins:"管理員",members:"成員",menus:"指定餐單",status:"狀態",save:"儲存",manage:"管理",
   roles:{admin:"管理員",member:"成員"},
   noMenus:"尚未建立指定餐單。",noMenusDescription:"新增後，成員可在供餐期間內用同一張餐牌訂購。",
@@ -73,8 +74,8 @@ i18n.addResourceBundle("en", "translation", { portal: {
   email:"Email",password:"Password",emailPlaceholder:"Enter email",passwordPlaceholder:"Enter password",login:"Sign in",register:"Create invited account",verifyEmail:"Verify your email, then sign in to accept the invitation.",
   forgotPassword:"Reset password",resetSent:"Check your inbox for the reset link.",lookup:"Look up orders by phone and email",invitation:"Organization invitation",acceptInvite:"Accept invitation",joined:"Organization joined.",
   membershipRequired:"This account does not currently have organization ordering access. Verify your email and join using an invitation link from your organization administrator. If you have already joined, ask the administrator to confirm that your account and organization are active.",loadFailed:"Unable to load organization details. Please retry. If the problem persists, contact support.",operationFailed:"Could not complete the action. Check your details and permissions, then retry.",retry:"Retry",navigation:"Customer navigation",openMenu:"Open menu",closeMenu:"Close menu",
-  home:"Home",menus:"Menus",vip:"VIP lunch",siteNav:{cateringSite:"Catering website",eventLunch:"Event lunchboxes",orders:"Orders",rewards:"Redeem rewards",paymentDelivery:"Payment and delivery",profile:"My details",guides:"About catering",about:"About us",clients:"Client list",cases:"Customer stories",companyMeals:"Company catering",promise:"Service promise",evidenceLink:"Payment evidence"},vipIntro:"One cycle shares one cutoff. Choose quantities for several days at once. Each day becomes its own quote.",noVip:"No VIP lunch cycle is open.",chooseVip:"Choose a cycle",vipCutoff:"Cutoff {{time}}",submitVip:"Submit {{count}} days",vipSubmitted:"Preliminary orders were submitted for each day and are waiting for FCCD confirmation.",orders:"Orders",points:"Rewards",team:"Team",addresses:"Addresses",profile:"Profile",headline:"Your order, in a few steps.",homeDescription:"Choose a menu and confirm delivery details.",orderNow:"Order now",details:"View details",pointUnit:"points",
-  choose:"Choose menu",noMenus:"No menus available. Contact operations to check access.",serviceDate:"Delivery date",serviceDateHint:"Choose today or a later day inside this menu period.",invalidServiceDate:"Choose a delivery date inside the menu period.",orderBlackout:"This holiday is closed for orders.", orderBlackoutNamed:"{{date}} is {{name}}. Orders are closed that day.",available:"{{count}} available",quantityLabel:"{{name}} quantity",chooseAddress:"Choose address",addAddress:"Add address",editAddress:"Edit address",deleteAddress:"Delete address",cancelEdit:"Cancel edit",addressArchived:"Address deleted.",pointsHint:"Earn 1 point for every HK$25 of food. Points post within one business day after the order is completed. Delivery is excluded. Points can be exchanged for goods or cash vouchers, and cannot reduce the amount due.",shipping:"Delivery",payable:"Amount due",submitting:"Submitting…",confirmOrder:"Submit preliminary order",orderCreated:"Preliminary order submitted. It becomes a confirmed order after FCCD review.",noOrders:"No orders yet.",awaitingConfirmation:"Awaiting confirmation",confirmed:"Confirmed",settled:"Settled",awaitingPayment:"Awaiting payment",reorder:"Order again",reorderNotice:"Available items were copied. Review quantities and current prices; unavailable items were omitted.",cancelReason:"Enter cancellation reason",cancelRequested:"Cancellation requested. Awaiting operations review.",requestCancel:"Request cancellation",cancelPending:"Cancellation requested",rewardRules:"Personal and organization points stay separate. Earn 1 point per HK$25 of food when the order is completed, valid for one year. Points redeem gifts and cannot reduce the amount due.",expires:"Expires",noLedger:"No rewards transactions yet.",ledger:{earn:"Order rewards",redeem:"Redemption",return:"Returned points",expire:"Expired points",clawback:"Refund clawback"},addressFields:{label:"Label",recipient:"Recipient",phone:"Phone",address:"Delivery address"},addressPlaceholders:{label:"e.g. Office",recipient:"Enter recipient",phone:"Enter phone",address:"Enter full address"},save:"Save",saved:"Saved.",roles:{admin:"Organization admin",member:"Member"},active:"Active",inactive:"Inactive",remove:"Deactivate",createInvite:"Create invitation link",inviteLink:"Invitation link (valid for 7 days; share with the specified recipient)",
+  home:"Home",menus:"Menus",menusIntro:"Browse each brand's menu and latest updates.",vip:"VIP lunch",siteNav:{cateringSite:"Catering website",eventLunch:"Event lunchboxes",orders:"Orders",rewards:"Redeem rewards",paymentDelivery:"Payment and delivery",profile:"My details",company:"Company",guides:"About catering",about:"About us",clients:"Client list",cases:"Customer stories",companyMeals:"Company catering",promise:"Service promise",evidenceLink:"Payment evidence"},vipIntro:"One cycle shares one cutoff. Choose quantities for several days at once. Each day becomes its own order.",noVip:"No VIP lunch cycle is open.",chooseVip:"Choose a cycle",vipCutoff:"Cutoff {{time}}",cutoffIn:"Order cutoff in {{time}}",cutoffLabel:"Order cutoff",cutoffPassed:"Ordering closed",cdDay:"{{n}}d",cdHour:"{{n}}h",cdMinute:"{{n}}m",cdSecond:"{{n}}s",vipSummaryTitle:"This cycle",vipOrdered:"Ordered",vipNotOrdered:"Not ordered",vipAmount:"Cycle total",vipMyStatus:"My order status",vipMyOrdered:"Ordered",vipMyWaiting:"Not ordered",vipMyAmount:"My amount",submitVip:"Submit {{count}} days",vipSubmitted:"Orders were submitted for each day and are awaiting confirmation.",vipNotice:"Ordering information",vipAvailable:"Available boxes",vipSelected:"{{count}} selected",vipNext:"Next",vipConfirm:"Confirm your order",vipBack:"Back",vipChooseQuantity:"Choose quantity",vipAdd:"Add to order",vipDecrease:"Decrease {{name}} quantity",vipIncrease:"Increase {{name}} quantity",vipLoadFailed:"Unable to load VIP lunch. Please try again.",orders:"Orders",points:"Rewards",team:"Team",addresses:"Addresses",profile:"Profile",profileIntro:"Review your organization and membership details.",memberProfile:"Membership details",headline:"Your order, in a few steps.",homeDescription:"Choose an event lunchbox and confirm the delivery details.",orderNow:"Order now",details:"View details",pointUnit:"points",
+  choose:"Choose menu",noMenus:"No menus available right now.",serviceDate:"Delivery date",serviceDateHint:"Choose today or a later day inside this menu period.",invalidServiceDate:"Choose a delivery date inside the menu period.",orderBlackout:"This holiday is closed for orders.", orderBlackoutNamed:"{{date}} is {{name}}. Orders are closed that day.",available:"{{count}} available",quantityLabel:"{{name}} quantity",chooseAddress:"Choose address",addAddress:"Add address",editAddress:"Edit address",deleteAddress:"Delete address",cancelEdit:"Cancel edit",addressArchived:"Address deleted.",shipping:"Delivery",payable:"Amount due",submitting:"Submitting…",confirmOrder:"Submit preliminary order",orderCreated:"Preliminary order submitted. It becomes a confirmed order after FCCD review.",orderPendingAdmin:"Submitted. Awaiting admin send.",orderFor:"Order for",orderForSelf:"Myself",rewardsTitle:"Rewards",ledgerTitle:"Points history",balanceLabel:"Points balance",myAddresses:"My delivery addresses",addressIntro:"Manage company delivery addresses to use when ordering.",noAddresses:"No delivery addresses yet.",pendingRequests:"Awaiting admin send",pendingRequestsHint:"Member submissions become orders only after a company admin sends them.",sendBatch:"Send batch",requestSent:"Sent.",requestDeleted:"Submission deleted.",requestUpdated:"Submission updated.",saveRequest:"Save",noPendingRequests:"No pending submissions.",memberLabel:"Member",noOrders:"No orders yet.",awaitingConfirmation:"Awaiting confirmation",confirmed:"Confirmed",settled:"Settled",awaitingPayment:"Awaiting payment",reorder:"Order again",reorderNotice:"Available items were copied. Review quantities and current prices; unavailable items were omitted.",cancelReason:"Enter cancellation reason",cancelRequested:"Cancellation requested. Awaiting operations review.",requestCancel:"Request cancellation",cancelPending:"Cancellation requested",rewardRules:"Personal and organization points stay separate. Earn 1 point per HK$25 of food when the order is completed, valid for one year. Points redeem gifts and cannot reduce the amount due.",expires:"Expires",noLedger:"No rewards transactions yet.",ledger:{earn:"Order rewards",redeem:"Redemption",return:"Returned points",expire:"Expired points",clawback:"Refund clawback"},addressFields:{label:"Label",recipient:"Recipient",phone:"Phone",address:"Delivery address"},addressPlaceholders:{label:"e.g. Office",recipient:"Enter recipient",phone:"Enter phone",address:"Enter full address"},save:"Save",saved:"Saved.",roles:{admin:"Organization admin",member:"Member"},active:"Active",inactive:"Inactive",remove:"Deactivate",createInvite:"Create invitation link",inviteLink:"Invitation link (valid for 7 days; share with the specified recipient)",
   members:"Members",pendingInvites:"Pending invitations",noPendingInvites:"No pending invitations.",revokeInvite:"Cancel invitation",inviteRevoked:"Invitation cancelled.",inviteExpires:"Expires {{date}}",
   promoteAdmin:"Make admin",demoteMember:"Make member",roleUpdated:"Role updated.",
   templates:"Saved orders",noTemplates:"No saved orders yet.",applyTemplate:"Apply saved order",saveTemplate:"Save as saved order",deleteTemplate:"Delete saved order",
@@ -83,12 +84,13 @@ i18n.addResourceBundle("en", "translation", { portal: {
   menuScopesHint:"Select the assigned menus this member may order. Clearing all selections restores access to every menu.",
   noAssignableMenus:"No assignable menus yet.",menuScopesAll:"Currently allowed to order from all menus.",menuScopesSelected:"Limited to {{count}} menus.",
   saveMenuScopes:"Save menu access",menuScopesSaved:"Menu access updated.",
+  memberDepartment:"Department",memberDeliveryPoint:"Assigned delivery point",memberCanOrder:"Can order",memberNone:"Not set",saveMemberProfile:"Save member settings",memberProfileSaved:"Member settings updated.",myDepartment:"Department",myDeliveryPoint:"Assigned delivery point",yes:"Yes",no:"No",
 }}, true, true);
 i18n.addResourceBundle("en", "translation", { portalOps: {
   description:"Create organizations, assign the first admin, and configure assigned menus, prices, stock, cutoffs and delivery fees.",
   loading:"Loading…",saved:"Saved.",close:"Close",accessDenied:"You do not have customer ordering ops access.",operationFailed:"Could not complete the action. Please retry.",
   userNotFound:"No verified user was found for that email.",membershipConflict:"That user already belongs to another organization.",invalidEmail:"Invalid email format.",invalidMenu:"Check the menu fields and items.",
-  createOrg:"Create organization",editOrg:"Edit organization",orgName:"Organization name",vip:"VIP customer",vipHint:"Only customers marked VIP appear on the meal calendar.",noOrgs:"No organizations yet.",noOrgsDescription:"Create an organization to assign its admin and menus.",noMatches:"No organizations found",noMatchesDescription:"Try a different search or status.",search:"Search organizations",searchPlaceholder:"Search by organization name",statusFilter:"Status",allStatuses:"All statuses",active:"Active",inactive:"Inactive",
+  createOrg:"Create organization",editOrg:"Edit organization",orgName:"Organization name",vip:"VIP customer",vipHint:"Only customers marked VIP appear on the meal calendar.",showPrices:"Show prices",showPricesHint:"When off, members see no amounts in the portal, exports or documents.",minimumQuantity:"Minimum order per delivery point",noOrgs:"No organizations yet.",noOrgsDescription:"Create an organization to assign its admin and menus.",noMatches:"No organizations found",noMatchesDescription:"Try a different search or status.",search:"Search organizations",searchPlaceholder:"Search by organization name",statusFilter:"Status",allStatuses:"All statuses",active:"Active",inactive:"Inactive",
   admins:"Admins",members:"Members",menus:"Assigned menus",status:"Status",save:"Save",manage:"Manage",
   roles:{admin:"Admin",member:"Member"},
   noMenus:"No assigned menus yet.",noMenusDescription:"After you add one, members can order from it throughout the service period.",
@@ -167,6 +169,7 @@ i18n.addResourceBundle("zh-HK", "translation", { portalApplications: {
   openAttachment:"開啟附件（60 秒）",primary:"主要",adminEmail:"首位管理員電郵",cycle:"結算週期",
   cycleWeekly:"週結",cycleSemiMonthly:"半月結",cycleMonthly:"月結",
   approve:"批准並指定管理員",needsInfo:"要求補資料",reject:"拒絕",reviewed:"已記錄審核結果。",
+  brChangesTitle:"待審核商業登記更新",brChangesHint:"有 {{count}} 個公司提交的商業登記更新待審核。",brChangeReviewed:"已記錄商業登記更新審核結果。",currentBr:"現有商業登記",proposedBr:"新商業登記",approveChange:"批准",
   statusValue:{draft:"草稿",pending_review:"待審核",needs_info:"需補資料",rejected:"已拒絕",approved:"已批准"},
 }}, true, true);
 i18n.addResourceBundle("en", "translation", { portalApplications: {
@@ -186,6 +189,7 @@ i18n.addResourceBundle("en", "translation", { portalApplications: {
   openAttachment:"Open file (60 seconds)",primary:"Primary",adminEmail:"First admin email",cycle:"Settlement cycle",
   cycleWeekly:"Weekly",cycleSemiMonthly:"Twice a month",cycleMonthly:"Monthly",
   approve:"Approve and assign admin",needsInfo:"Request more information",reject:"Reject",reviewed:"Review recorded.",
+  brChangesTitle:"Business registration updates awaiting review",brChangesHint:"{{count}} company business registration update(s) awaiting review.",brChangeReviewed:"BR change review recorded.",currentBr:"Current BR",proposedBr:"New BR",approveChange:"Approve",
   statusValue:{draft:"Draft",pending_review:"Pending review",needs_info:"More information required",rejected:"Rejected",approved:"Approved"},
 }}, true, true);
 i18n.addResourceBundle("zh-HK", "translation", { lunchboxOps: {
@@ -205,11 +209,13 @@ i18n.addResourceBundle("en", "translation", { lunchboxOps: {
   items:"Items", product:"Product", chooseProduct:"Choose an internal product", price:"Unit price", stock:"Available quantity", addItem:"Add item", status:"Status", active:"Active", inactive:"Inactive",
 }}, true, true);
 i18n.addResourceBundle("zh-HK", "translation", { portalFeedback: {
+  backToOrders:"返回訂單列表", retry:"重試", emptyTitle:"暫未能填寫訂單意見", emptyDescription:"目前沒有可填寫的意見資料。請返回訂單紀錄查看訂單狀態，或稍後再試。",
   title:"訂單意見", intro:"訂單已完成。每張訂單只可留下一次意見，無需登入。登入後看到的是同一份意見。",
   comment:"你的意見", submit:"提交意見", submitting:"提交中…", loading:"正在載入訂單意見",
   unavailable:"暫時未能開啟這張訂單的意見。", alreadySubmitted:"這張訂單已提交過意見。", required:"請填寫意見。",
 }}, true, true);
 i18n.addResourceBundle("en", "translation", { portalFeedback: {
+  backToOrders:"Back to order history", retry:"Retry", emptyTitle:"Order feedback is not available yet", emptyDescription:"There is no feedback form available for this order. Return to order history to check its status, or try again later.",
   title:"Order feedback", intro:"This order is complete. Each order accepts one comment. Sign-in is not required, and the same comment is visible after you sign in.",
   comment:"Your comment", submit:"Submit feedback", submitting:"Submitting…", loading:"Loading order feedback",
   unavailable:"This order feedback link is not available.", alreadySubmitted:"Feedback was already submitted for this order.", required:"Enter a comment.",
@@ -253,13 +259,13 @@ i18n.addResourceBundle("en", "translation", { portalRewardCatalog: {
   imageFailed:"The image could not be processed. Please retry.",
 }}, true, true);
 i18n.addResourceBundle("zh-HK", "translation", { portalVoucher: {
-  codes:"Shopify 現金券碼", queued:"正在建立折扣碼", issuing:"正在向 Shopify 發碼", issued:"可在 Shopify 結帳輸入", failed:"發碼未完成，請稍後再看",
+  codes:"現金券", heading:"現金券", yourCode:"你的現金券碼", copy:"複製", copied:"已複製", showCode:"顯示折扣碼", hideCode:"隱藏折扣碼", expand:"展開折扣碼", collapse:"收起折扣碼", codeHint:"折扣碼建立後會在此顯示。", queued:"準備中", issuing:"準備中", issued:"結帳時輸入此券碼", failed:"現金券暫未準備好，請稍後查看",
   amount:"面額（HK$）", store:"Shopify 店舖", validDays:"有效天數", noStore:"不經 Shopify，由 FCCD 發送",
   linkTitle:"Shopify 客戶對應", linkIntro:"把 Portal 個人或企業連到店舖裡的既有客戶後，送貨地址才會雙向同步，現金券也會限定該客戶使用。",
   ownerType:"對象", user:"個人用戶", organization:"企業", ownerId:"用戶或企業 ID", customerId:"Shopify 客戶 ID", link:"儲存對應", linked:"已儲存 Shopify 客戶對應。",
 }}, true, true);
 i18n.addResourceBundle("en", "translation", { portalVoucher: {
-  codes:"Shopify voucher codes", queued:"Creating the discount code", issuing:"Sending the code to Shopify", issued:"Enter this code at Shopify checkout", failed:"The code could not be created yet. Check again shortly.",
+  codes:"Cash vouchers", heading:"Cash voucher", yourCode:"Your voucher code", copy:"Copy", copied:"Copied", showCode:"Show the discount code", hideCode:"Hide the discount code", expand:"Show the discount code", collapse:"Hide the discount code", codeHint:"The discount code will appear here once it is created.", queued:"Preparing your voucher", issuing:"Preparing your voucher", issued:"Enter this code at checkout", failed:"The code could not be created yet. Check again shortly.",
   amount:"Face value (HK$)", store:"Shopify store", validDays:"Valid days", noStore:"Manual voucher, not sent to Shopify",
   linkTitle:"Shopify customer link", linkIntro:"Link a personal or company account to an existing store customer before addresses sync both ways. Voucher codes are then limited to that customer.",
   ownerType:"Account", user:"Personal user", organization:"Company", ownerId:"User or company ID", customerId:"Shopify customer ID", link:"Save link", linked:"Shopify customer link saved.",
@@ -285,22 +291,20 @@ i18n.addResourceBundle("en", "translation", { portal: {
   },
 }}, true, true);
 i18n.addResourceBundle("zh-HK", "translation", { lunchboxOps: {
-  vipTitle: "VIP 訂飯週期", vipIntro: "把多日飯盒餐單放進同一個週期。週期截單後不能再批量下單，每一天仍是獨立報價單。",
-  vipName: "週期名稱", vipSave: "發布週期", vipSaved: "已發布 VIP 訂飯週期。", vipInvalid: "請填週期名稱、截單時間，並至少選擇一日餐單。",
-  vipDays: "{{count}} 日", vipNoMenus: "先建立至少一個有效餐單，才能放進週期。", failed: "操作未完成，請重試。",
+  vipToggle: "VIP 訂飯", vipToggleHint: "開啟後這張餐單只會出現在公司版客戶平台的「VIP 訂飯」，不會顯示在個人活動飯盒。",
+  failed: "操作未完成，請重試。",
   loading: "載入中…", emptyDescription: "建立餐單後會顯示在這裡。", listTitle: "餐單目錄", editAction: "編輯",
 }}, true, true);
 i18n.addResourceBundle("en", "translation", { lunchboxOps: {
-  vipTitle: "VIP lunch cycle", vipIntro: "Group several lunchbox days into one cycle. After the cycle cutoff, bulk ordering closes. Each day remains its own quote.",
-  vipName: "Cycle name", vipSave: "Publish cycle", vipSaved: "VIP lunch cycle published.", vipInvalid: "Enter a cycle name, a cutoff and at least one day.",
-  vipDays: "{{count}} days", vipNoMenus: "Create at least one active menu before adding it to a cycle.", failed: "The action could not be completed. Please retry.",
+  vipToggle: "VIP lunch", vipToggleHint: "When on, this menu only appears in the company portal's VIP lunch flow, not the personal event lunchboxes.",
+  failed: "The action could not be completed. Please retry.",
   loading: "Loading…", emptyDescription: "Menus you create will appear here.", listTitle: "Menu catalog", editAction: "Edit",
 }}, true, true);
 i18n.addResourceBundle("zh-HK", "translation", { portal: {
-  exportOrders: "匯出訂單", exported: "已下載訂單。",
+  exportOrders: "匯出訂單", exported: "已下載訂單。", ordersEmptyHint: "完成訂購後，訂單會顯示在這裡。",
 }}, true, true);
 i18n.addResourceBundle("en", "translation", { portal: {
-  exportOrders: "Export orders", exported: "Orders downloaded.",
+  exportOrders: "Export orders", exported: "Orders downloaded.", ordersEmptyHint: "Your orders will appear here once you place one.",
 }}, true, true);
 i18n.addResourceBundle("zh-HK", "translation", { portalRewardRules: {
   holidays: "不能訂餐", holidaysHint: "這些日期不能落單。未加入的日子，包括星期六、日，仍可訂餐。",
@@ -353,6 +357,16 @@ i18n.addResourceBundle("zh-HK", "translation", { portal: {
   companyLoadFailed: "暫時未能載入公司資料。", companyMissing: "尚未填寫",
   brNumber: "商業登記號碼", brExpires: "商業登記到期日", settlementCycle: "結算週期",
   companyContacts: "公司聯絡人", noCompanyContacts: "尚未有公司聯絡人。", primaryContact: "主要聯絡人",
+  companyAdminHint: "商業登記更新需經 FCCD 審核，聯絡人可以即時新增、編輯或刪除。",
+  contactName: "姓名", contactPhone: "電話", contactTitle: "職位",
+  editBr: "更新商業登記", submitBr: "提交更新", brAttachment: "商業登記文件（JPG、PNG 或 PDF，最多 10MB）",
+  brReviewHint: "提交後會顯示為待審核；FCCD 核對後，新的商業登記才會生效。",
+  brPending: "商業登記更新待 FCCD 審核。", brSubmitted: "已提交商業登記更新，待 FCCD 審核。",
+  invalidBr: "請核對商業登記號碼、有效期及文件。", invalidContact: "請填寫姓名、電話及職位，電話須為 8 至 20 位數字。",
+  addContact: "新增聯絡人", editContact: "編輯聯絡人", deleteContact: "刪除聯絡人",
+  contactSaved: "已更新聯絡人。", contactDeleted: "已刪除聯絡人。",
+  cancel: "取消", close: "關閉",
+  fileDropChoose: "點擊選擇文件", fileDropHint: "或將檔案拖放到此", fileRejected: "檔案格式或大小不符（JPG、PNG、PDF，最多 10MB）",
   cycles: { weekly: "每週", semi_monthly: "半月", monthly: "每月" },
 }}, true, true);
 i18n.addResourceBundle("en", "translation", { portal: {
@@ -360,6 +374,16 @@ i18n.addResourceBundle("en", "translation", { portal: {
   companyLoadFailed: "The company profile could not be loaded.", companyMissing: "Not on file",
   brNumber: "Business registration number", brExpires: "Registration expiry", settlementCycle: "Settlement cycle",
   companyContacts: "Company contacts", noCompanyContacts: "No company contacts yet.", primaryContact: "Primary contact",
+  companyAdminHint: "Business registration updates need FCCD review. Contacts can be added, edited or removed immediately.",
+  contactName: "Name", contactPhone: "Phone", contactTitle: "Title",
+  editBr: "Update business registration", submitBr: "Submit update", brAttachment: "BR file (JPG, PNG or PDF, up to 10MB)",
+  brReviewHint: "After submission it shows as pending review. The new BR takes effect once FCCD verifies it.",
+  brPending: "A business registration update is awaiting FCCD review.", brSubmitted: "Business registration update submitted for FCCD review.",
+  invalidBr: "Check the BR number, expiry and file.", invalidContact: "Enter the name, phone and title. Phone must be 8 to 20 digits.",
+  addContact: "Add contact", editContact: "Edit contact", deleteContact: "Delete contact",
+  contactSaved: "Contact updated.", contactDeleted: "Contact deleted.",
+  cancel: "Cancel", close: "Close",
+  fileDropChoose: "Click to choose a file", fileDropHint: "or drag and drop it here", fileRejected: "Unsupported file — use JPG, PNG or PDF up to 10MB.",
   cycles: { weekly: "Weekly", semi_monthly: "Twice a month", monthly: "Monthly" },
 }}, true, true);
 i18n.addResourceBundle("zh-HK", "translation", { mealCalendar: {
@@ -496,6 +520,25 @@ i18n.addResourceBundle("en", "translation", { portalGuides: {
   operationFailed: "Could not complete the action. Please retry.",
   invalid: "Use a title of 1 to 40 characters, and keep the content within 8000 characters.",
 }}, true, true);
+
+i18n.addResourceBundle("zh-HK", "translation", { portal: {
+  newAddress: "新增送貨地址", editAddressTitle: "編輯送貨地址", saveAddress: "儲存地址", close: "關閉", cancel: "取消", saving: "儲存中…",
+  addressType: "地址類型", addressTypeHint: "選擇此地點的用途，方便日後管理", addressKinds: { office: "辦公室", warehouse: "倉庫", other: "其他" },
+  addressSteps: { contact: "聯絡資料", contactHint: "請填寫收貨人的聯絡資料", placeHint: "輸入方便識別的地點名稱，例如：辦公室、倉庫", detailHint: "請填寫完整的送貨地址，以確保順利送達" },
+  addressNoticeTitle: "注意事項", addressNotice: "此地址只用於未來訂單的送貨安排，不會更改現有訂單的送貨位置。",
+  setDefault: "設為預設地址", defaultAddressHint: "設定為預設後，下次訂餐時會自動選擇此地址。",
+  defaultAddress: "預設地址", defaultBadge: "預設", makeDefault: "設為預設", addressMenu: "更多地址操作",
+  deliveryPoints: "送貨點", addDeliveryPoint: "新增送貨點", noDeliveryPoints: "尚未加入送貨點。", deliveryPointName: "送貨點名稱", deliveryPointPlaceholder: "例如：3樓接待處", removeDeliveryPoint: "刪除送貨點 {{name}}", deliveryPointSaved: "已新增送貨點。", deliveryPointRemoved: "已刪除送貨點。", deliveryPointsHint: "可加入多個送貨點（例如樓層、部門），成員落單時可選擇。",
+} }, true, true);
+i18n.addResourceBundle("en", "translation", { portal: {
+  newAddress: "New delivery address", editAddressTitle: "Edit delivery address", saveAddress: "Save address", close: "Close", cancel: "Cancel", saving: "Saving…",
+  addressType: "Address type", addressTypeHint: "Choose how you use this place so it is easier to manage later.", addressKinds: { office: "Office", warehouse: "Warehouse", other: "Other" },
+  addressSteps: { contact: "Contact", contactHint: "Enter the recipient's contact details", placeHint: "Enter a name that is easy to recognise, e.g. Office or Warehouse", detailHint: "Enter the full delivery address so it can be delivered" },
+  addressNoticeTitle: "Please note", addressNotice: "This address is used for future orders only. Existing deliveries are not changed.",
+  setDefault: "Set as default address", defaultAddressHint: "The next order will select this address automatically.",
+  defaultAddress: "Default address", defaultBadge: "Default", makeDefault: "Set as default", addressMenu: "More address actions",
+  deliveryPoints: "Delivery points", addDeliveryPoint: "Add delivery point", noDeliveryPoints: "No delivery points yet.", deliveryPointName: "Delivery point name", deliveryPointPlaceholder: "e.g. 3/F reception", removeDeliveryPoint: "Remove delivery point {{name}}", deliveryPointSaved: "Delivery point added.", deliveryPointRemoved: "Delivery point removed.", deliveryPointsHint: "Add one or more delivery points (for example floors or departments) that members can choose when ordering.",
+} }, true, true);
 
 i18n.addResourceBundle("zh-HK", "translation", { richText: { formatting: "文字格式", bold: "粗體", italic: "斜體", underline: "底線", strike: "刪除線", bulletList: "項目清單", numberedList: "編號清單", heading: "大標題", subheading: "小標題", quote: "引用", rule: "分隔線", link: "連結", unlink: "移除連結", linkUrl: "連結網址", applyLink: "套用", alignLeft: "靠左", alignCenter: "置中", alignRight: "靠右", undo: "復原", redo: "重做", placeholder: "輸入內容" } }, true, true);
 i18n.addResourceBundle("en-GB", "translation", { richText: { formatting: "Text formatting", bold: "Bold", italic: "Italic", underline: "Underline", strike: "Strikethrough", bulletList: "Bullet list", numberedList: "Numbered list", heading: "Heading", subheading: "Subheading", quote: "Quote", rule: "Divider", link: "Link", unlink: "Remove link", linkUrl: "Link URL", applyLink: "Apply", alignLeft: "Align left", alignCenter: "Align center", alignRight: "Align right", undo: "Undo", redo: "Redo", placeholder: "Write the content" } }, true, true);

@@ -4,40 +4,45 @@ import { beforeEach, expect, it, vi } from "vitest";
 import { CustomerPortalLunchboxPage } from "@/components/settings/CustomerPortalLunchboxPage";
 import "@/lib/customer-portal-i18n";
 
-const mocks = vi.hoisted(() => ({ edit: true, publish: vi.fn(), menus: vi.fn() }));
+const mocks = vi.hoisted(() => ({ edit: true, menus: vi.fn() }));
 vi.mock("@/auth/use-page-access", () => ({ useCurrentPageAccess: () => ({ canAccess: () => mocks.edit }) }));
 vi.mock("@/lib/customer-portal-ops", () => ({
   listPortalOpsChannels: async () => [], listPortalOpsProducts: async () => [],
 }));
 vi.mock("@/lib/customer-lunchbox-ops", () => ({
-  listLunchboxes: mocks.menus, listVipCycles: async () => [],
-  upsertVipCycle: mocks.publish, setVipCycleMenus: vi.fn(),
-  replaceLunchboxItems: vi.fn(), upsertLunchbox: vi.fn(),
+  listLunchboxes: mocks.menus, upsertLunchbox: vi.fn(), deleteLunchbox: vi.fn(), replaceLunchboxItems: vi.fn(),
 }));
+const menu = { id: "menu", name: "Lunch", brand: "FCC", channel_id: "ch", delivery_date: "2026-10-15", delivery_time: "12:00", cutoff_at: "2026-10-15T10:00:00Z", shipping_fee: 0, items: [], is_active: true, is_vip: false };
 beforeEach(() => {
   mocks.edit = true;
-  mocks.publish.mockReset();
-  mocks.menus.mockResolvedValue([{ id: "menu", name: "Lunch", brand: "FCC", delivery_date: "2026-10-15", delivery_time: "12:00", items: [], is_active: true }]);
+  mocks.menus.mockResolvedValue([menu]);
 });
-it("keeps lunch menus visible and opens VIP configuration only when requested", async () => {
+it("keeps lunch menus visible and only exposes the VIP switch inside the menu editor", async () => {
   render(<MemoryRouter><CustomerPortalLunchboxPage /></MemoryRouter>);
   await screen.findByText("Lunch");
   expect(screen.queryByRole("heading", { level: 1 })).not.toBeInTheDocument();
-  expect(screen.queryByLabelText("週期名稱")).not.toBeInTheDocument();
-  fireEvent.click(screen.getByRole("button", { name: "VIP 訂飯週期" }));
+  expect(screen.queryByRole("switch", { name: "VIP 訂飯" })).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "新增飯盒餐單" }));
   const dialog = within(await screen.findByRole("dialog"));
-  fireEvent.click(dialog.getByRole("button", { name: "發布週期" }));
-  expect(await dialog.findByRole("alert")).toBeInTheDocument();
-  expect(mocks.publish).not.toHaveBeenCalled();
-  fireEvent.click(dialog.getByRole("button", { name: "關閉" }));
-  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-  expect(screen.getByText("Lunch")).toBeInTheDocument();
+  const vip = dialog.getByRole("switch", { name: "VIP 訂飯" });
+  expect(vip).not.toBeChecked();
+  fireEvent.click(vip);
+  expect(vip).toBeChecked();
 });
-it("hides cycle and creation actions for read-only users", async () => {
+it("opens a VIP menu with the VIP switch already on", async () => {
+  mocks.menus.mockResolvedValue([{ ...menu, is_vip: true }]);
+  render(<MemoryRouter><CustomerPortalLunchboxPage /></MemoryRouter>);
+  await screen.findByText("Lunch");
+  fireEvent.click(screen.getByRole("button", { name: "編輯" }));
+  const dialog = within(await screen.findByRole("dialog"));
+  expect(dialog.getByRole("switch", { name: "VIP 訂飯" })).toBeChecked();
+});
+it("hides creation and row actions for read-only users", async () => {
   mocks.edit = false;
   render(<MemoryRouter><CustomerPortalLunchboxPage /></MemoryRouter>);
   await screen.findByText("Lunch");
-  expect(screen.queryByRole("button", { name: "VIP 訂飯週期" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "新增飯盒餐單" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "編輯" })).not.toBeInTheDocument();
   expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
 });
 it("opens the half-width menu editor with grouped fields and visible item labels", async () => {

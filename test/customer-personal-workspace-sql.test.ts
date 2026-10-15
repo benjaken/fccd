@@ -8,7 +8,7 @@ beforeEach(async () => {
   await db.exec(`create role anon; create role authenticated; create role service_role; create schema private; create schema auth; create schema storage;
     create table auth.users(id uuid primary key,email text,email_confirmed_at timestamptz);
     create function auth.uid() returns uuid language sql as $$select nullif(current_setting('test.user_id',true),'')::uuid$$;
-    create table orders(id uuid primary key,channel_id uuid,document_type text,archived_at timestamptz,order_number text,outstanding numeric,delivery_status text,currency text default 'HKD');
+    create table orders(id uuid primary key,channel_id uuid,shopify_store_id uuid,document_type text,archived_at timestamptz,order_number text,outstanding numeric,delivery_status text,currency text default 'HKD',email_snapshot text);
     create table private.customer_personal_order_links(order_id uuid primary key,user_id uuid);
     create table private.customer_self_service_sessions(auth_user_id uuid,expires_at timestamptz,phone_hash bytea,email_hash bytea);
     create function private.self_service_order_matches(p_order orders,p_phone bytea,p_email bytea) returns boolean language sql as $$
@@ -32,6 +32,8 @@ beforeEach(async () => {
     create table shopify_catalog_draft_variants(draft_id uuid,shopify_variant_id bigint,requires_components boolean);`);
   await db.exec(readFileSync("supabase/migrations/20261013130000_customer_personal_workspace.sql", "utf8"));
   await db.exec(readFileSync("supabase/migrations/20261014133000_customer_receipt_membership_guard.sql", "utf8"));
+  await db.exec(readFileSync("supabase/migrations/20261015140000_customer_personal_brand_website.sql", "utf8"));
+  await db.exec(readFileSync("supabase/migrations/20261015200000_customer_personal_order_scan_perf.sql", "utf8"));
   await db.exec(`create policy "Organization uploads" on storage.objects for insert to authenticated with check(private.customer_receipt_path_allowed(name));
     grant execute on function private.customer_receipt_path_allowed(text) to authenticated;
     insert into auth.users values('${user}','person@example.com',now()),('${other}','other@example.com',now());
@@ -123,6 +125,31 @@ describe("personal workspace authorization and transactions", () => {
     await db.exec("update order_lines set remarks_1='No onions'"); await expect(cart()).rejects.toThrow("reorder_options_required");
     await db.exec("update order_lines set remarks_1=null;update shopify_catalog_drafts set shopify_status='draft'"); await expect(cart()).rejects.toThrow("reorder_unavailable");
     await db.exec(`select set_config('test.user_id','${other}',false)`); await expect(cart()).rejects.toThrow("order_access_required");
+  });
+  it("resolves historical B orders through the bound Lunch Box channel without a Shopify store ID", async () => {
+    await db.exec(`update channels set name='HK lunch box' where id='${brand}';
+      update shopify_stores set shop_domain='hklunchbox.myshopify.com' where id='${store}';
+      update orders set order_number='B-1550C',shopify_store_id=null where id='${order}';`);
+    const result = await db.query<{ data: { order_states: Record<string, { store_domain: string | null }> } }>("select customer_personal_snapshot() data");
+    expect(result.rows[0].data.order_states[order].store_domain).toBe("hklunchbox.myshopify.com");
+  });
+  it("resolves only the order's own trusted brand website, never another brand", async () => {
+    const states = async (uid = user) => {
+      await db.exec(`select set_config('test.user_id','${uid}',false)`);
+      return (await db.query<{ data: { order_states: Record<string, { store_domain: string | null }> } }>("select customer_personal_snapshot() data")).rows[0].data.order_states;
+    };
+    expect((await states())[order].store_domain).toBe("catering.myshopify.com");
+    // An ambiguous channel (two active stores) is never guessed.
+    await db.exec(`insert into shopify_stores values('00000000-0000-0000-0000-0000000000aa','${brand}','other.myshopify.com',true)`);
+    expect((await states())[order].store_domain).toBeNull();
+    // An inactive store or a non-Shopify domain is not reused.
+    await db.exec(`update shopify_stores set is_active=false where id='${store}'; delete from shopify_stores where id='00000000-0000-0000-0000-0000000000aa';`);
+    expect((await states())[order].store_domain).toBeNull();
+    // The order's own configured store wins when set and active.
+    await db.exec(`update shopify_stores set is_active=true where id='${store}'; update orders set shopify_store_id='${store}' where id='${order}'`);
+    expect((await states())[order].store_domain).toBe("catering.myshopify.com");
+    // A different account never learns this order's brand.
+    expect((await states(other))[order]?.store_domain).toBeUndefined();
   });
   it("blocks anonymous/unverified accounts and direct private-table access", async () => {
     await db.exec(`update auth.users set email_confirmed_at=null where id='${user}'`); await expect(snapshot()).rejects.toThrow("email_verification_required");

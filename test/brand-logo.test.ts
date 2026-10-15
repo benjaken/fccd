@@ -7,6 +7,7 @@ import {
   HK_LUNCH_BOX_LOGO_PATH,
   HK_PARTY_FOOD_LOGO_PATH,
   getBrandContactEmail,
+  FOOD_CHANNEL_EXPRESS_LOGO_PATH,
   getDocumentLogoPath,
   getBrandLogoAlt,
   getStorefrontLogoPath,
@@ -51,7 +52,7 @@ describe("brand logo selection", () => {
     expect(getStorefrontLogoPath("HK lunch box", "hklunchbox.myshopify.com")).toBe(HK_LUNCH_BOX_LOGO_PATH);
     expect(getStorefrontLogoPath("HK Party Food", "hk-party-food.myshopify.com")).toBe(HK_PARTY_FOOD_LOGO_PATH);
     expect(getStorefrontLogoPath("Kitchen", "foodchannels-kitchen.myshopify.com")).toBe(FOOD_CHANNEL_KITCHEN_LOGO_PATH);
-    expect(getStorefrontLogoPath("Express", "foodchannels-express.myshopify.com")).toBeNull();
+    expect(getStorefrontLogoPath("Express", "foodchannels-express.myshopify.com")).toBe(FOOD_CHANNEL_EXPRESS_LOGO_PATH);
     expect(getStorefrontLogoPath("Brand menu", "brand.myshopify.com")).toBeNull();
   });
 

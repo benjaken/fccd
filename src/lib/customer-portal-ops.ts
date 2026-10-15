@@ -6,6 +6,7 @@ export type OpsOrgListItem = {
   customer_id: string | null;
   is_active: boolean;
   is_vip: boolean;
+  show_prices: boolean;
   created_at: string;
   member_count: number;
   admin_count: number;
@@ -30,6 +31,7 @@ export type OpsMenuSummary = {
   delivery_time: string;
   cutoff_at: string;
   shipping_fee: number;
+  minimum_quantity: number;
   is_active: boolean;
   item_count: number;
 };
@@ -40,6 +42,7 @@ export type OpsOrgDetail = {
   customer_id: string | null;
   is_active: boolean;
   is_vip: boolean;
+  show_prices: boolean;
   created_at: string;
   members: OpsOrgMember[];
   menus: OpsMenuSummary[];
@@ -65,6 +68,7 @@ export type OpsMenuDetail = {
   delivery_time: string;
   cutoff_at: string;
   shipping_fee: number;
+  minimum_quantity: number;
   is_active: boolean;
   items: OpsMenuItem[];
 };
@@ -83,6 +87,13 @@ async function rpc<T>(name: string, args?: Record<string, unknown>): Promise<T> 
   return data as T;
 }
 
+export type OpsPackingLine = { member_email: string; department: string | null; items: Array<{ name: string; quantity: number }> };
+export type OpsPackingDay = {
+  service_date: string; organization_id: string; organization_name: string;
+  address_id: string | null; address_label: string | null; total_quantity: number; lines: OpsPackingLine[];
+};
+export const fetchPortalOpsPackingList = (from: string, to: string) =>
+  rpc<{ days: OpsPackingDay[] }>("customer_portal_ops_packing_list", { p_from: from, p_to: to, p_organization_id: null });
 export const listPortalOpsOrgs = () => rpc<OpsOrgListItem[]>("customer_portal_ops_list_orgs");
 export const deletePortalOpsOrg = (orgId: string) => rpc<void>("customer_portal_ops_delete_org", { p_id: orgId });
 export const getPortalOpsOrg = (orgId: string) =>
@@ -93,6 +104,7 @@ export const upsertPortalOpsOrg = (input: {
   customerId?: string | null;
   isActive: boolean;
   isVip?: boolean;
+  showPrices?: boolean;
 }) =>
   rpc<string>("customer_portal_ops_upsert_org", {
     p_id: input.id ?? null,
@@ -100,6 +112,7 @@ export const upsertPortalOpsOrg = (input: {
     p_customer_id: input.customerId ?? null,
     p_is_active: input.isActive,
     p_is_vip: input.isVip ?? false,
+    p_show_prices: input.showPrices ?? true,
   });
 export const assignPortalOpsAdmin = (orgId: string, email: string) =>
   rpc<string>("customer_portal_ops_assign_admin", { p_org_id: orgId, p_email: email });
@@ -115,6 +128,7 @@ export const upsertPortalOpsMenu = (input: {
   deliveryTime: string;
   cutoffAt: string;
   shippingFee: number;
+  minimumQuantity: number;
   isActive: boolean;
 }) =>
   rpc<string>("customer_portal_ops_upsert_menu", {
@@ -127,6 +141,7 @@ export const upsertPortalOpsMenu = (input: {
     p_delivery_time: input.deliveryTime,
     p_cutoff_at: input.cutoffAt,
     p_shipping_fee: input.shippingFee,
+    p_minimum_quantity: input.minimumQuantity,
     p_is_active: input.isActive,
   });
 export const replacePortalOpsMenuItems = (

@@ -39,6 +39,10 @@ beforeEach(async () => {
     insert into private.customer_personal_addresses values('00000000-0000-0000-0000-000000000008','${user}','Home','陳先生','91234567','九龍');
     select set_config('test.user_id','${user}',false); select set_config('test.has_access','1',false);`);
   await db.exec(readFileSync("supabase/migrations/20261013170000_customer_personal_lunchbox.sql", "utf8"));
+  await db.exec(`alter table customer_lunchbox_menus add column cycle_id uuid;
+    alter table products add column image_url text, add column description text;
+    update products set image_url='/assets/chicken.png', description='雞扒・時蔬・白飯';`);
+  await db.exec(readFileSync("supabase/migrations/20261015180000_personal_lunchbox_product_details.sql", "utf8"));
 }, 20000);
 afterEach(async () => { await db.close(); });
 
@@ -49,8 +53,10 @@ describe("personal lunchbox quotes", () => {
       [brand],
     )).rows[0].id;
     await db.query("select customer_portal_ops_replace_lunchbox_items($1,$2::jsonb)", [menu, JSON.stringify([{ product_id: product, unit_price: 48, available_quantity: 5 }])]);
-    const catalog = (await db.query<{ data: { menus: Array<{ items: Array<{ name: string }> }> } }>("select customer_personal_lunchbox_catalog() data")).rows[0].data;
+    const catalog = (await db.query<{ data: { menus: Array<{ items: Array<{ name: string; image_url: string; description: string }> }> } }>("select customer_personal_lunchbox_catalog() data")).rows[0].data;
     expect(catalog.menus[0].items[0].name).toBe("雞扒飯盒");
+    expect(catalog.menus[0].items[0].image_url).toBe("/assets/chicken.png");
+    expect(catalog.menus[0].items[0].description).toBe("雞扒・時蔬・白飯");
     const submit = (id = request) => db.query<{ id: string }>("select customer_personal_submit_lunchbox($1,$2,$3,$4::jsonb) id", [id, menu, "00000000-0000-0000-0000-000000000008", JSON.stringify([{ product_id: product, quantity: 2 }])]);
     const first = await submit();
     const second = await submit();
@@ -58,6 +64,11 @@ describe("personal lunchbox quotes", () => {
     const created = (await db.query<{ document_type: string; legacy_id: string; grand_total: string }>("select document_type,legacy_id,grand_total::text from orders")).rows[0];
     expect(created).toEqual({ document_type: "quote", legacy_id: `web-quote-${first.rows[0].id}`, grand_total: "116.00" });
     expect((await db.query<{ available_quantity: number }>("select available_quantity from customer_lunchbox_items")).rows[0].available_quantity).toBe(3);
+  });
+
+  it("requires a verified user before returning product media", async () => {
+    await db.exec("select set_config('test.user_id','',false)");
+    await expect(db.query("select customer_personal_lunchbox_catalog()")).rejects.toThrow("email_verification_required");
   });
 
   it("rejects ops without access and carts that exceed published stock", async () => {

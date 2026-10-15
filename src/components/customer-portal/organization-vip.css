@@ -1,0 +1,7 @@
+.personal-vip .lunchbox-menu-select{margin:12px 0 4px}
+.personal-vip .vip-day{margin-top:6px}
+.personal-vip .vip-day .lunchbox-section-heading{margin-top:26px}
+.personal-vip .vip-day:first-of-type .lunchbox-section-heading{margin-top:22px}
+.personal-vip .lunchbox-checkout .vip-day{margin:0 0 20px}
+.personal-vip .lunchbox-empty{min-height:420px;padding-top:44px}
+@media(min-width:600px){.personal-vip .lunchbox-empty{min-height:470px}}

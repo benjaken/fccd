@@ -20,6 +20,7 @@ beforeEach(async()=>{
   await db.exec(`create table customer_portal_orders(order_id uuid primary key,organization_id uuid);
     create function private.customer_personal_user() returns uuid language sql as $$select auth.uid()$$;`);
   await db.exec(readFileSync("supabase/migrations/20261014130000_customer_personal_order_isolation.sql","utf8"));
+  await db.exec(readFileSync("supabase/migrations/20261015200000_customer_personal_order_scan_perf.sql","utf8"));
   await db.exec("create table customer_organizations(id uuid primary key,name text,is_active boolean);create table customer_memberships(user_id uuid,organization_id uuid,is_active boolean)");
   await db.exec(readFileSync("supabase/migrations/20261012120000_customer_portal_identities.sql","utf8"));
   await db.exec(`insert into auth.users values('${user}','person@example.com',now()),('${other}','other@example.com',now());

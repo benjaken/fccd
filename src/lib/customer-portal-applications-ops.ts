@@ -60,6 +60,24 @@ export const reviewOrganizationApplication = (input: {
     p_settlement_cycle: input.settlementCycle ?? null,
     p_admin_email: input.adminEmail ?? null,
   });
+export type BrChangeRequest = {
+  id: string;
+  organizationId: string;
+  orgName: string;
+  brNumber: string;
+  brExpiresOn: string;
+  currentBrNumber: string;
+  currentBrExpiresOn: string | null;
+  submittedByEmail: string | null;
+  submittedAt: string;
+};
+
+export const listBrChanges = () => rpc<BrChangeRequest[]>("customer_portal_ops_list_br_changes");
+export const reviewBrChange = (input: { id: string; decision: "approved" | "rejected"; reason: string }) =>
+  rpc<void>("customer_portal_ops_review_br_change", {
+    p_id: input.id, p_decision: input.decision, p_reason: input.reason,
+  });
+
 export const getBrExpiryPolicy = () => rpc<BrExpiryPolicy | null>("customer_portal_ops_br_policy");
 export const publishBrExpiryPolicy = (input: {
   reminderLeadDays: number;
