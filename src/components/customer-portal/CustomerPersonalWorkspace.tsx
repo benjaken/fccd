@@ -232,8 +232,9 @@ function PersonalOrdersPage() {
 }
 
 function PersonalOrderFeedbackPage() {
+  const { t } = useTranslation();
   const { orderId = "" } = useParams();
-  return <AccountOrderFeedback orderId={orderId} />;
+  return <div><Button variant="outline" asChild><Link to={`${base}/orders`}>{t("portalFeedback.backToOrders")}</Link></Button><AccountOrderFeedback key={orderId} orderId={orderId} showEmptyState /></div>;
 }
 
 function PersonalPointsPage() {
@@ -289,7 +290,7 @@ export function CustomerPersonalWorkspace({ canSwitch, loggingOut, onLogout }: {
   const pageKey = location.pathname.startsWith(`${base}/payments`) ? "orders"
     : personalNavigation.find(item => item.to && (item.end ? location.pathname === item.to : location.pathname === item.to || location.pathname.startsWith(`${item.to}/`)))?.key
     || (location.pathname.startsWith(`${base}/`) ? "orders" : "home");
-  const header = <CustomerWorkspaceHeader desktopTitle={location.pathname.startsWith(`${base}/guides/`) ? t("portal.siteNav.guides") : t(`personal.${pageKey}`)} mode="personal" personal canSwitch={canSwitch} navItems={personalNavigation.map(item => ({ ...item, label: t(personalNavLabel[item.key]) }))} loggingOut={loggingOut} onLogout={onLogout} />;
+  const header = <CustomerWorkspaceHeader desktopTitle={location.pathname.startsWith(`${base}/feedback/`) ? t("portalFeedback.title") : location.pathname.startsWith(`${base}/guides/`) ? t("portal.siteNav.guides") : t(`personal.${pageKey}`)} mode="personal" personal canSwitch={canSwitch} navItems={personalNavigation.map(item => ({ ...item, label: t(personalNavLabel[item.key]) }))} loggingOut={loggingOut} onLogout={onLogout} />;
   const frame = (child: ReactNode) => <main className="customer-portal personal-workspace">{header}{child}</main>;
   if (loading) return frame(<PageSkeleton label={t("personal.loading")} variant="dashboard" />);
   if (!session || sessionError) return frame(<CustomerPortalAccessState error={sessionError || t("personal.loadFailed")} busy={false} onRetry={() => setVersion(v => v + 1)} />);

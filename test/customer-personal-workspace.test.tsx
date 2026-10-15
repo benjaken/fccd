@@ -39,6 +39,26 @@ beforeEach(() => {
   });
 });
 describe("personal customer pages", () => {
+  it("shows an empty feedback state and returns to order history from a direct link", async () => {
+    mount("/customer/personal/feedback/next");
+    expect(await screen.findByRole("heading", { name: "暫未能填寫訂單意見" })).toBeInTheDocument();
+    expect(screen.getByText("目前沒有可填寫的意見資料。請返回訂單紀錄查看訂單狀態，或稍後再試。")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("link", { name: "返回訂單紀錄" }));
+    expect(await screen.findByRole("heading", { name: "訂單紀錄" })).toBeInTheDocument();
+  });
+  it("keeps the feedback return link available when loading fails and supports retry", async () => {
+    const original = vi.mocked(supabase.rpc).getMockImplementation()!;
+    let feedbackAttempts = 0;
+    vi.mocked(supabase.rpc).mockImplementation(async (...args) => {
+      if (args[0] === "customer_portal_order_feedback" && feedbackAttempts++ === 0) return { data: null, error: { message: "offline" } };
+      return original(...args);
+    });
+    mount("/customer/personal/feedback/next");
+    expect(await screen.findByRole("alert")).toHaveTextContent("暫時未能開啟這張訂單的意見。");
+    expect(screen.getByRole("link", { name: "返回訂單紀錄" })).toHaveAttribute("href", "/customer/personal/orders");
+    fireEvent.click(screen.getByRole("button", { name: "重試" }));
+    expect(await screen.findByRole("heading", { name: "暫未能填寫訂單意見" })).toBeInTheDocument();
+  });
   it("shows the earliest upcoming order and honest reward availability", async () => {
     mount(); await screen.findByRole("heading", { name: "下一張訂單狀態" });
     expect(screen.getAllByRole("link", { name: "FCC-1" })[0]).toHaveAttribute("href", "/customer/personal/next");

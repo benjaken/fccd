@@ -46,17 +46,20 @@ export function OrderFeedbackPage({ token }: { token: string }) {
   return <main className="customer-portal">{error ? <section><h1>{t("portalFeedback.title")}</h1><p role="alert">{error}</p></section> : view ? <OrderFeedbackCard view={view} onSubmit={async comment => setView(await submitOrderFeedback(token, comment))} /> : <p role="status">{t("portalFeedback.loading")}</p>}</main>;
 }
 
-export function AccountOrderFeedback({ orderId }: { orderId: string }) {
+export function AccountOrderFeedback({ orderId, showEmptyState = false }: { orderId: string; showEmptyState?: boolean }) {
   const { t } = useTranslation();
   const [view, setView] = useState<OrderFeedback | null | undefined>(undefined);
   const [error, setError] = useState("");
+  const [attempt, setAttempt] = useState(0);
   useEffect(() => {
     let active = true;
+    setView(undefined);
+    setError("");
     void fetchAccountOrderFeedback(orderId).then(next => { if (active) setView(next); }).catch(() => { if (active) setError(t("portalFeedback.unavailable")); });
     return () => { active = false; };
-  }, [orderId, t]);
-  if (error) return <section><h1>{t("portalFeedback.title")}</h1><p role="alert">{error}</p></section>;
+  }, [orderId, t, attempt]);
+  if (error) return <section><h1>{t("portalFeedback.title")}</h1><p role="alert">{error}</p><Button variant="outline" onClick={() => setAttempt(value => value + 1)}>{t("portalFeedback.retry")}</Button></section>;
   if (view === undefined) return <p role="status">{t("portalFeedback.loading")}</p>;
-  if (!view) return null;
+  if (!view) return showEmptyState ? <section className="personal-empty" role="status"><h1>{t("portalFeedback.emptyTitle")}</h1><p>{t("portalFeedback.emptyDescription")}</p></section> : null;
   return <OrderFeedbackCard view={view} onSubmit={async comment => setView(await submitAccountOrderFeedback(orderId, comment))} />;
 }

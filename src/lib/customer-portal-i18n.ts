@@ -205,11 +205,13 @@ i18n.addResourceBundle("en", "translation", { lunchboxOps: {
   items:"Items", product:"Product", chooseProduct:"Choose an internal product", price:"Unit price", stock:"Available quantity", addItem:"Add item", status:"Status", active:"Active", inactive:"Inactive",
 }}, true, true);
 i18n.addResourceBundle("zh-HK", "translation", { portalFeedback: {
+  backToOrders:"返回訂單紀錄", retry:"重試", emptyTitle:"暫未能填寫訂單意見", emptyDescription:"目前沒有可填寫的意見資料。請返回訂單紀錄查看訂單狀態，或稍後再試。",
   title:"訂單意見", intro:"訂單已完成。每張訂單只可留下一次意見，無需登入。登入後看到的是同一份意見。",
   comment:"你的意見", submit:"提交意見", submitting:"提交中…", loading:"正在載入訂單意見",
   unavailable:"暫時未能開啟這張訂單的意見。", alreadySubmitted:"這張訂單已提交過意見。", required:"請填寫意見。",
 }}, true, true);
 i18n.addResourceBundle("en", "translation", { portalFeedback: {
+  backToOrders:"Back to order history", retry:"Retry", emptyTitle:"Order feedback is not available yet", emptyDescription:"There is no feedback form available for this order. Return to order history to check its status, or try again later.",
   title:"Order feedback", intro:"This order is complete. Each order accepts one comment. Sign-in is not required, and the same comment is visible after you sign in.",
   comment:"Your comment", submit:"Submit feedback", submitting:"Submitting…", loading:"Loading order feedback",
   unavailable:"This order feedback link is not available.", alreadySubmitted:"Feedback was already submitted for this order.", required:"Enter a comment.",
