@@ -124,7 +124,6 @@ button.ui-button.personal-address-create:hover{background:#18663a}
 .personal-address-step header p{margin:2px 0 0;color:#5d6f68;font-size:13px;line-height:1.45}
 .personal-address-pair{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .personal-address-form label{display:grid;gap:6px;color:#163028;font-size:14px;font-weight:700}
-.personal-address-required{color:#c2413a}
 .personal-address-field{position:relative;display:block}
 .personal-address-field>svg{position:absolute;top:14px;left:12px;color:#7d9288;pointer-events:none}
 .personal-address-form input,.personal-address-form textarea{width:100%;min-height:44px;padding:10px 12px 10px 38px;border:1px solid #d5e2db;border-radius:10px;background:#fff;color:#163028;font:inherit;caret-color:#1f7a45}

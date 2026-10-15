@@ -227,10 +227,10 @@ export function CustomerPersonalAddressesPage() {
             </div>
           </header>
           <div className="personal-address-pair">
-            <label>{t("personal.addressFields.recipient")}<span className="personal-address-required" aria-hidden="true"> *</span>
+            <label>{t("personal.addressFields.recipient")}
               <span className="personal-address-field"><UserRound size={16} aria-hidden="true" /><input required maxLength={120} autoComplete="name" value={draft.recipient} placeholder={t("personal.addressPlaceholders.recipientPlaceholder")} onChange={event => setDraft({ ...draft, recipient: event.target.value })} /></span>
             </label>
-            <label>{t("personal.addressFields.phone")}<span className="personal-address-required" aria-hidden="true"> *</span>
+            <label>{t("personal.addressFields.phone")}
               <span className="personal-address-field"><Phone size={16} aria-hidden="true" /><input required type="tel" maxLength={40} autoComplete="tel" inputMode="tel" value={draft.phone} placeholder={t("personal.addressPlaceholders.phonePlaceholder")} onChange={event => setDraft({ ...draft, phone: event.target.value })} /></span>
             </label>
           </div>
