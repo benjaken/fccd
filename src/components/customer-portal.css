@@ -150,7 +150,15 @@
 }
 .customer-portal-drawer-guides a:hover,
 .customer-portal-drawer-guides a[aria-current="page"]{color:#fff;background:rgba(255,255,255,.08)}
-.portal-guide-body{white-space:pre-wrap;max-width:42rem;line-height:1.7}
+.portal-guide-body{max-width:42rem;line-height:1.7}
+.portal-guide-body :is(p,ul,ol,blockquote,h2,h3){margin:0 0 12px}
+.portal-guide-body ul{list-style:disc;padding-inline-start:24px}
+.portal-guide-body ol{list-style:decimal;padding-inline-start:24px}
+.portal-guide-body h2{font-size:1.35rem;font-weight:700}
+.portal-guide-body h3{font-size:1.15rem;font-weight:650}
+.portal-guide-body blockquote{padding-inline-start:12px;border-inline-start:3px solid var(--border);color:var(--muted-foreground)}
+.portal-guide-body a{color:var(--primary);text-decoration:underline}
+.portal-guide-body hr{border:0;border-top:1px solid var(--border);margin:16px 0}
 .portal-guide-form{display:grid;gap:16px}
 .portal-guide-form label{display:grid;gap:8px;font-weight:650}
 .portal-guide-form textarea{width:100%;min-height:240px;padding:12px;border:1px solid var(--border);border-radius:12px;background:var(--card);color:inherit;font:inherit}

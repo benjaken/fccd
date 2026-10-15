@@ -497,5 +497,5 @@ i18n.addResourceBundle("en", "translation", { portalGuides: {
   invalid: "Use a title of 1 to 40 characters, and keep the content within 8000 characters.",
 }}, true, true);
 
-i18n.addResourceBundle("zh-HK", "translation", { richText: { formatting: "文字格式", bold: "粗體", italic: "斜體", underline: "底線", bulletList: "項目清單", numberedList: "編號清單" } }, true, true);
-i18n.addResourceBundle("en-GB", "translation", { richText: { formatting: "Text formatting", bold: "Bold", italic: "Italic", underline: "Underline", bulletList: "Bullet list", numberedList: "Numbered list" } }, true, true);
+i18n.addResourceBundle("zh-HK", "translation", { richText: { formatting: "文字格式", bold: "粗體", italic: "斜體", underline: "底線", strike: "刪除線", bulletList: "項目清單", numberedList: "編號清單", heading: "大標題", subheading: "小標題", quote: "引用", rule: "分隔線", link: "連結", unlink: "移除連結", linkUrl: "連結網址", applyLink: "套用", alignLeft: "靠左", alignCenter: "置中", alignRight: "靠右", undo: "復原", redo: "重做", placeholder: "輸入內容" } }, true, true);
+i18n.addResourceBundle("en-GB", "translation", { richText: { formatting: "Text formatting", bold: "Bold", italic: "Italic", underline: "Underline", strike: "Strikethrough", bulletList: "Bullet list", numberedList: "Numbered list", heading: "Heading", subheading: "Subheading", quote: "Quote", rule: "Divider", link: "Link", unlink: "Remove link", linkUrl: "Link URL", applyLink: "Apply", alignLeft: "Align left", alignCenter: "Align center", alignRight: "Align right", undo: "Undo", redo: "Redo", placeholder: "Write the content" } }, true, true);

@@ -220,13 +220,24 @@
 
 .portal-guide-content-field { display: grid; gap: 8px; min-width: 0; }
 .rich-text-editor { min-width: 0; border: 1px solid var(--input); border-radius: 8px; overflow: hidden; background: var(--card); }
-.rich-text-toolbar { display: flex; flex-wrap: wrap; gap: 4px; padding: 6px; border-bottom: 1px solid var(--border); background: var(--muted); }
-.rich-text-content { min-height: 320px; padding: 16px; outline: none; line-height: 1.7; overflow-wrap: anywhere; font-weight: 400; }
+.rich-text-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 2px; padding: 6px; border-bottom: 1px solid var(--border); background: var(--muted); }
+.rich-text-toolbar .is-active { background: var(--accent); color: var(--accent-foreground); }
+.rich-text-sep { width: 1px; height: 18px; margin: 0 4px; background: var(--border); }
+.rich-text-link-row { display: flex; gap: 8px; align-items: center; padding: 8px; border-bottom: 1px solid var(--border); }
+.rich-text-link-row input { flex: 1; min-width: 0; height: 36px; padding: 0 10px; border: 1px solid var(--input); border-radius: 6px; background: var(--card); }
+.rich-text-content .ProseMirror { min-height: 320px; padding: 16px; outline: none; line-height: 1.7; overflow-wrap: anywhere; font-weight: 400; }
+.rich-text-content .ProseMirror p.is-editor-empty:first-child::before { content: attr(data-placeholder); float: left; height: 0; pointer-events: none; color: var(--muted-foreground); }
 .rich-text-editor:focus-within { outline: 2px solid var(--ring); outline-offset: 2px; }
 .rich-text-content[aria-disabled="true"] { opacity: 0.6; }
-.rich-text-content ul, .portal-guide-body ul { list-style: disc; padding-inline-start: 24px; }
-.rich-text-content ol, .portal-guide-body ol { list-style: decimal; padding-inline-start: 24px; }
-.rich-text-content p, .portal-guide-body p { margin: 0 0 12px; }
+.rich-text-content :is(ul, ol), .portal-guide-body :is(ul, ol) { margin: 0 0 12px; padding-inline-start: 24px; }
+.rich-text-content ul, .portal-guide-body ul { list-style: disc; }
+.rich-text-content ol, .portal-guide-body ol { list-style: decimal; }
+.rich-text-content :is(p, blockquote, h2, h3), .portal-guide-body :is(p, blockquote, h2, h3) { margin: 0 0 12px; }
+.rich-text-content h2, .portal-guide-body h2 { font-size: 1.35rem; font-weight: 700; }
+.rich-text-content h3, .portal-guide-body h3 { font-size: 1.15rem; font-weight: 650; }
+.rich-text-content blockquote, .portal-guide-body blockquote { padding-inline-start: 12px; border-inline-start: 3px solid var(--border); color: var(--muted-foreground); }
+.rich-text-content a, .portal-guide-body a { color: var(--primary); text-decoration: underline; }
+.rich-text-content hr, .portal-guide-body hr { border: 0; border-top: 1px solid var(--border); margin: 16px 0; }
 .portal-editor-setting { padding: 14px 0; }
 .portal-editor-setting + .portal-editor-setting { border-top: 1px solid var(--border); }
 .portal-editor-setting p, .portal-editor-hint { margin: 0; font-size: 13px; line-height: 1.6; color: var(--muted-foreground); }
