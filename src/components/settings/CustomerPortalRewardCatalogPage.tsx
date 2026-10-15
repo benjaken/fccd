@@ -1,4 +1,5 @@
 import { DragEvent, FormEvent, useCallback, useEffect, useState } from "react";
+import { Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useCurrentPageAccess } from "@/auth/use-page-access";
 import { Input } from "@/components/ui/input";
@@ -281,7 +282,7 @@ export function CustomerPortalRewardCatalogPage() {
             </div>
             <div className="reward-admin-image-preview-wrap">
               {imagePreview ? <img className="reward-admin-image-preview" src={imagePreview} alt="" /> : <div className="reward-admin-image-preview-empty">{t("portalRewardCatalog.imageDrop")}</div>}
-              {imagePath ? <Button type="button" variant="outline" disabled={editorBusy} onClick={() => { setImagePath(null); setImagePreview(""); }}>{t("portalRewardCatalog.removeImage")}</Button> : null}
+              {imagePath ? <Button type="button" size="icon" variant="outline" className="reward-admin-image-remove" disabled={editorBusy} aria-label={t("portalRewardCatalog.removeImage")} onClick={() => { setImagePath(null); setImagePreview(""); }}><Trash2 /></Button> : null}
             </div>
           </div>
         </div>
