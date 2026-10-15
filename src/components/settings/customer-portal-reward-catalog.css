@@ -61,9 +61,14 @@
 .reward-admin-empty{padding:48px 12px;text-align:center;color:var(--muted-foreground);background:var(--muted);border-radius:8px;font-size:14px}
 .reward-admin-error{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px;border:1px solid var(--destructive);border-radius:8px;color:var(--destructive);background:var(--card)}
 .reward-admin-notice{padding:16px;background:var(--selection-bg);color:var(--primary);border-radius:8px}
-.reward-admin-records{min-width:0;overflow:hidden}
-.reward-admin-records>h2{padding:20px 24px;margin:0;border-bottom:1px solid var(--border)}
-.reward-admin-records td{overflow-wrap:anywhere}
+.reward-admin-catalog-table,.reward-admin-records{min-width:0;overflow:hidden}
+.reward-admin-catalog-table>h2,.reward-admin-records>h2{padding:20px 24px;margin:0;border-bottom:1px solid var(--border)}
+.reward-admin-catalog-table td,.reward-admin-records td,.reward-admin-records-panel td{overflow-wrap:anywhere}
+.reward-admin-records-panel{display:grid;gap:16px;min-width:0}
+.reward-admin-table-thumb{display:block;width:48px;height:48px;object-fit:cover;border-radius:8px;border:1px solid var(--border);background:var(--muted)}
+.reward-admin-table-thumb.is-empty{display:inline-block}
+.reward-admin-table-name{display:grid;gap:4px;min-width:0}
+.reward-admin-table-name small{color:var(--muted-foreground);font-size:12px;line-height:1.45;overflow-wrap:anywhere}
 
 @media(max-width:900px){
   .reward-admin-section-grid,.reward-admin-image-media{grid-template-columns:1fr}

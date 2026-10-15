@@ -76,7 +76,7 @@ export function CustomerPortalRewardCatalogPage() {
   const [ownerId, setOwnerId] = useState("");
   const [customerId, setCustomerId] = useState("");
   const [linkStoreId, setLinkStoreId] = useState("");
-  const [panel, setPanel] = useState<"editor" | "catalog" | "link" | null>(null);
+  const [panel, setPanel] = useState<"editor" | "redemptions" | "link" | null>(null);
 
   function resetEditor() {
     setEditing(null); setName(""); setDescription(""); setAmount(""); setStoreId("");
@@ -193,11 +193,11 @@ export function CustomerPortalRewardCatalogPage() {
   return <section className="reward-admin">
     <header className="page-heading"><div className="reward-admin-actions">
       {canEdit ? <Button type="button" onClick={openCreate}>{t("portalRewardCatalog.create")}</Button> : null}
-      <Button type="button" variant="outline" onClick={() => setPanel("catalog")}>{t("portalRewardCatalog.items")}</Button>
+      <Button type="button" variant="outline" onClick={() => { setActionError(""); setPanel("redemptions"); }}>{t("portalRewardCatalog.redemptions")}</Button>
       {canEdit ? <Button type="button" variant="outline" onClick={() => { setActionError(""); setPanel("link"); }}>{t("portalVoucher.linkTitle")}</Button> : null}
     </div></header>
     {error ? <div className="reward-admin-error" role="alert">{error} <Button variant="outline" disabled={loading} onClick={() => void load().catch(reason => setError(t(failure(reason))))}>{t("portal.retry")}</Button></div> : null}
-    {actionError && panel !== "editor" && panel !== "link" ? <p className="reward-admin-error" role="alert">{actionError}</p> : null}
+    {actionError && panel !== "editor" && panel !== "link" && panel !== "redemptions" ? <p className="reward-admin-error" role="alert">{actionError}</p> : null}
     {notice ? <p className="reward-admin-notice" role="status">{notice}</p> : null}
     {canEdit ? <SidePanel half open={panel === "editor"} title={editing ? t("portalRewardCatalog.edit") : t("portalRewardCatalog.create")} onClose={closeEditor} closeLabel={t("portalOps.close")} footer={
       <div className="reward-admin-editor-footer">
@@ -299,10 +299,19 @@ export function CustomerPortalRewardCatalogPage() {
         </div>
       </section>
     </form></SidePanel> : null}
-    <SidePanel wide open={panel === "catalog"} title={t("portalRewardCatalog.items")} onClose={() => setPanel(null)} closeLabel={t("portalOps.close")}>
-    <section className="reward-admin-catalog">
-    {loading ? <PageSkeleton label={t("portalCatalog.loading")} variant="profile" compact /> : error ? <p>{t("portalRewardCatalog.failed")}</p> : items.length ? items.map(item => <article className="reward-admin-item" key={item.id}><div className="reward-admin-item-media">{previews[item.id] ? <img src={previews[item.id]} alt="" /> : null}<div><h3>{item.name}</h3><p>{t(item.kind === "gift" ? "portalRewardCatalog.gift" : "portalRewardCatalog.voucher")} · {item.points_cost} · {t("portalRewardCatalog.stock")} {item.stock} · {t(item.is_active ? "portalRewardCatalog.active" : "portalRewardCatalog.inactive")}</p><p>{item.description}</p>{item.voucher_amount_hkd ? <p>HK$ {Number(item.voucher_amount_hkd).toFixed(2)}</p> : null}</div></div>{canEdit ? <Button variant="outline" disabled={saving} onClick={() => openEdit(item)}>{t("portalRewardCatalog.edit")}</Button> : null}</article>) : <div className="reward-admin-empty">{t("portalRewardCatalog.empty")}</div>}
-    </section>
+    <SidePanel half open={panel === "redemptions"} title={t("portalRewardCatalog.redemptions")} onClose={() => setPanel(null)} closeLabel={t("portalOps.close")}>
+      {actionError ? <p className="reward-admin-error" role="alert">{actionError}</p> : null}
+      <div className="reward-admin-records-panel">
+        <ListTable loading={loading} loadingLabel={t("portalCatalog.loading")} skeletonColumns={3} onRefresh={() => load().catch(reason => setError(t(failure(reason))))}
+          header={<tr><th>{t("portalVoucher.ownerId")}</th><th>{t("portalRewardCatalog.items")}</th><th>{t("orders.columns.actions")}</th></tr>}>
+          {redemptions.map(row => <tr key={row.id}><td>{row.account}</td><td>{row.name} · {row.points} · {t(row.status === "fulfilled" ? "portalRewardCatalog.fulfilled" : "portalRewardCatalog.pending")}{row.voucher_status ? ` · ${t(`portalVoucher.${row.voucher_status}`)}` : ""}{row.voucher_last4 ? ` · ${row.voucher_last4}` : ""}</td><td className="table-actions-cell">{canEdit && row.status === "pending" ? <Button type="button" variant="outline" disabled={fulfilling !== null} aria-busy={fulfilling === row.id} onClick={() => { setFulfilling(row.id); setActionError(""); void fulfillRewardRedemption(row.id).then(() => load()).catch(reason => setActionError(t(failure(reason)))).finally(() => setFulfilling(null)); }}>{t("portalRewardCatalog.fulfill")}</Button> : null}</td></tr>)}
+          {!redemptions.length ? <tr><td colSpan={3}>{error ? t("portalRewardCatalog.failed") : t("portalRewardCatalog.noRedemptions")}</td></tr> : null}
+        </ListTable>
+        <TablePagination summary={t("orders.pagination", {from: total ? (page-1)*15+1 : 0, to:Math.min(page*15,total),total})}
+          page={page} totalPages={Math.max(1,Math.ceil(total/15))} loading={loading}
+          onPrevious={() => setPage(current=>Math.max(1,current-1))} onNext={() => setPage(current=>Math.min(Math.max(1,Math.ceil(total/15)),current+1))}
+          onPageChange={setPage} previousLabel={t("orders.previous")} nextLabel={t("orders.next")} pageLabel={t("orders.pageOf")} jumpLabel={t("orders.jumpToPage")} />
+      </div>
     </SidePanel>
     {canEdit ? <SidePanel wide open={panel === "link"} title={t("portalVoucher.linkTitle")} description={t("portalVoucher.linkIntro")} onClose={() => { if (!linking) setPanel(null); }} closeLabel={t("portalOps.close")} footer={<Button type="submit" form="catalog-link-form" disabled={linking || !stores.length || storeError} aria-busy={linking}>{t("portalVoucher.link")}</Button>}>
       <form id="catalog-link-form" className="reward-admin-form reward-admin-panel-form" onSubmit={event => {
@@ -328,17 +337,22 @@ export function CustomerPortalRewardCatalogPage() {
       </select></div>
       <div className="reward-admin-field"><label htmlFor="link-customer">{t("portalVoucher.customerId")}</label><Input id="link-customer" value={customerId} onChange={event => setCustomerId(event.target.value)} required /></div>
     </form></SidePanel> : null}
-    <section className="panel reward-admin-records">
-    <h2>{t("portalRewardCatalog.redemptions")}</h2>
-    <ListTable loading={loading} loadingLabel={t("portalCatalog.loading")} skeletonColumns={3} onRefresh={() => load().catch(reason => setError(t(failure(reason))))}
-      header={<tr><th>{t("portalVoucher.ownerId")}</th><th>{t("portalRewardCatalog.items")}</th><th>{t("orders.columns.actions")}</th></tr>}>
-      {redemptions.map(row => <tr key={row.id}><td>{row.account}</td><td>{row.name} · {row.points} · {t(row.status === "fulfilled" ? "portalRewardCatalog.fulfilled" : "portalRewardCatalog.pending")}{row.voucher_status ? ` · ${t(`portalVoucher.${row.voucher_status}`)}` : ""}{row.voucher_last4 ? ` · ${row.voucher_last4}` : ""}</td><td className="table-actions-cell">{canEdit && row.status === "pending" ? <Button type="button" variant="outline" disabled={fulfilling !== null} aria-busy={fulfilling === row.id} onClick={() => { setFulfilling(row.id); setActionError(""); void fulfillRewardRedemption(row.id).then(() => load()).catch(reason => setActionError(t(failure(reason)))).finally(() => setFulfilling(null)); }}>{t("portalRewardCatalog.fulfill")}</Button> : null}</td></tr>)}
-      {!redemptions.length ? <tr><td colSpan={3}>{error ? t("portalRewardCatalog.failed") : t("portalRewardCatalog.noRedemptions")}</td></tr> : null}
-    </ListTable>
-    <TablePagination summary={t("orders.pagination", {from: total ? (page-1)*15+1 : 0, to:Math.min(page*15,total),total})}
-      page={page} totalPages={Math.max(1,Math.ceil(total/15))} loading={loading}
-      onPrevious={() => setPage(current=>Math.max(1,current-1))} onNext={() => setPage(current=>Math.min(Math.max(1,Math.ceil(total/15)),current+1))}
-      onPageChange={setPage} previousLabel={t("orders.previous")} nextLabel={t("orders.next")} pageLabel={t("orders.pageOf")} jumpLabel={t("orders.jumpToPage")} />
+    <section className="panel reward-admin-catalog-table">
+      <h2>{t("portalRewardCatalog.items")}</h2>
+      {loading && !items.length ? <PageSkeleton label={t("portalCatalog.loading")} variant="profile" compact /> : null}
+      <ListTable loading={loading && !items.length} loadingLabel={t("portalCatalog.loading")} skeletonColumns={6} onRefresh={() => load().catch(reason => setError(t(failure(reason))))}
+        header={<tr><th>{t("portalRewardCatalog.image")}</th><th>{t("portalRewardCatalog.name")}</th><th>{t("portalRewardCatalog.kind")}</th><th>{t("portalRewardCatalog.points")}</th><th>{t("portalRewardCatalog.stock")}</th><th>{t("portalRewardCatalog.active")}</th><th>{t("orders.columns.actions")}</th></tr>}>
+        {items.map(item => <tr key={item.id}>
+          <td>{previews[item.id] ? <img className="reward-admin-table-thumb" src={previews[item.id]} alt="" /> : <span className="reward-admin-table-thumb is-empty" aria-hidden="true" />}</td>
+          <td><div className="reward-admin-table-name">{item.name}{item.description ? <small>{item.description}</small> : null}{item.voucher_amount_hkd ? <small>HK$ {Number(item.voucher_amount_hkd).toFixed(2)}</small> : null}</div></td>
+          <td>{t(item.kind === "gift" ? "portalRewardCatalog.gift" : "portalRewardCatalog.voucher")}</td>
+          <td>{item.points_cost}</td>
+          <td>{item.stock}</td>
+          <td>{t(item.is_active ? "portalRewardCatalog.active" : "portalRewardCatalog.inactive")}</td>
+          <td className="table-actions-cell">{canEdit ? <Button variant="outline" disabled={saving} onClick={() => openEdit(item)}>{t("portalRewardCatalog.edit")}</Button> : null}</td>
+        </tr>)}
+        {!items.length ? <tr><td colSpan={7}>{error ? t("portalRewardCatalog.failed") : t("portalRewardCatalog.empty")}</td></tr> : null}
+      </ListTable>
     </section>
   </section>;
 }
