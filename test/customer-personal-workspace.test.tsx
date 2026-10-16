@@ -307,13 +307,14 @@ describe("personal customer pages", () => {
     fireEvent.submit(screen.getByLabelText("FPS／入數紙").closest("form")!); expect(await screen.findByRole("alert")).toHaveTextContent("請選擇不超過 10MB"); expect(mocks.upload).not.toHaveBeenCalled();
     const file = new File(["proof"], "proof.pdf", { type: "application/pdf" }); fireEvent.change(screen.getByLabelText("FPS／入數紙"), { target: { files: [file] } });
     fireEvent.submit(screen.getByLabelText("FPS／入數紙").closest("form")!); await waitFor(() => expect(mocks.upload).toHaveBeenCalledWith("next", file, 100));
-    expect(await screen.findByRole("status")).toHaveTextContent("付款單據已提交");
+    expect(await screen.findByText("付款單據已提交，等待財務核實。")).toBeVisible();
   });
   it("keeps entered profile data when saving fails", async () => {
     mocks.profile.mockRejectedValue(new Error("network")); mount("/customer/personal/profile");
     fireEvent.click(await screen.findByRole("button", { name: "編輯資料" }));
     fireEvent.change(screen.getByLabelText("姓名"), { target: { value: "Keep me" } }); fireEvent.click(screen.getByRole("button", { name: "確定" }));
-    expect(await screen.findByRole("alert")).toHaveTextContent("操作未完成"); expect(screen.getByLabelText("姓名")).toHaveValue("Keep me");
+    const form = screen.getByLabelText("姓名").closest("form")!;
+    expect(await within(form).findByRole("alert")).toHaveTextContent("操作未完成"); expect(screen.getByLabelText("姓名")).toHaveValue("Keep me");
   });
   it("offers retry after a failed session and preserves navigation", async () => {
     mocks.session.mockRejectedValueOnce(new Error("offline")); mount(); await screen.findByRole("heading", { name: "未能載入客戶資料" });

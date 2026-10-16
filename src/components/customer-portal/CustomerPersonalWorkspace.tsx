@@ -14,6 +14,7 @@ import { PersonalLunchboxPage } from "@/components/customer-portal/PersonalLunch
 import { CustomerGuidePage } from "@/components/customer-portal/CustomerGuidePage";
 import { AccountOrderFeedback } from "@/components/customer-portal/OrderFeedbackPage";
 import { PersonalPointsPage, PersonalPointsSkeleton } from "./PersonalPointsPage";
+import { HistoricalPointsWelcome } from "./HistoricalPointsWelcome";
 import { getStorefrontLogoPath } from "@/lib/brand-logo";
 import { fetchPersonalOtpSession, logoutPersonalOtpSession } from "@/lib/customer-otp-session";
 import { fetchCustomerSelfServiceAddonOptions, fetchCustomerSelfServiceOrder, type CustomerSelfServiceOrderDetail, type CustomerSelfServiceOrderSummary, type CustomerSelfServiceSession } from "@/lib/customer-self-service";
@@ -352,6 +353,7 @@ export function CustomerPersonalWorkspace({ canSwitch, loggingOut, onLogout }: {
   if (loading) return frame(<div className="personal-content">{pageKey === "points" ? <PersonalPointsSkeleton label={t("personal.loading")} /> : <PersonalPageSkeleton variant={personalSkeletonForPath(location.pathname, location.search)} />}</div>);
   if (!session || sessionError) return frame(<CustomerPortalAccessState error={sessionError || t("personal.loadFailed")} busy={false} onRetry={() => setVersion(v => v + 1)} />);
   return frame(<div className="personal-content">
+    <HistoricalPointsWelcome />
     {dataError && <div className="personal-data-error"><p role="alert">{dataError}</p><Button variant="outline" onClick={() => setVersion(v => v + 1)}>{t("personal.retry")}</Button></div>}
     {operationError && <CornerNotice message={operationError} tone="error" onDismiss={() => setOperationError("")} />}{notice && <CornerNotice message={notice} onDismiss={() => setNotice("")} />}
     <PersonalContext.Provider value={{ data, points, session, refresh, busy, run }}><Routes>
