@@ -4,6 +4,14 @@ import { describe, expect, it } from "vitest";
 describe("customer sign-in email", () => {
   const html = readFileSync("supabase/templates/customer-otp.html", "utf8");
 
+  it("also supplies a branded code for recovery sign-ins while preserving password resets", () => {
+    const recovery = readFileSync("supabase/templates/customer-recovery-otp.html", "utf8");
+    const document = new DOMParser().parseFromString(recovery.replace("{{ .Token }}", "12345678"), "text/html");
+    expect(document.body.textContent).toContain("12345678");
+    expect(document.querySelector("img")?.getAttribute("alt")).toBe("Food Channels Catering");
+    expect(document.querySelector('a[href="{{ .ConfirmationURL }}"]')?.textContent).toBe("按此重設密碼");
+  });
+
   it("delivers a readable code without a confirmation link", () => {
     const document = new DOMParser().parseFromString(html.replace("{{ .Token }}", "12345678"), "text/html");
     expect(document.body.textContent).toContain("12345678");
