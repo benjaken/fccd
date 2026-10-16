@@ -34,3 +34,11 @@ Validate in a rollback transaction containing the migration, reviewed seed and
 claims, claim idempotency, privileges, expiry, partial refunds, adjustment
 idempotency and insufficient-balance debt. No order rows are modified by tests.
 After deployment, reconcile grant counts/sums, claimed rows and ledger entries.
+
+The follow-up `20261017141000_historical_reward_welcome` migration adds a
+per-grant welcome acknowledgement. Authenticated RPCs return only the caller's
+unread, unexpired claim summary and acknowledge one exact batch/claim timestamp.
+The personal workspace shows the welcome after session restoration; lookup
+failures do not interrupt login, and failed acknowledgements remain retryable.
+The read RPC safely invokes the idempotent self-claim path for an existing
+verified session. Acknowledgement never changes the points balance.

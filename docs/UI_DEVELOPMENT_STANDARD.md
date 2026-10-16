@@ -1,5 +1,11 @@
 # UI Development Standard
 
+Historical reward welcome dialogs use the approved standalone transparent FC
+lunchbox illustration. In zh-HK, only the illustration card says “Thank you”;
+title and description preserve their localized line breaks. Self-hosted Noto
+Sans TC subset fonts keep the approved weights consistent. Display actual
+credited personal points, with per-user/per-claim acknowledgement on the server.
+
 客戶指南富文本的編輯區與顯示頁共用 `fccd-rich-content` 深綠色標題、連結及薄荷綠引用樣式。編輯器提供 HTML 匯入區；套用前告知會取代內容，經現有白名單清理後載入預覽，支援復原及取消，仍需頁面原有儲存操作。電話連結僅接受數字、空格、括號、連字號及開頭可選加號的 `tel:` 格式；不開放任意行內樣式。
 
 Approved UI hard rules for **FCCD** (*Food Channel Catering Delivery*) —

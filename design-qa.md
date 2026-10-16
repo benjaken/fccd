@@ -43,3 +43,25 @@ No actionable P0/P1/P2 visual issue remains within this scoped change. Real host
 ## Latest header positioning adjustment
 
 Source: `C:/Users/user/AppData/Local/Temp/codex-clipboard-8d60ab78-46d8-40ba-91c2-9ed4fcdd3ab2.png`. The user explicitly moved identity switching to the top right beside logout. The implementation now places the existing mode links inside the header actions, removes the separate identity row, and retains one selector. Browser captures: `artifacts/customer-login/workspace-top-right.png` (1349 × 900, density 1) and `workspace-top-right-mobile.png` (393 × 852, density 1). The desktop capture visibly places the control at the arrow's requested destination; the mobile action row wraps and remains right aligned, with scroll width equal to viewport width (393). Logo, status card and action behavior are preserved. TypeScript and 24 existing integration tests passed after the adjustment. No P0/P1/P2 finding; final result: passed.
+
+## Historical personal reward welcome — 2026-10-16
+
+final result: passed
+
+Reference: user-approved codex-clipboard-6b736ccb-8bbd-44e3-9adc-4cd01645a1be.png.
+Compared actual browser captures at 390x700, 320x568 and 1280x900.
+Normalized source width to 390px and compared side by side in
+artifacts/points-welcome-design/comparison.png (source left, implementation right).
+Focused review covered title weight/line breaks, body spacing, number hierarchy,
+FC illustration, expiry and button layout. Source and actual mobile screenshots
+were opened together. P2 typography/spacing and narrow-screen button wrapping
+were corrected and recaptured. Final review found no outstanding P0/P1/P2.
+Intentional differences: source leaf replaced by requested dotted FC; actual
+focus ring retained; host-page background belongs to the existing app. The
+preview uses explicit sample data; production reads actual claim data.
+Browser checked both primary and secondary actions; no console errors.
+Self-hosted Noto Sans TC weights 400/700/900 stabilize cross-device rendering.
+Existing workspace tests had ambiguous global status/alert queries; scoped
+assertions preserve the same success/failure expectations. Changed tests and
+production build passed. Broader regression has failures in other existing
+modules; see artifacts/points-welcome-design/verify.log.
