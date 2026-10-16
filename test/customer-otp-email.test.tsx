@@ -9,6 +9,8 @@ describe("customer sign-in email", () => {
     expect(document.body.textContent).toContain("12345678");
     expect(document.body.textContent).toContain("8 位驗證碼");
     expect(document.querySelectorAll("a")).toHaveLength(0);
+    expect(document.querySelector("img")?.getAttribute("src")).toBe("https://www.foodchannels-delivery.com/assets/fc-catering-logo-email.png");
+    expect(document.querySelector("img")?.getAttribute("alt")).toBe("Food Channels Catering");
     expect(html.match(/{{\s*\.Token\s*}}/g)).toHaveLength(1);
     expect(html).not.toContain(".ConfirmationURL");
   });
